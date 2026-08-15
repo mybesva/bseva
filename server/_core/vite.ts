@@ -48,19 +48,30 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
+  // Prefer dist/public (vite outDir). Fallbacks cover local `node dist/index.js`
+  // and platforms where cwd is the project root.
+  const candidates = [
+    path.resolve(process.cwd(), "dist", "public"),
+    path.resolve(import.meta.dirname, "public"),
+    path.resolve(import.meta.dirname, "..", "dist", "public"),
+  ];
+  const distPath = candidates.find((p) => fs.existsSync(p));
+
+  if (!distPath) {
     console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
+      `Could not find the client build directory. Tried:\n${candidates.join("\n")}\nRun: pnpm build`
     );
+    app.use("*", (_req, res) => {
+      res
+        .status(500)
+        .send("Client build missing. Run pnpm build before starting the server.");
+    });
+    return;
   }
 
+  console.log(`[Static] Serving frontend from ${distPath}`);
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });

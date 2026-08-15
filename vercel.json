@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo 'This app is Express + SQLite and is not supported on Vercel. Deploy to Railway or Render — see DEPLOY.md' && exit 1"
+}
