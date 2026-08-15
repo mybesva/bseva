@@ -20,7 +20,7 @@ On free hosts the disk is often ephemeral — redeploys may reset demo data (OK 
 ## Railway (recommended)
 
 1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub**
-2. Select the `mybesva/bseba` repo (or your fork)
+2. Select the `mybesva/bseva` repo (or your fork)
 3. Set variables:
    - `JWT_SECRET` = any secret ≥ 32 chars (e.g. `bseva-demo-jwt-secret-min-32-characters-long`)
    - `NODE_ENV` = `production`
