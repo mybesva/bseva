@@ -22,6 +22,8 @@ Local uvicorn + Vite still work unchanged.
 
 Do **not** set Root Directory to `bseva-export` — Python entry is `api/index.py` at repo root.
 
+**Function region:** `vercel.json` sets `"regions": ["bom1"]` (Mumbai, India) so `/api/*` runs close to Indian users. Static assets still use Vercel’s global CDN.
+
 ## Environment variables (Vercel → Settings → Environment Variables)
 
 ### Frontend (Production + Preview)
@@ -50,7 +52,23 @@ STORAGE_BUCKET=bseva
 OTP_DEV_CODE=123456
 ```
 
-## Supabase manual setup
+## Supabase manual setup (India / low latency)
+
+Supabase **region is fixed when the project is created** — you cannot move an existing project from Sydney (`ap-southeast-2`) to Mumbai (`ap-south-1`).
+
+For lowest latency with Vercel `bom1`:
+
+1. Create a **new** Supabase project → Region: **South Asia (Mumbai)** / `ap-south-1`.
+2. Apply schema: run SQL from `supabase/migrations/` in the SQL editor (or `ensure_schema()` locally).
+3. Create Storage bucket `bseva` (private).
+4. Update **Vercel env vars** (and local `.env`):
+   - `DATABASE_URL` → Session pooler URI, host like `aws-0-ap-south-1.pooler.supabase.com`
+   - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` from the new project
+5. Migrate data from the old project if needed (pg_dump / restore or Supabase dashboard).
+
+Until Supabase is in `ap-south-1`, API runs in Mumbai but DB is still in Sydney (~80–120ms extra per query).
+
+### General setup
 
 1. **Database** — Session pooler connection string as `DATABASE_URL`.
 2. Apply schema once (not on cold start):

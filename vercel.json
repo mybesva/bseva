@@ -1,12 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["bom1"],
   "buildCommand": "cd bseva-export && NODE_ENV=production VITE_API_URL= pnpm run build:web",
   "outputDirectory": "bseva-export/dist/public",
   "installCommand": "cd bseva-export && corepack enable && pnpm install --frozen-lockfile",
   "functions": {
     "api/index.py": {
       "maxDuration": 30,
-      "memory": 1024,
       "includeFiles": "backend/**"
     }
   },
