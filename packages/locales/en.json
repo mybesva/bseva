@@ -1,0 +1,9 @@
+{
+  "app.name": "BSeva",
+  "auth.login": "Login",
+  "auth.register": "Create account",
+  "auth.accountType": "What type of account do you want to create?",
+  "auth.customer": "Customer",
+  "auth.pujari": "Pujari",
+  "auth.blocked": "Your account has been blocked. Please contact BSeva support for assistance."
+}

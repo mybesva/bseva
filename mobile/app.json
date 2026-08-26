@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "BSeva",
+    "slug": "bseva",
+    "scheme": "bseva",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bseva.app"
+    },
+    "android": {
+      "package": "com.bseva.app"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}
