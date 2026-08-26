@@ -62,8 +62,13 @@ coverage/
 temp/
 tmp/
 
+# Vercel local link
+.vercel/
+
 # Local demo / DB files
 data/
 *.db
 *.sqlite
 *.sqlite3
+.vercel
+.env*

@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd bseva-export && npm install && NODE_ENV=production VITE_API_URL= npm run build:web",
+  "buildCommand": "cd bseva-export && NODE_ENV=production VITE_API_URL= pnpm run build:web",
   "outputDirectory": "bseva-export/dist/public",
-  "installCommand": "npm install --prefix bseva-export && pip install -r requirements.txt",
+  "installCommand": "cd bseva-export && corepack enable && pnpm install --frozen-lockfile && pip install -r ../requirements.txt",
   "functions": {
     "api/index.py": {
       "maxDuration": 30,
