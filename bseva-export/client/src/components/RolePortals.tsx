@@ -17,6 +17,7 @@ import {
   Clock,
   Landmark,
   Sparkles,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -41,6 +42,9 @@ const customerNav: NavItem[] = [
   { label: "Wallet / Payments", href: "/customer/wallet", icon: Wallet },
   { label: "My Bookings", href: "/customer/bookings", icon: Calendar },
   { label: "Booking History", href: "/customer/history", icon: History },
+  { label: "Invoices", href: "/customer/invoices", icon: FileText },
+  { label: "Rewards & Referral", href: "/customer/rewards", icon: Sparkles },
+  { label: "Support", href: "/customer/support", icon: FileText },
   { label: "Change Password", href: "/customer/change-password", icon: KeyRound },
 ];
 
@@ -55,6 +59,8 @@ const pujariNav: NavItem[] = [
   { label: "Experience", href: "/pujari/experience", icon: Briefcase },
   { label: "Availability", href: "/pujari/availability", icon: Clock },
   { label: "Bank / Settlement", href: "/pujari/bank", icon: Landmark },
+  { label: "Assess Pujaris", href: "/pujari/head-ratings", icon: Star },
+  { label: "Support", href: "/pujari/support", icon: FileText },
   { label: "Change Password", href: "/pujari/change-password", icon: KeyRound },
 ];
 
@@ -194,6 +200,7 @@ function CustomerShell({ children }: { children: ReactNode }) {
 function PujariShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { t } = useI18n();
+  const { user } = useAuth();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [nav, setNav] = useState(pujariNav);
   const [profile, setProfile] = useState<any>(null);
@@ -207,14 +214,17 @@ function PujariShell({ children }: { children: ReactNode }) {
       .then((p) => {
         setProfile(p);
         const profileDone = !!p.profile_submitted_at;
-        setNav(
-          profileDone
-            ? pujariNav.filter((item) => item.href !== "/pujari/onboarding")
-            : pujariNav
-        );
+        const isHead = !!p.is_head_pujari || user?.role === "head_pujari";
+        let next = profileDone
+          ? pujariNav.filter((item) => item.href !== "/pujari/onboarding")
+          : [...pujariNav];
+        if (!isHead) {
+          next = next.filter((item) => item.href !== "/pujari/head-ratings");
+        }
+        setNav(next);
       })
-      .catch(() => setNav(pujariNav));
-  }, [location]);
+      .catch(() => setNav(pujariNav.filter((item) => item.href !== "/pujari/head-ratings")));
+  }, [location, user?.role]);
 
   const headerBelow = profile ? (() => {
     const approved = Number(profile.approved_level || 0);

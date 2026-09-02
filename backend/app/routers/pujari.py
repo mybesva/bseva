@@ -187,15 +187,32 @@ def apply_level(body: PujariApplyLevelIn, user=Depends(require_roles("pujari")),
 
 
 @router.patch("/profile")
-def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
+def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
     year = body.qualification_year
     if year is not None and year > date.today().year:
         raise HTTPException(400, "Qualification year cannot be in the future")
     if body.date_of_birth and body.date_of_birth > date.today():
         raise HTTPException(400, "Date of birth cannot be in the future")
+    # District mandatory when touching address fields
+    touching_address = any(
+        v is not None
+        for v in (body.address_line1, body.city, body.state, body.pincode, body.district, body.location_label)
+    )
+    if touching_address:
+        if body.district is not None:
+            if not str(body.district).strip():
+                raise HTTPException(400, "District is required")
+        else:
+            existing = db.execute(
+                text("SELECT district FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+                {"id": user["id"]},
+            ).scalar()
+            if not (existing and str(existing).strip()):
+                raise HTTPException(400, "District is required")
     quals = json.dumps(body.qualifications) if body.qualifications is not None else None
     langs = json.dumps(body.languages) if body.languages is not None else None
     specs = json.dumps(body.specializations) if body.specializations is not None else None
+    # gender intentionally ignored (req #16) — column retained for historical rows only
     db.execute(
         text(
             """
@@ -204,7 +221,6 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari")), 
               father_name = COALESCE(:father_name, father_name),
               gotra = COALESCE(:gotra, gotra),
               date_of_birth = COALESCE(:dob, date_of_birth),
-              gender = COALESCE(:gender, gender),
               native_place = COALESCE(:native_place, native_place),
               permanent_address = COALESCE(:permanent_address, permanent_address),
               present_address = COALESCE(:present_address, present_address),
@@ -242,7 +258,6 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari")), 
             "father_name": body.father_name,
             "gotra": body.gotra,
             "dob": body.date_of_birth,
-            "gender": body.gender,
             "native_place": body.native_place,
             "permanent_address": body.permanent_address,
             "present_address": body.present_address,

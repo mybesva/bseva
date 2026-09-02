@@ -46,6 +46,13 @@ export default function RolePortalGate({
   const [requestedLevel, setRequestedLevel] = useState(2);
   const [pending, setPending] = useState(false);
   const expected = apiRole(role);
+  const isAdminLike = (r: string) => r === "admin" || r === "super_admin";
+  const matchesPortal =
+    user &&
+    (user.role === expected ||
+      (expected === "pujari" && user.role === "head_pujari") ||
+      (allowAdminBypass && isAdminLike(user.role) && role === "admin"));
+  const canEnter = Boolean(matchesPortal);
   const { levels: pujariLevels } = usePujariLevels();
 
   useEffect(() => {
@@ -71,10 +78,9 @@ export default function RolePortalGate({
     );
   }
 
-  const canEnter = user && (user.role === expected || (allowAdminBypass && user.role === "admin" && role === "admin"));
   if (canEnter) return <>{children}</>;
 
-  if (user && user.role !== expected) {
+  if (user && user.role !== expected && !(expected === "pujari" && user.role === "head_pujari")) {
     return (
       <Layout>
         <div className="container py-16 max-w-md">
@@ -104,7 +110,11 @@ export default function RolePortalGate({
     setPending(true);
     try {
       const out = await loginApi(email, password);
-      if (out.user.role !== expected && !(allowAdminBypass && out.user.role === "admin")) {
+      const roleOk =
+        out.user.role === expected ||
+        (expected === "pujari" && out.user.role === "head_pujari") ||
+        (allowAdminBypass && isAdminLike(out.user.role) && role === "admin");
+      if (!roleOk) {
         toast.error(`This portal is for ${expected}s.`);
         await logout();
         return;

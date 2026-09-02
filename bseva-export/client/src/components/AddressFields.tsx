@@ -29,8 +29,8 @@ const MAPS_KEY =
   (import.meta.env.VITE_FRONTEND_FORGE_API_KEY as string | undefined);
 const FORGE_BASE = (import.meta.env.VITE_FRONTEND_FORGE_API_URL as string | undefined) || "https://forge.butterfly-effect.dev";
 const MAPS_SCRIPT = MAPS_KEY?.startsWith("AIza")
-  ? `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,marker,geocoding&v=weekly`
-  : `${FORGE_BASE}/v1/maps/proxy/maps/api/js?key=${MAPS_KEY}&libraries=places,marker,geocoding&v=weekly`;
+  ? `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=marker,geocoding&v=weekly`
+  : `${FORGE_BASE}/v1/maps/proxy/maps/api/js?key=${MAPS_KEY}&libraries=marker,geocoding&v=weekly`;
 
 function loadMaps() {
   if (window.google?.maps) return Promise.resolve();
@@ -199,8 +199,8 @@ export default function AddressFields({ value, onChange, className }: Props) {
           <Input value={value.city} onChange={(e) => set("city", e.target.value)} required />
         </div>
         <div>
-          <Label>District</Label>
-          <Input value={value.district} onChange={(e) => set("district", e.target.value)} />
+          <Label>District *</Label>
+          <Input value={value.district} onChange={(e) => set("district", e.target.value)} required />
         </div>
         <div>
           <Label>State *</Label>

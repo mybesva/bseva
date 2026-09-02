@@ -30,6 +30,7 @@ class RegisterIn(BaseModel):
     registration_consent: bool = False
     terms_version: Optional[str] = None
     privacy_version: Optional[str] = None
+    referral_code: Optional[str] = Field(default=None, max_length=40)
 
 
 class MePatchIn(BaseModel):
@@ -94,9 +95,15 @@ class BookingCreateIn(BaseModel):
     start_time: time
     location_label: Optional[str] = None
     address: Optional[str] = None
+    city: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    special_instructions: Optional[str] = None
     terms_accepted: bool
+    recurring: Optional[Literal["none", "weekly", "monthly", "selected_dates"]] = "none"
+    recurring_count: Optional[int] = Field(default=None, ge=1, le=52)
+    selected_dates: Optional[list[date]] = None
+    referral_code: Optional[str] = Field(default=None, max_length=40)
 
 
 class WalletLoadIn(BaseModel):
@@ -109,9 +116,10 @@ class BlockIn(BaseModel):
 
 
 class VerifyPujariIn(BaseModel):
-    verification_status: Literal["approved", "rejected", "under_review"]
+    verification_status: Literal["approved", "rejected", "under_review", "correction_required", "pending"]
     approved_level: Optional[int] = Field(default=None, ge=1, le=4)
     rejection_reason: Optional[str] = None
+    internal_note: Optional[str] = None
 
 
 class PujariLevelIn(BaseModel):
@@ -154,7 +162,7 @@ class ServiceIn(BaseModel):
     standard_price_paise: int
     premium_price_paise: int
     duration_minutes: int = 90
-    virtual_available: bool = True
+    virtual_available: bool = False
     active: bool = True
 
 
@@ -222,3 +230,17 @@ class AdminUserIn(BaseModel):
     role: Literal["customer", "pujari"]
     requested_level: Optional[int] = Field(default=2, ge=1, le=4)
     location: Optional[str] = None
+    # When True, mark under_review so admin can finish profile then verify.
+    # When False (default), create as pending / profile incomplete ("complete later").
+    complete_profile_now: bool = False
+
+
+class AdminCustomerUpdateIn(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=120)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, min_length=10, max_length=15)
+    location: Optional[str] = None
+
+
+class BookingAssignIn(BaseModel):
+    pujari_id: str

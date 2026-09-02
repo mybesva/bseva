@@ -18,6 +18,7 @@ _STMTS = [
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS sampradaya TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS website_publication_consent BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS signature_path TEXT",
+    "ALTER TABLE pujari_documents ADD COLUMN IF NOT EXISTS uploaded_by UUID REFERENCES users(id)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_consent BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_consent_at TIMESTAMPTZ",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version TEXT",
@@ -199,12 +200,396 @@ def _seed_legal_policies(conn) -> None:
         )
 
 
+_FOUNDATION_STMTS = [
+    """
+    ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_status_check
+    """,
+    """
+    DO $$ BEGIN
+      ALTER TABLE bookings ADD CONSTRAINT bookings_status_check
+        CHECK (status IN (
+          'pending', 'pending_acceptance', 'confirmed', 'in_progress',
+          'completed', 'cancelled', 'rejected'
+        ));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'paid'",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS settlement_status TEXT DEFAULT 'not_applicable'",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS rating_status TEXT DEFAULT 'not_applicable'",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS platform_fee_paise INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS discount_paise INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS wallet_credit_paise INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pujari_payable_paise INTEGER",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMPTZ",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS otp_sent_at TIMESTAMPTZ",
+    """
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check
+    """,
+    """
+    DO $$ BEGIN
+      ALTER TABLE users ADD CONSTRAINT users_role_check
+        CHECK (role IN ('customer', 'pujari', 'admin', 'super_admin'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    """
+    ALTER TABLE pujari_profiles DROP CONSTRAINT IF EXISTS pujari_profiles_verification_status_check
+    """,
+    """
+    DO $$ BEGIN
+      ALTER TABLE pujari_profiles ADD CONSTRAINT pujari_profiles_verification_status_check
+        CHECK (verification_status IN (
+          'pending', 'under_review', 'correction_required', 'approved', 'rejected'
+        ));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS platform_settings (
+      key TEXT PRIMARY KEY,
+      value JSONB NOT NULL DEFAULT '{}'::jsonb,
+      description TEXT,
+      updated_by UUID REFERENCES users(id),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS admin_permissions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      permission TEXT NOT NULL,
+      granted_by UUID REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, permission)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS booking_terms_acceptances (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      pujari_id UUID NOT NULL REFERENCES users(id),
+      terms_version TEXT NOT NULL,
+      terms_slug TEXT NOT NULL DEFAULT 'pujari_booking_terms',
+      accepted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (booking_id, pujari_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS reward_campaigns (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      code TEXT NOT NULL UNIQUE,
+      campaign_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      threshold_count INTEGER,
+      reward_paise INTEGER NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      valid_from TIMESTAMPTZ,
+      valid_to TIMESTAMPTZ,
+      eligible_service_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS reward_ledger (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id),
+      campaign_id UUID REFERENCES reward_campaigns(id),
+      reward_type TEXT NOT NULL,
+      reference_booking_id UUID REFERENCES bookings(id),
+      reference_user_id UUID REFERENCES users(id),
+      amount_paise INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      credited_at TIMESTAMPTZ
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS referrals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      referrer_id UUID NOT NULL REFERENCES users(id),
+      referee_id UUID NOT NULL REFERENCES users(id) UNIQUE,
+      role_scope TEXT NOT NULL,
+      code TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      qualified_booking_id UUID REFERENCES bookings(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS settlements (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      booking_id UUID NOT NULL UNIQUE REFERENCES bookings(id),
+      pujari_id UUID NOT NULL REFERENCES users(id),
+      customer_payment_paise INTEGER NOT NULL,
+      base_puja_paise INTEGER NOT NULL,
+      platform_fee_paise INTEGER NOT NULL,
+      gst_paise INTEGER NOT NULL DEFAULT 0,
+      discount_paise INTEGER NOT NULL DEFAULT 0,
+      adjustments_paise INTEGER NOT NULL DEFAULT 0,
+      refund_adjustments_paise INTEGER NOT NULL DEFAULT 0,
+      pujari_payable_paise INTEGER NOT NULL,
+      settlement_amount_paise INTEGER NOT NULL,
+      due_date DATE,
+      settled_at TIMESTAMPTZ,
+      status TEXT NOT NULL DEFAULT 'pending',
+      payment_reference TEXT,
+      override_flag BOOLEAN NOT NULL DEFAULT FALSE,
+      override_reason TEXT,
+      override_by UUID REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS samagri_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL,
+      description TEXT,
+      unit TEXT DEFAULT 'pcs',
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS service_samagri (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      samagri_item_id UUID NOT NULL REFERENCES samagri_items(id),
+      required BOOLEAN NOT NULL DEFAULT TRUE,
+      optional BOOLEAN NOT NULL DEFAULT FALSE,
+      customer_provided BOOLEAN NOT NULL DEFAULT FALSE,
+      instructions TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      UNIQUE (service_id, samagri_item_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS booking_samagri_snapshot (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      required BOOLEAN NOT NULL DEFAULT TRUE,
+      optional BOOLEAN NOT NULL DEFAULT FALSE,
+      customer_provided BOOLEAN NOT NULL DEFAULT FALSE,
+      instructions TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS ratings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      from_user_id UUID NOT NULL REFERENCES users(id),
+      to_user_id UUID NOT NULL REFERENCES users(id),
+      role_from TEXT NOT NULL,
+      stars INTEGER NOT NULL,
+      comment TEXT,
+      skipped BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (booking_id, from_user_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS invoices (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      invoice_number TEXT NOT NULL UNIQUE,
+      invoice_type TEXT NOT NULL,
+      booking_id UUID REFERENCES bookings(id),
+      settlement_id UUID,
+      user_id UUID NOT NULL REFERENCES users(id),
+      snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+      total_paise INTEGER NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ticket_number TEXT NOT NULL UNIQUE,
+      user_id UUID NOT NULL REFERENCES users(id),
+      user_role TEXT NOT NULL,
+      category TEXT NOT NULL,
+      related_booking_id UUID REFERENCES bookings(id),
+      related_settlement_id UUID,
+      subject TEXT NOT NULL,
+      description TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open',
+      priority TEXT NOT NULL DEFAULT 'normal',
+      assigned_admin_id UUID REFERENCES users(id),
+      resolution TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS support_ticket_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ticket_id UUID NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+      author_id UUID NOT NULL REFERENCES users(id),
+      body TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS pujari_location_pings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      pujari_id UUID NOT NULL REFERENCES users(id),
+      latitude DOUBLE PRECISION NOT NULL,
+      longitude DOUBLE PRECISION NOT NULL,
+      recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "ALTER TABLE pujari_blocked_dates ADD COLUMN IF NOT EXISTS start_time TIME",
+    "ALTER TABLE pujari_blocked_dates ADD COLUMN IF NOT EXISTS end_time TIME",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT",
+    "ALTER TABLE otp_codes DROP CONSTRAINT IF EXISTS otp_codes_purpose_check",
+    """
+    DO $$ BEGIN
+      ALTER TABLE otp_codes ADD CONSTRAINT otp_codes_purpose_check
+        CHECK (purpose IN (
+          'register', 'login', 'verify', 'reset', 'verify_email', 'verify_phone', 'start_puja'
+        ));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+]
+
+
+def _seed_platform_settings(conn) -> None:
+    import json
+
+    defaults = {
+        "virtual_puja_enabled": False,
+        "pujari_settlement_days": 14,
+        "pujari_share_percent": 85,
+        "loyalty_pujari_puja_count": 10,
+        "loyalty_pujari_reward_paise": 50000,
+        "loyalty_pujari_active": True,
+        "referral_customer_reward_paise": 10000,
+        "referral_pujari_reward_paise": 10000,
+        "referral_customer_active": True,
+        "referral_pujari_active": True,
+        "puja_start_otp_before_minutes": 10,
+        "pujari_location_tracking_before_minutes": 15,
+        "pujari_full_booking_details_before_hours": 24,
+        "bseva_whatsapp_number": "919876543210",
+        "email_from_accounts": "accounts@b-seva.com",
+        "email_from_support": "support@b-seva.com",
+        "email_from_admin": "admin@b-seva.com",
+        "email_from_info": "info@b-seva.com",
+        "email_from_contact": "contact@b-seva.com",
+        "weekend_days": [6, 7],
+        "weekend_surge_percent": 0,
+        "weekend_surge_paise": 0,
+    }
+    for k, v in defaults.items():
+        conn.execute(
+            text(
+                """
+                INSERT INTO platform_settings (key, value)
+                VALUES (:k, CAST(:v AS jsonb))
+                ON CONFLICT (key) DO NOTHING
+                """
+            ),
+            {"k": k, "v": json.dumps(v)},
+        )
+
+
+def _seed_reward_campaigns(conn) -> None:
+    count = conn.execute(text("SELECT COUNT(*) FROM reward_campaigns")).scalar() or 0
+    if count:
+        return
+    conn.execute(
+        text(
+            """
+            INSERT INTO reward_campaigns (code, campaign_type, title, threshold_count, reward_paise, active)
+            VALUES
+              ('PUJARI_LOYALTY_10', 'pujari_loyalty', '10 Pujas Loyalty', 10, 50000, TRUE),
+              ('CUSTOMER_REF_100', 'customer_referral', 'Customer Referral', NULL, 10000, TRUE),
+              ('PUJARI_REF_100', 'pujari_referral', 'Pujari Referral', NULL, 10000, TRUE)
+            """
+        )
+    )
+
+
+def _seed_pujari_booking_terms(conn) -> None:
+    row = conn.execute(text("SELECT 1 FROM legal_policies WHERE slug = 'pujari_booking_terms'")).first()
+    if row:
+        return
+    import json
+
+    points = [
+        {
+            "title": "Non-circumvention",
+            "body": (
+                "The Pujari agrees not to bypass BSeva and directly provide services to a "
+                "BSeva-introduced Customer for 6 months, subject to final legal approval."
+            ),
+        },
+        {
+            "title": "Platform rules",
+            "body": "The Pujari agrees to follow BSeva booking, OTP start, completion, and settlement processes.",
+        },
+    ]
+    conn.execute(
+        text(
+            """
+            INSERT INTO legal_policies (slug, title, version, sort_order, points)
+            VALUES ('pujari_booking_terms', 'Pujari Booking Acceptance Terms', '2026-01', 5, CAST(:p AS jsonb))
+            """
+        ),
+        {"p": json.dumps(points)},
+    )
+
+
 def ensure_schema() -> None:
     with engine.begin() as conn:
         for stmt in _STMTS:
             conn.execute(text(stmt))
+        for stmt in _FOUNDATION_STMTS:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                # Some ALTER/DO blocks may fail on partially migrated DBs; continue
+                pass
+        try:
+            from app.phase2_migrate import _PHASE2_STMTS
+
+            for stmt in _PHASE2_STMTS:
+                try:
+                    conn.execute(text(stmt))
+                except Exception:
+                    pass
+        except Exception:
+            pass
         _seed_pujari_roles(conn)
         _seed_legal_policies(conn)
+        try:
+            _seed_platform_settings(conn)
+            _seed_reward_campaigns(conn)
+            _seed_pujari_booking_terms(conn)
+        except Exception:
+            pass
+        # Mark historical payouts as legacy settlements
+        try:
+            conn.execute(
+                text(
+                    """
+                    UPDATE bookings SET settlement_status = 'legacy'
+                    WHERE (settlement_status IS NULL OR settlement_status = 'not_applicable')
+                      AND status IN ('confirmed', 'completed', 'in_progress')
+                      AND pujari_id IS NOT NULL
+                    """
+                )
+            )
+        except Exception:
+            pass
 
 
 def ensure_pujari_profile_schema() -> None:

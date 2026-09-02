@@ -96,6 +96,13 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
     if not body.registration_consent:
         raise HTTPException(400, "You must accept the Terms & Conditions and Privacy Policy")
     _verify_registration_otp(db, body)
+    referrer_ok = None
+    if body.referral_code:
+        from app.referrals import find_referrer_by_code
+
+        referrer_ok = find_referrer_by_code(db, body.referral_code)
+        if not referrer_ok or referrer_ok.get("blocked"):
+            raise HTTPException(400, "Invalid referral code")
     exists = db.execute(
         text("SELECT id FROM users WHERE email = :e OR phone = :p"),
         {"e": str(body.email), "p": body.phone},
@@ -180,6 +187,18 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
                 "backup": body.backup_phone,
             },
         )
+    if body.account_type == "pujari":
+        from app.referrals import ensure_pujari_referral_code
+
+        ensure_pujari_referral_code(db, user_id)
+    else:
+        from app.referrals import ensure_customer_referral_code
+
+        ensure_customer_referral_code(db, user_id)
+    if body.referral_code:
+        from app.referrals import apply_referral_code
+
+        apply_referral_code(db, user_id, body.referral_code)
     db.commit()
     row = db.execute(text("SELECT * FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}).mappings().one()
     return TokenOut(access_token=create_access_token(user_id, body.account_type), user=_public(dict(row)))

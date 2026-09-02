@@ -19,8 +19,8 @@ const DOC_SLOTS = [
   },
   {
     type: "supporting",
-    label: "Supporting Certificate",
-    hint: "Upload an additional supporting certificate (PDF or image).",
+    label: "Additional Documents",
+    hint: "Upload additional documents (PDF or image).",
   },
 ] as const;
 

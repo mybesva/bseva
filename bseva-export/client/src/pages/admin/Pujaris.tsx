@@ -93,6 +93,65 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
         </Button>
         <Button
           size="sm"
+          variant="secondary"
+          onClick={async () => {
+            await api(`/admin/pujaris/${u.id}/verify`, {
+              method: "POST",
+              body: JSON.stringify({ verification_status: "correction_required", approved_level: level }),
+            });
+            toast.success("Marked correction required");
+            await onChanged();
+          }}
+        >
+          Correction
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            await api(`/admin/pujaris/${u.id}/verify`, {
+              method: "POST",
+              body: JSON.stringify({ verification_status: "rejected", approved_level: level }),
+            });
+            toast.success("Rejected");
+            await onChanged();
+          }}
+        >
+          Reject
+        </Button>
+        {u.is_head_pujari || u.role === "head_pujari" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await api(`/admin/pujaris/${u.id}/head`, {
+                method: "POST",
+                body: JSON.stringify({ is_head_pujari: false, scope_cities: [] }),
+              });
+              toast.success("Removed Head Pujari");
+              await onChanged();
+            }}
+          >
+            Unhead
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await api(`/admin/pujaris/${u.id}/head`, {
+                method: "POST",
+                body: JSON.stringify({ is_head_pujari: true, scope_cities: [] }),
+              });
+              toast.success("Marked Head Pujari");
+              await onChanged();
+            }}
+          >
+            Make Head
+          </Button>
+        )}
+        <Button
+          size="sm"
           variant="outline"
           onClick={async () => {
             await api(`/admin/users/${u.id}/block`, { method: "POST", body: JSON.stringify({ blocked: !u.blocked, reason: "Admin action" }) });

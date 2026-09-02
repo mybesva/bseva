@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import require_roles
 from app.domain import row_dict
+from app.rbac import require_any_permission, require_permission
 from app.schemas import (
+    AdminCustomerUpdateIn,
     AdminUserIn,
     BlockIn,
     LegalPolicyUpdateIn,
@@ -29,16 +31,34 @@ def stats(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
     pujaris = db.execute(text("SELECT COUNT(*) FROM users WHERE role = 'pujari' AND blocked = FALSE")).scalar() or 0
     bookings = db.execute(text("SELECT COUNT(*) FROM bookings")).scalar() or 0
     revenue = db.execute(text("SELECT COALESCE(SUM(total_paise),0) FROM bookings WHERE status <> 'cancelled'")).scalar() or 0
+    pending_v = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status IN ('pending','under_review')")).scalar() or 0
+    correction = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status = 'correction_required'")).scalar() or 0
+    rejected = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status = 'rejected'")).scalar() or 0
+    blocked_p = db.execute(text("SELECT COUNT(*) FROM users WHERE role = 'pujari' AND blocked = TRUE")).scalar() or 0
+    approved = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status = 'approved'")).scalar() or 0
     return {
         "totalCustomers": int(customers),
         "activePriests": int(pujaris),
         "totalBookings": int(bookings),
         "monthlyRevenue": int(revenue),
+        "pujariStatus": {
+            "active": int(approved),
+            "pendingVerification": int(pending_v),
+            "correctionRequired": int(correction),
+            "rejected": int(rejected),
+            "blocked": int(blocked_p),
+        },
     }
 
 
 @router.get("/users")
-def list_users(role: str | None = None, blocked: bool | None = None, q: str | None = None, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def list_users(
+    role: str | None = None,
+    blocked: bool | None = None,
+    q: str | None = None,
+    user=Depends(require_any_permission("view_customers", "view_pujaris", "manage_admins")),
+    db: Session = Depends(get_db),
+):
     sql = "SELECT id, name, email, phone, role, blocked, blocked_at, block_reason, created_at FROM users WHERE 1=1"
     params: dict = {}
     if role:
@@ -55,9 +75,18 @@ def list_users(role: str | None = None, blocked: bool | None = None, q: str | No
 
 
 @router.post("/users/{user_id}/block")
-def block_user(user_id: str, body: BlockIn, admin=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def block_user(user_id: str, body: BlockIn, admin=Depends(require_any_permission("block_pujaris", "edit_customers")), db: Session = Depends(get_db)):
     if str(admin["id"]) == user_id:
         raise HTTPException(400, "You cannot block your own account")
+    target = db.execute(text("SELECT role FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}).first()
+    if not target:
+        raise HTTPException(404, "User not found")
+    if target[0] in ("pujari", "head_pujari"):
+        # block_pujaris required — already satisfied by require_any if only edit_customers
+        from app.rbac import is_super_admin, user_permissions
+
+        if not is_super_admin(admin) and "block_pujaris" not in user_permissions(db, admin):
+            raise HTTPException(403, "Missing permission: block_pujaris")
     db.execute(
         text(
             """
@@ -82,8 +111,16 @@ def block_user(user_id: str, body: BlockIn, admin=Depends(require_roles("admin")
 
 
 @router.post("/users")
-def create_user(body: AdminUserIn, admin=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def create_user(body: AdminUserIn, admin=Depends(require_any_permission("create_customers", "create_pujaris")), db: Session = Depends(get_db)):
     from uuid import uuid4
+
+    from app.rbac import is_super_admin, user_permissions
+
+    perms = user_permissions(db, admin) if not is_super_admin(admin) else None
+    if body.role == "customer" and perms is not None and "create_customers" not in perms:
+        raise HTTPException(403, "Missing permission: create_customers")
+    if body.role == "pujari" and perms is not None and "create_pujaris" not in perms:
+        raise HTTPException(403, "Missing permission: create_pujaris")
 
     existing = db.execute(
         text("SELECT id FROM users WHERE email = :e OR phone = :p"),
@@ -115,17 +152,95 @@ def create_user(body: AdminUserIn, admin=Depends(require_roles("admin")), db: Se
             {"id": user_id, "loc": body.location},
         )
     else:
+        # Complete later → pending + incomplete. Complete now → under_review for admin to finish & verify.
+        vstatus = "under_review" if body.complete_profile_now else "pending"
         db.execute(
             text(
                 """
-                INSERT INTO pujari_profiles (user_id, requested_level, approved_level, verification_status, location_label)
-                VALUES (CAST(:id AS uuid), :lvl, :lvl, 'approved', :loc)
+                INSERT INTO pujari_profiles (
+                  user_id, requested_level, approved_level, verification_status,
+                  location_label, full_name, mobile_number, profile_complete, available
+                )
+                VALUES (
+                  CAST(:id AS uuid), :lvl, NULL, :st,
+                  :loc, :name, :phone, FALSE, FALSE
+                )
                 """
             ),
-            {"id": user_id, "lvl": body.requested_level or 2, "loc": body.location},
+            {
+                "id": user_id,
+                "lvl": body.requested_level or 2,
+                "st": vstatus,
+                "loc": body.location,
+                "name": body.name,
+                "phone": body.phone,
+            },
         )
     db.commit()
-    return {"ok": True, "id": user_id}
+    return {
+        "ok": True,
+        "id": user_id,
+        "complete_profile_now": bool(body.complete_profile_now) if body.role == "pujari" else None,
+        "profile_incomplete": body.role == "pujari",
+    }
+
+
+@router.put("/users/{user_id}/customer")
+def update_customer(
+    user_id: str,
+    body: AdminCustomerUpdateIn,
+    admin=Depends(require_permission("edit_customers")),
+    db: Session = Depends(get_db),
+):
+    row = db.execute(
+        text("SELECT role FROM users WHERE id = CAST(:id AS uuid)"),
+        {"id": user_id},
+    ).first()
+    if not row or row[0] != "customer":
+        raise HTTPException(404, "Customer not found")
+    if body.email:
+        clash = db.execute(
+            text("SELECT id FROM users WHERE email = :e AND id <> CAST(:id AS uuid)"),
+            {"e": str(body.email), "id": user_id},
+        ).first()
+        if clash:
+            raise HTTPException(400, "Email already in use")
+    if body.phone:
+        clash = db.execute(
+            text("SELECT id FROM users WHERE phone = :p AND id <> CAST(:id AS uuid)"),
+            {"p": body.phone, "id": user_id},
+        ).first()
+        if clash:
+            raise HTTPException(400, "Phone already in use")
+    db.execute(
+        text(
+            """
+            UPDATE users SET
+              name = COALESCE(:name, name),
+              email = COALESCE(:email, email),
+              phone = COALESCE(:phone, phone)
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {
+            "name": body.name,
+            "email": str(body.email) if body.email else None,
+            "phone": body.phone,
+            "id": user_id,
+        },
+    )
+    if body.location is not None:
+        db.execute(
+            text(
+                """
+                UPDATE customer_profiles SET location_label = :loc
+                WHERE user_id = CAST(:id AS uuid)
+                """
+            ),
+            {"loc": body.location, "id": user_id},
+        )
+    db.commit()
+    return {"ok": True}
 
 
 @router.delete("/users/{user_id}")
@@ -148,12 +263,15 @@ def delete_user(user_id: str, admin=Depends(require_roles("admin")), db: Session
 
 
 @router.get("/pujaris")
-def list_pujaris(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def list_pujaris(user=Depends(require_any_permission("view_pujaris", "verify_pujaris")), db: Session = Depends(get_db)):
     rows = db.execute(
         text(
             """
-            SELECT u.id, u.name, u.email, u.phone, u.blocked, u.blocked_at, u.block_reason,
-                   p.requested_level, p.approved_level, p.verification_status, p.available, p.location_label
+            SELECT u.id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
+                   p.requested_level, p.approved_level, p.verification_status, p.available, p.location_label,
+                   COALESCE(p.is_head_pujari, FALSE) AS is_head_pujari,
+                   COALESCE(p.profile_complete, FALSE) AS profile_complete,
+                   COALESCE(p.profile_completion_percentage, 0) AS profile_completion_percentage
             FROM users u JOIN pujari_profiles p ON p.user_id = u.id
             ORDER BY u.created_at DESC
             """
@@ -163,28 +281,43 @@ def list_pujaris(user=Depends(require_roles("admin")), db: Session = Depends(get
 
 
 @router.post("/pujaris/{pujari_id}/verify")
-def verify_pujari(pujari_id: str, body: VerifyPujariIn, admin=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def verify_pujari(pujari_id: str, body: VerifyPujariIn, admin=Depends(require_permission("verify_pujaris")), db: Session = Depends(get_db)):
+    exists = db.execute(
+        text("SELECT profile_complete, verification_status FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+        {"id": pujari_id},
+    ).mappings().first()
+    if not exists:
+        raise HTTPException(404, "Pujari not found")
+    if body.verification_status == "approved" and not exists.get("profile_complete"):
+        raise HTTPException(400, "Cannot approve — pujari profile is incomplete")
     db.execute(
         text(
             """
             UPDATE pujari_profiles
             SET verification_status = :st,
-                approved_level = COALESCE(:lvl, approved_level)
+                approved_level = COALESCE(:lvl, approved_level),
+                rejection_reason = COALESCE(:rr, rejection_reason),
+                available = CASE WHEN :st = 'approved' THEN TRUE ELSE available END
             WHERE user_id = CAST(:id AS uuid)
             """
         ),
-        {"st": body.verification_status, "lvl": body.approved_level, "id": pujari_id},
+        {
+            "st": body.verification_status,
+            "lvl": body.approved_level,
+            "rr": body.rejection_reason,
+            "id": pujari_id,
+        },
     )
     db.execute(
-        text("INSERT INTO audit_logs (actor_id, action, entity_type, entity_id) VALUES (:a, 'verify_pujari', 'pujari', :e)"),
-        {"a": admin["id"], "e": pujari_id},
+        text("INSERT INTO audit_logs (actor_id, action, entity_type, entity_id) VALUES (:a, :act, 'pujari', :e)"),
+        {"a": admin["id"], "act": f"verify_pujari:{body.verification_status}", "e": pujari_id},
     )
     db.commit()
     return {"ok": True}
 
 
 @router.post("/pujaris/{pujari_id}/level")
-def set_pujari_level(pujari_id: str, body: PujariLevelIn, admin=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def set_pujari_level(pujari_id: str, body: PujariLevelIn, admin=Depends(require_any_permission("approve_pujaris", "verify_pujaris", "edit_pujaris")), db: Session = Depends(get_db)):
     result = db.execute(
         text(
             """
@@ -206,12 +339,12 @@ def set_pujari_level(pujari_id: str, body: PujariLevelIn, admin=Depends(require_
 
 
 @router.get("/services")
-def admin_services(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def admin_services(user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
     return [row_dict(r) for r in db.execute(text("SELECT * FROM services ORDER BY name")).mappings().all()]
 
 
 @router.post("/services")
-def create_service(body: ServiceIn, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def create_service(body: ServiceIn, user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
     db.execute(
         text(
             """
@@ -236,8 +369,8 @@ def create_service(body: ServiceIn, user=Depends(require_roles("admin")), db: Se
 
 
 @router.put("/services/{service_id}")
-def update_service(service_id: str, body: ServiceIn, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
-    db.execute(
+def update_service(service_id: str, body: ServiceIn, user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
+    result = db.execute(
         text(
             """
             UPDATE services SET name=:name, slug=:slug, description=:desc, required_level=:lvl,
@@ -259,12 +392,14 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_roles(
             "id": service_id,
         },
     )
+    if result.rowcount == 0:
+        raise HTTPException(404, "Service not found")
     db.commit()
     return {"ok": True}
 
 
 @router.delete("/services/{service_id}")
-def delete_service(service_id: str, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def delete_service(service_id: str, user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
     n = db.execute(text("SELECT COUNT(*) FROM bookings WHERE service_id = CAST(:id AS uuid)"), {"id": service_id}).scalar() or 0
     if n:
         db.execute(text("UPDATE services SET active = FALSE WHERE id = CAST(:id AS uuid)"), {"id": service_id})
@@ -427,7 +562,7 @@ def update_legal_policy(slug: str, body: LegalPolicyUpdateIn, user=Depends(requi
 
 
 @router.get("/documents/{pujari_id}")
-def list_docs(pujari_id: str, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def list_docs(pujari_id: str, user=Depends(require_any_permission("view_pujaris", "verify_pujaris", "edit_pujaris")), db: Session = Depends(get_db)):
     rows = db.execute(
         text("SELECT * FROM pujari_documents WHERE pujari_id = CAST(:id AS uuid) ORDER BY uploaded_at DESC"),
         {"id": pujari_id},

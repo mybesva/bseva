@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePublicConfig, whatsappDisplay, whatsappHref } from "@/hooks/usePublicConfig";
 
 const PinterestIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -37,6 +38,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
   const { t, lang, setLang, labels } = useI18n();
+  const { config } = usePublicConfig();
+  const phoneDisplay = whatsappDisplay(config.bseva_whatsapp_number);
+  const supportEmail = config.email_from_support || "support@b-seva.com";
 
   const navItems = useMemo(() => {
     const base = [
@@ -56,7 +60,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       return [...base, ...portals.map(({ label, path }) => ({ label, path }))];
     }
 
-    const mine = portals.find((p) => p.role === user.role);
+    const mine = portals.find(
+      (p) => p.role === user.role || (p.role === "admin" && user.role === "super_admin")
+    );
     return [
       ...base,
       ...(mine ? [{ label: mine.label, path: mine.path }] : []),
@@ -71,7 +77,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube" },
     { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn" },
     { icon: PinterestIcon, href: "https://pinterest.com/bseva", label: "Pinterest" },
-    { icon: WhatsAppIcon, href: "https://wa.me/919876543210", label: "WhatsApp" },
+    { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp" },
     { icon: TelegramIcon, href: "https://t.me/bseva", label: "Telegram" },
   ];
 
@@ -95,8 +101,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="bg-sidebar text-sidebar-foreground py-2 text-sm hidden md:block">
         <div className="container flex justify-between items-center">
           <div className="flex gap-6">
-            <span className="flex items-center gap-2"><Phone size={14} /> +91 98765 43210</span>
-            <span className="flex items-center gap-2"><Mail size={14} /> support@bseva.com</span>
+            <span className="flex items-center gap-2"><Phone size={14} /> {phoneDisplay}</span>
+            <span className="flex items-center gap-2"><Mail size={14} /> {supportEmail}</span>
           </div>
           <div className="flex gap-3 items-center">
             <LanguageSelect className="w-[110px] h-7 text-xs bg-sidebar border-sidebar-border text-sidebar-foreground" />
@@ -198,7 +204,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <footer className="bg-sidebar text-sidebar-foreground pt-16 pb-8">
         <div className="container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           <div>
-            <img src="/bseva-logo.png" alt="B-Seva" className="h-14 mb-4 brightness-0 invert" />
+            <img src="/bseva-mark.png" alt="B-Seva" className="h-14 mb-4" />
             <p className="text-sidebar-foreground/70 text-sm leading-relaxed mb-4">
               {t("footer.tagline")}
             </p>
@@ -217,8 +223,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h4 className="font-heading font-bold text-lg mb-4 text-primary">{t("footer.contact")}</h4>
             <ul className="space-y-3 text-sm text-sidebar-foreground/80">
-              <li className="flex items-center gap-2"><Phone size={14} /> +91 98765 43210</li>
-              <li className="flex items-center gap-2"><Mail size={14} /> support@bseva.com</li>
+              <li className="flex items-center gap-2"><Phone size={14} /> {phoneDisplay}</li>
+              <li className="flex items-center gap-2"><Mail size={14} /> {supportEmail}</li>
             </ul>
           </div>
           <div>

@@ -8,6 +8,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Calendar, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { getLoginUrl } from "@/const";
 
 export default function MyBookings() {
   const { user, loading } = useAuth();
@@ -32,7 +33,9 @@ export default function MyBookings() {
           <Card className="max-w-md">
             <CardContent className="pt-6 text-center space-y-4">
               <h2 className="text-2xl font-heading font-bold">Login required</h2>
-              <Button onClick={() => setLocation("/login")}>Login</Button>
+              <Button onClick={() => setLocation(getLoginUrl({ role: "customer", returnPath: "/my-bookings" }))}>
+                Login
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -40,24 +43,37 @@ export default function MyBookings() {
     );
   }
 
+  const role = user.role === "pujari" || user.role === "head_pujari" ? "pujari" : "customer";
+
   return (
     <Layout>
       <div className="container py-10 space-y-4">
         <h1 className="font-heading text-3xl font-bold">My bookings</h1>
         {bookings.length === 0 && <p className="text-muted-foreground">No bookings yet.</p>}
         {bookings.map((b) => (
-          <Card key={b.id}>
+          <Card
+            key={b.id}
+            className="cursor-pointer hover:border-primary/40 transition-colors"
+            onClick={() => setLocation(`/booking/${b.id}`)}
+          >
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2">
                 <span>{b.service_name || b.booking_number}</span>
-                <Badge>{b.status}</Badge>
+                <Badge>{String(b.status || "").replace(/_/g, " ")}</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-4 text-sm">
-              <span className="flex items-center gap-1"><Calendar size={14} /> {b.booking_date} {b.start_time}</span>
-              <span className="flex items-center gap-1"><MapPin size={14} /> {b.location_label || b.mode}</span>
+            <CardContent className="flex flex-wrap gap-4 text-sm items-center" onClick={(e) => e.stopPropagation()}>
+              <span className="flex items-center gap-1">
+                <Calendar size={14} /> {b.booking_date} {b.start_time}
+              </span>
+              <span className="flex items-center gap-1">
+                <MapPin size={14} /> {b.location_label || b.mode}
+              </span>
               <span>{rupees(b.total_paise)}</span>
-              {b.status === "confirmed" && (
+              <Button size="sm" variant="secondary" onClick={() => setLocation(`/booking/${b.id}`)}>
+                Details / Receipt
+              </Button>
+              {["confirmed", "pending_acceptance"].includes(b.status) && role === "customer" && (
                 <Button
                   size="sm"
                   variant="outline"

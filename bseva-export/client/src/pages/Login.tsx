@@ -10,30 +10,48 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
+import { safeReturnUrl } from "@/const";
 
 export default function Login() {
   const [location, setLocation] = useLocation();
   const { refresh, user, loading } = useAuth();
-  const roleHint = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("role");
+  const search = typeof window !== "undefined" ? window.location.search : "";
+  const params = new URLSearchParams(search);
+  const roleHint = params.get("role");
+  const returnUrl = safeReturnUrl(params.get("returnUrl"));
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
 
+  function goAfterLogin(role: string) {
+    if (returnUrl && (role === "customer" || !roleHint || roleHint === "customer")) {
+      setLocation(returnUrl);
+      return;
+    }
+    setLocation(dashboardPath(role));
+  }
+
   useEffect(() => {
-    if (!loading && user) setLocation(dashboardPath(user.role));
-  }, [user, loading, setLocation]);
+    if (!loading && user) goAfterLogin(user.role);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
     try {
       const out = await loginApi(identifier, password);
-      if (roleHint && out.user.role !== roleHint && !(roleHint === "admin" && out.user.role === "admin")) {
+      const roleOk =
+        !roleHint ||
+        out.user.role === roleHint ||
+        (roleHint === "pujari" && out.user.role === "head_pujari") ||
+        (roleHint === "admin" && (out.user.role === "admin" || out.user.role === "super_admin"));
+      if (!roleOk) {
         toast.error(`This sign-in is for ${roleHint} accounts. Your account role is ${out.user.role}.`);
       }
       await refresh();
       toast.success(`Welcome, ${out.user.name}`);
-      setLocation(dashboardPath(out.user.role));
+      goAfterLogin(out.user.role);
     } catch (err: any) {
       toast.error(err.message || "Login failed");
     } finally {
@@ -81,7 +99,18 @@ export default function Login() {
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 New to BSeva?{" "}
-                <Link href={roleHint ? `/register?role=${roleHint}` : "/register"} className="text-primary font-semibold">
+                <Link
+                  href={
+                    (() => {
+                      const p = new URLSearchParams();
+                      if (roleHint) p.set("role", roleHint);
+                      if (returnUrl) p.set("returnUrl", returnUrl);
+                      const q = p.toString();
+                      return q ? `/register?${q}` : "/register";
+                    })()
+                  }
+                  className="text-primary font-semibold"
+                >
                   Create an account
                 </Link>
               </p>

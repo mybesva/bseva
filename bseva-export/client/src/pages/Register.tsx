@@ -13,11 +13,15 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { safeReturnUrl } from "@/const";
 
 export default function Register() {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
   const roleHint = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("role");
+  const returnUrl = safeReturnUrl(
+    new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("returnUrl")
+  );
   const [accountType, setAccountType] = useState<"customer" | "pujari">(roleHint === "pujari" ? "pujari" : "customer");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,6 +33,7 @@ export default function Register() {
   const [requestedLevel, setRequestedLevel] = useState(2);
   const [consent, setConsent] = useState(false);
   const [pending, setPending] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
   const { levels: pujariLevels } = usePujariLevels();
 
   async function sendOtp() {
@@ -81,9 +86,14 @@ export default function Register() {
         registration_consent: true,
         terms_version: TERMS_VERSION,
         privacy_version: PRIVACY_VERSION,
+        referral_code: referralCode.trim() || undefined,
       });
       toast.success(`Welcome, ${name}. You can add your address after signing in.`);
-      setLocation(accountType === "pujari" ? "/pujari/onboarding" : "/customer/address");
+      if (returnUrl && accountType === "customer") {
+        setLocation(returnUrl);
+      } else {
+        setLocation(accountType === "pujari" ? "/pujari/onboarding" : "/customer/address");
+      }
     } catch (err: any) {
       toast.error(err.message || "Registration failed");
     } finally {
@@ -147,6 +157,15 @@ export default function Register() {
                   <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter OTP" required />
                   <Button type="button" variant="secondary" onClick={() => void sendOtp()}>{otpSent ? "Resend" : "Send OTP"}</Button>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("rewards.codeLabel")} ({t("common.optional")})</Label>
+                <Input
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                  placeholder="CUST1234-RC / PUJARI1234-RC"
+                  autoComplete="off"
+                />
               </div>
               <label className="flex items-start gap-2 text-sm">
                 <Checkbox checked={consent} onCheckedChange={(v) => setConsent(!!v)} className="mt-0.5" />

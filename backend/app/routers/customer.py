@@ -35,6 +35,22 @@ def get_profile(user=Depends(require_roles("customer", "admin")), db: Session = 
 
 @router.patch("/profile")
 def patch_profile(body: CustomerProfileIn, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+    # When updating address fields, district is mandatory
+    touching_address = any(
+        v is not None
+        for v in (body.address_line1, body.city, body.state, body.pincode, body.district, body.location_label)
+    )
+    if touching_address:
+        if body.district is not None:
+            if not str(body.district).strip():
+                raise HTTPException(400, "District is required")
+        else:
+            existing = db.execute(
+                text("SELECT district FROM customer_profiles WHERE user_id = CAST(:id AS uuid)"),
+                {"id": user["id"]},
+            ).scalar()
+            if not (existing and str(existing).strip()):
+                raise HTTPException(400, "District is required")
     db.execute(
         text(
             """

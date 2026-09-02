@@ -47,9 +47,17 @@ uvicorn app.main:app --reload --port 8000
 
 Seed accounts (password `TestPass123!`):
 
-- `admin@bseva.test` — admin
-- `customer1@bseva.test` — customer
-- `pujari1@bseva.test` — approved pujari
+| Role | Name | Email | Phone |
+|------|------|-------|-------|
+| Super Admin | BSeva Super Admin | `super@bseva.test` | `9000000000` |
+| Admin | BSeva Admin | `admin@bseva.test` | `9000000001` |
+| Customer | Ananya Customer | `customer1@bseva.test` | `9000000002` |
+| Customer | Rohan Customer | `customer2@bseva.test` | `9000000003` |
+| Customer | Meera Customer | `customer3@bseva.test` | `9000000004` |
+| Head Pujari | Pandit Sharma | `pujari1@bseva.test` | `9000000005` |
+| Pujari | Pandit Reddy | `pujari2@bseva.test` | `9000000006` |
+
+Run: `cd backend && python seed.py` (idempotent — keeps existing users, adds/upgrades missing roles).
 
 Dev OTP is `123456` unless `ENVIRONMENT=production`.
 

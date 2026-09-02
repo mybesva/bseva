@@ -46,13 +46,17 @@ export default function PujariAddressPage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!value.district.trim()) {
+      toast.error("District is required");
+      return;
+    }
     setSaving(true);
     try {
       await api("/pujari/profile", {
         method: "PATCH",
         body: JSON.stringify({
           ...value,
-          present_address: [value.address_line1, value.address_line2, value.city, value.state, value.pincode]
+          present_address: [value.address_line1, value.address_line2, value.city, value.district, value.state, value.pincode]
             .filter(Boolean)
             .join(", "),
         }),

@@ -95,12 +95,15 @@ export default function PujariOnboardingPage() {
       await saveStep(2, {
         full_name: profile.full_name,
         date_of_birth: profile.date_of_birth || null,
-        gender: profile.gender || null,
         mobile_number: profile.mobile_number || user?.phone,
       });
       return;
     }
     if (step === 2) {
+      if (!String(profile.district || "").trim()) {
+        toast.error("District is required");
+        return;
+      }
       await saveStep(3, {
         address_line1: profile.address_line1,
         address_line2: profile.address_line2,
@@ -263,19 +266,6 @@ export default function PujariOnboardingPage() {
                     value={(profile.date_of_birth || "").slice(0, 10)}
                     onChange={(e) => setField("date_of_birth", e.target.value)}
                   />
-                </div>
-                <div>
-                  <Label>Gender</Label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                    value={profile.gender || ""}
-                    onChange={(e) => setField("gender", e.target.value)}
-                  >
-                    <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
                 </div>
                 <div>
                   <Label>{t("pujari.mobile")} *</Label>

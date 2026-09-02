@@ -34,7 +34,12 @@ def current_user(
 
 def require_roles(*roles: str):
     def inner(user=Depends(current_user)):
-        if user["role"] not in roles:
+        effective = set(roles)
+        if "admin" in effective:
+            effective.add("super_admin")
+        if "pujari" in effective:
+            effective.add("head_pujari")
+        if user["role"] not in effective:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Not allowed")
         return user
 

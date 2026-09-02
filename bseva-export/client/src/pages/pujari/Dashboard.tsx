@@ -1,4 +1,5 @@
 import { PujariPortal } from "@/components/RolePortals";
+import BookingDetailPanel from "@/components/BookingDetailPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,13 +11,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -26,13 +20,13 @@ import {
   Clock,
   User,
   Sparkles,
-  LogOut,
   IndianRupee,
   CheckCircle2,
   Hourglass,
   TrendingUp,
   History,
   PlayCircle,
+  AlertCircle,
 } from "lucide-react";
 import { format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
@@ -44,7 +38,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 
 type BookingRow = {
   booking: {
-    id: number;
+    id: string;
     bookingNumber: string;
     bookingDate: Date | string | null;
     bookingTime: string | null;
@@ -55,7 +49,11 @@ type BookingRow = {
     totalAmount: number;
     priestAmount: number;
     platformFee: number;
+    basePrice: number;
+    gstAmount: number;
     specialInstructions: string | null;
+    customerName: string | null;
+    serviceName: string;
   };
   pujaType: { name: string; estimatedDuration: number };
   customer: { name: string | null; email: string | null; phone: string | null };
@@ -67,7 +65,7 @@ function formatPaise(paise: number) {
 
 function PujariDashboardContent() {
   const { t } = useI18n();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
@@ -75,7 +73,7 @@ function PujariDashboardContent() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujariProfile, setPujariProfile] = useState<any>(null);
-  const profile = pujariProfile || (user?.profile as any);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
 
   async function loadBookings() {
     const rows = await api<any[]>("/bookings");
@@ -83,32 +81,30 @@ function PujariDashboardContent() {
   }
 
   useEffect(() => {
-    if (!user || (user.role !== "pujari" && user.role !== "admin")) return;
+    if (!user || (user.role !== "pujari" && user.role !== "head_pujari" && user.role !== "admin" && user.role !== "super_admin")) return;
     setIsLoading(true);
     Promise.all([
       loadBookings(),
-      user.role === "pujari" ? api<any>("/pujari/profile").then(setPujariProfile) : Promise.resolve(),
+      user.role === "pujari" || user.role === "head_pujari"
+        ? api<any>("/pujari/profile").then(setPujariProfile)
+        : Promise.resolve(),
+      user.role === "pujari" || user.role === "head_pujari"
+        ? api<{ referral_code: string }>("/pujari/referral-code")
+            .then((r) => setReferralCode(r.referral_code))
+            .catch(() => setReferralCode(null))
+        : Promise.resolve(),
     ])
       .catch((e) => toast.error(e.message))
       .finally(() => setIsLoading(false));
   }, [user]);
 
-  async function updateStatus(bookingId: string, status: string) {
-    try {
-      await api(`/bookings/${bookingId}/status?status=${encodeURIComponent(status)}`, { method: "PATCH" });
-      toast.success("Booking status updated");
-      await loadBookings();
-      setSelectedBooking(null);
-    } catch (e: any) {
-      toast.error(e.message);
-    }
-  }
-
   const rows = (bookings || []).map((b) => {
-    const priestAmount = Math.round(Number(b.base_price_paise || 0) * 0.85);
+    const base = Number(b.base_price_paise || 0);
+    const platform = Number(b.platform_fee_paise || Math.round(base * 0.15));
+    const priestAmount = Number(b.pujari_payable_paise || base - platform);
     return {
       booking: {
-        id: b.id,
+        id: String(b.id),
         bookingNumber: b.booking_number,
         bookingDate: b.booking_date,
         bookingTime: b.start_time,
@@ -118,8 +114,12 @@ function PujariDashboardContent() {
         tier: b.package_type,
         totalAmount: b.total_paise,
         priestAmount,
-        platformFee: Number(b.total_paise || 0) - priestAmount,
+        platformFee: platform,
+        basePrice: base,
+        gstAmount: Number(b.gst_amount_paise || 0),
         specialInstructions: null,
+        customerName: b.customer_name,
+        serviceName: b.service_name,
       },
       pujaType: { name: b.service_name, estimatedDuration: 90 },
       customer: { name: b.customer_name, email: null, phone: null },
@@ -136,7 +136,9 @@ function PujariDashboardContent() {
         new Date(r.booking.bookingDate) >= now &&
         !["cancelled", "completed", "refunded"].includes(r.booking.status)
     );
-    const pending = rows.filter((r) => r.booking.status === "pending" || r.booking.status === "confirmed");
+    const pending = rows.filter((r) =>
+      ["pending", "pending_acceptance", "confirmed"].includes(r.booking.status)
+    );
 
     const earningStatuses = ["completed", "confirmed", "in_progress"];
     const totalEarnings = rows
@@ -178,6 +180,19 @@ function PujariDashboardContent() {
     );
   }, [rows, selectedDate]);
 
+  const pendingAcceptance = useMemo(
+    () => rows.filter((r) => ["pending", "pending_acceptance"].includes(r.booking.status)),
+    [rows]
+  );
+
+  const needsAction = useMemo(
+    () =>
+      rows.filter((r) =>
+        ["pending", "pending_acceptance", "confirmed", "in_progress"].includes(r.booking.status)
+      ),
+    [rows]
+  );
+
   const upcoming = useMemo(() => {
     return rows
       .filter((b) => b.booking.bookingDate && new Date(b.booking.bookingDate) >= now)
@@ -212,6 +227,7 @@ function PujariDashboardContent() {
       case "confirmed":
         return "bg-green-100 text-green-800";
       case "pending":
+      case "pending_acceptance":
         return "bg-yellow-100 text-yellow-800";
       case "in_progress":
         return "bg-blue-100 text-blue-800";
@@ -269,46 +285,57 @@ function PujariDashboardContent() {
     },
   ];
 
-  const BookingListItem = ({ row }: { row: BookingRow }) => (
-    <button
-      type="button"
-      onClick={() => setSelectedBooking(row)}
-      className="w-full text-left p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary/30 transition-colors"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-semibold text-sidebar flex items-center gap-2">
-            <Sparkles size={16} className="text-primary shrink-0" />
-            <span className="truncate">{row.pujaType.name}</span>
+  const actionHint = (status: string) => {
+    if (status === "pending" || status === "pending_acceptance") return "Accept required";
+    if (status === "confirmed") return "Start with OTP";
+    if (status === "in_progress") return "Complete when done";
+    return null;
+  };
+
+  const BookingListItem = ({ row }: { row: BookingRow }) => {
+    const hint = actionHint(row.booking.status);
+    return (
+      <button
+        type="button"
+        onClick={() => setSelectedBooking(row)}
+        className="w-full text-left p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary/30 transition-colors"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-semibold text-sidebar flex items-center gap-2">
+              <Sparkles size={16} className="text-primary shrink-0" />
+              <span className="truncate">{row.pujaType.name}</span>
+            </div>
+            <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
+              <span className="flex items-center gap-1">
+                <CalendarIcon size={14} />
+                {row.booking.bookingDate
+                  ? format(new Date(row.booking.bookingDate), "dd MMM yyyy")
+                  : "—"}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock size={14} />
+                {row.booking.bookingTime || "—"}
+              </span>
+              <span className="flex items-center gap-1">
+                <User size={14} />
+                {row.customer.name}
+              </span>
+              <span className="flex items-center gap-1">
+                <MapPin size={14} />
+                {row.booking.city || "—"}
+              </span>
+            </div>
+            <div className="text-sm font-medium text-primary mt-2">
+              Your share: {formatPaise(row.booking.priestAmount || 0)}
+            </div>
+            {hint && <p className="text-xs text-orange-700 mt-1 font-medium">{hint}</p>}
           </div>
-          <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
-            <span className="flex items-center gap-1">
-              <CalendarIcon size={14} />
-              {row.booking.bookingDate
-                ? format(new Date(row.booking.bookingDate), "dd MMM yyyy")
-                : "—"}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock size={14} />
-              {row.booking.bookingTime || "—"}
-            </span>
-            <span className="flex items-center gap-1">
-              <User size={14} />
-              {row.customer.name}
-            </span>
-            <span className="flex items-center gap-1">
-              <MapPin size={14} />
-              {row.booking.city || "—"}
-            </span>
-          </div>
-          <div className="text-sm font-medium text-primary mt-2">
-            Your share: {formatPaise(row.booking.priestAmount || 0)}
-          </div>
+          <Badge className={getStatusColor(row.booking.status)}>{row.booking.status.replace(/_/g, " ")}</Badge>
         </div>
-        <Badge className={getStatusColor(row.booking.status)}>{row.booking.status}</Badge>
-      </div>
-    </button>
-  );
+      </button>
+    );
+  };
 
   return (
     <>
@@ -329,11 +356,47 @@ function PujariDashboardContent() {
             )}
           </CardContent>
         </Card>
+        {referralCode && (
+          <Card>
+            <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Your referral code</p>
+                <p className="font-heading font-semibold text-lg tracking-wide">{referralCode}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void navigator.clipboard.writeText(referralCode);
+                  toast.success("Referral code copied");
+                }}
+              >
+                Copy
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {(profileStatus === "profile_incomplete" || !pujariProfile?.profile_submitted_at) && (
           <Card className="border-primary/30 bg-orange-50">
             <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm">{t("pujari.profile.prompt")}</p>
               <Button size="sm" onClick={() => setLocation("/pujari/onboarding")}>{t("pujari.menu.profile")}</Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {!isLoading && pendingAcceptance.length > 0 && (
+          <Card className="border-2 border-orange-300 bg-orange-50/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-heading text-sidebar flex items-center gap-2">
+                <AlertCircle className="text-orange-600" size={20} />
+                Pending acceptance ({pendingAcceptance.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingAcceptance.map((row) => (
+                <BookingListItem key={row.booking.id} row={row} />
+              ))}
             </CardContent>
           </Card>
         )}
@@ -350,6 +413,21 @@ function PujariDashboardContent() {
               {ongoing.map((row) => (
                 <BookingListItem key={row.booking.id} row={row} />
               ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {!isLoading && needsAction.filter((r) => r.booking.status === "confirmed").length > 0 && (
+          <Card className="border border-blue-200 bg-blue-50/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="font-heading text-base text-sidebar">Ready to start (OTP)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {needsAction
+                .filter((r) => r.booking.status === "confirmed")
+                .map((row) => (
+                  <BookingListItem key={row.booking.id} row={row} />
+                ))}
             </CardContent>
           </Card>
         )}
@@ -466,13 +544,8 @@ function PujariDashboardContent() {
               <CardContent className="p-5 space-y-2">
                 <div className="font-heading font-semibold text-sidebar">Earnings & settlements</div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Mark each booking as <strong>completed</strong> once the puja is finished so your
-                  earnings and booking history stay up to date.
-                </p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Amounts shown are your service earnings. The final amount credited to your account
-                  will be the net payout after applicable taxes and deductions, as per BSeva
-                  settlement policy.
+                  Accept pending bookings, start with customer OTP, then mark complete when finished so
+                  settlements stay accurate.
                 </p>
               </CardContent>
             </Card>
@@ -481,7 +554,7 @@ function PujariDashboardContent() {
       </div>
 
       <Dialog open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading text-sidebar">
               {selectedBooking?.pujaType.name}
@@ -489,85 +562,30 @@ function PujariDashboardContent() {
             <DialogDescription>#{selectedBooking?.booking.bookingNumber}</DialogDescription>
           </DialogHeader>
           {selectedBooking && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div className="text-muted-foreground">Customer</div>
-                  <div className="font-medium">{selectedBooking.customer.name}</div>
-                  <div className="text-muted-foreground">{selectedBooking.customer.phone}</div>
-                  <div className="text-muted-foreground text-xs">{selectedBooking.customer.email}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Status</div>
-                  <Badge className={getStatusColor(selectedBooking.booking.status)}>
-                    {selectedBooking.booking.status}
-                  </Badge>
-                  <div className="text-muted-foreground mt-2">Package</div>
-                  <div className="font-medium capitalize">{selectedBooking.booking.tier}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Date & Time</div>
-                  <div className="font-medium">
-                    {selectedBooking.booking.bookingDate
-                      ? format(new Date(selectedBooking.booking.bookingDate), "dd MMM yyyy")
-                      : "—"}{" "}
-                    {selectedBooking.booking.bookingTime}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Duration</div>
-                  <div className="font-medium">
-                    ~{selectedBooking.pujaType.estimatedDuration} mins
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <div className="text-muted-foreground">Location</div>
-                  <div className="font-medium">{selectedBooking.booking.location}</div>
-                </div>
-                {selectedBooking.booking.specialInstructions && (
-                  <div className="col-span-2">
-                    <div className="text-muted-foreground">Instructions</div>
-                    <div>{selectedBooking.booking.specialInstructions}</div>
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-lg border border-border bg-secondary/30 p-3 grid grid-cols-3 gap-2 text-sm">
-                <div>
-                  <div className="text-muted-foreground text-xs">Total</div>
-                  <div className="font-medium">{formatPaise(selectedBooking.booking.totalAmount)}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground text-xs">Platform</div>
-                  <div className="font-medium">{formatPaise(selectedBooking.booking.platformFee || 0)}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground text-xs">Your share</div>
-                  <div className="font-semibold text-primary">
-                    {formatPaise(selectedBooking.booking.priestAmount || 0)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t">
-                <div className="text-sm font-medium">Update Status</div>
-                <Select
-                  defaultValue={selectedBooking.booking.status}
-                  onValueChange={(status) => updateStatus(String(selectedBooking.booking.id), status)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <BookingDetailPanel
+              bookingId={selectedBooking.booking.id}
+              role="pujari"
+              seed={{
+                status: selectedBooking.booking.status,
+                service_name: selectedBooking.booking.serviceName,
+                booking_number: selectedBooking.booking.bookingNumber,
+                booking_date: selectedBooking.booking.bookingDate
+                  ? String(selectedBooking.booking.bookingDate).slice(0, 10)
+                  : undefined,
+                start_time: selectedBooking.booking.bookingTime || undefined,
+                location_label: selectedBooking.booking.location,
+                package_type: selectedBooking.booking.tier,
+                base_price_paise: selectedBooking.booking.basePrice,
+                platform_fee_paise: selectedBooking.booking.platformFee,
+                gst_amount_paise: selectedBooking.booking.gstAmount,
+                total_paise: selectedBooking.booking.totalAmount,
+                pujari_payable_paise: selectedBooking.booking.priestAmount,
+                customer_name: selectedBooking.customer.name || undefined,
+              }}
+              onUpdated={async () => {
+                await loadBookings();
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

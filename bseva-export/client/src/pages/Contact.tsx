@@ -6,9 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
 
 export default function Contact() {
   const { t } = useI18n();
+  const { config } = usePublicConfig();
+  const phoneDisplay = whatsappDisplay(config.bseva_whatsapp_number);
+  const supportEmail = config.email_from_support || "support@b-seva.com";
+  const contactEmail = config.email_from_contact || supportEmail;
 
   return (
     <Layout>
@@ -55,8 +60,11 @@ export default function Contact() {
                     <div>
                       <h4 className="font-bold text-sidebar mb-1">{t("contact.phone")}</h4>
                       <p className="text-sm text-muted-foreground">
-                        +91 98765 43210<br />
-                        +91 80 1234 5678
+                        <a href={telHref(config.bseva_whatsapp_number)} className="hover:text-primary">{phoneDisplay}</a>
+                        <br />
+                        <a href={whatsappHref(config.bseva_whatsapp_number)} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                          WhatsApp
+                        </a>
                       </p>
                     </div>
                   </CardContent>
@@ -70,8 +78,9 @@ export default function Contact() {
                     <div>
                       <h4 className="font-bold text-sidebar mb-1">{t("contact.email")}</h4>
                       <p className="text-sm text-muted-foreground">
-                        support@bseva.com<br />
-                        bookings@bseva.com
+                        <a href={`mailto:${supportEmail}`} className="hover:text-primary">{supportEmail}</a>
+                        <br />
+                        <a href={`mailto:${contactEmail}`} className="hover:text-primary">{contactEmail}</a>
                       </p>
                     </div>
                   </CardContent>

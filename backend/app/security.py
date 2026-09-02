@@ -17,6 +17,11 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd.verify(plain, hashed)
 
 
+# Aliases used by lifecycle OTP
+hash_otp = hash_password
+verify_otp = verify_password
+
+
 def create_access_token(sub: str, role: str) -> str:
     exp = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
     return jwt.encode({"sub": sub, "role": role, "exp": exp}, settings.jwt_secret, algorithm=settings.jwt_algorithm)

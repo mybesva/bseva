@@ -47,6 +47,10 @@ export default function CustomerAddressPage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!value.district.trim()) {
+      toast.error("District is required");
+      return;
+    }
     setSaving(true);
     try {
       await api("/customer/profile", {

@@ -40,6 +40,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useI18n } from "@/i18n/I18nProvider";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import {
   Table,
   TableBody,
@@ -94,7 +95,15 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
   const [nearby, setNearby] = useState<any[]>([]);
   const [previous, setPrevious] = useState<any[]>([]);
   const [panchang, setPanchang] = useState<any>(null);
-  const settings = { virtualPujaEnabled: "true", gstPercent: "18" };
+  const [recurring, setRecurring] = useState<"none" | "weekly" | "monthly" | "selected_dates">("none");
+  const [recurringCount, setRecurringCount] = useState(4);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [extraDate, setExtraDate] = useState<Date | undefined>();
+  const { config: publicConfig } = usePublicConfig();
+  const settings = {
+    virtualPujaEnabled: publicConfig.virtual_puja_enabled ? "true" : "false",
+    gstPercent: "18",
+  };
 
   useEffect(() => {
     if (!bookingDate) {
@@ -116,11 +125,16 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
 
   useEffect(() => {
     if (!bookingDate) return;
-    const qs = new URLSearchParams({ service_id: serviceId, package_type: tier });
+    const qs = new URLSearchParams({
+      service_id: serviceId,
+      package_type: tier,
+      city: city || "",
+      booking_date: format(bookingDate, "yyyy-MM-dd"),
+    });
     api(`/quote?${qs}`)
       .then(setQuote)
       .catch(() => setQuote(null));
-  }, [bookingDate, serviceId, tier]);
+  }, [bookingDate, serviceId, tier, city]);
 
   useEffect(() => {
     if (currentStep < 2) return;
@@ -155,6 +169,12 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
   ];
 
   const virtualEnabled = settings?.virtualPujaEnabled !== "false";
+
+  useEffect(() => {
+    if (!virtualEnabled && serviceMode === "virtual") {
+      setServiceMode("physical");
+    }
+  }, [virtualEnabled, serviceMode]);
 
   const bill = useMemo(() => {
     if (quote) return quote;
@@ -192,7 +212,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
         toast.error("No available pujari for this service");
         return;
       }
-      const result = await api<{ booking_number: string; total_paise: number; meeting_url?: string }>("/bookings", {
+      const result = await api<{ id: string; booking_number: string; total_paise: number; meeting_url?: string }>("/bookings", {
         method: "POST",
         body: JSON.stringify({
           service_id: serviceId,
@@ -203,18 +223,21 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
           start_time: bookingTime.length === 5 ? `${bookingTime}:00` : bookingTime,
           location_label: `${locationText}, ${city}`,
           address: locationText,
+          city,
           latitude: DEMO_LAT,
           longitude: DEMO_LNG,
+          special_instructions: specialInstructions || undefined,
           terms_accepted: true,
+          recurring,
+          recurring_count: recurring === "none" || recurring === "selected_dates" ? undefined : recurringCount,
+          selected_dates:
+            recurring === "selected_dates"
+              ? selectedDates.map((d) => format(d, "yyyy-MM-dd"))
+              : undefined,
         }),
       });
       toast.success("Booking confirmed and paid from wallet");
-      const q = new URLSearchParams({
-        number: result.booking_number,
-        total: String(result.total_paise),
-      });
-      if (result.meeting_url) q.set("meet", result.meeting_url);
-      setLocation(`/booking-confirmation?${q.toString()}`);
+      setLocation(`/booking/${result.id || result.booking_number}`);
     } catch (error: any) {
       toast.error(error?.message || "Failed to create booking");
     } finally {
@@ -279,33 +302,39 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
 
           <div className="space-y-3">
             <Label>Puja Mode</Label>
-            <RadioGroup
-              value={serviceMode}
-              onValueChange={(v) => setServiceMode(v as ServiceMode)}
-              className="grid grid-cols-1 md:grid-cols-2 gap-3"
-            >
-              <Label
-                className={cn(
-                  "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
-                  serviceMode === "physical" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
-                )}
+            {virtualEnabled ? (
+              <RadioGroup
+                value={serviceMode}
+                onValueChange={(v) => setServiceMode(v as ServiceMode)}
+                className="grid grid-cols-1 md:grid-cols-2 gap-3"
               >
-                <RadioGroupItem value="physical" className="sr-only" />
+                <Label
+                  className={cn(
+                    "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
+                    serviceMode === "physical" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                  )}
+                >
+                  <RadioGroupItem value="physical" className="sr-only" />
+                  <span className="font-medium">{t("booking.physical")}</span>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Pujari visits your home or venue</p>
+                </Label>
+                <Label
+                  className={cn(
+                    "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
+                    serviceMode === "virtual" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                  )}
+                >
+                  <RadioGroupItem value="virtual" className="sr-only" />
+                  <span className="font-medium">{t("booking.virtual")}</span>
+                  <p className="text-xs text-muted-foreground mt-1">Live video session with your pujari</p>
+                </Label>
+              </RadioGroup>
+            ) : (
+              <div className="rounded-lg border-2 border-[#F7931E] bg-orange-50 p-4">
                 <span className="font-medium">{t("booking.physical")}</span>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Pujari visits your home or venue</p>
-              </Label>
-              <Label
-                className={cn(
-                  "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
-                  !virtualEnabled && "opacity-50 pointer-events-none",
-                  serviceMode === "virtual" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
-                )}
-              >
-                <RadioGroupItem value="virtual" className="sr-only" disabled={!virtualEnabled} />
-                <span className="font-medium">{t("booking.virtual")}</span>
-                <p className="text-xs text-muted-foreground mt-1">Live video session with your pujari</p>
-              </Label>
-            </RadioGroup>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -388,6 +417,90 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
             <Label>City *</Label>
             <Input value={city} onChange={(e) => setCity(e.target.value)} />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{t("booking.recurring")}</Label>
+              <Select
+                value={recurring}
+                onValueChange={(v) => setRecurring(v as "none" | "weekly" | "monthly" | "selected_dates")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("booking.recurring.none")}</SelectItem>
+                  <SelectItem value="weekly">{t("booking.recurring.weekly")}</SelectItem>
+                  <SelectItem value="monthly">{t("booking.recurring.monthly")}</SelectItem>
+                  <SelectItem value="selected_dates">{t("booking.recurring.selected")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {recurring !== "none" && recurring !== "selected_dates" && (
+              <div className="space-y-2">
+                <Label>{t("booking.recurring.count")}</Label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={52}
+                  value={recurringCount}
+                  onChange={(e) => setRecurringCount(Number(e.target.value) || 2)}
+                />
+              </div>
+            )}
+          </div>
+          {recurring === "selected_dates" && (
+            <div className="space-y-2">
+              <Label>{t("booking.recurring.addDates")}</Label>
+              <div className="flex flex-wrap gap-2 items-end">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {extraDate ? format(extraDate, "PPP") : t("booking.recurring.pickDate")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={extraDate}
+                      onSelect={setExtraDate}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    if (!extraDate) return;
+                    const key = format(extraDate, "yyyy-MM-dd");
+                    if (selectedDates.some((d) => format(d, "yyyy-MM-dd") === key)) return;
+                    setSelectedDates((prev) => [...prev, extraDate].sort((a, b) => a.getTime() - b.getTime()));
+                    setExtraDate(undefined);
+                  }}
+                >
+                  {t("common.add")}
+                </Button>
+              </div>
+              <ul className="text-sm space-y-1">
+                {selectedDates.map((d) => (
+                  <li key={format(d, "yyyy-MM-dd")} className="flex justify-between gap-2">
+                    <span>{format(d, "PPP")}</span>
+                    <button
+                      type="button"
+                      className="text-xs text-red-600"
+                      onClick={() =>
+                        setSelectedDates((prev) => prev.filter((x) => format(x, "yyyy-MM-dd") !== format(d, "yyyy-MM-dd")))
+                      }
+                    >
+                      {t("common.remove")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Special Instructions</Label>
             <Textarea value={specialInstructions} onChange={(e) => setSpecialInstructions(e.target.value)} />
@@ -415,6 +528,15 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">Previously booked · {p.bookingCount} times</p>
+                    <a
+                      href={`/pujari-profile/${p.priestId}`}
+                      className="text-xs text-primary underline"
+                      onClick={(e) => e.stopPropagation()}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("pujari.public.view")}
+                    </a>
                   </button>
                 ))}
               </div>
@@ -454,6 +576,17 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
                           Previous
                         </Badge>
                       )}
+                      <div>
+                        <a
+                          href={`/pujari-profile/${p.priestId}`}
+                          className="text-xs text-primary underline"
+                          onClick={(e) => e.stopPropagation()}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {t("pujari.public.view")}
+                        </a>
+                      </div>
                     </TableCell>
                     <TableCell>L{p.approvedLevel || "—"}</TableCell>
                     <TableCell className="text-right">{p.distanceKm} km</TableCell>
@@ -558,7 +691,17 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
             <Card className="border-orange-200 bg-orange-50">
               <CardContent className="p-6">
                 <p className="mb-4 text-sm">Please login as a customer to pay from wallet and confirm booking.</p>
-                <Button onClick={() => setLocation(getLoginUrl())} className="bg-[#F7931E]">
+                <Button
+                  onClick={() =>
+                    setLocation(
+                      getLoginUrl({
+                        role: "customer",
+                        returnPath: typeof window !== "undefined" ? window.location.pathname + window.location.search : "/book",
+                      })
+                    )
+                  }
+                  className="bg-[#F7931E]"
+                >
                   <LogIn className="w-4 h-4 mr-2" /> Login
                 </Button>
               </CardContent>

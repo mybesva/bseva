@@ -39,7 +39,7 @@ def slot_conflict(db: Session, pujari_id: str, booking_date: date, start: time, 
             SELECT 1 FROM bookings
             WHERE pujari_id = CAST(:pid AS uuid)
               AND booking_date = :d
-              AND status IN ('pending', 'confirmed')
+              AND status IN ('pending', 'pending_acceptance', 'confirmed', 'in_progress')
               AND start_time < :end_t AND end_time > :start_t
             LIMIT 1
             """
@@ -53,8 +53,9 @@ def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, rad
     rows = db.execute(
         text(
             """
-            SELECT u.id, u.name, u.phone, p.approved_level, p.verification_status, p.available,
-                   p.latitude, p.longitude, p.service_radius_km, p.location_label
+            SELECT u.id, u.name, p.approved_level, p.verification_status, p.available,
+                   p.latitude, p.longitude, p.service_radius_km, p.location_label,
+                   p.experience_years, p.languages, p.specializations, p.city
             FROM pujari_profiles p
             JOIN users u ON u.id = p.user_id
             WHERE u.blocked = FALSE AND u.role = 'pujari'
@@ -72,6 +73,10 @@ def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, rad
         if dist <= min(radius_km, float(r["service_radius_km"] or radius_km)):
             item = row_dict(r)
             item["distance_km"] = round(dist, 2)
+            # Strip coords from public response (keep distance only)
+            item.pop("latitude", None)
+            item.pop("longitude", None)
+            item.pop("phone", None)
             out.append(item)
     out.sort(key=lambda x: x["distance_km"])
     return out

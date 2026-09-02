@@ -1,18 +1,59 @@
+import { useEffect, useMemo, useState } from "react";
 import Layout from "@/components/Layout";
 import SectionHeader from "@/components/SectionHeader";
 import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Flower, Home, Sparkles, Heart, Star, Sun, Moon } from "lucide-react";
+import { Flame, Flower, Home, Sparkles, Heart, Star, Sun, Moon, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useLocation } from "wouter";
+import { api } from "@/lib/api";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
+import { toast } from "sonner";
+
+const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
 
 export default function Services() {
   const { t } = useI18n();
+  const [, setLocation] = useLocation();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const card = (href: string, titleKey: string, descKey: string, image: string, icon: React.ReactNode) => (
-    <div onClick={() => (window.location.href = href)} className="cursor-pointer">
-      <ServiceCard title={t(titleKey)} description={t(descKey)} image={image} icon={icon} />
-    </div>
+  useEffect(() => {
+    api<any[]>("/services")
+      .then(setServices)
+      .catch((e) => toast.error(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function openService(slug: string) {
+    const path = `/book/${slug}`;
+    if (authLoading) return;
+    if (!isAuthenticated || user?.role !== "customer") {
+      setLocation(getLoginUrl({ role: "customer", returnPath: path }));
+      return;
+    }
+    setLocation(path);
+  }
+
+  const cards = useMemo(
+    () =>
+      (services || []).map((s, i) => {
+        const Icon = ICONS[i % ICONS.length];
+        return (
+          <div key={s.id} onClick={() => openService(s.slug)} className="cursor-pointer">
+            <ServiceCard
+              title={s.name}
+              description={s.description || `From ₹${((s.standard_price_paise || 0) / 100).toLocaleString("en-IN")}`}
+              image={i % 2 === 0 ? "/images/puja-thali.png" : "/images/temple-ritual.png"}
+              icon={<Icon size={24} />}
+            />
+          </div>
+        );
+      }),
+    [services, isAuthenticated, user, authLoading]
   );
 
   return (
@@ -29,60 +70,28 @@ export default function Services() {
 
       <section className="py-16">
         <div className="container">
-          <Tabs defaultValue="all" className="w-full">
-            <div className="flex justify-center mb-12">
-              <TabsList className="bg-secondary/30 p-1 h-auto flex-wrap justify-center gap-2">
-                <TabsTrigger value="all" className="px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-white">{t("services.all")}</TabsTrigger>
-                <TabsTrigger value="puja" className="px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-white">{t("services.pujas")}</TabsTrigger>
-                <TabsTrigger value="havan" className="px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-white">{t("services.havans")}</TabsTrigger>
-                <TabsTrigger value="ceremony" className="px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-white">{t("services.ceremonies")}</TabsTrigger>
-                <TabsTrigger value="dosha" className="px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-white">{t("services.dosha")}</TabsTrigger>
-              </TabsList>
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
             </div>
-
-            <TabsContent value="all" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {card("/book/satyanarayan-puja", "svc.satyanarayan.title", "svc.satyanarayan.desc", "/images/puja-thali.png", <Flower size={24} />)}
-                {card("/book/griha-pravesh", "svc.grihapravesh.title", "svc.grihapravesh.desc", "/images/hero-bg.png", <Home size={24} />)}
-                {card("/book/ganapati-havan", "svc.ganapati.title", "svc.ganapati.desc", "/images/temple-ritual.png", <Flame size={24} />)}
-                {card("/book/marriage-ceremony", "svc.marriage.title", "svc.marriage.desc", "/images/hero-bg.png", <Heart size={24} />)}
-                {card("/book/navagraha-shanti", "svc.navagraha.title", "svc.navagraha.desc", "/images/meditation.png", <Sun size={24} />)}
-                {card("/book/namkaran", "svc.namkaran.title", "svc.namkaran.desc", "/images/puja-thali.png", <Star size={24} />)}
-                {card("/book/rudra-abhishekam", "svc.rudra.title", "svc.rudra.desc", "/images/temple-ritual.png", <Moon size={24} />)}
-                {card("/book/kaal-sarp-dosh", "svc.kaalsarp.title", "svc.kaalsarp.desc", "/images/meditation.png", <Sparkles size={24} />)}
-                {card("/book/office-opening", "svc.office.title", "svc.office.desc", "/images/hero-bg.png", <Home size={24} />)}
+          ) : (
+            <Tabs defaultValue="all" className="w-full">
+              <div className="flex justify-center mb-12">
+                <TabsList className="bg-secondary/30 p-1 h-auto flex-wrap justify-center gap-2">
+                  <TabsTrigger value="all" className="px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-white">
+                    {t("services.all")}
+                  </TabsTrigger>
+                </TabsList>
               </div>
-            </TabsContent>
-
-            <TabsContent value="puja" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {card("/book/satyanarayan-puja", "svc.satyanarayan.title", "svc.satyanarayan.desc", "/images/puja-thali.png", <Flower size={24} />)}
-                {card("/book/rudra-abhishekam", "svc.rudra.title", "svc.rudra.desc", "/images/temple-ritual.png", <Moon size={24} />)}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="havan" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {card("/book/ganapati-havan", "svc.ganapati.title", "svc.ganapati.desc", "/images/temple-ritual.png", <Flame size={24} />)}
-                {card("/book/navagraha-shanti", "svc.navagraha.title", "svc.navagraha.desc", "/images/meditation.png", <Sun size={24} />)}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="ceremony" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {card("/book/griha-pravesh", "svc.grihapravesh.title", "svc.grihapravesh.desc", "/images/hero-bg.png", <Home size={24} />)}
-                {card("/book/marriage-ceremony", "svc.marriage.title", "svc.marriage.desc", "/images/hero-bg.png", <Heart size={24} />)}
-                {card("/book/namkaran", "svc.namkaran.title", "svc.namkaran.desc", "/images/puja-thali.png", <Star size={24} />)}
-                {card("/book/office-opening", "svc.office.title", "svc.office.desc", "/images/hero-bg.png", <Home size={24} />)}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="dosha" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {card("/book/kaal-sarp-dosh", "svc.kaalsarp.title", "svc.kaalsarp.desc", "/images/meditation.png", <Sparkles size={24} />)}
-              </div>
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="all" className="mt-0">
+                {cards.length === 0 ? (
+                  <p className="text-center text-muted-foreground">No active services yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{cards}</div>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
         </div>
       </section>
 
@@ -92,7 +101,7 @@ export default function Services() {
           <Button
             size="lg"
             className="bg-primary text-white hover:bg-primary/90 px-8 h-12 text-lg font-bold shadow-lg"
-            onClick={() => (window.location.href = "/contact")}
+            onClick={() => setLocation("/contact")}
           >
             {t("services.requestCustom")}
           </Button>

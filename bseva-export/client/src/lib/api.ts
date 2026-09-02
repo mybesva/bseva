@@ -88,12 +88,42 @@ export async function openPujariDocument(docId: string) {
   window.open(URL.createObjectURL(blob), "_blank");
 }
 
+export async function openAdminPujariDocument(pujariId: string, docId: string) {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(
+    `${apiBase()}/api/v1/admin/pujaris/${pujariId}/documents/${docId}/file`,
+    { headers }
+  );
+  if (!res.ok) throw new Error("Could not open document");
+  const blob = await res.blob();
+  window.open(URL.createObjectURL(blob), "_blank");
+}
+
+export async function uploadAdminPujariDocument(pujariId: string, file: File, documentType: string) {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const body = new FormData();
+  body.append("file", file);
+  body.append("document_type", documentType);
+  const res = await fetch(`${apiBase()}/api/v1/admin/pujaris/${pujariId}/documents/upload`, {
+    method: "POST",
+    headers,
+    body,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { detail?: string }).detail || "Upload failed");
+  return data;
+}
+
 export type AuthUser = {
   id: string;
   name: string;
   email: string;
   phone: string;
-  role: "customer" | "pujari" | "admin";
+  role: "customer" | "pujari" | "admin" | "super_admin";
   blocked: boolean;
   preferred_language?: string;
   calendar_preference?: string;
@@ -127,8 +157,8 @@ export function logoutApi() {
 }
 
 export function dashboardPath(role: string) {
-  if (role === "admin") return "/admin";
-  if (role === "pujari" || role === "priest") return "/pujari";
+  if (role === "admin" || role === "super_admin") return "/admin";
+  if (role === "pujari" || role === "priest" || role === "head_pujari") return "/pujari";
   return "/customer";
 }
 

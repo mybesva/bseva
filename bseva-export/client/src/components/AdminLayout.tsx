@@ -1,15 +1,15 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { 
-  LayoutDashboard, 
-  Users, 
-  UserCog, 
-  Church, 
-  Sparkles, 
-  Calendar, 
-  CreditCard, 
-  Star, 
-  Bell, 
+import {
+  LayoutDashboard,
+  Users,
+  UserCog,
+  Church,
+  Sparkles,
+  Calendar,
+  CreditCard,
+  Star,
+  Bell,
   Settings,
   LogOut,
   Menu,
@@ -17,10 +17,11 @@ import {
   Flower2,
   BarChart3,
   FileText,
+  LifeBuoy,
+  IndianRupee,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import RolePortalGate from "@/components/RolePortalGate";
@@ -34,33 +35,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { api } from "@/lib/api";
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
-type UserRole = "admin" | "manager" | "staff";
-
 interface NavItem {
   nameKey: string;
   href: string;
   icon: React.ComponentType<{ size?: number }>;
-  roles: UserRole[];
+  /** Soft RBAC: hide unless user has one of these permissions (super_admin has all). */
+  permissions?: string[];
+  /** Only super_admin when true. */
+  superOnly?: boolean;
 }
 
 const navigation: NavItem[] = [
-  { nameKey: "admin.dashboard", href: "/admin", icon: LayoutDashboard, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.customers", href: "/admin/customers", icon: Users, roles: ["admin", "manager"] },
-  { nameKey: "admin.pujaris", href: "/admin/pujaris", icon: UserCog, roles: ["admin", "manager"] },
-  { nameKey: "admin.temples", href: "/admin/temples", icon: Church, roles: ["admin", "manager"] },
-  { nameKey: "admin.services", href: "/admin/services", icon: Sparkles, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.samagri", href: "/admin/samagri", icon: Flower2, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.bookings", href: "/admin/bookings", icon: Calendar, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.payments", href: "/admin/payments", icon: CreditCard, roles: ["admin", "manager"] },
-  { nameKey: "admin.reviews", href: "/admin/reviews", icon: Star, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.notifications", href: "/admin/notifications", icon: Bell, roles: ["admin", "manager"] },
-  { nameKey: "admin.reports", href: "/admin/reports", icon: BarChart3, roles: ["admin", "manager"] },
-  { nameKey: "admin.settings", href: "/admin/settings", icon: Settings, roles: ["admin"] },
+  { nameKey: "admin.dashboard", href: "/admin", icon: LayoutDashboard },
+  { nameKey: "admin.customers", href: "/admin/customers", icon: Users, permissions: ["view_customers"] },
+  { nameKey: "admin.pujaris", href: "/admin/pujaris", icon: UserCog, permissions: ["view_pujaris", "verify_pujaris", "edit_pujaris"] },
+  { nameKey: "admin.temples", href: "/admin/temples", icon: Church, permissions: ["manage_services"] },
+  { nameKey: "admin.services", href: "/admin/services", icon: Sparkles, permissions: ["manage_services"] },
+  { nameKey: "admin.samagri", href: "/admin/samagri", icon: Flower2, permissions: ["manage_samagri"] },
+  { nameKey: "admin.bookings", href: "/admin/bookings", icon: Calendar, permissions: ["view_bookings", "manage_bookings"] },
+  { nameKey: "admin.settlements", href: "/admin/settlements", icon: CreditCard, permissions: ["manage_settlements", "view_payments"] },
+  { nameKey: "admin.payments", href: "/admin/payments", icon: CreditCard, permissions: ["view_payments", "manage_settlements"] },
+  { nameKey: "admin.pricing", href: "/admin/pricing", icon: IndianRupee, permissions: ["manage_config", "manage_services"] },
+  { nameKey: "admin.permissions", href: "/admin/permissions", icon: UserCog, permissions: ["manage_admins"], superOnly: false },
+  { nameKey: "admin.reviews", href: "/admin/reviews", icon: Star, permissions: ["view_bookings"] },
+  { nameKey: "admin.notifications", href: "/admin/notifications", icon: Bell, permissions: ["manage_config"] },
+  { nameKey: "admin.reports", href: "/admin/reports", icon: BarChart3, permissions: ["view_reports"] },
+  { nameKey: "admin.settings", href: "/admin/settings", icon: Settings, permissions: ["manage_config"], superOnly: false },
 ];
 
 const adminSidebarActionClass =
@@ -71,8 +77,29 @@ function AdminShell({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, loading } = useAuth();
   const { lang, setLang, labels, t } = useI18n();
-  const userRole: UserRole = "admin";
-  const filteredNavigation = navigation.filter((item) => item.roles.includes(userRole));
+  const [permissions, setPermissions] = useState<string[] | null>(null);
+  const isSuper = user?.role === "super_admin";
+
+  useEffect(() => {
+    if (!user || (user.role !== "admin" && user.role !== "super_admin")) return;
+    api<{ role: string; permissions: string[] }>("/admin/me/permissions")
+      .then((r) => setPermissions(r.permissions || []))
+      .catch(() => setPermissions([]));
+  }, [user]);
+
+  const filteredNavigation = useMemo(() => {
+    return navigation.filter((item) => {
+      if (isSuper) return true;
+      if (item.superOnly) return false;
+      // Soft RBAC: until permissions load, show core dashboard only
+      if (permissions == null) return item.href === "/admin";
+      if (!item.permissions?.length) return true;
+      return item.permissions.some((p) => permissions.includes(p));
+    });
+  }, [isSuper, permissions]);
+
+  const showLegal = isSuper || (permissions?.includes("manage_legal") ?? false);
+  const showSupport = isSuper || (permissions?.includes("manage_support") ?? false);
 
   const handleLogout = async () => {
     await logout();
@@ -103,7 +130,7 @@ function AdminShell({ children }: AdminLayoutProps) {
           <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border">
             <Link href="/admin">
               <div className="flex items-center gap-2">
-                <img src="/bseva-logo.png" alt="B-Seva" className="h-8" />
+                <img src="/bseva-mark.png" alt="B-Seva" className="h-8 w-auto" />
                 <span className="font-heading font-bold text-lg text-sidebar-foreground">Admin</span>
               </div>
             </Link>
@@ -134,19 +161,49 @@ function AdminShell({ children }: AdminLayoutProps) {
                   </Link>
                 );
               })}
-              <Link href="/admin/legal">
+              {showSupport && (
+                <Link href="/admin/support">
+                  <a
+                    className={cn(
+                      adminSidebarActionClass,
+                      (location === "/admin/support" || location.startsWith("/admin/support")) &&
+                        "bg-sidebar-accent text-sidebar-accent-foreground"
+                    )}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <LifeBuoy size={18} />
+                    Support
+                  </a>
+                </Link>
+              )}
+              <Link href="/admin/head-ratings">
                 <a
                   className={cn(
                     adminSidebarActionClass,
-                    (location === "/admin/legal" || location.startsWith("/admin/legal")) &&
+                    (location === "/admin/head-ratings" || location.startsWith("/admin/head-ratings")) &&
                       "bg-sidebar-accent text-sidebar-accent-foreground"
                   )}
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <FileText size={18} />
-                  Terms & Conditions
+                  <Star size={18} />
+                  Head assessments
                 </a>
               </Link>
+              {showLegal && (
+                <Link href="/admin/legal">
+                  <a
+                    className={cn(
+                      adminSidebarActionClass,
+                      (location === "/admin/legal" || location.startsWith("/admin/legal")) &&
+                        "bg-sidebar-accent text-sidebar-accent-foreground"
+                    )}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <FileText size={18} />
+                    Terms & Conditions
+                  </a>
+                </Link>
+              )}
               <button
                 type="button"
                 className={adminSidebarActionClass}
@@ -180,7 +237,9 @@ function AdminShell({ children }: AdminLayoutProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || "Admin User"}</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email || "admin@bseva.com"}</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">
+                  {user?.role === "super_admin" ? "Super admin" : user?.email || "admin@bseva.com"}
+                </p>
               </div>
             </div>
           </div>
@@ -196,7 +255,13 @@ function AdminShell({ children }: AdminLayoutProps) {
             <h1 className="text-lg font-semibold text-foreground">
               {navigation.find(
                 (item) => location === item.href || (item.href !== "/admin" && location.startsWith(item.href))
-              )?.name || "Dashboard"}
+              )?.nameKey
+                ? t(
+                    navigation.find(
+                      (item) => location === item.href || (item.href !== "/admin" && location.startsWith(item.href))
+                    )!.nameKey
+                  )
+                : "Dashboard"}
             </h1>
           </div>
         </header>
