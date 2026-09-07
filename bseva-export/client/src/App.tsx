@@ -67,12 +67,15 @@ import CustomerRewardsPage from "./pages/customer/RewardsPage";
 import PublicPujariProfile from "./pages/PublicPujariProfile";
 import AdminPujariDetail from "./pages/admin/PujariDetail";
 import { adminBasePath } from "./const";
+import ScrollToTop from "./components/ScrollToTop";
 
 function Router() {
   const ops = adminBasePath();
 
   return (
-    <Switch>
+    <>
+      <ScrollToTop />
+      <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
@@ -147,6 +150,7 @@ function Router() {
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
+    </>
   );
 }
 

@@ -283,7 +283,9 @@ function AdminShell({ children }: AdminLayoutProps) {
             Logout
           </Button>
         </header>
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-4 lg:p-6" data-scroll-reset>
+          {children}
+        </main>
       </div>
     </div>
   );

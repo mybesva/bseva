@@ -165,7 +165,9 @@ function PortalShell({
             Logout
           </Button>
         </header>
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 lg:p-8" data-scroll-reset>
+          {children}
+        </main>
         <footer className="border-t py-4 text-center text-xs text-muted-foreground">© BSeva. All rights reserved.</footer>
       </div>
     </div>
