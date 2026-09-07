@@ -57,6 +57,15 @@ interface BookingWizardProps {
     standard: number;
     premium: number;
   };
+  /** Optional reimbursable add-on list prices (paise) */
+  addonPrices?: {
+    samagri?: number | null;
+    alankaram?: number | null;
+    food?: number | null;
+    samagriAvailable?: boolean;
+    alankaramAvailable?: boolean;
+    foodAvailable?: boolean;
+  };
 }
 
 type BookingStep = 1 | 2 | 3 | 4;
@@ -67,7 +76,7 @@ type CalendarType = "north" | "south" | "lunar";
 const DEMO_LAT = 12.9352;
 const DEMO_LNG = 77.6245;
 
-export default function BookingWizard({ serviceId, pujaName, basePrices }: BookingWizardProps) {
+export default function BookingWizard({ serviceId, pujaName, basePrices, addonPrices }: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading, user } = useAuth();
@@ -90,6 +99,8 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [includeSamagri, setIncludeSamagri] = useState(false);
+  const [includeAlankaram, setIncludeAlankaram] = useState(false);
   const [wallet, setWallet] = useState<{ balance?: number; wallet?: { balance_paise: number } } | null>(null);
   const [quote, setQuote] = useState<any>(null);
   const [nearby, setNearby] = useState<any[]>([]);
@@ -130,11 +141,21 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
       package_type: tier,
       city: city || "",
       booking_date: format(bookingDate, "yyyy-MM-dd"),
+      include_samagri: includeSamagri ? "true" : "false",
+      include_alankaram: includeAlankaram ? "true" : "false",
+      include_food: "false",
     });
     api(`/quote?${qs}`)
       .then(setQuote)
       .catch(() => setQuote(null));
-  }, [bookingDate, serviceId, tier, city]);
+  }, [bookingDate, serviceId, tier, city, includeSamagri, includeAlankaram]);
+
+  const samagriPrice = Number(addonPrices?.samagri || quote?.samagriListPrice || 0);
+  const alankaramPrice = Number(addonPrices?.alankaram || quote?.alankaramListPrice || 0);
+  const showSamagriOpt =
+    (addonPrices?.samagriAvailable !== false) && samagriPrice > 0;
+  const showAlankaramOpt =
+    (addonPrices?.alankaramAvailable !== false) && alankaramPrice > 0;
 
   useEffect(() => {
     if (currentStep < 2) return;
@@ -228,6 +249,9 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
           longitude: DEMO_LNG,
           special_instructions: specialInstructions || undefined,
           terms_accepted: true,
+          include_samagri: includeSamagri,
+          include_alankaram: includeAlankaram,
+          include_food: false,
           recurring,
           recurring_count: recurring === "none" || recurring === "selected_dates" ? undefined : recurringCount,
           selected_dates:
@@ -658,6 +682,18 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
                   <span>Service ({tierDetails[tier].name})</span>
                   <span>₹{(bill.basePrice / 100).toLocaleString("en-IN")}</span>
                 </div>
+                {Number(bill.samagri || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Samagri (pujari buys · reimbursed)</span>
+                    <span>₹{(bill.samagri / 100).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {Number(bill.alankaram || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Alankaram (pujari buys · reimbursed)</span>
+                    <span>₹{(bill.alankaram / 100).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
                 {bill.peakFee > 0 && (
                   <div className="flex justify-between text-orange-700">
                     <span>{t("booking.peakFee")}</span>
@@ -687,6 +723,83 @@ export default function BookingWizard({ serviceId, pujaName, basePrices }: Booki
       {currentStep === 4 && (
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-[#1E3A5F]">{t("booking.payment")}</h3>
+
+          {(showSamagriOpt || showAlankaramOpt) && (
+            <Card className="border-dashed">
+              <CardContent className="p-5 space-y-4">
+                <div>
+                  <p className="font-medium text-[#1E3A5F]">Optional add-ons</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    If selected, the assigned pujari will buy these items and get reimbursed from your payment.
+                    You can skip both — they are optional.
+                  </p>
+                </div>
+                {showSamagriOpt && (
+                  <label className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/40">
+                    <Checkbox
+                      checked={includeSamagri}
+                      onCheckedChange={(v) => setIncludeSamagri(!!v)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium">Samagri kit</span>
+                        <span className="font-semibold text-[#F7931E] shrink-0">
+                          ₹{(samagriPrice / 100).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Puja materials — pujari purchases and is reimbursed.
+                      </p>
+                    </div>
+                  </label>
+                )}
+                {showAlankaramOpt && (
+                  <label className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/40">
+                    <Checkbox
+                      checked={includeAlankaram}
+                      onCheckedChange={(v) => setIncludeAlankaram(!!v)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium">Alankaram</span>
+                        <span className="font-semibold text-[#F7931E] shrink-0">
+                          ₹{(alankaramPrice / 100).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Decoration / flowers — pujari purchases and is reimbursed.
+                      </p>
+                    </div>
+                  </label>
+                )}
+                {(includeSamagri || includeAlankaram) && (
+                  <div className="text-sm border-t pt-3 space-y-1">
+                    {includeSamagri && (
+                      <div className="flex justify-between">
+                        <span>Samagri</span>
+                        <span>₹{(samagriPrice / 100).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {includeAlankaram && (
+                      <div className="flex justify-between">
+                        <span>Alankaram</span>
+                        <span>₹{(alankaramPrice / 100).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-semibold">
+                      <span>Updated total</span>
+                      <span className="text-[#F7931E]">
+                        ₹{(Number(bill.totalAmount || 0) / 100).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {!isAuthenticated && !authLoading && (
             <Card className="border-orange-200 bg-orange-50">
               <CardContent className="p-6">

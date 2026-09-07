@@ -355,7 +355,7 @@ async function seedDatabase(raw: Client) {
   const pwd = hashPassword("password123");
 
   const usersSeed = [
-    ["admin-1", "Admin User", "admin@bseva.com", "+919876543210", "admin", "Bangalore", "Karnataka", "B-Seva HQ"],
+    ["admin-1", "Admin User", "admin@bseva.com", "+919014654994", "admin", "Bangalore", "Karnataka", "B-Seva HQ"],
     ["cust-1", "Priya Sharma", "customer@bseva.com", "+919800000001", "customer", "Bangalore", "Karnataka", "12 MG Road"],
     ["cust-2", "Rahul Verma", "rahul@example.com", "+919800000002", "customer", "Mumbai", "Maharashtra", "45 Andheri West"],
     ["cust-3", "Ananya Iyer", "ananya@example.com", "+919800000003", "customer", "Chennai", "Tamil Nadu", "8 T Nagar"],

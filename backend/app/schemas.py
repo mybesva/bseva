@@ -104,6 +104,10 @@ class BookingCreateIn(BaseModel):
     recurring_count: Optional[int] = Field(default=None, ge=1, le=52)
     selected_dates: Optional[list[date]] = None
     referral_code: Optional[str] = Field(default=None, max_length=40)
+    # Optional add-ons: pujari buys materials and is reimbursed from customer payment
+    include_samagri: bool = False
+    include_alankaram: bool = False
+    include_food: bool = False
 
 
 class WalletLoadIn(BaseModel):

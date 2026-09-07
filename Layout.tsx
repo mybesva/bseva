@@ -46,7 +46,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube" },
     { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn" },
     { icon: PinterestIcon, href: "https://pinterest.com/bseva", label: "Pinterest" },
-    { icon: WhatsAppIcon, href: "https://wa.me/919876543210", label: "WhatsApp" },
+    { icon: WhatsAppIcon, href: "https://wa.me/919014654994", label: "WhatsApp" },
     { icon: TelegramIcon, href: "https://t.me/bseva", label: "Telegram" },
   ];
 
@@ -56,7 +56,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="bg-sidebar text-sidebar-foreground py-2 text-sm hidden md:block">
         <div className="container flex justify-between items-center">
           <div className="flex gap-6">
-            <span className="flex items-center gap-2"><Phone size={14} /> +91 98765 43210</span>
+            <span className="flex items-center gap-2"><Phone size={14} /> +91 90146 54994</span>
             <span className="flex items-center gap-2"><Mail size={14} /> support@bseva.com</span>
           </div>
           <div className="flex gap-3">
@@ -223,7 +223,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="text-primary shrink-0" size={16} />
-                <span>+91 98765 43210</span>
+                <span>+91 90146 54994</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="text-primary shrink-0" size={16} />
@@ -232,7 +232,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </ul>
             {/* WhatsApp CTA */}
             <a 
-              href="https://wa.me/919876543210" 
+              href="https://wa.me/919014654994" 
               target="_blank" 
               rel="noopener noreferrer"
               className="mt-4 inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"

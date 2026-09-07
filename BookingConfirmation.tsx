@@ -106,7 +106,7 @@ export default function BookingConfirmation() {
               <div className="mt-8 pt-8 border-t text-sm text-gray-600">
                 <p className="mb-2">Need help with your booking?</p>
                 <p className="font-medium text-[#1E3A5F]">
-                  Call us at <a href="tel:+919876543210" className="underline">+91 98765 43210</a> or email{" "}
+                  Call us at <a href="tel:+919014654994" className="underline">+91 90146 54994</a> or email{" "}
                   <a href="mailto:support@bseva.com" className="underline">support@bseva.com</a>
                 </p>
               </div>

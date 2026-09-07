@@ -26,6 +26,9 @@ export type BookingDetail = {
   gst_amount_paise?: number;
   total_paise?: number;
   pujari_payable_paise?: number;
+  samagri_charge_paise?: number;
+  alankaram_charge_paise?: number;
+  food_charge_paise?: number;
   customer_name?: string;
   pujari_name?: string;
   rating_status?: string;
@@ -231,6 +234,22 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           <span className="text-muted-foreground">Base</span>
           <span>{rupees(base)}</span>
         </div>
+        {Number(booking.samagri_charge_paise || 0) > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              Samagri{viewerRole === "pujari" ? " (buy & reimbursed)" : ""}
+            </span>
+            <span>{rupees(Number(booking.samagri_charge_paise))}</span>
+          </div>
+        )}
+        {Number(booking.alankaram_charge_paise || 0) > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              Alankaram{viewerRole === "pujari" ? " (buy & reimbursed)" : ""}
+            </span>
+            <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
+          </div>
+        )}
         {Number(booking.peak_fee_paise || 0) > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Surge / peak</span>

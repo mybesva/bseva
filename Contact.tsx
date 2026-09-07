@@ -59,7 +59,7 @@ export default function Contact() {
                     <div>
                       <h4 className="font-bold text-sidebar mb-1">Phone Support</h4>
                       <p className="text-sm text-muted-foreground">
-                        +91 98765 43210<br />
+                        +91 90146 54994<br />
                         +91 80 1234 5678
                       </p>
                     </div>

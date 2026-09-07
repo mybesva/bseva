@@ -97,7 +97,7 @@ const sentNotifications = [
   {
     id: 3,
     template: "Booking Reminder",
-    recipient: "+91 98765 43210",
+    recipient: "+91 90146 54994",
     type: "sms",
     sentAt: "2024-12-15 06:00 PM",
     status: "delivered",

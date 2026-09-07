@@ -96,13 +96,13 @@ def create_ticket(body: TicketIn, user=Depends(current_user), db: Session = Depe
         "payments", "wallet", "bookings", "booking", "others",
     }
     cats_p = {
-        "Settlement", "Route Map / Location", "Others",
+        "Settlement", "Route Map / Location", "Others", "Bookings",
         "settlement", "route", "others", "bookings", "booking",
     }
     role = user["role"]
     if role == "customer" and body.category not in cats_c:
         raise HTTPException(400, "Invalid category for customer")
-    if role == "pujari" and body.category not in cats_p and body.category not in cats_c:
+    if role in ("pujari", "head_pujari") and body.category not in cats_p and body.category not in cats_c:
         raise HTTPException(400, "Invalid category for pujari")
     num = f"TKT-{datetime.utcnow().strftime('%y%m%d')}-{uuid4().hex[:6].upper()}"
     tid = str(uuid4())
@@ -127,7 +127,7 @@ def create_ticket(body: TicketIn, user=Depends(current_user), db: Session = Depe
               subject, description
             ) VALUES (
               CAST(:id AS uuid), :n, CAST(:u AS uuid), :r, :c,
-              :b::uuid, :setl::uuid, :pay::uuid, :subj, :d
+              CAST(:b AS uuid), CAST(:setl AS uuid), CAST(:pay AS uuid), :subj, :d
             )
             """
         ),

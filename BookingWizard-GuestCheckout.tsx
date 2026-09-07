@@ -173,7 +173,7 @@ const [bookingData, setBookingData] = useState<BookingData>({
             <Input
               id="guestPhone"
               type="tel"
-              placeholder="+91 98765 43210"
+              placeholder="+91 90146 54994"
               value={bookingData.guestPhone}
               onChange={(e) => updateBookingData("guestPhone", e.target.value)}
               required

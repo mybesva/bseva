@@ -160,11 +160,22 @@ function ProfileForm() {
           </div>
           <div>
             <Label>{t("pujari.gotra")}</Label>
-            <Input value={profile.gotra || ""} onChange={(e) => setField("gotra", e.target.value)} />
+            <Input
+              value={profile.gotra || ""}
+              onChange={(e) => setField("gotra", e.target.value)}
+              placeholder="e.g. Bharadwaja"
+            />
           </div>
           <div>
             <Label>{t("pujari.pravara")}</Label>
-            <Input value={profile.pravara || ""} onChange={(e) => setField("pravara", e.target.value)} />
+            <Input
+              value={profile.pravara || ""}
+              onChange={(e) => setField("pravara", e.target.value)}
+              placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Your family Pravara (rishi lineage), usually listed with Gotra.
+            </p>
           </div>
           <div>
             <Label>{t("pujari.dob")} *</Label>

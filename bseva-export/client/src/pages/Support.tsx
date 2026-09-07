@@ -17,10 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
+import { getLoginUrl } from "@/const";
+import { Link } from "wouter";
 import { toast } from "sonner";
 
 const CUSTOMER_CATS = ["Payments", "Wallet", "Bookings", "Others"];
-const PUJARI_CATS = ["Settlement", "Route Map / Location", "Others"];
+const PUJARI_CATS = ["Settlement", "Route Map / Location", "Bookings", "Others"];
 
 function SupportForm({ categories }: { categories: string[] }) {
   const { t } = useI18n();
@@ -90,7 +92,13 @@ function SupportForm({ categories }: { categories: string[] }) {
             </div>
             <div className="space-y-1">
               <Label>Description</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} required minLength={3} rows={4} />
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                minLength={3}
+                rows={4}
+              />
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? "Sending…" : "Submit"}
@@ -107,14 +115,14 @@ function SupportForm({ categories }: { categories: string[] }) {
           {tickets.length === 0 ? (
             <p className="text-sm text-muted-foreground">No tickets yet.</p>
           ) : (
-            tickets.map((t) => (
-              <div key={t.id} className="rounded-md border p-3 text-sm">
+            tickets.map((ticket) => (
+              <div key={ticket.id} className="rounded-md border p-3 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{t.subject}</span>
-                  <Badge variant="secondary">{t.status}</Badge>
+                  <span className="font-medium">{ticket.subject}</span>
+                  <Badge variant="secondary">{ticket.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {t.ticket_number} · {t.category}
+                  {ticket.ticket_number} · {ticket.category}
                 </p>
               </div>
             ))
@@ -145,19 +153,30 @@ export function PujariSupportPage() {
   );
 }
 
+function isPujariRole(role?: string | null) {
+  return role === "pujari" || role === "head_pujari";
+}
+
 /** Public contact-adjacent page for logged-out users (uses Layout). */
 export default function SupportPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container py-10">Loading…</div>
+      </Layout>
+    );
+  }
   if (user?.role === "customer") return <CustomerSupportPage />;
-  if (user?.role === "pujari") return <PujariSupportPage />;
+  if (isPujariRole(user?.role)) return <PujariSupportPage />;
   return (
     <Layout>
       <div className="container py-10 max-w-lg">
         <h1 className="text-2xl font-heading font-bold mb-2">Support</h1>
         <p className="text-muted-foreground mb-4">Please sign in to raise a support ticket.</p>
-        <Button asChild>
-          <a href="/login">Sign in</a>
-        </Button>
+        <Link href={getLoginUrl({ role: "pujari", returnPath: "/pujari/support" })}>
+          <Button>Sign in</Button>
+        </Link>
       </div>
     </Layout>
   );

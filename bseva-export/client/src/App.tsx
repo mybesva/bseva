@@ -59,7 +59,7 @@ import LogoWatermark from "./components/LogoWatermark";
 import AdminSettlements from "./pages/admin/Settlements";
 import AdminPricingRules from "./pages/admin/PricingRules";
 import AdminPermissionsPage from "./pages/admin/AdminPermissions";
-import SupportPage from "./pages/Support";
+import SupportPage, { CustomerSupportPage, PujariSupportPage } from "./pages/Support";
 import HeadRatingsPage from "./pages/HeadRatings";
 import CustomerInvoicesPage from "./pages/customer/InvoicesPage";
 import CustomerRewardsPage from "./pages/customer/RewardsPage";
@@ -84,7 +84,7 @@ function Router() {
       <Route path="/customer/bookings" component={CustomerBookingsPage} />
       <Route path="/customer/history" component={CustomerHistoryPage} />
       <Route path="/customer/change-password" component={CustomerChangePasswordPage} />
-      <Route path="/customer/support" component={SupportPage} />
+      <Route path="/customer/support" component={CustomerSupportPage} />
       <Route path="/customer/invoices" component={CustomerInvoicesPage} />
       <Route path="/customer/rewards" component={CustomerRewardsPage} />
       <Route path="/pujari-profile/:id" component={PublicPujariProfile} />
@@ -100,7 +100,7 @@ function Router() {
       <Route path="/pujari/availability" component={PujariAvailabilityPage} />
       <Route path="/pujari/bank" component={PujariBankPage} />
       <Route path="/pujari/change-password" component={PujariChangePasswordPage} />
-      <Route path="/pujari/support" component={SupportPage} />
+      <Route path="/pujari/support" component={PujariSupportPage} />
       <Route path="/support" component={SupportPage} />
       <Route path="/pujaris" component={PujariDashboard} />
       <Route path="/book/:slug" component={Book} />

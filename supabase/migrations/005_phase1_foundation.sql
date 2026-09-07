@@ -71,7 +71,7 @@ INSERT INTO platform_settings (key, value, description) VALUES
   ('puja_start_otp_before_minutes', '10'::jsonb, 'Minutes before puja to send start OTP'),
   ('pujari_location_tracking_before_minutes', '15'::jsonb, 'Minutes before puja to start location tracking'),
   ('pujari_full_booking_details_before_hours', '24'::jsonb, 'Hours before booking when full details visible to pujari'),
-  ('bseva_whatsapp_number', '"919876543210"'::jsonb, 'Official WhatsApp number E.164 without +'),
+  ('bseva_whatsapp_number', '"919014654994"'::jsonb, 'Official WhatsApp number E.164 without +'),
   ('email_from_accounts', '"accounts@b-seva.com"'::jsonb, 'Accounts from-address'),
   ('email_from_support', '"support@b-seva.com"'::jsonb, 'Support from-address'),
   ('email_from_admin', '"admin@b-seva.com"'::jsonb, 'Admin from-address'),

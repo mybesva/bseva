@@ -196,6 +196,9 @@ def quote(
     package_type: str = "standard",
     city: str | None = None,
     booking_date: str | None = None,
+    include_samagri: bool = False,
+    include_alankaram: bool = False,
+    include_food: bool = False,
     db: Session = Depends(get_db),
 ):
     from app.pricing import compute_quote, parse_booking_date
@@ -214,6 +217,9 @@ def quote(
         package_type=package_type,
         city=city,
         booking_date=parse_booking_date(booking_date),
+        include_samagri=include_samagri,
+        include_alankaram=include_alankaram,
+        include_food=include_food,
     )
 
 
@@ -332,6 +338,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         package_type=body.package_type,
         city=city,
         booking_date=body.booking_date,
+        include_samagri=bool(body.include_samagri),
+        include_alankaram=bool(body.include_alankaram),
+        include_food=bool(body.include_food),
     )
     base = int(bill["basePrice"]) + int(bill["locationAdjustment"])
     platform_fee = int(bill["platformFee"])
@@ -519,7 +528,14 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             skipped: list[str] = []
             for d in dates:
                 child_bill = compute_quote(
-                    db, service=svc, package_type=body.package_type, city=city, booking_date=d
+                    db,
+                    service=svc,
+                    package_type=body.package_type,
+                    city=city,
+                    booking_date=d,
+                    include_samagri=bool(body.include_samagri),
+                    include_alankaram=bool(body.include_alankaram),
+                    include_food=bool(body.include_food),
                 )
                 c_base = int(child_bill["basePrice"])
                 c_peak = int(child_bill["peakFee"])

@@ -110,6 +110,9 @@ def compute_quote(
     booking_date: date | None = None,
     discount_paise: int = 0,
     wallet_credit_paise: int = 0,
+    include_samagri: bool | None = None,
+    include_alankaram: bool | None = None,
+    include_food: bool | None = None,
 ) -> dict:
     # Prefer explicit main_puja component when set; else standard/premium package price.
     main = service.get("main_puja_price_paise")
@@ -139,21 +142,36 @@ def compute_quote(
     alankaram_prov = (service.get("alankaram_provider") or "included").lower()
     food_prov = (service.get("food_provider") or "included").lower()
 
-    # Customer pays when included or reimbursable (BSeva collects then reimburses pujari).
-    # Customer-provided / pujari-provided (non-reimbursable) are not charged to customer here.
-    chargeable_providers = {"included", "reimbursable"}
-    samagri_charge = samagri if samagri_prov in chargeable_providers else 0
-    alankaram_charge = alankaram if alankaram_prov in chargeable_providers else 0
-    food_charge = food if food_prov in chargeable_providers else 0
-    components_total = samagri_charge + alankaram_charge + food_charge
+    # Explicit customer opt-in (booking wizard): charge as reimbursable line items.
+    if include_samagri is not None or include_alankaram is not None or include_food is not None:
+        samagri_charge = samagri if include_samagri else 0
+        alankaram_charge = alankaram if include_alankaram else 0
+        food_charge = food if include_food else 0
+        reimbursement = 0
+        if include_samagri and samagri_charge:
+            reimbursement += samagri_charge
+            samagri_prov = "reimbursable"
+        if include_alankaram and alankaram_charge:
+            reimbursement += alankaram_charge
+            alankaram_prov = "reimbursable"
+        if include_food and food_charge:
+            reimbursement += food_charge
+            food_prov = "reimbursable"
+    else:
+        # Legacy: customer pays when included or reimbursable.
+        chargeable_providers = {"included", "reimbursable"}
+        samagri_charge = samagri if samagri_prov in chargeable_providers else 0
+        alankaram_charge = alankaram if alankaram_prov in chargeable_providers else 0
+        food_charge = food if food_prov in chargeable_providers else 0
+        reimbursement = 0
+        if samagri_prov == "reimbursable":
+            reimbursement += samagri
+        if alankaram_prov == "reimbursable":
+            reimbursement += alankaram
+        if food_prov == "reimbursable":
+            reimbursement += food
 
-    reimbursement = 0
-    if samagri_prov == "reimbursable":
-        reimbursement += samagri
-    if alankaram_prov == "reimbursable":
-        reimbursement += alankaram
-    if food_prov == "reimbursable":
-        reimbursement += food
+    components_total = samagri_charge + alankaram_charge + food_charge
 
     loc_adj = location_adjustment_paise(db, str(service["id"]), city)
     adjusted_base = max(0, base + loc_adj)
@@ -178,11 +196,17 @@ def compute_quote(
         "samagri": samagri_charge,
         "alankaram": alankaram_charge,
         "foodPrasadam": food_charge,
+        "samagriListPrice": samagri,
+        "alankaramListPrice": alankaram,
+        "foodListPrice": food,
         "componentsTotal": components_total,
         "pujariReimbursement": reimbursement,
         "samagriProvider": samagri_prov,
         "alankaramProvider": alankaram_prov,
         "foodProvider": food_prov,
+        "includeSamagri": bool(include_samagri) if include_samagri is not None else None,
+        "includeAlankaram": bool(include_alankaram) if include_alankaram is not None else None,
+        "includeFood": bool(include_food) if include_food is not None else None,
         "locationAdjustment": loc_adj,
         "platformFee": platform_fee,
         "pujariShare": pujari_share,

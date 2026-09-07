@@ -738,7 +738,7 @@ def public_config(db: Session = Depends(get_db)):
 
     return {
         "virtual_puja_enabled": bool(get_setting(db, "virtual_puja_enabled", False)),
-        "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919876543210")),
+        "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919014654994")),
         "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 24)),
         "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 10)),
         "muhurta_consultation_fee_paise": int(get_setting(db, "muhurta_consultation_fee_paise", 30000)),

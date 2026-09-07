@@ -22,7 +22,7 @@ export default function Settings() {
     siteName: "B-Seva",
     tagline: "Traditional Indian Spiritual Services",
     supportEmail: "support@bseva.com",
-    supportPhone: "+91 98765 43210",
+    supportPhone: "+91 90146 54994",
     address: "123 Temple Street, Bangalore, Karnataka 560001",
     timezone: "Asia/Kolkata",
     currency: "INR",

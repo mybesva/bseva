@@ -172,6 +172,18 @@ export default function BookingReceipt() {
                 <span className="text-muted-foreground">Base</span>
                 <span>{rupees(booking.base_price_paise)}</span>
               </div>
+              {Number(booking.samagri_charge_paise || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Samagri (pujari buys · reimbursed)</span>
+                  <span>{rupees(booking.samagri_charge_paise)}</span>
+                </div>
+              )}
+              {Number(booking.alankaram_charge_paise || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Alankaram (pujari buys · reimbursed)</span>
+                  <span>{rupees(booking.alankaram_charge_paise)}</span>
+                </div>
+              )}
               {Number(booking.peak_fee_paise || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Surge / peak</span>

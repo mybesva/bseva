@@ -478,7 +478,7 @@ def _seed_platform_settings(conn) -> None:
         "puja_start_otp_before_minutes": 10,
         "pujari_location_tracking_before_minutes": 15,
         "pujari_full_booking_details_before_hours": 24,
-        "bseva_whatsapp_number": "919876543210",
+        "bseva_whatsapp_number": "919014654994",
         "email_from_accounts": "accounts@b-seva.com",
         "email_from_support": "support@b-seva.com",
         "email_from_admin": "admin@b-seva.com",

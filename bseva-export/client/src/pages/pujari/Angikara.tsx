@@ -58,6 +58,7 @@ export default function AngikaraPage() {
               <Row label={t("pujari.fullName")} value={source.full_name} />
               <Row label={t("pujari.fatherName")} value={source.father_name} />
               <Row label={t("pujari.gotra")} value={source.gotra} />
+              <Row label={t("pujari.pravara")} value={source.pravara} />
               <Row label={t("pujari.dob")} value={source.date_of_birth} />
               <Row label={t("pujari.native")} value={source.native_place} />
               <Row label={t("pujari.permanent")} value={source.permanent_address} />
