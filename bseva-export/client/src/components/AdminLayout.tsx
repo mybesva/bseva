@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { adminBasePath, adminPath } from "@/const";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -273,10 +274,11 @@ function AdminShell({ children }: AdminLayoutProps) {
               })()}
             </h1>
           </div>
+          <ThemeToggle className="shrink-0" />
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0 ml-auto"
+            className="shrink-0"
             onClick={() => void handleLogout()}
           >
             <LogOut size={16} className="mr-1.5" />

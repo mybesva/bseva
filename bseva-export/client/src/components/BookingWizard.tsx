@@ -162,7 +162,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       <Card className="border-dashed border-[#F7931E]/60 bg-orange-50/40">
         <CardContent className="p-5 space-y-4">
           <div>
-            <p className="font-medium text-[#1E3A5F]">
+            <p className="font-medium text-foreground">
               Optional — {[showSamagriOpt && "Samagri", showAlankaramOpt && "Alankaram"].filter(Boolean).join(" & ")}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -171,7 +171,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             </p>
           </div>
           {showSamagriOpt && (
-            <label className="flex items-start gap-3 rounded-md border bg-white p-3 cursor-pointer hover:bg-muted/40">
+            <label className="flex items-start gap-3 rounded-md border bg-card p-3 cursor-pointer hover:bg-muted/40">
               <Checkbox
                 checked={includeSamagri}
                 onCheckedChange={(v) => setIncludeSamagri(!!v)}
@@ -191,7 +191,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             </label>
           )}
           {showAlankaramOpt && (
-            <label className="flex items-start gap-3 rounded-md border bg-white p-3 cursor-pointer hover:bg-muted/40">
+            <label className="flex items-start gap-3 rounded-md border bg-card p-3 cursor-pointer hover:bg-muted/40">
               <Checkbox
                 checked={includeAlankaram}
                 onCheckedChange={(v) => setIncludeAlankaram(!!v)}
@@ -374,7 +374,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
       {currentStep === 1 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-semibold text-[#1E3A5F]">{t("booking.package")}</h3>
+          <h3 className="text-xl font-semibold text-foreground">{t("booking.package")}</h3>
           <RadioGroup value={tier} onValueChange={(v) => setTier(v as Tier)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(Object.keys(tierDetails) as Tier[]).map((key) => (
               <Label
@@ -387,7 +387,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               >
                 <RadioGroupItem value={key} id={key} className="sr-only" />
                 <div className="flex w-full items-start justify-between gap-3 mb-2">
-                  <span className="font-semibold text-[#1E3A5F]">{tierDetails[key].name}</span>
+                  <span className="font-semibold text-foreground">{tierDetails[key].name}</span>
                   <span className="text-lg font-bold text-[#F7931E] shrink-0 whitespace-nowrap">
                     ₹{(basePrices[key] / 100).toLocaleString("en-IN")}
                   </span>
@@ -445,7 +445,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
       {currentStep === 2 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-semibold text-[#1E3A5F]">{t("booking.details")}</h3>
+          <h3 className="text-xl font-semibold text-foreground">{t("booking.details")}</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -489,7 +489,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             {panchang && (
               <Card className="border-orange-200 bg-orange-50">
                 <CardContent className="p-4 text-sm space-y-1">
-                  <p className="font-medium text-[#1E3A5F]">{t("calendar.panchangam")}</p>
+                  <p className="font-medium text-foreground">{t("calendar.panchangam")}</p>
                   <p>
                     <span className="font-medium">Tithi:</span> {panchang.tithi} ({panchang.paksha})
                   </p>
@@ -721,7 +721,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
       {currentStep === 3 && (
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-[#1E3A5F]">{t("booking.review")}</h3>
+          <h3 className="text-xl font-semibold text-foreground">{t("booking.review")}</h3>
           <Card>
             <CardContent className="p-6 space-y-3 text-sm">
               <div className="flex justify-between">
@@ -809,7 +809,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
       {currentStep === 4 && (
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-[#1E3A5F]">{t("booking.payment")}</h3>
+          <h3 className="text-xl font-semibold text-foreground">{t("booking.payment")}</h3>
 
           <AddonOptionsCard />
 

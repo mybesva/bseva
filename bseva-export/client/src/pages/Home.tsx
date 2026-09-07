@@ -60,7 +60,7 @@ export default function Home() {
               {t("home.heroDesc")}
             </p>
 
-            <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-2xl p-2 md:p-3 flex flex-col md:flex-row gap-2 items-center">
+            <div className="max-w-2xl mx-auto bg-card rounded-xl shadow-2xl p-2 md:p-3 flex flex-col md:flex-row gap-2 items-center">
               <div className="flex-1 w-full relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                 <Input
@@ -126,27 +126,27 @@ export default function Home() {
 
         <div className="container relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-white/50 border border-white/60 shadow-sm hover:shadow-md transition-all">
+            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-card/50 border border-border/60 shadow-sm hover:shadow-md transition-all">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <UserCheck size={32} />
               </div>
-              <h3 className="text-h3 text-sidebar mb-3">{t("home.feat1Title")}</h3>
+              <h3 className="text-h3 text-foreground mb-3">{t("home.feat1Title")}</h3>
               <p className="text-muted-foreground">{t("home.feat1Desc")}</p>
             </div>
 
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-white/50 border border-white/60 shadow-sm hover:shadow-md transition-all">
+            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-card/50 border border-border/60 shadow-sm hover:shadow-md transition-all">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <Sparkles size={32} />
               </div>
-              <h3 className="text-h3 text-sidebar mb-3">{t("home.feat2Title")}</h3>
+              <h3 className="text-h3 text-foreground mb-3">{t("home.feat2Title")}</h3>
               <p className="text-muted-foreground">{t("home.feat2Desc")}</p>
             </div>
 
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-white/50 border border-white/60 shadow-sm hover:shadow-md transition-all">
+            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-card/50 border border-border/60 shadow-sm hover:shadow-md transition-all">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <Calendar size={32} />
               </div>
-              <h3 className="text-h3 text-sidebar mb-3">{t("home.feat3Title")}</h3>
+              <h3 className="text-h3 text-foreground mb-3">{t("home.feat3Title")}</h3>
               <p className="text-muted-foreground">{t("home.feat3Desc")}</p>
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function Home() {
               <div className="absolute -top-4 -left-4 w-24 h-24 border-t-4 border-l-4 border-primary rounded-tl-3xl" />
               <div className="absolute -bottom-4 -right-4 w-24 h-24 border-b-4 border-r-4 border-primary rounded-br-3xl" />
               <img src="/images/temple-ritual.png" alt="Priest performing aarti" className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]" />
-              <div className="absolute -bottom-8 -left-8 bg-white p-6 rounded-xl shadow-xl max-w-xs hidden md:block">
+              <div className="absolute -bottom-8 -left-8 bg-card p-6 rounded-xl shadow-xl max-w-xs hidden md:block">
                 <div className="flex items-center gap-4 mb-2">
                   <div className="text-price text-primary">500+</div>
                   <div className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{t("home.verifiedCount")}</div>
@@ -222,7 +222,7 @@ export default function Home() {
 
             <div>
               <span className="text-sm font-bold tracking-[0.2em] uppercase text-primary mb-2 block">{t("home.missionLabel")}</span>
-              <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">{t("home.missionTitle")}</h2>
+              <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">{t("home.missionTitle")}</h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">{t("home.missionP1")}</p>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{t("home.missionP2")}</p>
 
@@ -232,7 +232,7 @@ export default function Home() {
                     <Heart size={20} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sidebar">{t("home.devotional")}</h4>
+                    <h4 className="font-bold text-foreground">{t("home.devotional")}</h4>
                     <p className="text-sm text-muted-foreground">{t("home.devotionalSub")}</p>
                   </div>
                 </div>
@@ -241,7 +241,7 @@ export default function Home() {
                     <Sparkles size={20} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sidebar">{t("home.vedic")}</h4>
+                    <h4 className="font-bold text-foreground">{t("home.vedic")}</h4>
                     <p className="text-sm text-muted-foreground">{t("home.vedicSub")}</p>
                   </div>
                 </div>
@@ -299,8 +299,8 @@ export default function Home() {
             </div>
 
             <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">{t("home.ctaTitle")}</h2>
-              <p className="text-xl text-sidebar/80 mb-10 font-medium">{t("home.ctaDesc")}</p>
+              <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">{t("home.ctaTitle")}</h2>
+              <p className="text-xl text-foreground/80 mb-10 font-medium">{t("home.ctaDesc")}</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
                   size="lg"
@@ -312,7 +312,7 @@ export default function Home() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="bg-transparent border-2 border-sidebar text-sidebar hover:bg-sidebar/10 h-14 px-10 text-lg font-bold"
+                  className="bg-transparent border-2 border-sidebar text-foreground hover:bg-sidebar/10 h-14 px-10 text-lg font-bold"
                   onClick={() => (window.location.href = "/contact")}
                 >
                   {t("home.contactSupport")}

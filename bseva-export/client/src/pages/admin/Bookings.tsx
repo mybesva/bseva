@@ -344,7 +344,7 @@ export default function Bookings() {
                   return (
                     <div className="space-y-5">
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-sidebar">
+                        <p className="text-sm font-medium text-foreground">
                           Default — within {ring} km
                         </p>
                         {nearby.length === 0 ? (
@@ -358,7 +358,7 @@ export default function Bookings() {
 
                       {other.length > 0 && (
                         <div className="space-y-2">
-                          <p className="text-sm font-medium text-sidebar">
+                          <p className="text-sm font-medium text-foreground">
                             Other available pujaris
                             {available.booking_has_coordinates
                               ? ` (beyond ${ring} km or distance unknown)`

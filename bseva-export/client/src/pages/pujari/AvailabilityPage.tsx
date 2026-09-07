@@ -41,9 +41,9 @@ function AvailabilityDayButton(props: React.ComponentProps<typeof CalendarDayBut
       className={cn(
         className,
         "text-sm font-medium transition-colors",
-        isToday && !isBlocked && "ring-1 ring-[#D4AF37]/80 bg-sidebar/[0.06] text-sidebar rounded-md",
+        isToday && !isBlocked && "ring-1 ring-[#D4AF37]/80 bg-sidebar/[0.06] text-foreground rounded-md",
         isBlocked &&
-          "bg-[#F4E4C1]/80 text-sidebar/55 line-through decoration-sidebar/50 decoration-2 rounded-md hover:bg-[#F4E4C1]",
+          "bg-[#F4E4C1]/80 text-foreground/55 line-through decoration-sidebar/50 decoration-2 rounded-md hover:bg-[#F4E4C1]",
         isBlocked && isToday && "ring-1 ring-[#D4AF37]/60"
       )}
       {...rest}
@@ -218,7 +218,7 @@ export default function PujariAvailabilityPage() {
                   <Clock size={20} strokeWidth={2} />
                 </span>
                 <div>
-                  <CardTitle className="text-sidebar text-lg md:text-xl">Booking settings</CardTitle>
+                  <CardTitle className="text-foreground text-lg md:text-xl">Booking settings</CardTitle>
                   <CardDescription className="mt-1 text-sm leading-relaxed">
                     Control whether customers can discover and book you for new pujas.
                   </CardDescription>
@@ -248,7 +248,7 @@ export default function PujariAvailabilityPage() {
                       className="border-[#D4AF37]/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
                     <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-semibold text-sidebar">Available for new bookings</span>
+                      <span className="block text-sm font-semibold text-foreground">Available for new bookings</span>
                       <span className="block text-xs text-muted-foreground mt-0.5">
                         {available ? "Customers can request bookings with you" : "You are hidden from new booking requests"}
                       </span>
@@ -256,7 +256,7 @@ export default function PujariAvailabilityPage() {
                   </label>
 
                   <div className="space-y-2">
-                    <Label htmlFor="service-radius" className="text-sidebar text-sm font-medium flex items-center gap-1.5">
+                    <Label htmlFor="service-radius" className="text-foreground text-sm font-medium flex items-center gap-1.5">
                       <MapPin size={14} className="text-primary shrink-0" />
                       Service radius (km)
                     </Label>
@@ -290,11 +290,11 @@ export default function PujariAvailabilityPage() {
             <div className="h-1 bg-gradient-to-r from-sidebar via-[#D4AF37]/80 to-sidebar/60" />
             <CardHeader className="pb-4 space-y-3">
               <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sidebar/10 text-sidebar">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sidebar/10 text-foreground">
                   <CalendarDays size={20} strokeWidth={2} />
                 </span>
                 <div>
-                  <CardTitle className="text-sidebar text-lg md:text-xl">Block calendar dates</CardTitle>
+                  <CardTitle className="text-foreground text-lg md:text-xl">Block calendar dates</CardTitle>
                   <CardDescription className="mt-1 text-sm leading-relaxed">
                     Tap a date to block it with an optional note. Tap a blocked date again to unblock.
                   </CardDescription>
@@ -302,7 +302,7 @@ export default function PujariAvailabilityPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-0 pb-6 md:pb-8 space-y-5">
-              <div className="rounded-xl border border-[#D4AF37]/25 bg-[#FFF8E7]/80 p-3 sm:p-5">
+              <div className="rounded-xl border border-[#D4AF37]/25 bg-secondary/80 p-3 sm:p-5">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -314,14 +314,14 @@ export default function PujariAvailabilityPage() {
                   classNames={{
                     months: "w-full",
                     month: "w-full gap-4",
-                    month_caption:" font-semibold text-sidebar capitalize text-base mb-1",
+                    month_caption:" font-semibold text-foreground capitalize text-base mb-1",
                     nav: "absolute inset-x-0 top-0 flex justify-between",
                     button_previous:
-                      "h-8 w-8 rounded-md text-sidebar hover:bg-primary/10 hover:text-primary border border-transparent hover:border-[#D4AF37]/30",
+                      "h-8 w-8 rounded-md text-foreground hover:bg-primary/10 hover:text-primary border border-transparent hover:border-[#D4AF37]/30",
                     button_next:
-                      "h-8 w-8 rounded-md text-sidebar hover:bg-primary/10 hover:text-primary border border-transparent hover:border-[#D4AF37]/30",
+                      "h-8 w-8 rounded-md text-foreground hover:bg-primary/10 hover:text-primary border border-transparent hover:border-[#D4AF37]/30",
                     weekdays: "border-b border-border/60 pb-2 mb-1",
-                    weekday: "text-sidebar/65 text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide flex-1",
+                    weekday: "text-foreground/65 text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide flex-1",
                     week: "mt-1",
                     day: "p-0.5",
                     outside: "text-muted-foreground/35",
@@ -331,12 +331,12 @@ export default function PujariAvailabilityPage() {
 
                 <div className="mt-5 pt-4 border-t border-[#D4AF37]/20 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
                   <LegendSwatch label="Available">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-white text-[11px] font-medium text-sidebar">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-[11px] font-medium text-foreground">
                       12
                     </span>
                   </LegendSwatch>
                   <LegendSwatch label="Blocked">
-                    <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-[#F4E4C1]/80 text-[11px] font-medium text-sidebar/55 line-through decoration-sidebar/50">
+                    <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-[#F4E4C1]/80 text-[11px] font-medium text-foreground/55 line-through decoration-sidebar/50">
                       15
                       <Ban className="absolute -top-1 -right-1 size-3 text-primary stroke-[2.5]" aria-hidden />
                     </span>
@@ -347,7 +347,7 @@ export default function PujariAvailabilityPage() {
                     </span>
                   </LegendSwatch>
                   <LegendSwatch label="Today">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-[#D4AF37]/80 bg-sidebar/[0.06] text-[11px] font-medium text-sidebar">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-[#D4AF37]/80 bg-sidebar/[0.06] text-[11px] font-medium text-foreground">
                       26
                     </span>
                   </LegendSwatch>
@@ -356,7 +356,7 @@ export default function PujariAvailabilityPage() {
 
               {upcomingBlocks.length > 0 ? (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-sidebar flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Ban size={14} className="text-primary" />
                     Upcoming blocked dates
                     <span className="text-xs font-normal text-muted-foreground">({upcomingBlocks.length})</span>
@@ -365,10 +365,10 @@ export default function PujariAvailabilityPage() {
                     {upcomingBlocks.map((b) => (
                       <li
                         key={b.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-border/80 bg-white/70 px-4 py-3 text-sm shadow-sm"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-border/80 bg-card/70 px-4 py-3 text-sm shadow-sm"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sidebar">
+                          <p className="font-medium text-foreground">
                             {format(parseISO(b.blocked_date), "EEE, dd MMM yyyy")}
                           </p>
                           <p
@@ -385,7 +385,7 @@ export default function PujariAvailabilityPage() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="h-8 border-[#D4AF37]/40 text-sidebar hover:bg-secondary/40"
+                            className="h-8 border-[#D4AF37]/40 text-foreground hover:bg-secondary/40"
                             disabled={blockBusy}
                             onClick={() => {
                               setSelectedDate(parseISO(b.blocked_date));
@@ -399,7 +399,7 @@ export default function PujariAvailabilityPage() {
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-muted-foreground hover:text-sidebar hover:bg-secondary/30"
+                            className="h-8 text-muted-foreground hover:text-foreground hover:bg-secondary/30"
                             disabled={blockBusy}
                             onClick={() => void quickUnblock(b.id)}
                           >
@@ -436,12 +436,12 @@ export default function PujariAvailabilityPage() {
             }}
           >
             <DialogHeader className="space-y-2">
-              <DialogTitle className="text-sidebar text-xl">
+              <DialogTitle className="text-foreground text-xl">
                 {selectedBlock ? "Blocked date" : "Block this date?"}
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed">
                 {selectedDate ? (
-                  <span className="font-medium text-sidebar">{format(selectedDate,"EEEE, dd MMMM yyyy")}</span>
+                  <span className="font-medium text-foreground">{format(selectedDate,"EEEE, dd MMMM yyyy")}</span>
                 ) : null}
                 {selectedBlock
                   ? " Update the note below or unblock to make this date available again."
@@ -449,7 +449,7 @@ export default function PujariAvailabilityPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 py-3">
-              <Label htmlFor="block-reason" className="text-sidebar text-sm font-medium">
+              <Label htmlFor="block-reason" className="text-foreground text-sm font-medium">
                 Reason <span className="font-normal text-muted-foreground">(optional)</span>
               </Label>
               <Textarea
@@ -471,7 +471,7 @@ export default function PujariAvailabilityPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-sidebar/20 text-sidebar hover:bg-secondary/40"
+                    className="border-sidebar/20 text-foreground hover:bg-secondary/40"
                     disabled={blockBusy}
                     onClick={() => void unblockSelectedDate()}
                   >

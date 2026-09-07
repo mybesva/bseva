@@ -34,7 +34,7 @@ export default function PujariReferralPage() {
           <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Your referral code</p>
-              <p className="font-semibold text-lg tracking-wide text-sidebar">
+              <p className="font-semibold text-lg tracking-wide text-foreground">
                 {code || "—"}
               </p>
             </div>

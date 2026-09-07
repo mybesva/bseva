@@ -115,7 +115,7 @@ export default function ServiceDetail() {
                   ))}
                   {!svc.bookable && <Badge variant="outline">Coming soon</Badge>}
                 </div>
-                <h1 className="text-h1 text-sidebar mb-2">{svc.name}</h1>
+                <h1 className="text-h1 text-foreground mb-2">{svc.name}</h1>
                 {svc.local_name && <p className="text-muted-foreground mb-4">{svc.local_name}</p>}
                 <p className="text-lg text-muted-foreground leading-relaxed">
                   {svc.short_description || svc.description || "Authentic Vedic ritual through BSeva."}
@@ -160,7 +160,7 @@ export default function ServiceDetail() {
               </div>
 
               {prep?.verified && (
-                <div className="rounded-lg border bg-white">
+                <div className="rounded-lg border bg-card">
                   <button
                     type="button"
                     className="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"
@@ -210,9 +210,9 @@ export default function ServiceDetail() {
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-white p-3">
+    <div className="rounded-lg border bg-card p-3">
       <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
-      <div className="font-semibold text-sidebar">{value}</div>
+      <div className="font-semibold text-foreground">{value}</div>
     </div>
   );
 }

@@ -29,6 +29,7 @@ import RolePortalGate from "@/components/RolePortalGate";
 import PujariProfileGate from "@/components/PujariProfileGate";
 import { LegalInlineLink } from "@/components/LegalModal";
 import { useI18n } from "@/i18n/I18nProvider";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number }> };
 
@@ -152,13 +153,14 @@ function PortalShell({
             <Menu size={22} />
           </Button>
           <Link href="/">
-            <a className="font-brand font-bold text-sidebar">BSeva</a>
+            <a className="font-brand font-bold text-foreground">BSeva</a>
           </Link>
           <span className="text-sm text-muted-foreground capitalize ml-1">{role} portal</span>
+          <ThemeToggle className="ml-auto shrink-0" />
           <Button
             variant="outline"
             size="sm"
-            className="ml-auto shrink-0"
+            className="shrink-0"
             onClick={() => void handleLogout()}
           >
             <LogOut size={16} className="mr-1.5" />

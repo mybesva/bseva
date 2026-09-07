@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Phone, Mail, Facebook, Instagram, Twitter, Youtube, Linkedin } from "lucide-react";
+import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -14,6 +14,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePublicConfig, whatsappDisplay, whatsappHref } from "@/hooks/usePublicConfig";
+import ThemeToggle from "@/components/ThemeToggle";
+import { cn } from "@/lib/utils";
+
+/** Official brand colors — not a shared theme tint */
+const SOCIAL_BRAND = {
+  facebook: "#1877F2",
+  twitter: "#1DA1F2",
+  youtube: "#FF0000",
+  linkedin: "#0A66C2",
+  pinterest: "#E60023",
+  whatsapp: "#25D366",
+  telegram: "#26A5E4",
+} as const;
+
+const InstagramIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+    <defs>
+      <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
+        <stop offset="0%" stopColor="#fdf497" />
+        <stop offset="5%" stopColor="#fdf497" />
+        <stop offset="45%" stopColor="#fd5949" />
+        <stop offset="60%" stopColor="#d6249f" />
+        <stop offset="90%" stopColor="#285AEB" />
+      </radialGradient>
+    </defs>
+    <path
+      fill="url(#ig-grad)"
+      d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"
+    />
+  </svg>
+);
 
 const PinterestIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -73,14 +104,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [user, t]);
 
   const socialLinks = [
-    { icon: Facebook, href: "https://facebook.com/bseva", label: "Facebook" },
-    { icon: Instagram, href: "https://instagram.com/bseva", label: "Instagram" },
-    { icon: Twitter, href: "https://twitter.com/bseva", label: "Twitter" },
-    { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube" },
-    { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn" },
-    { icon: PinterestIcon, href: "https://pinterest.com/bseva", label: "Pinterest" },
-    { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp" },
-    { icon: TelegramIcon, href: "https://t.me/bseva", label: "Telegram" },
+    { icon: Facebook, href: "https://facebook.com/bseva", label: "Facebook", color: SOCIAL_BRAND.facebook },
+    { icon: InstagramIcon, href: "https://instagram.com/bseva", label: "Instagram", color: null },
+    { icon: Twitter, href: "https://twitter.com/bseva", label: "Twitter", color: SOCIAL_BRAND.twitter },
+    { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube", color: SOCIAL_BRAND.youtube },
+    { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn", color: SOCIAL_BRAND.linkedin },
+    { icon: PinterestIcon, href: "https://pinterest.com/bseva", label: "Pinterest", color: SOCIAL_BRAND.pinterest },
+    { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp", color: SOCIAL_BRAND.whatsapp },
+    { icon: TelegramIcon, href: "https://t.me/bseva", label: "Telegram", color: SOCIAL_BRAND.telegram },
   ];
 
   const LanguageSelect = ({ className }: { className?: string }) => (
@@ -107,6 +138,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="flex items-center gap-2"><Mail size={14} /> {supportEmail}</span>
           </div>
           <div className="flex gap-3 items-center">
+            <ThemeToggle className="h-7 w-7 text-sidebar-foreground hover:text-primary hover:bg-sidebar-accent/50" />
             <LanguageSelect className="w-[110px] h-7 text-xs bg-sidebar border-sidebar-border text-sidebar-foreground" />
             {socialLinks.map((social) => (
               <a
@@ -114,7 +146,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 href={social.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-primary transition-colors"
+                className={cn("transition-opacity hover:opacity-80", social.color && "hover:brightness-110")}
+                style={social.color ? { color: social.color } : undefined}
                 title={social.label}
               >
                 <social.icon size={16} />
@@ -144,6 +177,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </a>
               </Link>
             ))}
+            <ThemeToggle />
             <LanguageSelect />
             {!user && (
               <Link href="/services">
@@ -168,6 +202,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild className="lg:hidden">
               <Button variant="ghost" size="icon">
@@ -179,7 +214,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Link href="/">
                   <a className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
                     <img src="/bseva-logo.png" alt="B-Seva Logo" className="h-10 w-auto" />
-                    <span className="font-brand font-bold text-xl text-sidebar">B-SEVA</span>
+                    <span className="font-brand font-bold text-xl text-foreground">B-SEVA</span>
                   </a>
                 </Link>
                 <LanguageSelect className="w-full" />

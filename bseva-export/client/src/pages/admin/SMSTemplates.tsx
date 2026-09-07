@@ -224,7 +224,7 @@ export default function SMSTemplates() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-h1 text-[#1E3A5F]">SMS Templates</h1>
+          <h1 className="text-h1 text-foreground">SMS Templates</h1>
           <p className="text-gray-600 mt-1">Manage automated SMS templates for notifications</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="bg-[#F7931E] hover:bg-[#e8850d]">

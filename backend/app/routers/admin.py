@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+import time
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import text
@@ -612,16 +613,24 @@ async def upload_service_image(
     if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
         raise HTTPException(400, "Use jpg, png, webp, or gif")
     rel = f"services/{service_id}/cover{ext}"
-    # Drop previous storage object if it was an uploaded path
+    # Drop previous storage objects for this service (any extension)
     prev = (row.get("image_path") or "").strip()
-    if prev.startswith("services/") and prev != rel:
+    if prev.startswith("services/"):
         try:
             delete_object(prev)
         except Exception:
             pass
+    # Also try common cover extensions left from prior uploads
+    for old_ext in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        old = f"services/{service_id}/cover{old_ext}"
+        if old != rel and old != prev:
+            try:
+                delete_object(old)
+            except Exception:
+                pass
     upload_bytes(rel, data, content_type_for(name))
-    # Public catalog URL served by GET /api/v1/services/{slug}/image
-    public_url = f"/api/v1/services/{row['slug']}/image"
+    # Bust browser cache after replace
+    public_url = f"/api/v1/services/{row['slug']}/image?v={int(time.time())}"
     db.execute(
         text(
             """
@@ -630,10 +639,15 @@ async def upload_service_image(
             WHERE id = CAST(:id AS uuid)
             """
         ),
-        {"p": rel, "u": public_url, "id": service_id},
+        {"p": rel, "u": f"/api/v1/services/{row['slug']}/image", "id": service_id},
     )
     db.commit()
-    return {"ok": True, "image_path": rel, "image_url": public_url}
+    return {
+        "ok": True,
+        "image_path": rel,
+        "image_url": f"/api/v1/services/{row['slug']}/image",
+        "preview_url": public_url,
+    }
 
 
 @router.delete("/services/{service_id}/image")

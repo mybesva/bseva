@@ -231,12 +231,12 @@ export default function AdminLegalPage() {
                   <span
                     className={cn(
                       "flex h-12 w-12 items-center justify-center rounded-full",
-                      active ? "bg-primary text-white" : "bg-secondary text-sidebar"
+                      active ? "bg-primary text-white" : "bg-secondary text-foreground"
                     )}
                   >
                     <Icon size={20} />
                   </span>
-                  <span className={cn("text-sm font-medium leading-snug", active ?"text-sidebar" :"text-muted-foreground")}>
+                  <span className={cn("text-sm font-medium leading-snug", active ?"text-foreground" :"text-muted-foreground")}>
                     {policy.title}
                   </span>
                 </button>

@@ -403,14 +403,14 @@ export default function Settings() {
                           <span className="text-xs font-semibold uppercase tracking-wide text-primary">
                             Level {role.level}
                           </span>
-                          <h3 className="text-base font-semibold text-sidebar">{role.title}</h3>
+                          <h3 className="text-base font-semibold text-foreground">{role.title}</h3>
                         </div>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                           {role.summary || "No description"}
                         </p>
                         {examples.length > 0 && (
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            <span className="font-medium text-sidebar">Examples: </span>
+                            <span className="font-medium text-foreground">Examples: </span>
                             {examples.join(", ")}
                           </p>
                         )}

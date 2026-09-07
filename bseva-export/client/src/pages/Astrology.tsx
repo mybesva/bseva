@@ -61,7 +61,7 @@ export default function AstrologyPage() {
           {services.map((s) => (
             <Card key={s.id} className="hover:shadow-md transition-shadow border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-sidebar flex items-center gap-2">
+                <CardTitle className="text-lg text-foreground flex items-center gap-2">
                   <Sparkles className="text-primary" size={18} />
                   {s.name}
                 </CardTitle>
@@ -69,7 +69,7 @@ export default function AstrologyPage() {
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground line-clamp-3">{s.description}</p>
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-sidebar">
+                  <span className="font-medium text-foreground">
                     From {rupees(s.standard_price_paise || 0)}
                   </span>
                   {s.duration_minutes ? (

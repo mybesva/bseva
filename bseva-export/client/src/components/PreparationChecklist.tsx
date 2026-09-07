@@ -100,7 +100,7 @@ export default function PreparationChecklist({
 
       {sections.map((sec) => (
         <div key={sec.key} className="space-y-2">
-          <h4 className="text-sm font-semibold text-sidebar">{sec.title}</h4>
+          <h4 className="text-sm font-semibold text-foreground">{sec.title}</h4>
           <ul className="space-y-2">
             {sec.items.map((it, i) => {
               const key = `${sec.key}-${i}-${it.name || itemLabel(it)}`;

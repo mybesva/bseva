@@ -101,49 +101,49 @@
 }
 
 .dark {
-  /* Inverted palette for dark mode if needed, though design is primarily light/cream based */
+  /* BSeva dark — navy base, saffron/gold accents, readable cream text */
   --primary: #FF9933;
-  --primary-foreground: #1A2B4A;
-  
+  --primary-foreground: #0F1A2E;
+
   --sidebar-primary: #FF9933;
-  --sidebar-primary-foreground: #1A2B4A;
-  
-  --background: #1A2B4A;
-  --foreground: #FFF8E7;
-  
-  --card: #2E4A6F;
-  --card-foreground: #FFF8E7;
-  
-  --popover: #2E4A6F;
-  --popover-foreground: #FFF8E7;
-  
-  --secondary: #2E4A6F;
-  --secondary-foreground: #FFF8E7;
-  
-  --muted: #2E4A6F;
-  --muted-foreground: #D4AF37;
-  
+  --sidebar-primary-foreground: #0F1A2E;
+
+  --background: #0F1A2E;
+  --foreground: #F7F1E4;
+
+  --card: #1A2B4A;
+  --card-foreground: #F7F1E4;
+
+  --popover: #1A2B4A;
+  --popover-foreground: #F7F1E4;
+
+  --secondary: #243552;
+  --secondary-foreground: #F7F1E4;
+
+  --muted: #243552;
+  --muted-foreground: #C9BFA8;
+
   --accent: #D4AF37;
-  --accent-foreground: #1A2B4A;
-  
+  --accent-foreground: #0F1A2E;
+
   --destructive: #E74C3C;
   --destructive-foreground: #FFFFFF;
-  
-  --border: #2E4A6F;
-  --input: #2E4A6F;
+
+  --border: #3A4F6E;
+  --input: #243552;
   --ring: #FF9933;
-  
+
   --chart-1: #FF9933;
   --chart-2: #D4AF37;
   --chart-3: #C65D3B;
   --chart-4: #4CAF50;
   --chart-5: #E74C3C;
-  
-  --sidebar: #0F1A2E;
-  --sidebar-foreground: #FFF8E7;
+
+  --sidebar: #0A1220;
+  --sidebar-foreground: #F7F1E4;
   --sidebar-accent: #1A2B4A;
   --sidebar-accent-foreground: #FF9933;
-  --sidebar-border: #2E4A6F;
+  --sidebar-border: #3A4F6E;
   --sidebar-ring: #FF9933;
 }
 
@@ -292,11 +292,15 @@
   
   /* Custom utility for glassmorphism */
   .glass {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+    @apply bg-card/80 backdrop-blur-md border border-border/40 shadow-lg;
   }
   
   .glass-dark {
     @apply bg-black/30 backdrop-blur-md border border-white/10 shadow-lg;
+  }
+
+  .dark .glass {
+    @apply bg-card/90 border-border/60;
   }
   
   /* Text gradients */

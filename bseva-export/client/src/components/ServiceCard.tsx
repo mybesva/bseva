@@ -11,7 +11,7 @@ interface ServiceCardProps {
 
 export default function ServiceCard({ title, description, image, icon }: ServiceCardProps) {
   return (
-    <Card className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 bg-white h-full flex flex-col">
+    <Card className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 bg-card h-full flex flex-col">
       <div className="relative h-48 overflow-hidden">
         <div className="absolute inset-0 bg-sidebar/20 group-hover:bg-sidebar/0 transition-colors z-10" />
         <img 
@@ -20,14 +20,14 @@ export default function ServiceCard({ title, description, image, icon }: Service
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
         />
         {icon && (
-          <div className="absolute -bottom-6 right-6 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-primary z-20 group-hover:scale-110 transition-transform">
+          <div className="absolute -bottom-6 right-6 w-12 h-12 bg-card rounded-full shadow-lg flex items-center justify-center text-primary z-20 group-hover:scale-110 transition-transform">
             {icon}
           </div>
         )}
       </div>
       
       <CardHeader className="pt-10 pb-2">
-        <h3 className="text-h3 text-sidebar group-hover:text-primary transition-colors">
+        <h3 className="text-h3 text-foreground group-hover:text-primary transition-colors">
           {title}
         </h3>
       </CardHeader>

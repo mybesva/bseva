@@ -96,7 +96,7 @@ export default function MuhurtaConsultationBook({
         <div className="flex items-start gap-3 min-w-0">
           <Sparkles className="text-primary mt-0.5 shrink-0" size={20} />
           <div className="min-w-0">
-            <p className="font-semibold text-sidebar">
+            <p className="font-semibold text-foreground">
               {requiresMuhurta
                 ? "This puja needs an auspicious time (muhurta)"
                 : "Book a muhurta consultation"}
@@ -117,8 +117,8 @@ export default function MuhurtaConsultationBook({
         )}
       </div>
 
-      <div className="rounded-md border border-primary/20 bg-white/80 px-3 py-2.5 text-sm space-y-1">
-        <p className="font-medium text-sidebar">B-Seva benefit</p>
+      <div className="rounded-md border border-primary/20 bg-card/80 px-3 py-2.5 text-sm space-y-1">
+        <p className="font-medium text-foreground">B-Seva benefit</p>
         <p className="text-muted-foreground">
           If you set your muhurtham through B-Seva, you get a discount when you book marriage /
           wedding services with us. Your consultation fee stays as a paid receipt on your account.
@@ -126,9 +126,9 @@ export default function MuhurtaConsultationBook({
       </div>
 
       {open && !receipt && (
-        <div className="rounded-md border bg-white p-4 space-y-4">
+        <div className="rounded-md border bg-card p-4 space-y-4">
           <div>
-            <p className="font-semibold text-[#1E3A5F]">Muhurta consultation booking</p>
+            <p className="font-semibold text-foreground">Muhurta consultation booking</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Service: {serviceName} · Select your appointment date and time
             </p>
@@ -228,8 +228,8 @@ export default function MuhurtaConsultationBook({
       )}
 
       {receipt && (
-        <div className="rounded-md border bg-white px-4 py-3 text-sm space-y-2">
-          <p className="font-semibold text-[#1E3A5F]">Consultation receipt</p>
+        <div className="rounded-md border bg-card px-4 py-3 text-sm space-y-2">
+          <p className="font-semibold text-foreground">Consultation receipt</p>
           <div className="space-y-1">
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">Reference</span>

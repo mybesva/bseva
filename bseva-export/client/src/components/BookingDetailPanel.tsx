@@ -237,7 +237,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       )}
 
       <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1.5 text-sm">
-        <div className="font-medium text-sidebar mb-1">Pricing</div>
+        <div className="font-medium text-foreground mb-1">Pricing</div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Base</span>
           <span>{rupees(base)}</span>

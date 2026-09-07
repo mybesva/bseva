@@ -131,7 +131,7 @@ export default function Reports() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-h1 text-[#1E3A5F]">Analytics & Reports</h1>
+            <h1 className="text-h1 text-foreground">Analytics & Reports</h1>
             <p className="text-gray-600 mt-1">Comprehensive business intelligence dashboard</p>
           </div>
           <div className="flex items-center gap-3">
@@ -164,7 +164,7 @@ export default function Reports() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Total Revenue</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {paymentLoading ? "..." : formatCurrency(paymentAnalytics.gmv)}
                   </p>
                   <div className="flex items-center mt-1 text-green-600 text-sm">
@@ -184,7 +184,7 @@ export default function Reports() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Total Bookings</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {bookingLoading ? "..." : bookingAnalytics.monthly.total}
                   </p>
                   <div className="flex items-center mt-1 text-green-600 text-sm">
@@ -204,7 +204,7 @@ export default function Reports() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Active Pujaris</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {pujariLoading ? "..." : pujariAnalytics.length}
                   </p>
                   <div className="flex items-center mt-1 text-green-600 text-sm">
@@ -224,7 +224,7 @@ export default function Reports() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Customer Satisfaction</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {customerLoading ? "..." : `${customerAnalytics.repeatRate}%`}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">Repeat rate</p>
@@ -325,7 +325,7 @@ export default function Reports() {
                           </div>
                           <div className="w-full bg-gray-100 rounded-full h-2">
                             <div 
-                              className="h-full bg-[#1E3A5F] rounded-full"
+                              className="h-full bg-sidebar rounded-full"
                               style={{ width: `${method.percentage}%` }}
                             />
                           </div>
@@ -428,7 +428,7 @@ export default function Reports() {
               <Card>
                 <CardContent className="p-6">
                   <p className="text-sm text-gray-500">Total Customers</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {customerLoading ? "..." : customerAnalytics.totalCustomers}
                   </p>
                 </CardContent>
@@ -436,7 +436,7 @@ export default function Reports() {
               <Card>
                 <CardContent className="p-6">
                   <p className="text-sm text-gray-500">New Registrations</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {customerLoading ? "..." : customerAnalytics.newRegistrations}
                   </p>
                 </CardContent>
@@ -444,7 +444,7 @@ export default function Reports() {
               <Card>
                 <CardContent className="p-6">
                   <p className="text-sm text-gray-500">Total Bookings</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {customerLoading ? "..." : customerAnalytics.totalBookings}
                   </p>
                 </CardContent>
@@ -452,7 +452,7 @@ export default function Reports() {
               <Card>
                 <CardContent className="p-6">
                   <p className="text-sm text-gray-500">Repeat Rate</p>
-                  <p className="text-2xl font-bold text-[#1E3A5F]">
+                  <p className="text-2xl font-bold text-foreground">
                     {customerLoading ? "..." : `${customerAnalytics.repeatRate}%`}
                   </p>
                 </CardContent>
@@ -597,7 +597,7 @@ export default function Reports() {
               <Card>
                 <CardContent className="p-6">
                   <p className="text-sm text-gray-500">GMV</p>
-                  <p className="text-xl font-bold text-[#1E3A5F]">
+                  <p className="text-xl font-bold text-foreground">
                     {paymentLoading ? "..." : formatCurrency(paymentAnalytics.gmv)}
                   </p>
                 </CardContent>
@@ -613,7 +613,7 @@ export default function Reports() {
               <Card>
                 <CardContent className="p-6">
                   <p className="text-sm text-gray-500">Priest Payouts</p>
-                  <p className="text-xl font-bold text-[#1E3A5F]">
+                  <p className="text-xl font-bold text-foreground">
                     {paymentLoading ? "..." : formatCurrency(paymentAnalytics.priestPayouts)}
                   </p>
                 </CardContent>
@@ -657,7 +657,7 @@ export default function Reports() {
                         </div>
                         <div className="w-full bg-gray-100 rounded-full h-3">
                           <div 
-                            className="h-full bg-gradient-to-r from-[#1E3A5F] to-[#F7931E] rounded-full"
+                            className="h-full bg-gradient-to-r from-sidebar to-[#F7931E] rounded-full"
                             style={{ width: `${method.percentage}%` }}
                           />
                         </div>

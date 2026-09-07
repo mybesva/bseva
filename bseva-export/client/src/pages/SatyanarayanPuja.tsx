@@ -56,10 +56,10 @@ export default function SatyanarayanPuja() {
               This puja is performed to ensure abundance in one's life. Many people carry out this puja immediately after or on an auspicious occasion like a marriage or moving into a new house. It can also be performed on any day for any reason.
             </p>
             
-            <h3 className="font-bold text-xl text-sidebar mb-4">Ideal Occasions</h3>
+            <h3 className="font-bold text-xl text-foreground mb-4">Ideal Occasions</h3>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {["Griha Pravesh (House Warming)", "Before Marriage Ceremonies", "Namkaran (Naming Ceremony)", "Starting New Business", "Full Moon Days (Purnima)", "Ekadashi Tithi"].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-sidebar/80">
+                <li key={i} className="flex items-center gap-3 text-foreground/80">
                   <div className="w-2 h-2 rounded-full bg-primary" />
                   {item}
                 </li>
@@ -103,7 +103,7 @@ export default function SatyanarayanPuja() {
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold mb-3">
                     {i + 1}
                   </div>
-                  <h3 className="font-bold text-lg text-sidebar">{ritual.title}</h3>
+                  <h3 className="font-bold text-lg text-foreground">{ritual.title}</h3>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{ritual.desc}</p>
@@ -127,7 +127,7 @@ export default function SatyanarayanPuja() {
             {/* Essential Package */}
             <Card className="border border-border shadow-sm hover:shadow-lg transition-all relative">
               <CardHeader className="text-center pb-2">
-                <h3 className="font-bold text-2xl text-sidebar">Essential</h3>
+                <h3 className="font-bold text-2xl text-foreground">Essential</h3>
                 <div className="text-price text-primary mt-4">₹2,100</div>
                 <p className="text-sm text-muted-foreground mt-2">For small family gatherings</p>
               </CardHeader>
@@ -142,7 +142,7 @@ export default function SatyanarayanPuja() {
                     "Aarti & Prasad",
                     "No Havan"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-sidebar/80">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
@@ -160,12 +160,12 @@ export default function SatyanarayanPuja() {
             </Card>
             
             {/* Standard Package */}
-            <Card className="border-2 border-primary shadow-xl relative transform md:-translate-y-4 bg-white">
+            <Card className="border-2 border-primary shadow-xl relative transform md:-translate-y-4 bg-card">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
                 Recommended
               </div>
               <CardHeader className="text-center pb-2 pt-8">
-                <h3 className="font-bold text-2xl text-sidebar">Standard</h3>
+                <h3 className="font-bold text-2xl text-foreground">Standard</h3>
                 <div className="text-price text-primary mt-4">₹5,100</div>
                 <p className="text-sm text-muted-foreground mt-2">Complete ritual experience</p>
               </CardHeader>
@@ -181,7 +181,7 @@ export default function SatyanarayanPuja() {
                     "Flower Decoration (Basic)",
                     "Prasad Preparation Assistance"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-sidebar/80 font-medium">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80 font-medium">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
@@ -201,7 +201,7 @@ export default function SatyanarayanPuja() {
             {/* Premium Package */}
             <Card className="border border-border shadow-sm hover:shadow-lg transition-all relative">
               <CardHeader className="text-center pb-2">
-                <h3 className="font-bold text-2xl text-sidebar">Premium</h3>
+                <h3 className="font-bold text-2xl text-foreground">Premium</h3>
                 <div className="text-price text-primary mt-4">₹11,000</div>
                 <p className="text-sm text-muted-foreground mt-2">Grand celebration scale</p>
               </CardHeader>
@@ -217,7 +217,7 @@ export default function SatyanarayanPuja() {
                     "Professional Photography (Digital)",
                     "Customized Prasad Boxes (25 pcs)"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-sidebar/80">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
@@ -245,7 +245,7 @@ export default function SatyanarayanPuja() {
             description="We provide high-quality samagri in our Standard and Premium packages. Here is the checklist if you wish to arrange it yourself."
           />
           
-          <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
+          <div className="bg-card rounded-xl shadow-sm p-6 md:p-8">
             <div className="flex justify-end mb-6">
               <Button variant="outline" size="sm" className="gap-2 text-primary border-primary hover:bg-primary/5">
                 <Download size={16} /> Download PDF Checklist
@@ -254,7 +254,7 @@ export default function SatyanarayanPuja() {
             
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1">
-                <AccordionTrigger className="font-bold text-lg text-sidebar">Essential Items (Must Have)</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-foreground">Essential Items (Must Have)</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Turmeric Powder (Haldi)", "Kumkum", "Sandalwood Paste (Chandan)", "Incense Sticks (Agarbatti)", "Camphor (Kapur)", "Betel Leaves & Nuts", "Coconuts (3 pcs)", "Rice (2 kg)", "Flowers & Garlands", "Fruits (5 types)", "Milk, Curd, Ghee, Honey, Sugar (Panchamrit)"].map((item, i) => (
@@ -266,7 +266,7 @@ export default function SatyanarayanPuja() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-2">
-                <AccordionTrigger className="font-bold text-lg text-sidebar">Havan Samagri</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-foreground">Havan Samagri</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Havan Kund (Copper/Clay)", "Wood for Havan (Samidha)", "Ghee (500g)", "Havan Samagri Mix", "Black Sesame Seeds", "Dry Coconut (Kopra)", "Navagraha Samidha sticks"].map((item, i) => (
@@ -278,7 +278,7 @@ export default function SatyanarayanPuja() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-3">
-                <AccordionTrigger className="font-bold text-lg text-sidebar">Household Items to Keep Ready</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-foreground">Household Items to Keep Ready</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Low wooden stools (Chowki/Peeta)", "Clean cloth pieces (Red & White)", "Steel/Copper plates & bowls", "Spoons & Tumblers", "Oil Lamps (Diya)", "Matchbox", "Paper Napkins", "Scissors"].map((item, i) => (
@@ -297,7 +297,7 @@ export default function SatyanarayanPuja() {
       {/* CTA */}
       <section className="py-20">
         <div className="container text-center">
-          <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">
+          <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">
             Have specific requirements?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">

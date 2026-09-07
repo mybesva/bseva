@@ -27,7 +27,7 @@ import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
-import { FolderTree, Pencil, Plus } from "lucide-react";
+import { FolderTree, ImageIcon, Pencil, Plus } from "lucide-react";
 import { serviceImageUrl } from "@/lib/serviceImage";
 
 const PROVIDERS = [
@@ -129,6 +129,7 @@ export default function ServicesAdmin() {
   const [linkCategory, setLinkCategory] = useState("PUJA_SAMAGRI");
   const [linkProvidedBy, setLinkProvidedBy] = useState("CUSTOMER");
   const [imageUploading, setImageUploading] = useState(false);
+  const [imagePreviewKey, setImagePreviewKey] = useState(0);
   const [linkOptional, setLinkOptional] = useState(false);
 
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -171,6 +172,7 @@ export default function ServicesAdmin() {
 
   function openAdd() {
     setEditId(null);
+    setImagePreviewKey(0);
     setForm({ ...emptyForm, virtual_available: virtualFlagOn });
     setLinked([]);
     setOpen(true);
@@ -178,6 +180,7 @@ export default function ServicesAdmin() {
 
   function openEdit(s: any) {
     setEditId(s.id);
+    setImagePreviewKey(Date.now());
     const categorySlugs =
       Array.isArray(s.categories) && s.categories.length
         ? s.categories.map((c: { slug: string }) => c.slug)
@@ -536,6 +539,163 @@ export default function ServicesAdmin() {
                 onChange={(e) => setForm({ ...form, slug: e.target.value })}
               />
             </div>
+
+            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-base">Service image</Label>
+                {(form.image_url || form.image_path) ? (
+                  <Badge variant="secondary" className="text-xs">Assigned</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">Using placeholder</Badge>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <div className="w-full sm:w-56 shrink-0 space-y-2">
+                  <p className="text-xs text-muted-foreground">Current image</p>
+                  <div className="w-full aspect-[4/3] rounded-md overflow-hidden bg-muted border">
+                    <img
+                      key={imagePreviewKey}
+                      src={serviceImageUrl(form, { cacheBust: imagePreviewKey || undefined })}
+                      alt={form.name ? `${form.name} cover` : "Service cover preview"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 space-y-3 w-full">
+                  <p className="text-sm text-muted-foreground">
+                    Upload a new file to replace the catalog image for this puja. JPG, PNG, WebP, or GIF up to 8MB.
+                  </p>
+                  {editId ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        disabled={imageUploading}
+                        onClick={() => document.getElementById("service-image-file")?.click()}
+                      >
+                        {imageUploading
+                          ? "Uploading…"
+                          : form.image_url || form.image_path
+                            ? "Replace image"
+                            : "Upload image"}
+                      </Button>
+                      <input
+                        id="service-image-file"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (!file || !editId) return;
+                          setImageUploading(true);
+                          try {
+                            const headers = new Headers();
+                            const token = getToken();
+                            if (token) headers.set("Authorization", `Bearer ${token}`);
+                            const body = new FormData();
+                            body.append("file", file);
+                            const res = await fetch(
+                              `${apiBase()}/api/v1/admin/services/${editId}/image`,
+                              { method: "POST", headers, body }
+                            );
+                            const data = (await res.json().catch(() => ({}))) as {
+                              detail?: string;
+                              image_path?: string;
+                              image_url?: string;
+                              preview_url?: string;
+                            };
+                            if (!res.ok) throw new Error(data.detail || "Upload failed");
+                            setForm((f) => ({
+                              ...f,
+                              image_path: data.image_path || f.image_path,
+                              image_url: data.image_url || f.image_url,
+                            }));
+                            setImagePreviewKey(Date.now());
+                            toast.success("Image replaced");
+                            await load();
+                          } catch (err: any) {
+                            toast.error(err.message || "Upload failed");
+                          } finally {
+                            setImageUploading(false);
+                          }
+                        }}
+                      />
+                      {(form.image_url || form.image_path) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={imageUploading}
+                          onClick={async () => {
+                            if (!editId) return;
+                            if (!confirm("Remove this service image? The catalog will use the default placeholder.")) {
+                              return;
+                            }
+                            setImageUploading(true);
+                            try {
+                              await api(`/admin/services/${editId}/image`, { method: "DELETE" });
+                              setForm((f) => ({ ...f, image_path: "", image_url: "" }));
+                              setImagePreviewKey(Date.now());
+                              toast.success("Image removed");
+                              await load();
+                            } catch (err: any) {
+                              toast.error(err.message || "Remove failed");
+                            } finally {
+                              setImageUploading(false);
+                            }
+                          }}
+                        >
+                          Remove image
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Save the new service first, then reopen Edit to upload or replace its image.
+                    </p>
+                  )}
+                  {(form.image_url || form.image_path) && (
+                    <p className="text-xs text-muted-foreground break-all">
+                      Stored as: {form.image_url || form.image_path}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <details className="text-sm">
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                  Advanced: set image path / URL manually
+                </summary>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="service-image-path">Image path</Label>
+                    <Input
+                      id="service-image-path"
+                      value={form.image_path}
+                      onChange={(e) => {
+                        setForm({ ...form, image_path: e.target.value });
+                        setImagePreviewKey(Date.now());
+                      }}
+                      placeholder="/images/services/example.jpg"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="service-image-url">Image URL</Label>
+                    <Input
+                      id="service-image-url"
+                      value={form.image_url}
+                      onChange={(e) => {
+                        setForm({ ...form, image_url: e.target.value });
+                        setImagePreviewKey(Date.now());
+                      }}
+                      placeholder="/images/services/example.jpg"
+                    />
+                  </div>
+                </div>
+              </details>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="service-short">Short description</Label>
               <Textarea
@@ -802,7 +962,7 @@ export default function ServicesAdmin() {
                 </p>
               </div>
 
-              <div className="rounded-md border bg-white p-3 space-y-3">
+              <div className="rounded-md border bg-card p-3 space-y-3">
                 <label className="flex items-center gap-2 text-sm font-medium">
                   <Checkbox
                     checked={form.samagri_available}
@@ -847,7 +1007,7 @@ export default function ServicesAdmin() {
                 )}
               </div>
 
-              <div className="rounded-md border bg-white p-3 space-y-3">
+              <div className="rounded-md border bg-card p-3 space-y-3">
                 <label className="flex items-center gap-2 text-sm font-medium">
                   <Checkbox
                     checked={form.alankaram_available}
@@ -968,120 +1128,6 @@ export default function ServicesAdmin() {
                   value={form.pujaris_required}
                   onChange={(e) => setForm({ ...form, pujaris_required: Number(e.target.value) || 1 })}
                 />
-              </div>
-            </div>
-
-            <div className="space-y-3 rounded-lg border p-3">
-              <Label>Service image</Label>
-              <div className="flex flex-col sm:flex-row gap-4 items-start">
-                <div className="w-full sm:w-48 h-32 rounded-md overflow-hidden bg-muted border shrink-0">
-                  <img
-                    src={serviceImageUrl(form)}
-                    alt="Service preview"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 space-y-2 w-full">
-                  <p className="text-xs text-muted-foreground">
-                    Upload a cover image, or set a path/URL below. Empty uses the BSeva default placeholder.
-                  </p>
-                  {editId && (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={imageUploading}
-                        onClick={() => document.getElementById("service-image-file")?.click()}
-                      >
-                        {imageUploading ? "Uploading…" : "Upload image"}
-                      </Button>
-                      <input
-                        id="service-image-file"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          e.target.value = "";
-                          if (!file || !editId) return;
-                          setImageUploading(true);
-                          try {
-                            const headers = new Headers();
-                            const token = getToken();
-                            if (token) headers.set("Authorization", `Bearer ${token}`);
-                            const body = new FormData();
-                            body.append("file", file);
-                            const res = await fetch(
-                              `${apiBase()}/api/v1/admin/services/${editId}/image`,
-                              { method: "POST", headers, body }
-                            );
-                            const data = await res.json().catch(() => ({}));
-                            if (!res.ok) throw new Error((data as { detail?: string }).detail || "Upload failed");
-                            setForm((f) => ({
-                              ...f,
-                              image_path: (data as { image_path?: string }).image_path || f.image_path,
-                              image_url: (data as { image_url?: string }).image_url || f.image_url,
-                            }));
-                            toast.success("Image uploaded");
-                            load();
-                          } catch (err: any) {
-                            toast.error(err.message || "Upload failed");
-                          } finally {
-                            setImageUploading(false);
-                          }
-                        }}
-                      />
-                      {(form.image_url || form.image_path) && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={imageUploading}
-                          onClick={async () => {
-                            if (!editId) return;
-                            setImageUploading(true);
-                            try {
-                              await api(`/admin/services/${editId}/image`, { method: "DELETE" });
-                              setForm((f) => ({ ...f, image_path: "", image_url: "" }));
-                              toast.success("Image removed");
-                              load();
-                            } catch (err: any) {
-                              toast.error(err.message || "Remove failed");
-                            } finally {
-                              setImageUploading(false);
-                            }
-                          }}
-                        >
-                          Remove image
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  {!editId && (
-                    <p className="text-xs text-muted-foreground">Save the service first to enable upload.</p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="service-image-path">Image path (optional)</Label>
-                  <Input
-                    id="service-image-path"
-                    value={form.image_path}
-                    onChange={(e) => setForm({ ...form, image_path: e.target.value })}
-                    placeholder="/images/services/example.jpg"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="service-image-url">Image URL (optional)</Label>
-                  <Input
-                    id="service-image-url"
-                    value={form.image_url}
-                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                    placeholder="/images/services/example.jpg"
-                  />
-                </div>
               </div>
             </div>
 
@@ -1240,6 +1286,7 @@ export default function ServicesAdmin() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[4.5rem]">Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Categories</TableHead>
               <TableHead>Standard</TableHead>
@@ -1253,6 +1300,20 @@ export default function ServicesAdmin() {
           <TableBody>
             {rows.map((s) => (
               <TableRow key={s.id}>
+                <TableCell>
+                  <button
+                    type="button"
+                    className="block w-14 h-10 rounded overflow-hidden border bg-muted shrink-0"
+                    onClick={() => openEdit(s)}
+                    title="Edit image"
+                  >
+                    <img
+                      src={serviceImageUrl(s)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                </TableCell>
                 <TableCell>
                   <div className="font-medium">{s.name}</div>
                   <div className="text-muted-foreground text-xs">{s.slug}</div>
@@ -1292,6 +1353,16 @@ export default function ServicesAdmin() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="secondary"
+                      className="gap-1.5"
+                      onClick={() => openEdit(s)}
+                      title="Replace image"
+                    >
+                      <ImageIcon size={14} />
+                      Image
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="destructive"
                       onClick={async () => {
                         if (!confirm(`Remove ${s.name}?`)) return;
@@ -1314,7 +1385,7 @@ export default function ServicesAdmin() {
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No services yet. Add your first puja service.
                 </TableCell>
               </TableRow>

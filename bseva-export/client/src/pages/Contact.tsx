@@ -32,7 +32,7 @@ export default function Contact() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             <div className="lg:col-span-1 space-y-8">
               <div>
-                <h3 className="font-bold text-2xl text-sidebar mb-6">{t("contact.info")}</h3>
+                <h3 className="font-bold text-2xl text-foreground mb-6">{t("contact.info")}</h3>
                 <p className="text-muted-foreground mb-8">{t("contact.infoDesc")}</p>
               </div>
 
@@ -43,7 +43,7 @@ export default function Contact() {
                       <MapPin size={20} />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sidebar mb-1">{t("contact.office")}</h4>
+                      <h4 className="font-bold text-foreground mb-1">{t("contact.office")}</h4>
                       <p className="text-sm text-muted-foreground">
                         123 Spiritual Avenue, Temple Road,<br />
                         Bangalore, Karnataka 560001
@@ -58,7 +58,7 @@ export default function Contact() {
                       <Phone size={20} />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sidebar mb-1">{t("contact.phone")}</h4>
+                      <h4 className="font-bold text-foreground mb-1">{t("contact.phone")}</h4>
                       <p className="text-sm text-muted-foreground">
                         <a href={telHref(config.bseva_whatsapp_number)} className="hover:text-primary">{phoneDisplay}</a>
                         <br />
@@ -76,7 +76,7 @@ export default function Contact() {
                       <Mail size={20} />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sidebar mb-1">{t("contact.email")}</h4>
+                      <h4 className="font-bold text-foreground mb-1">{t("contact.email")}</h4>
                       <p className="text-sm text-muted-foreground">
                         <a href={`mailto:${supportEmail}`} className="hover:text-primary">{supportEmail}</a>
                         <br />
@@ -92,7 +92,7 @@ export default function Contact() {
                       <Clock size={20} />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sidebar mb-1">{t("contact.hours")}</h4>
+                      <h4 className="font-bold text-foreground mb-1">{t("contact.hours")}</h4>
                       <p className="text-sm text-muted-foreground whitespace-pre-line">{t("contact.hoursValue")}</p>
                     </div>
                   </CardContent>
@@ -103,7 +103,7 @@ export default function Contact() {
             <div className="lg:col-span-2">
               <Card className="border-none shadow-lg h-full">
                 <CardContent className="p-8 md:p-12">
-                  <h3 className="font-bold text-2xl text-sidebar mb-6">{t("contact.sendMessage")}</h3>
+                  <h3 className="font-bold text-2xl text-foreground mb-6">{t("contact.sendMessage")}</h3>
 
                   <form className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

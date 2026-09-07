@@ -300,7 +300,7 @@ function PujariDashboardContent() {
         <button type="button" onClick={openDetail} className="w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-semibold text-sidebar flex items-center gap-2">
+              <div className="font-semibold text-foreground flex items-center gap-2">
                 <Sparkles size={16} className="text-primary shrink-0" />
                 <span className="truncate">{row.pujaType.name}</span>
               </div>
@@ -402,7 +402,7 @@ function PujariDashboardContent() {
         {!isLoading && pendingAcceptance.length > 0 && (
           <Card className="border-2 border-orange-300 bg-orange-50/50 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sidebar flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <AlertCircle className="text-orange-600" size={20} />
                 Pending acceptance ({pendingAcceptance.length})
               </CardTitle>
@@ -418,7 +418,7 @@ function PujariDashboardContent() {
         {!isLoading && ongoing.length > 0 && (
           <Card className="border-2 border-blue-200 bg-blue-50/40 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sidebar flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <PlayCircle className="text-blue-600" size={20} />
                 {t("priest.ongoingPuja")}
               </CardTitle>
@@ -434,7 +434,7 @@ function PujariDashboardContent() {
         {!isLoading && needsAction.filter((r) => r.booking.status === "confirmed").length > 0 && (
           <Card className="border border-blue-200 bg-blue-50/20">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-sidebar">Ready to start (OTP)</CardTitle>
+              <CardTitle className="text-base text-foreground">Ready to start (OTP)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {needsAction
@@ -456,7 +456,7 @@ function PujariDashboardContent() {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-1">{m.title}</p>
-                  <p className="text-2xl font-bold text-sidebar">{m.value}</p>
+                  <p className="text-2xl font-bold text-foreground">{m.value}</p>
                   <p className="text-xs text-muted-foreground mt-1">{m.hint}</p>
                 </CardContent>
               </Card>
@@ -468,7 +468,7 @@ function PujariDashboardContent() {
         <div className="grid lg:grid-cols-3 gap-8">
           <Card className="lg:col-span-1 border-border shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sidebar flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <CalendarIcon size={18} className="text-primary" />
                 Booking Calendar
               </CardTitle>
@@ -489,7 +489,7 @@ function PujariDashboardContent() {
               </p>
 
               <div className="mt-6 space-y-2">
-                <h4 className="font-medium text-sm text-sidebar">
+                <h4 className="font-medium text-sm text-foreground">
                   {selectedDate ? format(selectedDate, "dd MMM yyyy") : "Select a date"}
                 </h4>
                 {isLoading && <Skeleton className="h-16 w-full" />}
@@ -506,7 +506,7 @@ function PujariDashboardContent() {
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-border">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sidebar">Your Bookings</CardTitle>
+                <CardTitle className="text-foreground">Your Bookings</CardTitle>
               </CardHeader>
               <CardContent>
                 <Tabs value={listTab} onValueChange={setListTab}>
@@ -544,7 +544,7 @@ function PujariDashboardContent() {
                     {past.length > 0 && (
                       <div className="pt-3 border-t border-border flex justify-between text-sm">
                         <span className="text-muted-foreground">Completed earnings</span>
-                        <span className="font-semibold text-sidebar">
+                        <span className="font-semibold text-foreground">
                           {formatPaise(stats.completedEarnings)}
                         </span>
                       </div>
@@ -556,7 +556,7 @@ function PujariDashboardContent() {
 
             <Card className="border-border bg-secondary/20">
               <CardContent className="p-5 space-y-2">
-                <div className="font-semibold text-sidebar">Earnings & settlements</div>
+                <div className="font-semibold text-foreground">Earnings & settlements</div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Accept pending bookings, start with customer OTP, then mark complete when finished so
                   settlements stay accurate.
@@ -570,7 +570,7 @@ function PujariDashboardContent() {
       <Dialog open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-sidebar">
+            <DialogTitle className="text-foreground">
               {selectedBooking?.pujaType.name}
             </DialogTitle>
             <DialogDescription>#{selectedBooking?.booking.bookingNumber}</DialogDescription>

@@ -103,7 +103,7 @@ export default function Services() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search Pujas, Homams, Vrathams..."
-              className="h-12 pl-11 bg-white text-sidebar border-none shadow-lg"
+              className="h-12 pl-11 bg-card text-foreground border-none shadow-lg"
             />
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function Services() {
                 className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
                   category === c.slug
                     ? "bg-primary text-white border-primary"
-                    : "bg-white text-sidebar border-border hover:border-primary/40"
+                    : "bg-card text-foreground border-border hover:border-primary/40"
                 }`}
               >
                 {c.name}

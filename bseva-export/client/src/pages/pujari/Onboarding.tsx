@@ -326,7 +326,7 @@ export default function PujariOnboardingPage() {
 
               <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
                 <div>
-                  <h3 className="font-semibold text-sidebar">Gotra &amp; Pravara</h3>
+                  <h3 className="font-semibold text-foreground">Gotra &amp; Pravara</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Enter your family Gotra and Pravara (rishi lineage).
                   </p>

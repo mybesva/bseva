@@ -23,7 +23,7 @@ export default function TestimonialCard({ name, location, text, rating = 5, imag
           ))}
         </div>
         
-        <p className="text-sidebar/80 italic mb-6 leading-relaxed">
+        <p className="text-foreground/80 italic mb-6 leading-relaxed">
           "{text}"
         </p>
         
@@ -31,12 +31,12 @@ export default function TestimonialCard({ name, location, text, rating = 5, imag
           {image ? (
             <img src={image} alt={name} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-sidebar/10 flex items-center justify-center text-sidebar font-bold text-lg">
+            <div className="w-12 h-12 rounded-full bg-sidebar/10 flex items-center justify-center text-foreground font-bold text-lg">
               {name.charAt(0)}
             </div>
           )}
           <div>
-            <h4 className="text-h4 text-sidebar">{name}</h4>
+            <h4 className="text-h4 text-foreground">{name}</h4>
             <p className="text-caption text-muted-foreground uppercase tracking-wider">{location}</p>
           </div>
         </div>

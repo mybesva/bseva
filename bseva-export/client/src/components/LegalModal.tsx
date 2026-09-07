@@ -58,14 +58,14 @@ function SectionPicker({
             className={cn(
               "flex items-center gap-2 rounded-full border px-3 py-2 text-left text-xs font-medium transition-colors",
               active
-                ? "border-primary bg-orange-50 text-sidebar"
+                ? "border-primary bg-orange-50 text-foreground"
                 : "border-border text-muted-foreground hover:border-primary/40"
             )}
           >
             <span
               className={cn(
                 "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-                active ? "bg-primary text-white" : "bg-secondary text-sidebar"
+                active ? "bg-primary text-white" : "bg-secondary text-foreground"
               )}
             >
               <Icon size={14} />

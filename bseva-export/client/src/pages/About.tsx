@@ -47,7 +47,7 @@ export default function About() {
 
             <div className="space-y-4">
               {[t("about.point1"), t("about.point2"), t("about.point3"), t("about.point4")].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-sidebar font-medium">
+                <div key={i} className="flex items-center gap-3 text-foreground font-medium">
                   <CheckCircle2 className="text-primary" size={20} />
                   <span>{item}</span>
                 </div>
@@ -66,7 +66,7 @@ export default function About() {
               <Card key={i} className="border-none shadow-sm hover:shadow-md transition-all text-center h-full">
                 <CardContent className="pt-8 pb-8">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6">{value.icon}</div>
-                  <h3 className="font-bold text-xl text-sidebar mb-3">{value.title}</h3>
+                  <h3 className="font-bold text-xl text-foreground mb-3">{value.title}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">{value.desc}</p>
                 </CardContent>
               </Card>
@@ -100,7 +100,7 @@ export default function About() {
 
       <section className="py-24 text-center">
         <div className="container">
-          <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">{t("about.ctaTitle")}</h2>
+          <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">{t("about.ctaTitle")}</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">{t("about.ctaDesc")}</p>
           <Button
             size="lg"

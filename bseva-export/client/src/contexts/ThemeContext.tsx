@@ -5,6 +5,7 @@ type Theme = "light" | "dark";
 interface ThemeContextType {
   theme: Theme;
   toggleTheme?: () => void;
+  setTheme?: (theme: Theme) => void;
   switchable: boolean;
 }
 
@@ -16,17 +17,25 @@ interface ThemeProviderProps {
   switchable?: boolean;
 }
 
+function preferSystem(): Theme {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "light",
   switchable = false,
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (!switchable) return defaultTheme;
+    try {
+      const stored = localStorage.getItem("bseva-theme") || localStorage.getItem("theme");
+      if (stored === "light" || stored === "dark") return stored;
+    } catch {
+      /* ignore */
     }
-    return defaultTheme;
+    return preferSystem() || defaultTheme;
   });
 
   useEffect(() => {
@@ -36,20 +45,32 @@ export function ThemeProvider({
     } else {
       root.classList.remove("dark");
     }
+    root.style.colorScheme = theme;
 
     if (switchable) {
-      localStorage.setItem("theme", theme);
+      try {
+        localStorage.setItem("bseva-theme", theme);
+        localStorage.setItem("theme", theme);
+      } catch {
+        /* ignore */
+      }
     }
   }, [theme, switchable]);
 
+  const setTheme = switchable
+    ? (next: Theme) => {
+        setThemeState(next);
+      }
+    : undefined;
+
   const toggleTheme = switchable
     ? () => {
-        setTheme(prev => (prev === "light" ? "dark" : "light"));
+        setThemeState((prev) => (prev === "light" ? "dark" : "light"));
       }
     : undefined;
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, switchable }}>
       {children}
     </ThemeContext.Provider>
   );

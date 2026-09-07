@@ -94,7 +94,7 @@ function CustomerDashboardContent() {
         {!isLoading && ongoingBookings.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-h2 text-sidebar flex items-center gap-2">
+              <h2 className="text-h2 text-foreground flex items-center gap-2">
                 <PlayCircle className="text-blue-600" size={22} />
                 {t("customer.ongoingPuja")}
               </h2>
@@ -109,7 +109,7 @@ function CustomerDashboardContent() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg text-sidebar">{booking.service_name}</h3>
+                          <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
                           <Badge className={getStatusColor(booking.status)}>{booking.status.replace("_","")}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>
@@ -179,7 +179,7 @@ function CustomerDashboardContent() {
         {recommendations.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-h2 text-sidebar flex items-center gap-2">
+              <h2 className="text-h2 text-foreground flex items-center gap-2">
                 <Sparkles className="text-primary" size={22} />
                 Recommended for you
               </h2>
@@ -188,7 +188,7 @@ function CustomerDashboardContent() {
               {recommendations.map((rec) => (
                 <Card key={rec.id} className="border-primary/30 bg-orange-50/40">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-sidebar">{rec.title}</CardTitle>
+                    <CardTitle className="text-lg text-foreground">{rec.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {rec.description && (
@@ -197,7 +197,7 @@ function CustomerDashboardContent() {
                     {rec.recurrence_hint && (
                       <p className="text-xs text-muted-foreground">{rec.recurrence_hint}</p>
                     )}
-                    <div className="text-sm font-medium text-sidebar">
+                    <div className="text-sm font-medium text-foreground">
                       {rec.service_name}
                       {rec.standard_price_paise
                         ? ` · From ₹${(rec.standard_price_paise / 100).toLocaleString("en-IN")}`
@@ -219,7 +219,7 @@ function CustomerDashboardContent() {
         {/* Booking cards — services */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-h2 text-sidebar">{t("customer.bookServices")}</h2>
+            <h2 className="text-h2 text-foreground">{t("customer.bookServices")}</h2>
             <Link href="/services">
               <Button variant="outline" className="gap-2">
                 View All <ArrowRight size={16} />
@@ -230,14 +230,14 @@ function CustomerDashboardContent() {
             {(pujas || []).slice(0, 6).map((puja) => (
               <Card key={puja.id} className="hover:shadow-md transition-shadow border-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-sidebar flex items-center gap-2">
+                  <CardTitle className="text-lg text-foreground flex items-center gap-2">
                     <Sparkles className="text-primary" size={18} />
                     {puja.name}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground line-clamp-2">{puja.description}</p>
-                  <div className="text-sm font-medium text-sidebar">
+                  <div className="text-sm font-medium text-foreground">
                     From ₹{((puja.standard_price_paise || 0) / 100).toLocaleString("en-IN")}
                   </div>
                   <Button
@@ -255,7 +255,7 @@ function CustomerDashboardContent() {
         {/* My bookings */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-h2 text-sidebar">{t("customer.myBookings")}</h2>
+            <h2 className="text-h2 text-foreground">{t("customer.myBookings")}</h2>
             <Link href="/customer/bookings">
               <Button variant="outline">{t("common.viewAll")}</Button>
             </Link>
@@ -278,7 +278,7 @@ function CustomerDashboardContent() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg text-sidebar">{booking.service_name}</h3>
+                        <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
                         <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>
