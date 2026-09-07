@@ -485,4 +485,16 @@ def ensure_catalog(conn) -> dict:
     _enrich_existing(conn, cat_ids)
     new_n = _insert_new(conn, cat_ids)
     special_n = _ensure_special(conn, cat_ids)
-    return {"categories": len(cat_ids), "new_services": new_n, "special_services": special_n}
+    images_n = 0
+    try:
+        from app.service_images_seed import apply_service_images
+
+        images_n = apply_service_images(conn, only_if_empty=True)
+    except Exception:
+        images_n = 0
+    return {
+        "categories": len(cat_ids),
+        "new_services": new_n,
+        "special_services": special_n,
+        "service_images": images_n,
+    }

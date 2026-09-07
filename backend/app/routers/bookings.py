@@ -138,6 +138,23 @@ def get_service(slug: str, db: Session = Depends(get_db)):
     return data
 
 
+@router.get("/services/{slug}/image")
+def get_service_image(slug: str, db: Session = Depends(get_db)):
+    """Public cover image for admin-uploaded storage objects (and storage-backed paths)."""
+    from pathlib import Path
+
+    from app.catalog import resolve_service_by_slug
+    from app.storage import file_response
+
+    row = resolve_service_by_slug(db, slug, active_only=False)
+    if not row:
+        raise HTTPException(404, "Service not found")
+    path = (row.get("image_path") or "").strip()
+    if not path.startswith("services/"):
+        raise HTTPException(404, "No uploaded image")
+    return file_response(path, filename=Path(path).name)
+
+
 @router.get("/pujari-roles")
 def list_pujari_roles(db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT id, level, title, summary, examples FROM pujari_roles ORDER BY level ASC")).mappings().all()

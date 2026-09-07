@@ -70,7 +70,7 @@ type Props = {
   /** Optional list-row seed so UI paints immediately before detail fetch. */
   seed?: Partial<BookingDetail>;
   role?: "customer" | "pujari" | "admin";
-  onUpdated?: () => void;
+  onUpdated?: (info?: { decision?: "accepted" | "rejected" | "cancelled" }) => void;
   compact?: boolean;
 };
 
@@ -112,13 +112,21 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     void load();
   }, [bookingId]);
 
-  async function run(action: () => Promise<void>, okMsg: string) {
+  async function run(
+    action: () => Promise<void>,
+    okMsg: string,
+    decision?: "accepted" | "rejected" | "cancelled"
+  ) {
     setBusy(true);
     try {
       await action();
       toast.success(okMsg);
-      await load();
-      onUpdated?.();
+      if (decision === "accepted" || decision === "rejected" || decision === "cancelled") {
+        onUpdated?.({ decision });
+      } else {
+        await load();
+        onUpdated?.();
+      }
     } catch (e: any) {
       toast.error(e.message || "Action failed");
     } finally {
@@ -292,13 +300,14 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             <Button
               disabled={busy || !termsAccepted}
               onClick={() =>
-                run(
+                void run(
                   () =>
                     api(`/bookings/${bookingId}/accept`, {
                       method: "POST",
                       body: JSON.stringify({ terms_accepted: true, terms_version: "2026-01" }),
                     }).then(() => undefined),
-                  "Booking accepted"
+                  "Accepted — booking confirmed",
+                  "accepted"
                 )
               }
             >
@@ -316,7 +325,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                       method: "POST",
                       body: JSON.stringify({ reason: reason.trim() || null }),
                     }).then(() => undefined),
-                  "Booking rejected — admin will reassign it"
+                  "Rejected — admin will reassign this booking",
+                  "rejected"
                 );
               }}
             >
@@ -347,7 +357,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                       }`,
                       { method: "POST" }
                     ).then(() => undefined),
-                  "Booking cancelled"
+                  "Booking cancelled",
+                  "cancelled"
                 );
               }}
             >

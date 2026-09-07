@@ -596,8 +596,11 @@ function PujariDashboardContent() {
                 pujari_payable_paise: selectedBooking.booking.priestAmount,
                 customer_name: selectedBooking.customer.name || undefined,
               }}
-              onUpdated={async () => {
+              onUpdated={async (info) => {
                 await loadBookings();
+                if (info?.decision === "accepted" || info?.decision === "rejected") {
+                  setSelectedBooking(null);
+                }
               }}
             />
           )}

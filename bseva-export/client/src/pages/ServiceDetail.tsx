@@ -9,6 +9,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
 import PreparationChecklist, { type PreparationView } from "@/components/PreparationChecklist";
+import { serviceImageUrl } from "@/lib/serviceImage";
 
 type Svc = {
   id: string;
@@ -83,7 +84,7 @@ export default function ServiceDetail() {
     setLocation(path);
   }
 
-  const img = svc?.image_url || svc?.image_path || "/images/puja-thali.png";
+  const img = serviceImageUrl(svc);
 
   return (
     <Layout>

@@ -11,8 +11,8 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { api, dashboardPath } from "@/lib/api";
 import { useEffect, useState } from "react";
+import { serviceImageUrl } from "@/lib/serviceImage";
 
-const PLACEHOLDERS = ["/images/puja-thali.png", "/images/temple-ritual.png", "/images/hero-bg.png", "/images/meditation.png"];
 const ICONS = [Flower, Flame, HomeIcon, Sparkles, Heart, Calendar, Users, UserCheck, Search, StarIcon];
 
 function StarIcon(props: { size?: number }) {
@@ -169,7 +169,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {popular.map((s, i) => {
                 const Icon = ICONS[i % ICONS.length];
-                const img = s.image_url || s.image_path || PLACEHOLDERS[i % PLACEHOLDERS.length];
+                const img = serviceImageUrl(s);
                 const desc =
                   s.short_description ||
                   s.description ||

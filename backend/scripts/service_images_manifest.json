@@ -1,0 +1,348 @@
+{
+  "_comment": "Curated Wikimedia Commons (and similar) assets with commercial-reuse-compatible licenses. image_url stored as /images/services/{slug}.jpg",
+  "default_placeholder": {
+    "path": "/images/puja-thali.png",
+    "note": "Single BSeva catalog fallback when image_url is empty"
+  },
+  "services": {
+    "ganapathi-puja": {
+      "commons_title": "File:Idol of Lord Ganesha worshipped on the occasion of Ganesh Chaturthi.jpg",
+      "relevance": "Ganesha idol in worship / Ganesh Chaturthi setup"
+    },
+    "ganesh-chaturthi-puja": {
+      "commons_title": "File:Ganesh Murti - Traditional Idol of Lord Ganesha 014.jpg",
+      "relevance": "Traditional Ganesha murti"
+    },
+    "pre-wedding-ganapathi-puja": {
+      "commons_title": "File:Ganesh Murti - Traditional Idol of Lord Ganesha 019.jpg",
+      "relevance": "Ganesha murti suitable for pre-wedding Ganapathi puja"
+    },
+    "office-ganapathi-puja": {
+      "commons_title": "File:Ganesh Murti - Traditional Idol of Lord Ganesha 017.jpg",
+      "relevance": "Ganesha murti"
+    },
+    "ganapathi-homam": {
+      "commons_title": "File:Havan kund ( Fire pit ).jpg",
+      "relevance": "Havan kund / fire pit for Homam"
+    },
+    "maha-ganapathi-homam": {
+      "commons_title": "File:(A) Bhumi Puja, yajna.jpg",
+      "relevance": "Yajna/homa fire ritual"
+    },
+    "satyanarayana-puja": {
+      "commons_title": "File:Satyanarayana Puja at home.jpg",
+      "relevance": "Satyanarayana Puja at home"
+    },
+    "griha-pravesham": {
+      "commons_title": "File:Griha Pravesh Puja Ceremony.jpg",
+      "relevance": "Griha Pravesh housewarming ceremony"
+    },
+    "new-home-flat-puja": {
+      "commons_title": "File:Griha-Pravesh-ritual.JPG",
+      "relevance": "Griha Pravesh milk warming ritual"
+    },
+    "marriage-ceremony": {
+      "commons_title": "File:(A) Hindu wedding, Saptapadi ritual before Agni Yajna.jpg",
+      "relevance": "Hindu wedding Saptapadi / Agni"
+    },
+    "nischitartham": {
+      "commons_title": "File:Baran Dala - Upanayana Ceremony - Simurali 2015-01-30 5325.JPG",
+      "relevance": "Traditional ceremonial tray (engagement-adjacent Hindu ritual setting)",
+      "needs_review": true,
+      "review_note": "Engagement-specific image preferred later; ceremonial tray is culturally adjacent only"
+    },
+    "vehicle-puja": {
+      "commons_title": "File:Hindu Blessing Car Singapore.jpg",
+      "relevance": "Hindu blessing / puja of a car"
+    },
+    "rudrabhishekam": {
+      "commons_title": "File:Decorated Shivalinga during Maha Shivaratri Rituals.jpg",
+      "relevance": "Decorated Shivalinga / Abhishekam for Rudrabhishekam"
+    },
+    "maha-rudrabhishekam": {
+      "commons_title": "File:Clay Shivling prepared for Maha Shivaratri ritual in Central India.jpg",
+      "relevance": "Clay Shivling for major Rudra ritual"
+    },
+    "shivaratri-puja": {
+      "commons_title": "File:Clay Shivling prepared for Maha Shivaratri ritual in Central India.jpg",
+      "relevance": "Maha Shivaratri clay Shivling",
+      "shared_with": ["maha-rudrabhishekam"],
+      "needs_review": true,
+      "review_note": "Same clay Shivling source as Maha Rudrabhishekam; prefer distinct later"
+    },
+    "maha-mrityunjaya-puja": {
+      "commons_title": "File:Shiva Lingam.jpg",
+      "relevance": "Shiva Lingam for Mrityunjaya puja"
+    },
+    "maha-mrityunjaya-homam": {
+      "commons_title": "File:Havan kund at alakh.jpg",
+      "relevance": "Havan kund for Shiva-related homam"
+    },
+    "navagraha-shanti": {
+      "commons_title": "File:Navgrah idols at Maa Durga Sai Baba Temple in Orlando.jpg",
+      "relevance": "Navagraha idols"
+    },
+    "navagraha-homam": {
+      "commons_title": "File:Navgrah idols at Maa Durga Sai Baba Temple in Orlando 1.jpg",
+      "relevance": "Navagraha idols (homam companion visual)"
+    },
+    "shani-shanti": {
+      "commons_title": "File:Ketu graha at navagraha mandapam, Shani Shingnapur.jpg",
+      "relevance": "Navagraha mandapam at Shani Shingnapur"
+    },
+    "rahu-ketu-shanti": {
+      "commons_title": "File:Guru Graha (Jupiter) at navagraha mandapam, Shani Shingnapur.jpg",
+      "relevance": "Navagraha mandapam graha idol"
+    },
+    "lakshmi-puja": {
+      "commons_title": "File:Lakshmi pooja in Odisha 2024 38.jpg",
+      "relevance": "Lakshmi puja ritual"
+    },
+    "lakshmi-kubera-puja": {
+      "commons_title": "File:Goddess Lakshmi inside a home for Diwali Puja.jpg",
+      "relevance": "Lakshmi worship setup at home"
+    },
+    "lakshmi-kubera-homam": {
+      "commons_title": "File:Havan kund.jpg",
+      "relevance": "Havan kund for Lakshmi Kubera Homam"
+    },
+    "diwali-lakshmi-puja": {
+      "commons_title": "File:Diwali Photograph.jpg",
+      "relevance": "Diwali lamps / festival of lights"
+    },
+    "varalakshmi-vratham": {
+      "commons_title": "File:Goddess Rajalakshmi Padmavathi idol (Decorated on the eve of Varamahalakshmi festival).jpg",
+      "relevance": "Varamahalakshmi festival decorated idol"
+    },
+    "ashta-lakshmi-puja": {
+      "commons_title": "File:Hindu Goddess of Wealth Lakshmi on Lotus.jpg",
+      "relevance": "Goddess Lakshmi on lotus"
+    },
+    "vastu-shanti": {
+      "commons_title": "File:वास्तुपुरुषः Vastupurusha.jpg",
+      "relevance": "Vastupurusha diagram / Vastu tradition"
+    },
+    "vastu-dosha-nivarana": {
+      "commons_title": "File:Vastu in Vastu Mandal.jpg",
+      "relevance": "Vastu mandala"
+    },
+    "bhoomi-puja": {
+      "commons_title": "File:Bhoomi Pooja 9.jpg",
+      "relevance": "Bhoomi Puja / foundation ceremony"
+    },
+    "annaprashanam": {
+      "commons_title": "File:AnnaPrashan (Anna Prashan) - Hindu First Rice Eating Ceremony.JPG",
+      "relevance": "Annaprashana first rice ceremony"
+    },
+    "seemantham": {
+      "commons_title": "File:Baby Shower Ceremony according to Hindu tradition.jpg",
+      "relevance": "Hindu baby shower / seemantham-style ceremony"
+    },
+    "mundan-choula": {
+      "commons_title": "File:Mundan Ceremony at the Uchchaith Bhagwati Temple Complex.jpg",
+      "relevance": "Mundan ceremony"
+    },
+    "upanayanam": {
+      "commons_title": "File:Upanayana krish.jpg",
+      "relevance": "Upanayana ceremony"
+    },
+    "hanuman-jayanti": {
+      "commons_title": "File:Idol of Lord Hanuman at Hanuman Mandir, Thana Chariali, Dibrugarh 01.jpg",
+      "relevance": "Hanuman idol"
+    },
+    "navaratri-durga-puja": {
+      "commons_title": "File:2016 Durga Puja Kolkata Shobhabazar Sarbojonin (9).jpg",
+      "relevance": "Durga Puja idol"
+    },
+    "krishna-janmashtami": {
+      "commons_title": "File:A Krishna statue with flowers at Janmashtami.jpg",
+      "relevance": "Krishna at Janmashtami"
+    },
+    "sri-rama-navami": {
+      "commons_title": "File:Idols of Rama, Sita and others in Howrah.jpg",
+      "relevance": "Rama and Sita idols"
+    },
+    "karthika-deepam": {
+      "commons_title": "File:Karthigai Deepam Festival.jpg",
+      "relevance": "Karthigai Deepam lamps"
+    },
+    "ugadi-puja": {
+      "commons_title": "File:A Happy Ugadi puja tray Telugu Hindu New Year Vaisakhi.jpg",
+      "relevance": "Ugadi puja tray"
+    },
+    "sankranti-pongal-puja": {
+      "commons_title": "File:Kolam Pongal ThiruViKa Uthandi Jan23 A7C 04890.jpg",
+      "relevance": "Pongal kolam"
+    },
+    "ayudha-puja": {
+      "commons_title": "File:Ayudha Pooja.jpg",
+      "relevance": "Ayudha Puja tools/instruments worship"
+    },
+    "shraddha-death-anniversary": {
+      "commons_title": "File:Perform Pinda Dana.jpg",
+      "relevance": "Pinda dana / ancestor ritual"
+    },
+    "pitru-dosha-nivarana": {
+      "commons_title": "File:Pitru Paksha 2007.jpg",
+      "relevance": "Pitru Paksha ritual"
+    },
+    "antyeshti": {
+      "commons_title": "File:An Early Morning Ritual During Mahalaya 37.jpg",
+      "relevance": "Ancestor / Mahalaya river ritual",
+      "needs_review": true,
+      "review_note": "Prefer dedicated Antyeshti imagery; this is ancestor-related not funeral-specific"
+    },
+    "ayush-homam": {
+      "commons_title": "File:Sasha India Havan Kund at Rewalsar Lake - 2018.jpg",
+      "relevance": "Havan kund"
+    },
+    "sudarshana-homam": {
+      "commons_title": "File:Ganga Yagna.jpg",
+      "relevance": "Yagna / fire offering"
+    },
+    "dhanvantari-homam": {
+      "commons_title": "File:Havan kund in Mandir.jpg",
+      "relevance": "Temple havan kund"
+    },
+    "saraswati-homam": {
+      "commons_title": "File:Havan kund ( Fire pit ).jpg",
+      "relevance": "Havan kund",
+      "shared_with": ["ganapathi-homam"],
+      "needs_review": true,
+      "review_note": "Prefer Saraswati-specific image later"
+    },
+    "nava-chandi-homam": {
+      "commons_title": "File:A low angle shot of Goddess Durga in A Mandap in North Kolkata, 2017.jpg",
+      "relevance": "Devi / Durga (Chandi association)"
+    },
+    "lakshmi-narayana-homam": {
+      "commons_title": "File:Lakshmi puja.jpg",
+      "relevance": "Lakshmi worship"
+    },
+    "santana-gopala-homam": {
+      "commons_title": "File:Silver-plated-blue-Laddu-Gopal-idol-baby-Krishna-crawling.jpg",
+      "relevance": "Baby Krishna / Gopala"
+    },
+    "sudarshana-narasimha-homam": {
+      "commons_title": "File:Ganga Yagna.jpg",
+      "relevance": "Yagna fire",
+      "shared_with": ["sudarshana-homam"],
+      "needs_review": true
+    },
+    "new-office-puja": {
+      "commons_title": "File:Griha Pravesh Puja Ceremony.jpg",
+      "relevance": "Inaugural / sanctification-style puja",
+      "shared_with": ["griha-pravesham"],
+      "needs_review": true,
+      "review_note": "Prefer office-opening specific image"
+    },
+    "new-shop-puja": {
+      "commons_title": "File:Griha-Pravesh-ritual.JPG",
+      "relevance": "Sanctification ritual",
+      "needs_review": true
+    },
+    "business-growth-puja": {
+      "commons_title": "File:Goddess Lakshmi inside a home for Diwali Puja.jpg",
+      "relevance": "Lakshmi prosperity worship",
+      "needs_review": true
+    },
+    "birthday-puja": {
+      "commons_title": "File:Havan kund.jpg",
+      "relevance": "General havan for birthday puja",
+      "needs_review": true
+    },
+    "marriage-anniversary-puja": {
+      "commons_title": "File:(A) Hindu wedding, Saptapadi ritual before Agni Yajna.jpg",
+      "relevance": "Marriage ritual imagery",
+      "shared_with": ["marriage-ceremony"],
+      "needs_review": true
+    },
+    "uma-maheshwara-puja": {
+      "commons_title": "File:Shivaratri celebration in and around Barisha 16.jpg",
+      "relevance": "Shiva / Shivaratri celebration for Uma-Maheshwara"
+    },
+    "karnavedha": {
+      "image_needed": true,
+      "reason": "No clearly licensed Karnavedha-specific photo found"
+    },
+    "namakaranam": {
+      "image_needed": true,
+      "reason": "No clearly licensed Namakaranam-specific photo found"
+    },
+    "aksharabhyasam": {
+      "image_needed": true,
+      "reason": "No clearly licensed Vidyarambham/Aksharabhyasam photo found"
+    },
+    "kuja-dosha-nivarana": {
+      "commons_title": "File:Navgrah idols at Maa Durga Sai Baba Temple in Orlando.jpg",
+      "relevance": "Navagraha (Mangal/Kuja context)",
+      "shared_with": ["navagraha-shanti"],
+      "needs_review": true
+    },
+    "kala-sarpa-dosha-puja": {
+      "commons_title": "File:Navgrah idols at Maa Durga Sai Baba Temple in Orlando 1.jpg",
+      "relevance": "Navagraha context for dosha shanti",
+      "needs_review": true
+    },
+    "nakshatra-shanti": {
+      "commons_title": "File:Guru Graha (Jupiter) at navagraha mandapam, Shani Shingnapur.jpg",
+      "relevance": "Graha / nakshatra shanti visual",
+      "needs_review": true
+    },
+    "sundarakanda-parayanam": {
+      "commons_title": "File:Idol of Lord Hanuman at Hanuman Mandir, Thana Chariali, Dibrugarh 02.jpg",
+      "relevance": "Hanuman (Sundarakanda association)"
+    },
+    "ramayana-parayanam": {
+      "commons_title": "File:Idols of Rama, Sita and others in Howrah.jpg",
+      "relevance": "Rama Sita idols",
+      "shared_with": ["sri-rama-navami"]
+    },
+    "bhagavad-gita-parayanam": {
+      "image_needed": true,
+      "reason": "Prefer original Gita manuscript/parayanam photo; no strong licensed match selected"
+    },
+    "vishnu-sahasranama": {
+      "image_needed": true,
+      "reason": "No strong Vishnu Sahasranama ritual photo selected"
+    },
+    "lalitha-sahasranama": {
+      "commons_title": "File:A low angle shot of Goddess Durga in A Mandap in North Kolkata, 2017.jpg",
+      "relevance": "Devi worship",
+      "shared_with": ["nava-chandi-homam"],
+      "needs_review": true
+    },
+    "durga-saptashati": {
+      "commons_title": "File:2019 Durga Idol and decoration of Puja at Kolkata 17.jpg",
+      "relevance": "Durga idol"
+    },
+    "shashti-poorthi": {
+      "image_needed": true,
+      "reason": "No licensed Shashti Poorthi-specific image found"
+    },
+    "bhima-ratha-shanti": {
+      "image_needed": true,
+      "reason": "No licensed Bhima Ratha Shanti image found"
+    },
+    "sahasra-chandra-darshanam": {
+      "image_needed": true,
+      "reason": "No licensed Sahasra Chandra Darshanam image found"
+    },
+    "marriage-muhurta-consultation": {
+      "image_needed": true,
+      "reason": "Consultation service — use custom BSeva graphic later"
+    },
+    "astrology-consultation": {
+      "image_needed": true,
+      "reason": "Consultation service — use custom BSeva graphic later"
+    },
+    "kundali-consultation": {
+      "image_needed": true,
+      "reason": "Consultation service — use custom BSeva graphic later"
+    },
+    "muhurta-consultation": {
+      "image_needed": true,
+      "reason": "Consultation service — use custom BSeva graphic later"
+    }
+  }
+}

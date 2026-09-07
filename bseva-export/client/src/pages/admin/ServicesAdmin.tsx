@@ -23,11 +23,12 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { api, rupees } from "@/lib/api";
+import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
 import { FolderTree, Pencil, Plus } from "lucide-react";
+import { serviceImageUrl } from "@/lib/serviceImage";
 
 const PROVIDERS = [
   { value: "included", label: "Included in price" },
@@ -127,6 +128,7 @@ export default function ServicesAdmin() {
   const [linkUnit, setLinkUnit] = useState("");
   const [linkCategory, setLinkCategory] = useState("PUJA_SAMAGRI");
   const [linkProvidedBy, setLinkProvidedBy] = useState("CUSTOMER");
+  const [imageUploading, setImageUploading] = useState(false);
   const [linkOptional, setLinkOptional] = useState(false);
 
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -969,22 +971,117 @@ export default function ServicesAdmin() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="service-image-path">Image path (optional)</Label>
-                <Input
-                  id="service-image-path"
-                  value={form.image_path}
-                  onChange={(e) => setForm({ ...form, image_path: e.target.value })}
-                />
+            <div className="space-y-3 rounded-lg border p-3">
+              <Label>Service image</Label>
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <div className="w-full sm:w-48 h-32 rounded-md overflow-hidden bg-muted border shrink-0">
+                  <img
+                    src={serviceImageUrl(form)}
+                    alt="Service preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 space-y-2 w-full">
+                  <p className="text-xs text-muted-foreground">
+                    Upload a cover image, or set a path/URL below. Empty uses the BSeva default placeholder.
+                  </p>
+                  {editId && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={imageUploading}
+                        onClick={() => document.getElementById("service-image-file")?.click()}
+                      >
+                        {imageUploading ? "Uploading…" : "Upload image"}
+                      </Button>
+                      <input
+                        id="service-image-file"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (!file || !editId) return;
+                          setImageUploading(true);
+                          try {
+                            const headers = new Headers();
+                            const token = getToken();
+                            if (token) headers.set("Authorization", `Bearer ${token}`);
+                            const body = new FormData();
+                            body.append("file", file);
+                            const res = await fetch(
+                              `${apiBase()}/api/v1/admin/services/${editId}/image`,
+                              { method: "POST", headers, body }
+                            );
+                            const data = await res.json().catch(() => ({}));
+                            if (!res.ok) throw new Error((data as { detail?: string }).detail || "Upload failed");
+                            setForm((f) => ({
+                              ...f,
+                              image_path: (data as { image_path?: string }).image_path || f.image_path,
+                              image_url: (data as { image_url?: string }).image_url || f.image_url,
+                            }));
+                            toast.success("Image uploaded");
+                            load();
+                          } catch (err: any) {
+                            toast.error(err.message || "Upload failed");
+                          } finally {
+                            setImageUploading(false);
+                          }
+                        }}
+                      />
+                      {(form.image_url || form.image_path) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={imageUploading}
+                          onClick={async () => {
+                            if (!editId) return;
+                            setImageUploading(true);
+                            try {
+                              await api(`/admin/services/${editId}/image`, { method: "DELETE" });
+                              setForm((f) => ({ ...f, image_path: "", image_url: "" }));
+                              toast.success("Image removed");
+                              load();
+                            } catch (err: any) {
+                              toast.error(err.message || "Remove failed");
+                            } finally {
+                              setImageUploading(false);
+                            }
+                          }}
+                        >
+                          Remove image
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {!editId && (
+                    <p className="text-xs text-muted-foreground">Save the service first to enable upload.</p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="service-image-url">Image URL (optional)</Label>
-                <Input
-                  id="service-image-url"
-                  value={form.image_url}
-                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="service-image-path">Image path (optional)</Label>
+                  <Input
+                    id="service-image-path"
+                    value={form.image_path}
+                    onChange={(e) => setForm({ ...form, image_path: e.target.value })}
+                    placeholder="/images/services/example.jpg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="service-image-url">Image URL (optional)</Label>
+                  <Input
+                    id="service-image-url"
+                    value={form.image_url}
+                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                    placeholder="/images/services/example.jpg"
+                  />
+                </div>
               </div>
             </div>
 

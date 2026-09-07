@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,7 @@ from app.schemas import (
     VerifyPujariIn,
 )
 from app.security import hash_password
+from app.storage import content_type_for, delete_object, file_response, upload_bytes
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -583,6 +585,85 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
     if result.rowcount == 0:
         raise HTTPException(404, "Service not found")
     _sync_service_categories(db, service_id, body.category_slugs)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/services/{service_id}/image")
+async def upload_service_image(
+    service_id: str,
+    file: UploadFile = File(...),
+    user=Depends(require_permission("manage_services")),
+    db: Session = Depends(get_db),
+):
+    row = db.execute(
+        text("SELECT id, slug, image_path FROM services WHERE id = CAST(:id AS uuid)"),
+        {"id": service_id},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Service not found")
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty file")
+    if len(data) > 8 * 1024 * 1024:
+        raise HTTPException(400, "Image must be under 8MB")
+    name = file.filename or "cover.jpg"
+    ext = Path(name).suffix.lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        raise HTTPException(400, "Use jpg, png, webp, or gif")
+    rel = f"services/{service_id}/cover{ext}"
+    # Drop previous storage object if it was an uploaded path
+    prev = (row.get("image_path") or "").strip()
+    if prev.startswith("services/") and prev != rel:
+        try:
+            delete_object(prev)
+        except Exception:
+            pass
+    upload_bytes(rel, data, content_type_for(name))
+    # Public catalog URL served by GET /api/v1/services/{slug}/image
+    public_url = f"/api/v1/services/{row['slug']}/image"
+    db.execute(
+        text(
+            """
+            UPDATE services
+            SET image_path = :p, image_url = :u, updated_at = NOW()
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"p": rel, "u": public_url, "id": service_id},
+    )
+    db.commit()
+    return {"ok": True, "image_path": rel, "image_url": public_url}
+
+
+@router.delete("/services/{service_id}/image")
+def remove_service_image(
+    service_id: str,
+    user=Depends(require_permission("manage_services")),
+    db: Session = Depends(get_db),
+):
+    row = db.execute(
+        text("SELECT image_path FROM services WHERE id = CAST(:id AS uuid)"),
+        {"id": service_id},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Service not found")
+    prev = (row.get("image_path") or "").strip()
+    if prev.startswith("services/"):
+        try:
+            delete_object(prev)
+        except Exception:
+            pass
+    db.execute(
+        text(
+            """
+            UPDATE services
+            SET image_path = NULL, image_url = NULL, updated_at = NOW()
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"id": service_id},
+    )
     db.commit()
     return {"ok": True}
 

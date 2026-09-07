@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
+import { serviceImageUrl } from "@/lib/serviceImage";
 
 const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
 
@@ -29,8 +30,6 @@ type Svc = {
   image_path?: string | null;
   categories?: { slug: string; name: string }[];
 };
-
-const PLACEHOLDER_IMAGES = ["/images/puja-thali.png", "/images/temple-ritual.png", "/images/hero-bg.png", "/images/meditation.png"];
 
 export default function Services() {
   const { t } = useI18n();
@@ -139,7 +138,7 @@ export default function Services() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {services.map((s, i) => {
                 const Icon = ICONS[i % ICONS.length];
-                const img = s.image_url || s.image_path || PLACEHOLDER_IMAGES[i % PLACEHOLDER_IMAGES.length];
+                const img = serviceImageUrl(s);
                 const desc =
                   s.short_description ||
                   s.description ||
