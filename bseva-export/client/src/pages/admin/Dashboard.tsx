@@ -15,17 +15,52 @@ export default function AdminDashboard() {
   const ps = stats?.pujariStatus || {};
   const metrics = [
     { title: "Total Customers", value: stats?.totalCustomers ?? "—", icon: Users, href: adminPath("/customers") },
-    { title: "Active Pujaris", value: stats?.activePriests ?? "—", icon: UserCog, href: adminPath("/pujaris") },
+    {
+      title: "Active Pujaris",
+      value: stats?.activePriests ?? "—",
+      icon: UserCog,
+      href: adminPath("/pujaris?status=approved"),
+    },
     { title: "Total Bookings", value: stats?.totalBookings ?? "—", icon: Calendar, href: adminPath("/bookings") },
     { title: "Revenue", value: stats ? rupees(stats.monthlyRevenue) : "—", icon: DollarSign, href: adminPath("/payments") },
   ];
 
   const pujariMetrics = [
-    { title: "Approved", value: ps.active ?? "—", icon: CheckCircle, color: "text-emerald-600" },
-    { title: "Pending verification", value: ps.pendingVerification ?? "—", icon: Clock, color: "text-amber-600" },
-    { title: "Correction required", value: ps.correctionRequired ?? "—", icon: AlertTriangle, color: "text-orange-600" },
-    { title: "Rejected", value: ps.rejected ?? "—", icon: Ban, color: "text-red-600" },
-    { title: "Blocked", value: ps.blocked ?? "—", icon: Ban, color: "text-slate-600" },
+    {
+      title: "Approved",
+      value: ps.active ?? "—",
+      icon: CheckCircle,
+      color: "text-emerald-600",
+      href: adminPath("/pujaris?status=approved"),
+    },
+    {
+      title: "Pending verification",
+      value: ps.pendingVerification ?? "—",
+      icon: Clock,
+      color: "text-amber-600",
+      href: adminPath("/pujaris?status=pending"),
+    },
+    {
+      title: "Correction required",
+      value: ps.correctionRequired ?? "—",
+      icon: AlertTriangle,
+      color: "text-orange-600",
+      href: adminPath("/pujaris?status=correction_required"),
+    },
+    {
+      title: "Rejected",
+      value: ps.rejected ?? "—",
+      icon: Ban,
+      color: "text-red-600",
+      href: adminPath("/pujaris?status=rejected"),
+    },
+    {
+      title: "Blocked",
+      value: ps.blocked ?? "—",
+      icon: Ban,
+      color: "text-slate-600",
+      href: adminPath("/pujaris?status=blocked"),
+    },
   ];
 
   return (
@@ -51,7 +86,7 @@ export default function AdminDashboard() {
       <h2 className="text-lg font-heading font-semibold mb-3">Pujari status</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {pujariMetrics.map((m) => (
-          <Link key={m.title} href={adminPath("/pujaris")}>
+          <Link key={m.title} href={m.href}>
             <Card className="hover:border-primary cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm">{m.title}</CardTitle>

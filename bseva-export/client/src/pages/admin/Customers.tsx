@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { adminPath } from "@/const";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -20,20 +29,36 @@ const emptyForm = { name: "", email: "", phone: "", password: "", location: "" }
 
 export default function CustomersPage() {
   const [rows, setRows] = useState<any[]>([]);
-  const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  const statusFilter = params.get("status") || "all";
+  const [q, setQ] = useState(params.get("q") || "");
+
+  function updateFilters(next: { status?: string; q?: string }) {
+    const sp = new URLSearchParams();
+    const st = next.status ?? statusFilter;
+    const query = next.q ?? q;
+    if (st && st !== "all") sp.set("status", st);
+    if (query.trim()) sp.set("q", query.trim());
+    const qs = sp.toString();
+    setLocation(adminPath(`/customers${qs ? `?${qs}` : ""}`));
+  }
 
   async function load() {
     const qs = new URLSearchParams({ role: "customer" });
-    if (q) qs.set("q", q);
+    if (statusFilter === "blocked") qs.set("blocked", "true");
+    if (statusFilter === "active") qs.set("blocked", "false");
+    if (q.trim()) qs.set("q", q.trim());
     setRows(await api<any[]>(`/admin/users?${qs}`));
   }
 
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
-  }, []);
+  }, [statusFilter, search]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -131,9 +156,38 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex gap-2 mb-4">
-        <Input placeholder="Search name, email, phone" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Button type="button" onClick={() => load()}>Search</Button>
+      <div className="flex flex-wrap gap-2 mb-4 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs">Status filter</Label>
+          <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2 flex-1 min-w-[200px]">
+          <Input
+            placeholder="Search name, email, phone"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") updateFilters({ q });
+            }}
+          />
+          <Button type="button" onClick={() => updateFilters({ q })}>
+            Search
+          </Button>
+        </div>
+        {statusFilter !== "all" && (
+          <Badge variant="secondary" className="mb-1">
+            Showing: {statusFilter}
+          </Badge>
+        )}
       </div>
       <Table>
         <TableHeader>
@@ -218,6 +272,9 @@ export default function CustomersPage() {
           ))}
         </TableBody>
       </Table>
+      {rows.length === 0 && (
+        <p className="text-sm text-muted-foreground mt-4">No customers match this filter.</p>
+      )}
     </AdminLayout>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { usePujariLevels } from "@/hooks/usePujariLevels";
+import { adminPath } from "@/const";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -220,14 +222,33 @@ export default function PujarisPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const { levels: pujariLevels } = usePujariLevels();
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  const statusFilter = params.get("status") || "all";
+  const [q, setQ] = useState(params.get("q") || "");
+
+  function updateFilters(next: { status?: string; q?: string }) {
+    const sp = new URLSearchParams();
+    const st = next.status ?? statusFilter;
+    const query = next.q ?? q;
+    if (st && st !== "all") sp.set("status", st);
+    if (query.trim()) sp.set("q", query.trim());
+    const qs = sp.toString();
+    setLocation(adminPath(`/pujaris${qs ? `?${qs}` : ""}`));
+  }
 
   async function load() {
-    setRows(await api<any[]>("/admin/pujaris"));
+    const qs = new URLSearchParams();
+    if (statusFilter && statusFilter !== "all") qs.set("status", statusFilter);
+    if (q.trim()) qs.set("q", q.trim());
+    const path = qs.toString() ? `/admin/pujaris?${qs}` : "/admin/pujaris";
+    setRows(await api<any[]>(path));
   }
 
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
-  }, []);
+  }, [statusFilter, search]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -256,6 +277,43 @@ export default function PujarisPage() {
           <Plus size={16} />
           Add pujari
         </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs">Status filter</Label>
+          <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending verification</SelectItem>
+              <SelectItem value="correction_required">Correction required</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2 flex-1 min-w-[200px]">
+          <Input
+            placeholder="Search name, email, phone"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") updateFilters({ q });
+            }}
+          />
+          <Button type="button" variant="secondary" onClick={() => updateFilters({ q })}>
+            Search
+          </Button>
+        </div>
+        {statusFilter !== "all" && (
+          <Badge variant="secondary" className="mb-1">
+            Showing: {statusFilter.replace(/_/g, " ")}
+          </Badge>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -364,6 +422,9 @@ export default function PujarisPage() {
           ))}
         </TableBody>
       </Table>
+      {rows.length === 0 && (
+        <p className="text-sm text-muted-foreground mt-4">No pujaris match this filter.</p>
+      )}
     </AdminLayout>
   );
 }

@@ -276,10 +276,14 @@ def delete_user(user_id: str, admin=Depends(require_roles("admin")), db: Session
 
 
 @router.get("/pujaris")
-def list_pujaris(user=Depends(require_any_permission("view_pujaris", "verify_pujaris")), db: Session = Depends(get_db)):
-    rows = db.execute(
-        text(
-            """
+def list_pujaris(
+    status: str | None = None,
+    blocked: bool | None = None,
+    q: str | None = None,
+    user=Depends(require_any_permission("view_pujaris", "verify_pujaris")),
+    db: Session = Depends(get_db),
+):
+    sql = """
             SELECT u.id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
                    p.requested_level, p.approved_level, p.verification_status, p.available, p.location_label,
                    p.experience_years, p.specializations, p.pravara, p.joining_fee_status,
@@ -287,10 +291,28 @@ def list_pujaris(user=Depends(require_any_permission("view_pujaris", "verify_puj
                    COALESCE(p.profile_complete, FALSE) AS profile_complete,
                    COALESCE(p.profile_completion_percentage, 0) AS profile_completion_percentage
             FROM users u JOIN pujari_profiles p ON p.user_id = u.id
-            ORDER BY u.created_at DESC
+            WHERE u.role IN ('pujari', 'head_pujari')
             """
-        )
-    ).mappings().all()
+    params: dict = {}
+    st = (status or "").strip().lower()
+    if st in ("blocked",):
+        sql += " AND u.blocked = TRUE"
+    elif st in ("approved", "active"):
+        sql += " AND u.blocked = FALSE AND p.verification_status = 'approved'"
+    elif st in ("pending", "pending_verification"):
+        sql += " AND u.blocked = FALSE AND p.verification_status IN ('pending', 'under_review')"
+    elif st in ("correction_required", "correction"):
+        sql += " AND u.blocked = FALSE AND p.verification_status = 'correction_required'"
+    elif st == "rejected":
+        sql += " AND u.blocked = FALSE AND p.verification_status = 'rejected'"
+    elif blocked is not None:
+        sql += " AND u.blocked = :blocked"
+        params["blocked"] = blocked
+    if q:
+        sql += " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q)"
+        params["q"] = f"%{q}%"
+    sql += " ORDER BY u.created_at DESC"
+    rows = db.execute(text(sql), params).mappings().all()
     return [row_dict(r) for r in rows]
 
 

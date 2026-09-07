@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, rupees } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { adminPath } from "@/const";
 import { toast } from "sonner";
 
 type AvailablePujari = {
@@ -61,6 +71,18 @@ export default function Bookings() {
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [penaltyFor, setPenaltyFor] = useState<string | null>(null);
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  const statusFilter = params.get("status") || "all";
+
+  const filtered = useMemo(() => {
+    if (statusFilter === "all") return rows;
+    if (statusFilter === "needs_reassignment") {
+      return rows.filter((b) => b.needs_reassignment || b.status === "rejected");
+    }
+    return rows.filter((b) => b.status === statusFilter);
+  }, [rows, statusFilter]);
 
   async function load() {
     setRows(await api<any[]>("/bookings"));
@@ -69,6 +91,11 @@ export default function Bookings() {
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
   }, []);
+
+  function setStatus(status: string) {
+    const qs = status === "all" ? "" : `?status=${encodeURIComponent(status)}`;
+    setLocation(adminPath(`/bookings${qs}`));
+  }
 
   async function openReassign(booking: any) {
     setReassignFor(booking);
@@ -129,6 +156,32 @@ export default function Bookings() {
   return (
     <AdminLayout>
       <h1 className="text-2xl font-heading font-bold mb-4">Bookings</h1>
+      <div className="flex flex-wrap gap-2 mb-4 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs">Status filter</Label>
+          <Select value={statusFilter} onValueChange={setStatus}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="pending_acceptance">Pending acceptance</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="in_progress">In progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="needs_reassignment">Needs reassignment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {statusFilter !== "all" && (
+          <Badge variant="secondary" className="mb-1">
+            Showing: {statusFilter.replace(/_/g, " ")} ({filtered.length})
+          </Badge>
+        )}
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -143,7 +196,7 @@ export default function Bookings() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((b) => {
+          {filtered.map((b) => {
             const needsAttention = Boolean(b.needs_reassignment) || b.status === "rejected";
             const canPenalise = ["confirmed", "in_progress", "completed", "cancelled"].includes(b.status);
             return (
