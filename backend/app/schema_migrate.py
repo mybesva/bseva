@@ -7,6 +7,7 @@ _STMTS = [
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS full_name TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS father_name TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS gotra TEXT",
+    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS pravara TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS date_of_birth DATE",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS native_place TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS permanent_address TEXT",

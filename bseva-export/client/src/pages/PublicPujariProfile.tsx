@@ -76,6 +76,12 @@ export default function PublicPujariProfile() {
                   <p className="font-medium">{p.gotra}</p>
                 </div>
               )}
+              {p.pravara && (
+                <div>
+                  <p className="text-muted-foreground">{t("pujari.pravara")}</p>
+                  <p className="font-medium">{p.pravara}</p>
+                </div>
+              )}
               <div>
                 <p className="text-muted-foreground">{t("pujari.public.languages")}</p>
                 <p className="font-medium">{parseList(p.languages).join(", ") || "—"}</p>

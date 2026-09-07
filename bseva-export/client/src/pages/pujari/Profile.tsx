@@ -59,8 +59,8 @@ function ProfileForm() {
         body: JSON.stringify({
           full_name: profile.full_name,
           father_name: profile.father_name,
-          gotra: profile.gotra,
-          pravara: profile.pravara,
+          gotra: profile.gotra ?? "",
+          pravara: profile.pravara ?? "",
           date_of_birth: profile.date_of_birth || null,
           native_place: profile.native_place,
           permanent_address: profile.permanent_address,
@@ -159,28 +159,45 @@ function ProfileForm() {
             <Input value={profile.father_name || ""} onChange={(e) => setField("father_name", e.target.value)} />
           </div>
           <div>
-            <Label>{t("pujari.gotra")}</Label>
-            <Input
-              value={profile.gotra || ""}
-              onChange={(e) => setField("gotra", e.target.value)}
-              placeholder="e.g. Bharadwaja"
-            />
-          </div>
-          <div>
-            <Label>{t("pujari.pravara")}</Label>
-            <Input
-              value={profile.pravara || ""}
-              onChange={(e) => setField("pravara", e.target.value)}
-              placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Your family Pravara (rishi lineage), usually listed with Gotra.
-            </p>
-          </div>
-          <div>
             <Label>{t("pujari.dob")} *</Label>
             <Input type="date" value={(profile.date_of_birth || "").slice(0, 10)} onChange={(e) => setField("date_of_birth", e.target.value)} />
           </div>
+          <div>
+            <Label>{t("pujari.mobile")} *</Label>
+            <Input value={profile.mobile_number || ""} onChange={(e) => setField("mobile_number", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
+          <div>
+            <h3 className="font-heading font-semibold text-sidebar">Gotra &amp; Pravara</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Enter your family Gotra and Pravara (rishi lineage). Both appear on Angikara Patram.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="pujari-gotra">{t("pujari.gotra")}</Label>
+              <Input
+                id="pujari-gotra"
+                value={profile.gotra || ""}
+                onChange={(e) => setField("gotra", e.target.value)}
+                placeholder="e.g. Bharadwaja"
+              />
+            </div>
+            <div>
+              <Label htmlFor="pujari-pravara">{t("pujari.pravara")}</Label>
+              <Input
+                id="pujari-pravara"
+                value={profile.pravara ?? ""}
+                onChange={(e) => setField("pravara", e.target.value)}
+                placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <Label>{t("pujari.native")}</Label>
             <Input value={profile.native_place || ""} onChange={(e) => setField("native_place", e.target.value)} />
@@ -200,10 +217,6 @@ function ProfileForm() {
               onChange={(e) => setField("present_address", e.target.value)}
               disabled={sameAddr}
             />
-          </div>
-          <div>
-            <Label>{t("pujari.mobile")} *</Label>
-            <Input value={profile.mobile_number || ""} onChange={(e) => setField("mobile_number", e.target.value)} />
           </div>
           <div>
             <label className="flex items-center gap-2 text-sm mb-2">

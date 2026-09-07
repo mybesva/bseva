@@ -463,7 +463,7 @@ def submit_angikara(user=Depends(require_roles("pujari")), db: Session = Depends
     if not profile.get("signature_path"):
         raise HTTPException(400, "Signature is required to submit")
     snap = json.dumps({k: profile.get(k) for k in (
-        "full_name", "father_name", "gotra", "date_of_birth", "native_place",
+        "full_name", "father_name", "gotra", "pravara", "date_of_birth", "native_place",
         "permanent_address", "present_address", "mobile_number", "whatsapp_number",
         "qualifications", "qualification_year", "sampradaya", "website_publication_consent",
         "profile_photo_path", "signature_path",

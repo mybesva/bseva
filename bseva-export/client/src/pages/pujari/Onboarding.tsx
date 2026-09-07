@@ -318,28 +318,38 @@ export default function PujariOnboardingPage() {
                     onChange={(e) => setField("mobile_number", e.target.value)}
                   />
                 </div>
-                <div>
-                  <Label>{t("pujari.gotra")}</Label>
-                  <Input
-                    value={profile.gotra || ""}
-                    onChange={(e) => setField("gotra", e.target.value)}
-                    placeholder="e.g. Bharadwaja"
-                  />
-                </div>
-                <div>
-                  <Label>{t("pujari.pravara")}</Label>
-                  <Input
-                    value={profile.pravara || ""}
-                    onChange={(e) => setField("pravara", e.target.value)}
-                    placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Family Pravara (rishi lineage), usually listed with Gotra.
-                  </p>
-                </div>
                 <div className="md:col-span-2">
                   <Label>Email</Label>
                   <Input value={user?.email || ""} readOnly disabled />
+                </div>
+              </div>
+
+              <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
+                <div>
+                  <h3 className="font-heading font-semibold text-sidebar">Gotra &amp; Pravara</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Enter your family Gotra and Pravara (rishi lineage).
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="onboarding-gotra">{t("pujari.gotra")}</Label>
+                    <Input
+                      id="onboarding-gotra"
+                      value={profile.gotra || ""}
+                      onChange={(e) => setField("gotra", e.target.value)}
+                      placeholder="e.g. Bharadwaja"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="onboarding-pravara">{t("pujari.pravara")}</Label>
+                    <Input
+                      id="onboarding-pravara"
+                      value={profile.pravara ?? ""}
+                      onChange={(e) => setField("pravara", e.target.value)}
+                      placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
+                    />
+                  </div>
                 </div>
               </div>
             </section>
