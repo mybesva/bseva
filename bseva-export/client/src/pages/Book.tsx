@@ -32,8 +32,8 @@ export default function Book() {
       setMuhurtaRequested(true);
       toast.success(
         out.payment_status === "paid"
-          ? `Consultation requested. ${rupees(out.fee_paise)} was debited from your wallet.`
-          : "Consultation requested. A pujari will share muhurta guidance shortly."
+          ? `Muhurta consultation booked. ${rupees(out.fee_paise)} debited — keep this as your payment record. Book marriage services with us later for a discount.`
+          : "Muhurta consultation booked. A pujari will share guidance shortly. Book marriage services with us later for a discount."
       );
     } catch (e: any) {
       toast.error(e.message || "Could not request a consultation");
@@ -104,32 +104,62 @@ export default function Book() {
       </section>
       <div className="container pb-12">
         {showMuhurta && (
-          <div className="mt-6 rounded-lg border border-primary/30 bg-orange-50/60 p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <Sparkles className="text-primary mt-0.5 shrink-0" size={20} />
-              <div>
-                <p className="font-heading font-semibold text-sidebar">
-                  {pujaType.requires_muhurta
-                    ? "This puja needs an auspicious time (muhurta)"
-                    : "Not sure about the right muhurta?"}
-                </p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {muhurtaRequested
-                    ? "Your request is in. A pujari will share the recommended dates and times, then you can complete this booking."
-                    : muhurtaFee > 0
-                      ? `Request guidance from a pujari for ${rupees(muhurtaFee)}, debited from your wallet. You can still pick a date below.`
-                      : "Request guidance from a pujari before you pick a date. You can still continue booking below."}
+          <div className="mt-6 rounded-lg border border-primary/30 bg-orange-50/60 p-4 space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <Sparkles className="text-primary mt-0.5 shrink-0" size={20} />
+                <div className="min-w-0">
+                  <p className="font-heading font-semibold text-sidebar">
+                    {pujaType.requires_muhurta
+                      ? "This puja needs an auspicious time (muhurta)"
+                      : "Not sure about the right muhurta?"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {muhurtaRequested
+                      ? "Your muhurta request is booked. A pujari will share recommended dates and times, then you can complete this booking."
+                      : muhurtaFee > 0
+                        ? `Request muhurta guidance from a pujari for ${rupees(muhurtaFee)} (debited from your wallet). You get a payment record for this consultation. You can still pick a date below.`
+                        : "Request muhurta guidance from a pujari before you pick a date. You can still continue booking below."}
+                  </p>
+                </div>
+              </div>
+              {!muhurtaRequested && (
+                <Button
+                  variant="secondary"
+                  disabled={requestingMuhurta}
+                  onClick={() => void requestMuhurta()}
+                >
+                  {requestingMuhurta ? "Requesting…" : "Request muhurta consultation"}
+                </Button>
+              )}
+            </div>
+
+            <div className="rounded-md border border-primary/20 bg-white/80 px-3 py-2.5 text-sm space-y-1">
+              <p className="font-medium text-sidebar">B-Seva benefit</p>
+              <p className="text-muted-foreground">
+                If you set your muhurtham through B-Seva, you get a discount when you book marriage /
+                wedding services with us (for example Vivaha / marriage puja). The consultation fee stays
+                on your account as a paid record, same as a booking receipt.
+              </p>
+            </div>
+
+            {muhurtaRequested && (
+              <div className="rounded-md border bg-white px-3 py-2.5 text-sm space-y-1">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className="font-medium text-green-700">Requested · awaiting pujari guidance</span>
+                </div>
+                {muhurtaFee > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Consultation fee</span>
+                    <span className="font-medium">{rupees(muhurtaFee)}</span>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground pt-1">
+                  Keep this confirmation — it counts toward your marriage-service discount when you book
+                  with B-Seva.
                 </p>
               </div>
-            </div>
-            {!muhurtaRequested && (
-              <Button
-                variant="secondary"
-                disabled={requestingMuhurta}
-                onClick={() => void requestMuhurta()}
-              >
-                {requestingMuhurta ? "Requesting…" : "Request muhurta consultation"}
-              </Button>
             )}
           </div>
         )}
@@ -144,8 +174,9 @@ export default function Book() {
             samagri: pujaType.samagri_price_paise,
             alankaram: pujaType.alankaram_price_paise,
             food: pujaType.food_price_paise,
-            samagriAvailable: pujaType.samagri_available !== false,
-            alankaramAvailable: pujaType.alankaram_available !== false,
+            // Always show optional Samagri + Alankaram on customer booking.
+            samagriAvailable: true,
+            alankaramAvailable: true,
             foodAvailable: Boolean(pujaType.food_available),
           }}
         />

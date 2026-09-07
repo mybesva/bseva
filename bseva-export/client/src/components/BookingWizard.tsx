@@ -150,12 +150,98 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       .catch(() => setQuote(null));
   }, [bookingDate, serviceId, tier, city, includeSamagri, includeAlankaram]);
 
-  const samagriPrice = Number(addonPrices?.samagri || quote?.samagriListPrice || 0);
-  const alankaramPrice = Number(addonPrices?.alankaram || quote?.alankaramListPrice || 0);
-  const showSamagriOpt =
-    (addonPrices?.samagriAvailable !== false) && samagriPrice > 0;
-  const showAlankaramOpt =
-    (addonPrices?.alankaramAvailable !== false) && alankaramPrice > 0;
+  const samagriPrice = Number(
+    addonPrices?.samagri && Number(addonPrices.samagri) > 0
+      ? addonPrices.samagri
+      : quote?.samagriListPrice || 50000
+  );
+  const alankaramPrice = Number(
+    addonPrices?.alankaram && Number(addonPrices.alankaram) > 0
+      ? addonPrices.alankaram
+      : quote?.alankaramListPrice || 30000
+  );
+  // Always offer both optional add-ons unless Admin explicitly disables them.
+  const showSamagriOpt = addonPrices?.samagriAvailable !== false;
+  const showAlankaramOpt = addonPrices?.alankaramAvailable !== false;
+
+  function AddonOptionsCard() {
+    if (!showSamagriOpt && !showAlankaramOpt) return null;
+    return (
+      <Card className="border-dashed border-[#F7931E]/60 bg-orange-50/40">
+        <CardContent className="p-5 space-y-4">
+          <div>
+            <p className="font-medium text-[#1E3A5F]">Optional — Samagri & Alankaram</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Tick if you want the pujari to bring these for you. You reimburse the pujari from this booking
+              payment. Skip both if you will arrange yourself.
+            </p>
+          </div>
+          {showSamagriOpt && (
+            <label className="flex items-start gap-3 rounded-md border bg-white p-3 cursor-pointer hover:bg-muted/40">
+              <Checkbox
+                checked={includeSamagri}
+                onCheckedChange={(v) => setIncludeSamagri(!!v)}
+                className="mt-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium">Samagri kit</span>
+                  <span className="font-semibold text-[#F7931E] shrink-0">
+                    ₹{(samagriPrice / 100).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Puja materials — pujari brings them; reimbursed to pujari.
+                </p>
+              </div>
+            </label>
+          )}
+          {showAlankaramOpt && (
+            <label className="flex items-start gap-3 rounded-md border bg-white p-3 cursor-pointer hover:bg-muted/40">
+              <Checkbox
+                checked={includeAlankaram}
+                onCheckedChange={(v) => setIncludeAlankaram(!!v)}
+                className="mt-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium">Alankaram</span>
+                  <span className="font-semibold text-[#F7931E] shrink-0">
+                    ₹{(alankaramPrice / 100).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Flowers / decoration — pujari brings them; reimbursed to pujari.
+                </p>
+              </div>
+            </label>
+          )}
+          {(includeSamagri || includeAlankaram) && (
+            <div className="text-sm border-t pt-3 space-y-1">
+              {includeSamagri && (
+                <div className="flex justify-between">
+                  <span>Samagri (reimbursement)</span>
+                  <span>₹{(samagriPrice / 100).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              {includeAlankaram && (
+                <div className="flex justify-between">
+                  <span>Alankaram (reimbursement)</span>
+                  <span>₹{(alankaramPrice / 100).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold">
+                <span>Updated total</span>
+                <span className="text-[#F7931E]">
+                  ₹{(Number(bill.totalAmount || 0) / 100).toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   useEffect(() => {
     if (currentStep < 2) return;
@@ -677,7 +763,14 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   </p>
                 ))}
               </div>
-              <div className="border-t pt-3 space-y-1">
+            </CardContent>
+          </Card>
+
+          <AddonOptionsCard />
+
+          <Card>
+            <CardContent className="p-6 space-y-3 text-sm">
+              <div className="border-t-0 space-y-1">
                 <div className="flex justify-between">
                   <span>Service ({tierDetails[tier].name})</span>
                   <span>₹{(bill.basePrice / 100).toLocaleString("en-IN")}</span>
@@ -724,81 +817,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-[#1E3A5F]">{t("booking.payment")}</h3>
 
-          {(showSamagriOpt || showAlankaramOpt) && (
-            <Card className="border-dashed">
-              <CardContent className="p-5 space-y-4">
-                <div>
-                  <p className="font-medium text-[#1E3A5F]">Optional add-ons</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    If selected, the assigned pujari will buy these items and get reimbursed from your payment.
-                    You can skip both — they are optional.
-                  </p>
-                </div>
-                {showSamagriOpt && (
-                  <label className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/40">
-                    <Checkbox
-                      checked={includeSamagri}
-                      onCheckedChange={(v) => setIncludeSamagri(!!v)}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between gap-2">
-                        <span className="font-medium">Samagri kit</span>
-                        <span className="font-semibold text-[#F7931E] shrink-0">
-                          ₹{(samagriPrice / 100).toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Puja materials — pujari purchases and is reimbursed.
-                      </p>
-                    </div>
-                  </label>
-                )}
-                {showAlankaramOpt && (
-                  <label className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/40">
-                    <Checkbox
-                      checked={includeAlankaram}
-                      onCheckedChange={(v) => setIncludeAlankaram(!!v)}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between gap-2">
-                        <span className="font-medium">Alankaram</span>
-                        <span className="font-semibold text-[#F7931E] shrink-0">
-                          ₹{(alankaramPrice / 100).toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Decoration / flowers — pujari purchases and is reimbursed.
-                      </p>
-                    </div>
-                  </label>
-                )}
-                {(includeSamagri || includeAlankaram) && (
-                  <div className="text-sm border-t pt-3 space-y-1">
-                    {includeSamagri && (
-                      <div className="flex justify-between">
-                        <span>Samagri</span>
-                        <span>₹{(samagriPrice / 100).toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                    {includeAlankaram && (
-                      <div className="flex justify-between">
-                        <span>Alankaram</span>
-                        <span>₹{(alankaramPrice / 100).toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-semibold">
-                      <span>Updated total</span>
-                      <span className="text-[#F7931E]">
-                        ₹{(Number(bill.totalAmount || 0) / 100).toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <AddonOptionsCard />
 
           {!isAuthenticated && !authLoading && (
             <Card className="border-orange-200 bg-orange-50">

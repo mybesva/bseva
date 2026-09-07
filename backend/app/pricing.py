@@ -138,14 +138,19 @@ def compute_quote(
     samagri = _comp("samagri_price_paise")
     alankaram = _comp("alankaram_price_paise")
     food = _comp("food_price_paise")
+    # When Admin has not set list prices yet, still offer customer opt-in with sensible defaults.
+    SAMAGRI_DEFAULT_PAISE = 50000  # ₹500
+    ALANKARAM_DEFAULT_PAISE = 30000  # ₹300
+    samagri_list = samagri if samagri > 0 else SAMAGRI_DEFAULT_PAISE
+    alankaram_list = alankaram if alankaram > 0 else ALANKARAM_DEFAULT_PAISE
     samagri_prov = (service.get("samagri_provider") or "included").lower()
     alankaram_prov = (service.get("alankaram_provider") or "included").lower()
     food_prov = (service.get("food_provider") or "included").lower()
 
     # Explicit customer opt-in (booking wizard): charge as reimbursable line items.
     if include_samagri is not None or include_alankaram is not None or include_food is not None:
-        samagri_charge = samagri if include_samagri else 0
-        alankaram_charge = alankaram if include_alankaram else 0
+        samagri_charge = samagri_list if include_samagri else 0
+        alankaram_charge = alankaram_list if include_alankaram else 0
         food_charge = food if include_food else 0
         reimbursement = 0
         if include_samagri and samagri_charge:
@@ -196,8 +201,8 @@ def compute_quote(
         "samagri": samagri_charge,
         "alankaram": alankaram_charge,
         "foodPrasadam": food_charge,
-        "samagriListPrice": samagri,
-        "alankaramListPrice": alankaram,
+        "samagriListPrice": samagri_list if include_samagri is not None else samagri,
+        "alankaramListPrice": alankaram_list if include_alankaram is not None else alankaram,
         "foodListPrice": food,
         "componentsTotal": components_total,
         "pujariReimbursement": reimbursement,
