@@ -34,6 +34,7 @@ import AngikaraPage from "./pages/pujari/Angikara";
 import PujariOnboarding from "./pages/pujari/Onboarding";
 import PujariAddressPage from "./pages/pujari/AddressPage";
 import PujariBankPage from "./pages/pujari/BankPage";
+import PujariReferralPage from "./pages/pujari/ReferralPage";
 import PujariAvailabilityPage from "./pages/pujari/AvailabilityPage";
 import PujariServicesPage from "./pages/pujari/ServicesPage";
 import PujariExperiencePage from "./pages/pujari/ExperiencePage";
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/pujari/experience" component={PujariExperiencePage} />
       <Route path="/pujari/availability" component={PujariAvailabilityPage} />
       <Route path="/pujari/bank" component={PujariBankPage} />
+      <Route path="/pujari/referral" component={PujariReferralPage} />
       <Route path="/pujari/change-password" component={PujariChangePasswordPage} />
       <Route path="/pujari/support" component={PujariSupportPage} />
       <Route path="/support" component={SupportPage} />

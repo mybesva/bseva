@@ -18,6 +18,7 @@ import {
   Landmark,
   Sparkles,
   Star,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -58,6 +59,7 @@ const pujariNav: NavItem[] = [
   { label: "Experience", href: "/pujari/experience", icon: Briefcase },
   { label: "Availability", href: "/pujari/availability", icon: Clock },
   { label: "Bank / Settlement", href: "/pujari/bank", icon: Landmark },
+  { label: "Referral", href: "/pujari/referral", icon: Gift },
   { label: "Assess Pujaris", href: "/pujari/head-ratings", icon: Star },
   { label: "Support", href: "/pujari/support", icon: FileText },
   { label: "Change Password", href: "/pujari/change-password", icon: KeyRound },

@@ -73,7 +73,6 @@ function PujariDashboardContent() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujariProfile, setPujariProfile] = useState<any>(null);
-  const [referralCode, setReferralCode] = useState<string | null>(null);
 
   async function loadBookings() {
     const rows = await api<any[]>("/bookings");
@@ -87,11 +86,6 @@ function PujariDashboardContent() {
       loadBookings(),
       user.role === "pujari" || user.role === "head_pujari"
         ? api<any>("/pujari/profile").then(setPujariProfile)
-        : Promise.resolve(),
-      user.role === "pujari" || user.role === "head_pujari"
-        ? api<{ referral_code: string }>("/pujari/referral-code")
-            .then((r) => setReferralCode(r.referral_code))
-            .catch(() => setReferralCode(null))
         : Promise.resolve(),
     ])
       .catch((e) => toast.error(e.message))
@@ -364,26 +358,6 @@ function PujariDashboardContent() {
             )}
           </CardContent>
         </Card>
-        {referralCode && (
-          <Card>
-            <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Your referral code</p>
-                <p className="font-heading font-semibold text-lg tracking-wide">{referralCode}</p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  void navigator.clipboard.writeText(referralCode);
-                  toast.success("Referral code copied");
-                }}
-              >
-                Copy
-              </Button>
-            </CardContent>
-          </Card>
-        )}
         {(profileStatus === "profile_incomplete" || !pujariProfile?.profile_submitted_at) && (
           <Card className="border-primary/30 bg-orange-50">
             <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
