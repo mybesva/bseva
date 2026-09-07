@@ -286,48 +286,80 @@ function PujariDashboardContent() {
     return null;
   };
 
-  const BookingListItem = ({ row }: { row: BookingRow }) => {
+  const BookingListItem = ({
+    row,
+    showAcceptReject = false,
+  }: {
+    row: BookingRow;
+    showAcceptReject?: boolean;
+  }) => {
     const hint = actionHint(row.booking.status);
+    const openDetail = () => setSelectedBooking(row);
     return (
-      <button
-        type="button"
-        onClick={() => setSelectedBooking(row)}
-        className="w-full text-left p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary/30 transition-colors"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="font-semibold text-sidebar flex items-center gap-2">
-              <Sparkles size={16} className="text-primary shrink-0" />
-              <span className="truncate">{row.pujaType.name}</span>
+      <div className="w-full text-left p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary/30 transition-colors">
+        <button type="button" onClick={openDetail} className="w-full text-left">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-semibold text-sidebar flex items-center gap-2">
+                <Sparkles size={16} className="text-primary shrink-0" />
+                <span className="truncate">{row.pujaType.name}</span>
+              </div>
+              <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                <span className="flex items-center gap-1">
+                  <CalendarIcon size={14} />
+                  {row.booking.bookingDate
+                    ? format(new Date(row.booking.bookingDate), "dd MMM yyyy")
+                    : "—"}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock size={14} />
+                  {row.booking.bookingTime || "—"}
+                </span>
+                <span className="flex items-center gap-1">
+                  <User size={14} />
+                  {row.customer.name}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin size={14} />
+                  {row.booking.city || "—"}
+                </span>
+              </div>
+              <div className="text-sm font-medium text-primary mt-2">
+                Your share: {formatPaise(row.booking.priestAmount || 0)}
+              </div>
+              {hint && !showAcceptReject && (
+                <p className="text-xs text-orange-700 mt-1 font-medium">{hint}</p>
+              )}
             </div>
-            <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
-              <span className="flex items-center gap-1">
-                <CalendarIcon size={14} />
-                {row.booking.bookingDate
-                  ? format(new Date(row.booking.bookingDate), "dd MMM yyyy")
-                  : "—"}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock size={14} />
-                {row.booking.bookingTime || "—"}
-              </span>
-              <span className="flex items-center gap-1">
-                <User size={14} />
-                {row.customer.name}
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin size={14} />
-                {row.booking.city || "—"}
-              </span>
-            </div>
-            <div className="text-sm font-medium text-primary mt-2">
-              Your share: {formatPaise(row.booking.priestAmount || 0)}
-            </div>
-            {hint && <p className="text-xs text-orange-700 mt-1 font-medium">{hint}</p>}
+            <Badge className={getStatusColor(row.booking.status)}>
+              {row.booking.status.replace(/_/g, " ")}
+            </Badge>
           </div>
-          <Badge className={getStatusColor(row.booking.status)}>{row.booking.status.replace(/_/g, " ")}</Badge>
-        </div>
-      </button>
+        </button>
+        {showAcceptReject && (
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/60">
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                openDetail();
+              }}
+            >
+              Accept
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                openDetail();
+              }}
+            >
+              Reject
+            </Button>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -377,7 +409,7 @@ function PujariDashboardContent() {
             </CardHeader>
             <CardContent className="space-y-3">
               {pendingAcceptance.map((row) => (
-                <BookingListItem key={row.booking.id} row={row} />
+                <BookingListItem key={row.booking.id} row={row} showAcceptReject />
               ))}
             </CardContent>
           </Card>

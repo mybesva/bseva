@@ -88,6 +88,27 @@ export default function BookingReceipt() {
 
   const showPujari = booking.pujari_details_visible === true && !!booking.pujari_name;
   const slot = `${booking.booking_date || "—"} · ${booking.start_time || "—"}`;
+  const canCancel =
+    user?.role === "customer" &&
+    ["pending", "pending_acceptance", "confirmed"].includes(String(booking.status || ""));
+
+  async function cancelBooking() {
+    const reason = window.prompt("Reason for cancellation? (optional)");
+    if (reason === null) return;
+    try {
+      await api(
+        `/bookings/${booking.id}/cancel${
+          reason.trim() ? `?reason=${encodeURIComponent(reason.trim())}` : ""
+        }`,
+        { method: "POST" }
+      );
+      toast.success("Booking cancelled");
+      const refreshed = await api<any>(`/bookings/${booking.id}`);
+      setBooking(refreshed);
+    } catch (e: any) {
+      toast.error(e.message || "Could not cancel");
+    }
+  }
 
   return (
     <Layout>
@@ -99,6 +120,11 @@ export default function BookingReceipt() {
           <Button size="sm" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-1" /> Print receipt
           </Button>
+          {canCancel && (
+            <Button size="sm" variant="destructive" onClick={() => void cancelBooking()}>
+              Cancel booking
+            </Button>
+          )}
         </div>
 
         <Card className="border-2 border-primary/30 shadow-md print:shadow-none print:border">

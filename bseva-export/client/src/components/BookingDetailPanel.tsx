@@ -326,6 +326,36 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         </div>
       )}
 
+      {viewerRole === "customer" &&
+        ["pending", "pending_acceptance", "confirmed"].includes(status) && (
+          <div className="rounded-lg border border-border p-3 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              You can cancel this booking (policy applies within 24 hours of the puja time).
+            </p>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={busy}
+              onClick={() => {
+                const reason = window.prompt("Reason for cancellation? (optional)");
+                if (reason === null) return;
+                void run(
+                  () =>
+                    api(
+                      `/bookings/${bookingId}/cancel${
+                        reason.trim() ? `?reason=${encodeURIComponent(reason.trim())}` : ""
+                      }`,
+                      { method: "POST" }
+                    ).then(() => undefined),
+                  "Booking cancelled"
+                );
+              }}
+            >
+              Cancel booking
+            </Button>
+          </div>
+        )}
+
       {canStartOtp && (
         <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/40 p-3">
           <p className="text-sm text-muted-foreground">

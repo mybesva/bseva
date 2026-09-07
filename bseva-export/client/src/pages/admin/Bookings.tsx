@@ -41,8 +41,12 @@ type AvailableResponse = {
   required_level?: number;
   current_pujari_id?: string | null;
   distance_rings_km?: number[];
+  primary_ring_km?: number;
   matched_ring_km?: number | null;
   booking_has_coordinates?: boolean;
+  default_pujari_available?: boolean;
+  nearby_pujaris?: AvailablePujari[];
+  other_pujaris?: AvailablePujari[];
   pujaris: AvailablePujari[];
 };
 
@@ -274,20 +278,18 @@ export default function Bookings() {
             {!loadingAvailable && available && (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Level {available.required_level} or above, free at this time.
+                  Level {available.required_level} or above, free at this time (availability filtered).
                   {available.booking_has_coordinates
-                    ? available.matched_ring_km
-                      ? ` Showing pujaris within ${available.matched_ring_km} km.`
-                      : " No one inside the configured distance rings — showing everyone eligible."
-                    : " This booking has no coordinates, so distances are unavailable."}
+                    ? ` Default option: within ${available.primary_ring_km ?? 10} km. Farther available pujaris are listed below as fallback.`
+                    : " This booking has no coordinates — distances unavailable; showing all eligible pujaris."}
                 </p>
-                {available.pujaris.length === 0 && (
-                  <p className="text-sm text-muted-foreground py-6 text-center">
-                    No eligible pujari is free for this slot.
-                  </p>
-                )}
-                <div className="space-y-2">
-                  {available.pujaris.map((p) => {
+
+                {(() => {
+                  const nearby = available.nearby_pujaris ?? [];
+                  const other = available.other_pujaris ?? available.pujaris ?? [];
+                  const ring = available.primary_ring_km ?? 10;
+
+                  const renderPujari = (p: AvailablePujari) => {
                     const specializations = parseList(p.specializations);
                     const isCurrent = p.id === available.current_pujari_id;
                     return (
@@ -302,8 +304,12 @@ export default function Bookings() {
                             {isCurrent && <Badge variant="secondary">Currently assigned</Badge>}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {p.distance_km != null ? `${p.distance_km} km away · ` : ""}
-                            {p.experience_years != null ? `${p.experience_years} yrs experience` : "Experience —"}
+                            {p.distance_km != null
+                              ? `${p.distance_km} km away · `
+                              : "Distance unknown · "}
+                            {p.experience_years != null
+                              ? `${p.experience_years} yrs experience`
+                              : "Experience —"}
                             {p.city ? ` · ${p.city}` : p.location_label ? ` · ${p.location_label}` : ""}
                           </div>
                           {specializations.length > 0 && (
@@ -325,8 +331,45 @@ export default function Bookings() {
                         </Button>
                       </div>
                     );
-                  })}
-                </div>
+                  };
+
+                  if (nearby.length === 0 && other.length === 0) {
+                    return (
+                      <p className="text-sm text-muted-foreground py-6 text-center">
+                        No eligible pujari is free for this slot.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-5">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-sidebar">
+                          Default — within {ring} km
+                        </p>
+                        {nearby.length === 0 ? (
+                          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                            No default pujari available within {ring} km.
+                          </p>
+                        ) : (
+                          nearby.map(renderPujari)
+                        )}
+                      </div>
+
+                      {other.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-sidebar">
+                            Other available pujaris
+                            {available.booking_has_coordinates
+                              ? ` (beyond ${ring} km or distance unknown)`
+                              : ""}
+                          </p>
+                          {other.map(renderPujari)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>

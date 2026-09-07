@@ -402,40 +402,50 @@ def available_pujaris_for_booking(
         item.pop("longitude", None)
         eligible.append(item)
 
-    matched_ring = None
-    filtered = eligible
-    if has_coords:
-        for ring in rings:
-            in_ring = [
-                p
-                for p in eligible
-                if p.get("distance_km") is not None and p["distance_km"] <= ring
-            ]
-            if in_ring:
-                filtered = in_ring
-                matched_ring = ring
-                break
-        else:
-            # No one within configured rings — still return all eligible, farthest first by distance
-            filtered = eligible
-            matched_ring = None
+    primary_ring = rings[0] if rings else 10.0
+    nearby: list = []
+    other: list = []
 
-    filtered.sort(
-        key=lambda x: (
+    def _sort_key(x: dict):
+        return (
             x["distance_km"] if x.get("distance_km") is not None else 99999,
             -(x.get("approved_level") or 0),
             x.get("name") or "",
         )
-    )
+
+    if has_coords:
+        for p in eligible:
+            d = p.get("distance_km")
+            if d is not None and d <= primary_ring:
+                nearby.append(p)
+            else:
+                # Farther than primary ring, or no coordinates on pujari profile
+                other.append(p)
+        matched_ring = primary_ring if nearby else None
+    else:
+        # No booking coords — treat all eligible as "other" (no distance ranking)
+        nearby = []
+        other = list(eligible)
+        matched_ring = None
+
+    nearby.sort(key=_sort_key)
+    other.sort(key=_sort_key)
+    # Combined list: nearby (default option) first, then fallback others
+    combined = nearby + other
+
     return {
         "booking_id": booking_id,
         "booking_number": b.get("booking_number"),
         "required_level": required,
         "current_pujari_id": str(b["pujari_id"]) if b.get("pujari_id") else None,
         "distance_rings_km": rings,
+        "primary_ring_km": primary_ring,
         "matched_ring_km": matched_ring,
         "booking_has_coordinates": has_coords,
-        "pujaris": filtered,
+        "nearby_pujaris": nearby,
+        "other_pujaris": other,
+        "default_pujari_available": len(nearby) > 0,
+        "pujaris": combined,
     }
 
 

@@ -72,7 +72,7 @@ const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?
     key: "assign_distance_rings_km",
     label: "Reassignment distance rings (km)",
     type: "json",
-    hint: "Comma-separated or JSON list, e.g. 10, 15, 20, 30. Admin reassignment searches each ring in order.",
+    hint: "First number is the default nearby radius (e.g. 10). Reassign shows within that distance first, then other available pujaris farther away.",
   },
 ];
 
