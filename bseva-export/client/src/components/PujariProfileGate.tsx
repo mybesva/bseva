@@ -44,7 +44,7 @@ export default function PujariProfileGate({ children }: { children: React.ReactN
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle className="font-heading">Complete Your Profile</DialogTitle>
+              <DialogTitle className="">Complete Your Profile</DialogTitle>
               <DialogDescription>
                 Please complete your BSeva Pujari profile before continuing. Your profile information and required documents are needed for verification and to receive bookings.
               </DialogDescription>

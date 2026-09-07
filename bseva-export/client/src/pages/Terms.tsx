@@ -37,7 +37,7 @@ export default function TermsPage() {
             Back
           </Link>
         </Button>
-        <h1 className="font-heading text-3xl font-bold mb-2">Terms & Conditions</h1>
+        <h1 className="text-h1 mb-2">Terms & Conditions</h1>
         <p className="text-sm text-muted-foreground mb-6">
           Choose a section to read. Only one section is shown at a time.
         </p>
@@ -68,7 +68,7 @@ export default function TermsPage() {
                 >
                   <Icon size={20} />
                 </span>
-                <span className={cn("text-sm font-medium leading-snug", active ? "text-sidebar" : "text-muted-foreground")}>
+                <span className={cn("text-sm font-medium leading-snug", active ?"text-sidebar" :"text-muted-foreground")}>
                   {policy.title}
                 </span>
               </button>
@@ -79,14 +79,14 @@ export default function TermsPage() {
         {selected && (
           <div className="space-y-5 text-muted-foreground leading-relaxed">
             <div>
-              <h2 className="font-heading text-xl text-foreground mb-1">{selected.title}</h2>
+              <h2 className="text-xl text-foreground mb-1">{selected.title}</h2>
               {selected.version && (
                 <p className="text-sm text-muted-foreground mb-4">Version {selected.version}</p>
               )}
             </div>
             {selected.points.map((s, i) => (
               <section key={i}>
-                {s.title ? <h3 className="font-heading text-lg text-foreground mb-2">{s.title}</h3> : null}
+                {s.title ? <h3 className="text-lg text-foreground mb-2">{s.title}</h3> : null}
                 <p>{s.body}</p>
               </section>
             ))}

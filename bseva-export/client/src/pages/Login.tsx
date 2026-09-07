@@ -66,7 +66,7 @@ export default function Login() {
       <div className="min-h-[70vh] flex items-center justify-center py-16 px-4 bg-gradient-to-b from-secondary/30 to-background">
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader>
-            <CardTitle className="font-heading text-2xl text-sidebar">{portalLabel}</CardTitle>
+            <CardTitle className="text-2xl text-sidebar">{portalLabel}</CardTitle>
             <CardDescription>Use your registered email or phone and password.</CardDescription>
           </CardHeader>
           <CardContent>

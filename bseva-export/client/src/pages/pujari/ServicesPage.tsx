@@ -24,7 +24,7 @@ export default function PujariServicesPage() {
     <PujariPortal>
       <Card className="max-w-2xl border-border shadow-sm">
         <CardHeader className="space-y-3">
-          <CardTitle className="font-heading text-2xl">{t("pujari.level.upgradePageTitle")}</CardTitle>
+          <CardTitle className="text-2xl">{t("pujari.level.upgradePageTitle")}</CardTitle>
           <CardDescription className="text-sm leading-relaxed">{t("pujari.level.hint")}</CardDescription>
           <div className="flex gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground leading-relaxed">
             <ShieldCheck className="h-5 w-5 shrink-0 text-primary mt-0.5" />

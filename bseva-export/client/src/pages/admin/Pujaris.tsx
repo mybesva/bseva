@@ -72,7 +72,7 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
       <TableCell>{u.email}</TableCell>
       <TableCell>
         <div className="flex flex-col gap-2 min-w-[220px]">
-          <span className="text-xs text-muted-foreground">Requested: {u.requested_level ?? "—"}</span>
+          <span className="text-xs text-muted-foreground">Requested: {u.requested_level ??"—"}</span>
           <div className="flex items-center gap-2">
             <select
               className="h-9 rounded-md border border-input bg-background px-2 text-sm"
@@ -272,7 +272,7 @@ export default function PujarisPage() {
   return (
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-heading font-bold">Pujaris</h1>
+        <h1 className="text-h1">Pujaris</h1>
         <Button onClick={() => setOpen(true)} className="gap-2">
           <Plus size={16} />
           Add pujari
@@ -319,7 +319,7 @@ export default function PujarisPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading">Add pujari</DialogTitle>
+            <DialogTitle className="">Add pujari</DialogTitle>
           </DialogHeader>
           <form id="add-pujari-form" onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">

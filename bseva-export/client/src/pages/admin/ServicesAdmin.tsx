@@ -364,7 +364,7 @@ export default function ServicesAdmin() {
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <div>
-          <h1 className="text-2xl font-heading font-bold">Puja Services</h1>
+          <h1 className="text-h1">Puja Services</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Edit each puja’s name, catalog details, categories, and Standard / Premium pricing.
             {isSuper ? " As Super Admin you can change all services and costs." : ""}
@@ -398,7 +398,7 @@ export default function ServicesAdmin() {
       <Dialog open={categoriesOpen} onOpenChange={setCategoriesOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading">Service categories</DialogTitle>
+            <DialogTitle className="">Service categories</DialogTitle>
           </DialogHeader>
           <form id="category-form" onSubmit={handleCategorySave} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -504,7 +504,7 @@ export default function ServicesAdmin() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading">{editId ? "Edit puja service" : "Add puja service"}</DialogTitle>
+            <DialogTitle className="">{editId ?"Edit puja service" :"Add puja service"}</DialogTitle>
           </DialogHeader>
           <form id="add-service-form" onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

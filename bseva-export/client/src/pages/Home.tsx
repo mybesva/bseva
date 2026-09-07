@@ -49,14 +49,14 @@ export default function Home() {
 
         <div className="container relative z-10 pt-20 pb-12 text-center">
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-bold tracking-[0.2em] uppercase mb-6">
+            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-eyebrow mb-6">
               {t("home.badge")}
             </span>
-            <h1 className="font-heading font-bold text-4xl md:text-6xl lg:text-7xl text-white mb-6 leading-tight drop-shadow-lg">
+            <h1 className="text-display text-white mb-6 drop-shadow-lg">
               {t("home.heroTitle1")} <br />
               <span className="text-gradient-gold">{t("home.heroTitle2")}</span>
             </h1>
-            <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+            <p className="text-body-lg text-white/90 max-w-2xl mx-auto mb-10">
               {t("home.heroDesc")}
             </p>
 
@@ -97,7 +97,7 @@ export default function Home() {
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
                     <card.icon size={24} />
                   </div>
-                  <CardTitle className="font-heading">{card.title}</CardTitle>
+                  <CardTitle className="">{card.title}</CardTitle>
                   <CardDescription>{card.desc}</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -130,7 +130,7 @@ export default function Home() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <UserCheck size={32} />
               </div>
-              <h3 className="font-heading font-bold text-xl text-sidebar mb-3">{t("home.feat1Title")}</h3>
+              <h3 className="text-h3 text-sidebar mb-3">{t("home.feat1Title")}</h3>
               <p className="text-muted-foreground">{t("home.feat1Desc")}</p>
             </div>
 
@@ -138,7 +138,7 @@ export default function Home() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <Sparkles size={32} />
               </div>
-              <h3 className="font-heading font-bold text-xl text-sidebar mb-3">{t("home.feat2Title")}</h3>
+              <h3 className="text-h3 text-sidebar mb-3">{t("home.feat2Title")}</h3>
               <p className="text-muted-foreground">{t("home.feat2Desc")}</p>
             </div>
 
@@ -146,7 +146,7 @@ export default function Home() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <Calendar size={32} />
               </div>
-              <h3 className="font-heading font-bold text-xl text-sidebar mb-3">{t("home.feat3Title")}</h3>
+              <h3 className="text-h3 text-sidebar mb-3">{t("home.feat3Title")}</h3>
               <p className="text-muted-foreground">{t("home.feat3Desc")}</p>
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function Home() {
               <img src="/images/temple-ritual.png" alt="Priest performing aarti" className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]" />
               <div className="absolute -bottom-8 -left-8 bg-white p-6 rounded-xl shadow-xl max-w-xs hidden md:block">
                 <div className="flex items-center gap-4 mb-2">
-                  <div className="text-4xl font-heading font-bold text-primary">500+</div>
+                  <div className="text-price text-primary">500+</div>
                   <div className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{t("home.verifiedCount")}</div>
                 </div>
                 <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
@@ -222,7 +222,7 @@ export default function Home() {
 
             <div>
               <span className="text-sm font-bold tracking-[0.2em] uppercase text-primary mb-2 block">{t("home.missionLabel")}</span>
-              <h2 className="font-heading font-bold text-4xl lg:text-5xl text-sidebar mb-6 leading-tight">{t("home.missionTitle")}</h2>
+              <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">{t("home.missionTitle")}</h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">{t("home.missionP1")}</p>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{t("home.missionP2")}</p>
 
@@ -247,7 +247,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <Button className="bg-sidebar text-white hover:bg-sidebar/90 px-8 h-12" onClick={() => (window.location.href = "/about")}>
+              <Button className="bg-sidebar text-white hover:bg-sidebar/90 px-8 h-12" onClick={() => (window.location.href ="/about")}>
                 {t("home.learnMore")}
               </Button>
             </div>
@@ -299,7 +299,7 @@ export default function Home() {
             </div>
 
             <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="font-heading font-bold text-3xl md:text-5xl text-sidebar mb-6">{t("home.ctaTitle")}</h2>
+              <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">{t("home.ctaTitle")}</h2>
               <p className="text-xl text-sidebar/80 mb-10 font-medium">{t("home.ctaDesc")}</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button

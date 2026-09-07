@@ -162,7 +162,7 @@ function AdminShell({ children }: AdminLayoutProps) {
             <Link href={opsBase}>
               <div className="flex items-center gap-2">
                 <img src="/bseva-mark.png" alt="B-Seva" className="h-8 w-auto" />
-                <span className="font-heading font-bold text-lg text-sidebar-foreground">Admin</span>
+                <span className="font-bold text-lg text-sidebar-foreground">Admin</span>
               </div>
             </Link>
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
@@ -250,7 +250,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                 {(user?.name || "A").charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || "Admin User"}</p>
+                <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name ||"Admin User"}</p>
                 <p className="text-xs text-sidebar-foreground/60 truncate">
                   {user?.role === "super_admin" ? "Super admin" : user?.email || "admin@bseva.com"}
                 </p>

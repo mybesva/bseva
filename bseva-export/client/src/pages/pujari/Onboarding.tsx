@@ -238,7 +238,7 @@ export default function PujariOnboardingPage() {
           <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Joining fee</p>
-              <p className="font-heading font-semibold text-lg capitalize">
+              <p className="font-semibold text-lg capitalize">
                 {feeStatus.replace(/_/g, " ")}
                 {feeAmount > 0 ? ` · ${rupees(feeAmount)}` : ""}
               </p>
@@ -258,7 +258,7 @@ export default function PujariOnboardingPage() {
       )}
       <Card className="max-w-3xl">
         <CardHeader>
-          <CardTitle className="font-heading">Complete onboarding</CardTitle>
+          <CardTitle className="">Complete onboarding</CardTitle>
           <p className="text-sm text-muted-foreground">Step {step} of 6</p>
           <div className="h-2 rounded-full bg-secondary overflow-hidden mt-2">
             <div className="h-full bg-primary transition-all" style={{ width: `${(step / 6) * 100}%` }} />
@@ -267,7 +267,7 @@ export default function PujariOnboardingPage() {
         <CardContent className="space-y-6">
           {step === 1 && (
             <section className="space-y-4">
-              <h2 className="font-heading text-xl">Personal details</h2>
+              <h2 className="text-xl">Personal details</h2>
               <div>
                 <Label>{t("pujari.photo")}</Label>
                 {photoUrl && <img src={photoUrl} alt="" className="mt-2 h-28 w-28 object-cover rounded-md border" />}
@@ -326,7 +326,7 @@ export default function PujariOnboardingPage() {
 
               <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
                 <div>
-                  <h3 className="font-heading font-semibold text-sidebar">Gotra &amp; Pravara</h3>
+                  <h3 className="font-semibold text-sidebar">Gotra &amp; Pravara</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Enter your family Gotra and Pravara (rishi lineage).
                   </p>
@@ -357,7 +357,7 @@ export default function PujariOnboardingPage() {
 
           {step === 2 && (
             <section className="space-y-4">
-              <h2 className="font-heading text-xl">Address</h2>
+              <h2 className="text-xl">Address</h2>
               <AddressFields
                 value={addressValue}
                 onChange={(next) => setProfile((prev: any) => ({ ...prev, ...next }))}
@@ -367,7 +367,7 @@ export default function PujariOnboardingPage() {
 
           {step === 3 && (
             <section className="space-y-6">
-              <h2 className="font-heading text-xl">Professional details</h2>
+              <h2 className="text-xl">Professional details</h2>
               <div className="max-w-xs">
                 <Label>Years of experience</Label>
                 <Input
@@ -462,7 +462,7 @@ export default function PujariOnboardingPage() {
 
           {step === 4 && (
             <section className="space-y-4">
-              <h2 className="font-heading text-xl">Documents</h2>
+              <h2 className="text-xl">Documents</h2>
               <PriestOnboardingPanel />
               <p className="text-sm">
                 After uploading documents, complete{" "}
@@ -476,7 +476,7 @@ export default function PujariOnboardingPage() {
 
           {step === 5 && (
             <section className="space-y-4">
-              <h2 className="font-heading text-xl">Availability & bank</h2>
+              <h2 className="text-xl">Availability & bank</h2>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox checked={!!profile.available} onCheckedChange={(v) => setField("available", !!v)} />
                 Available for new bookings
@@ -517,29 +517,29 @@ export default function PujariOnboardingPage() {
 
           {step === 6 && (
             <section className="space-y-4">
-              <h2 className="font-heading text-xl">Review & submit</h2>
+              <h2 className="text-xl">Review & submit</h2>
               <div className="text-sm space-y-1 border rounded-md p-4 bg-secondary/20">
                 <p>
-                  <span className="text-muted-foreground">Name:</span> {profile.full_name || "—"}
+                  <span className="text-muted-foreground">Name:</span> {profile.full_name ||"—"}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Phone:</span> {profile.mobile_number || "—"}
+                  <span className="text-muted-foreground">Phone:</span> {profile.mobile_number ||"—"}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">City:</span> {profile.city || "—"}
+                  <span className="text-muted-foreground">City:</span> {profile.city ||"—"}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Experience:</span> {profile.experience_years ?? "—"} years
+                  <span className="text-muted-foreground">Experience:</span> {profile.experience_years ??"—"} years
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Sampradaya:</span>{" "}
+                  <span className="text-muted-foreground">Sampradaya:</span>{""}
                   {profile.sampradaya ? t(`pujari.${profile.sampradaya}`) : "—"}
                 </p>
                 <p>
                   <span className="text-muted-foreground">Completion:</span> {profile.profile_completion_percentage ?? 0}%
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Status:</span> {profile.profile_status || "—"}
+                  <span className="text-muted-foreground">Status:</span> {profile.profile_status ||"—"}
                 </p>
               </div>
               <label className="flex items-start gap-2 text-sm">

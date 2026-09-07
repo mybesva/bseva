@@ -26,7 +26,7 @@ export default function About() {
             <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-6">
               {t("about.badge")}
             </span>
-            <h1 className="font-heading font-bold text-4xl md:text-6xl mb-6 leading-tight">{t("about.title")}</h1>
+            <h1 className="text-display mb-6">{t("about.title")}</h1>
             <p className="text-lg text-white/80 mb-8 leading-relaxed">{t("about.heroDesc")}</p>
           </div>
         </div>
@@ -66,7 +66,7 @@ export default function About() {
               <Card key={i} className="border-none shadow-sm hover:shadow-md transition-all text-center h-full">
                 <CardContent className="pt-8 pb-8">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6">{value.icon}</div>
-                  <h3 className="font-heading font-bold text-xl text-sidebar mb-3">{value.title}</h3>
+                  <h3 className="font-bold text-xl text-sidebar mb-3">{value.title}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">{value.desc}</p>
                 </CardContent>
               </Card>
@@ -79,19 +79,19 @@ export default function About() {
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">500+</div>
+              <div className="text-price text-primary mb-2">500+</div>
               <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statPriests")}</div>
             </div>
             <div>
-              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">10k+</div>
+              <div className="text-price text-primary mb-2">10k+</div>
               <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statPujas")}</div>
             </div>
             <div>
-              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">15+</div>
+              <div className="text-price text-primary mb-2">15+</div>
               <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statCities")}</div>
             </div>
             <div>
-              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">4.9</div>
+              <div className="text-price text-primary mb-2">4.9</div>
               <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statRating")}</div>
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function About() {
 
       <section className="py-24 text-center">
         <div className="container">
-          <h2 className="font-heading font-bold text-3xl md:text-4xl text-sidebar mb-6">{t("about.ctaTitle")}</h2>
+          <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">{t("about.ctaTitle")}</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">{t("about.ctaDesc")}</p>
           <Button
             size="lg"

@@ -65,7 +65,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-heading font-bold mb-6">Admin dashboard</h1>
+      <h1 className="text-h1 mb-6">Admin dashboard</h1>
       <p className="text-muted-foreground mb-6">Live counts from Supabase via FastAPI.</p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {metrics.map((m) => (
@@ -76,14 +76,14 @@ export default function AdminDashboard() {
                 <m.icon size={18} className="text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{m.value}</div>
+                <div className="text-2xl font-bold tabular-nums">{m.value}</div>
               </CardContent>
             </Card>
           </Link>
         ))}
       </div>
 
-      <h2 className="text-lg font-heading font-semibold mb-3">Pujari status</h2>
+      <h2 className="text-lg font-semibold mb-3">Pujari status</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {pujariMetrics.map((m) => (
           <Link key={m.title} href={m.href}>

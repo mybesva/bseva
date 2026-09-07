@@ -143,7 +143,7 @@ export default function RecommendationsAdmin() {
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <div>
-          <h1 className="text-2xl font-heading font-bold">Recommended pujas</h1>
+          <h1 className="text-h1">Recommended pujas</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Suggestions shown to customers on their dashboard. Pick a month to make one seasonal, or leave it on
             “Any month” to show it all year.
@@ -158,7 +158,7 @@ export default function RecommendationsAdmin() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading">
+            <DialogTitle className="">
               {editId ? "Edit recommendation" : "Add recommendation"}
             </DialogTitle>
           </DialogHeader>

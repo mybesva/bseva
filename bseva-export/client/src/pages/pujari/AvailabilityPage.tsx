@@ -202,7 +202,7 @@ export default function PujariAvailabilityPage() {
     <PujariPortal>
       <div className="max-w-6xl mx-auto space-y-6 md:space-y-8">
         <section className="bg-sidebar text-sidebar-foreground rounded-xl px-5 py-7 md:px-8 md:py-9 border border-[#D4AF37]/20 shadow-sm">
-          <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight">Availability</h1>
+          <h1 className="text-h1">Availability</h1>
           <p className="mt-2 text-sm md:text-base text-sidebar-foreground/75 max-w-2xl">
             Manage when customers can book you, your service area, and dates you want blocked on your calendar.
           </p>
@@ -218,7 +218,7 @@ export default function PujariAvailabilityPage() {
                   <Clock size={20} strokeWidth={2} />
                 </span>
                 <div>
-                  <CardTitle className="font-heading text-sidebar text-lg md:text-xl">Booking settings</CardTitle>
+                  <CardTitle className="text-sidebar text-lg md:text-xl">Booking settings</CardTitle>
                   <CardDescription className="mt-1 text-sm leading-relaxed">
                     Control whether customers can discover and book you for new pujas.
                   </CardDescription>
@@ -294,7 +294,7 @@ export default function PujariAvailabilityPage() {
                   <CalendarDays size={20} strokeWidth={2} />
                 </span>
                 <div>
-                  <CardTitle className="font-heading text-sidebar text-lg md:text-xl">Block calendar dates</CardTitle>
+                  <CardTitle className="text-sidebar text-lg md:text-xl">Block calendar dates</CardTitle>
                   <CardDescription className="mt-1 text-sm leading-relaxed">
                     Tap a date to block it with an optional note. Tap a blocked date again to unblock.
                   </CardDescription>
@@ -314,7 +314,7 @@ export default function PujariAvailabilityPage() {
                   classNames={{
                     months: "w-full",
                     month: "w-full gap-4",
-                    month_caption: "font-heading font-semibold text-sidebar capitalize text-base mb-1",
+                    month_caption:" font-semibold text-sidebar capitalize text-base mb-1",
                     nav: "absolute inset-x-0 top-0 flex justify-between",
                     button_previous:
                       "h-8 w-8 rounded-md text-sidebar hover:bg-primary/10 hover:text-primary border border-transparent hover:border-[#D4AF37]/30",
@@ -356,7 +356,7 @@ export default function PujariAvailabilityPage() {
 
               {upcomingBlocks.length > 0 ? (
                 <div className="space-y-3">
-                  <p className="text-sm font-heading font-semibold text-sidebar flex items-center gap-2">
+                  <p className="text-sm font-semibold text-sidebar flex items-center gap-2">
                     <Ban size={14} className="text-primary" />
                     Upcoming blocked dates
                     <span className="text-xs font-normal text-muted-foreground">({upcomingBlocks.length})</span>
@@ -436,12 +436,12 @@ export default function PujariAvailabilityPage() {
             }}
           >
             <DialogHeader className="space-y-2">
-              <DialogTitle className="font-heading text-sidebar text-xl">
+              <DialogTitle className="text-sidebar text-xl">
                 {selectedBlock ? "Blocked date" : "Block this date?"}
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed">
                 {selectedDate ? (
-                  <span className="font-medium text-sidebar">{format(selectedDate, "EEEE, dd MMMM yyyy")}</span>
+                  <span className="font-medium text-sidebar">{format(selectedDate,"EEEE, dd MMMM yyyy")}</span>
                 ) : null}
                 {selectedBlock
                   ? " Update the note below or unblock to make this date available again."

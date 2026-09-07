@@ -32,7 +32,7 @@ export default function MyBookings() {
         <div className="min-h-[50vh] flex items-center justify-center">
           <Card className="max-w-md">
             <CardContent className="pt-6 text-center space-y-4">
-              <h2 className="text-2xl font-heading font-bold">Login required</h2>
+              <h2 className="text-h1">Login required</h2>
               <Button onClick={() => setLocation(getLoginUrl({ role: "customer", returnPath: "/my-bookings" }))}>
                 Login
               </Button>
@@ -48,7 +48,7 @@ export default function MyBookings() {
   return (
     <Layout>
       <div className="container py-10 space-y-4">
-        <h1 className="font-heading text-3xl font-bold">My bookings</h1>
+        <h1 className="text-h1">My bookings</h1>
         {bookings.length === 0 && <p className="text-muted-foreground">No bookings yet.</p>}
         {bookings.map((b) => (
           <Card

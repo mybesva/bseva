@@ -18,7 +18,7 @@ export default function PrivacyPage() {
             Back
           </Link>
         </Button>
-        <h1 className="font-heading text-3xl font-bold mb-2">{privacy?.title || "Privacy Policy"}</h1>
+        <h1 className="text-h1 mb-2">{privacy?.title ||"Privacy Policy"}</h1>
         {privacy?.version && (
           <p className="text-sm text-muted-foreground mb-8">Version {privacy.version}</p>
         )}
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
         <div className="space-y-6 text-muted-foreground leading-relaxed">
           {(privacy?.points || []).map((s, i) => (
             <section key={i}>
-              {s.title ? <h2 className="font-heading text-lg text-foreground mb-2">{s.title}</h2> : null}
+              {s.title ? <h2 className="text-lg text-foreground mb-2">{s.title}</h2> : null}
               <p>{s.body}</p>
             </section>
           ))}

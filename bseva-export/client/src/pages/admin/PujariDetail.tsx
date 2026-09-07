@@ -40,7 +40,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return (
     <div className="space-y-1.5">
       <Label className="text-muted-foreground">{label}</Label>
-      <div className="text-sm">{children || "—"}</div>
+      <div className="text-sm">{children ||"—"}</div>
     </div>
   );
 }
@@ -238,7 +238,7 @@ export default function PujariDetailPage() {
             Back to pujaris
           </Link>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-heading font-bold">{profile.full_name || profile.name}</h1>
+            <h1 className="text-h1">{profile.full_name || profile.name}</h1>
             {incomplete && <Badge variant="destructive">Profile Incomplete</Badge>}
             <Badge>{profile.verification_status}</Badge>
             <Badge variant={profile.blocked ? "destructive" : "secondary"}>
@@ -313,7 +313,7 @@ export default function PujariDetailPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Basic</CardTitle>
+            <CardTitle className="text-base">Basic</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {editing ? (
@@ -385,7 +385,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Contact</CardTitle>
+            <CardTitle className="text-base">Contact</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {editing ? (
@@ -414,7 +414,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Address / District / Location</CardTitle>
+            <CardTitle className="text-base">Address / District / Location</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {editing ? (
@@ -490,7 +490,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Languages / Experience / Qualifications</CardTitle>
+            <CardTitle className="text-base">Languages / Experience / Qualifications</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {editing ? (
@@ -570,7 +570,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Availability</CardTitle>
+            <CardTitle className="text-base">Availability</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {editing ? (
@@ -601,7 +601,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Account status</CardTitle>
+            <CardTitle className="text-base">Account status</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <Field label="Role">{profile.role}</Field>
@@ -622,7 +622,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Referral</CardTitle>
+            <CardTitle className="text-base">Referral</CardTitle>
           </CardHeader>
           <CardContent>
             <Field label="Referral code">{referralCode}</Field>
@@ -632,7 +632,7 @@ export default function PujariDetailPage() {
         {(avg != null || ratingCount != null) && (
           <Card>
             <CardHeader>
-              <CardTitle className="font-heading text-base">Ratings</CardTitle>
+              <CardTitle className="text-base">Ratings</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <Field label="Average">{avg != null ? Number(avg).toFixed(1) : null}</Field>
@@ -643,7 +643,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Documents</CardTitle>
+            <CardTitle className="text-base">Documents</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {documents.length === 0 && <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>}
@@ -692,7 +692,7 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Final Verification</CardTitle>
+            <CardTitle className="text-base">Final Verification</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -740,7 +740,7 @@ export default function PujariDetailPage() {
               </Button>
             </div>
             <div className="pt-4 border-t space-y-2">
-              <h3 className="font-heading text-sm font-semibold">Verification history</h3>
+              <h3 className="text-sm font-semibold">Verification history</h3>
               {history.length === 0 && <p className="text-sm text-muted-foreground">No history yet.</p>}
               <ul className="space-y-2">
                 {history.map((h, i) => (

@@ -25,7 +25,7 @@ export default function SatyanarayanPuja() {
           <span className="inline-block py-1 px-3 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/40 text-primary-foreground text-xs font-bold tracking-[0.2em] uppercase mb-6">
             Most Popular Service
           </span>
-          <h1 className="font-heading font-bold text-4xl md:text-6xl text-white mb-6 drop-shadow-lg">
+          <h1 className="text-display text-white mb-6 drop-shadow-lg">
             Satyanarayan Puja
           </h1>
           <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
@@ -56,7 +56,7 @@ export default function SatyanarayanPuja() {
               This puja is performed to ensure abundance in one's life. Many people carry out this puja immediately after or on an auspicious occasion like a marriage or moving into a new house. It can also be performed on any day for any reason.
             </p>
             
-            <h3 className="font-heading font-bold text-xl text-sidebar mb-4">Ideal Occasions</h3>
+            <h3 className="font-bold text-xl text-sidebar mb-4">Ideal Occasions</h3>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {["Griha Pravesh (House Warming)", "Before Marriage Ceremonies", "Namkaran (Naming Ceremony)", "Starting New Business", "Full Moon Days (Purnima)", "Ekadashi Tithi"].map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-sidebar/80">
@@ -103,7 +103,7 @@ export default function SatyanarayanPuja() {
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold mb-3">
                     {i + 1}
                   </div>
-                  <h3 className="font-heading font-bold text-lg text-sidebar">{ritual.title}</h3>
+                  <h3 className="font-bold text-lg text-sidebar">{ritual.title}</h3>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{ritual.desc}</p>
@@ -127,8 +127,8 @@ export default function SatyanarayanPuja() {
             {/* Essential Package */}
             <Card className="border border-border shadow-sm hover:shadow-lg transition-all relative">
               <CardHeader className="text-center pb-2">
-                <h3 className="font-heading font-bold text-2xl text-sidebar">Essential</h3>
-                <div className="text-4xl font-bold text-primary mt-4">₹2,100</div>
+                <h3 className="font-bold text-2xl text-sidebar">Essential</h3>
+                <div className="text-price text-primary mt-4">₹2,100</div>
                 <p className="text-sm text-muted-foreground mt-2">For small family gatherings</p>
               </CardHeader>
               <CardContent className="pt-6">
@@ -165,8 +165,8 @@ export default function SatyanarayanPuja() {
                 Recommended
               </div>
               <CardHeader className="text-center pb-2 pt-8">
-                <h3 className="font-heading font-bold text-2xl text-sidebar">Standard</h3>
-                <div className="text-4xl font-bold text-primary mt-4">₹5,100</div>
+                <h3 className="font-bold text-2xl text-sidebar">Standard</h3>
+                <div className="text-price text-primary mt-4">₹5,100</div>
                 <p className="text-sm text-muted-foreground mt-2">Complete ritual experience</p>
               </CardHeader>
               <CardContent className="pt-6">
@@ -201,8 +201,8 @@ export default function SatyanarayanPuja() {
             {/* Premium Package */}
             <Card className="border border-border shadow-sm hover:shadow-lg transition-all relative">
               <CardHeader className="text-center pb-2">
-                <h3 className="font-heading font-bold text-2xl text-sidebar">Premium</h3>
-                <div className="text-4xl font-bold text-primary mt-4">₹11,000</div>
+                <h3 className="font-bold text-2xl text-sidebar">Premium</h3>
+                <div className="text-price text-primary mt-4">₹11,000</div>
                 <p className="text-sm text-muted-foreground mt-2">Grand celebration scale</p>
               </CardHeader>
               <CardContent className="pt-6">
@@ -254,7 +254,7 @@ export default function SatyanarayanPuja() {
             
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1">
-                <AccordionTrigger className="font-heading font-bold text-lg text-sidebar">Essential Items (Must Have)</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-sidebar">Essential Items (Must Have)</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Turmeric Powder (Haldi)", "Kumkum", "Sandalwood Paste (Chandan)", "Incense Sticks (Agarbatti)", "Camphor (Kapur)", "Betel Leaves & Nuts", "Coconuts (3 pcs)", "Rice (2 kg)", "Flowers & Garlands", "Fruits (5 types)", "Milk, Curd, Ghee, Honey, Sugar (Panchamrit)"].map((item, i) => (
@@ -266,7 +266,7 @@ export default function SatyanarayanPuja() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-2">
-                <AccordionTrigger className="font-heading font-bold text-lg text-sidebar">Havan Samagri</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-sidebar">Havan Samagri</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Havan Kund (Copper/Clay)", "Wood for Havan (Samidha)", "Ghee (500g)", "Havan Samagri Mix", "Black Sesame Seeds", "Dry Coconut (Kopra)", "Navagraha Samidha sticks"].map((item, i) => (
@@ -278,7 +278,7 @@ export default function SatyanarayanPuja() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-3">
-                <AccordionTrigger className="font-heading font-bold text-lg text-sidebar">Household Items to Keep Ready</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-sidebar">Household Items to Keep Ready</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Low wooden stools (Chowki/Peeta)", "Clean cloth pieces (Red & White)", "Steel/Copper plates & bowls", "Spoons & Tumblers", "Oil Lamps (Diya)", "Matchbox", "Paper Napkins", "Scissors"].map((item, i) => (
@@ -297,7 +297,7 @@ export default function SatyanarayanPuja() {
       {/* CTA */}
       <section className="py-20">
         <div className="container text-center">
-          <h2 className="font-heading font-bold text-3xl md:text-4xl text-sidebar mb-6">
+          <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">
             Have specific requirements?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">

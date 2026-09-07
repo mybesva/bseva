@@ -27,7 +27,7 @@ export default function ServiceCard({ title, description, image, icon }: Service
       </div>
       
       <CardHeader className="pt-10 pb-2">
-        <h3 className="font-heading font-bold text-xl text-sidebar group-hover:text-primary transition-colors">
+        <h3 className="text-h3 text-sidebar group-hover:text-primary transition-colors">
           {title}
         </h3>
       </CardHeader>

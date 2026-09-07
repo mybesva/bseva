@@ -22,7 +22,7 @@ export default function Contact() {
           <img src="/images/mandala-pattern.png" alt="Pattern" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10 text-center">
-          <h1 className="font-heading font-bold text-4xl md:text-6xl mb-6">{t("contact.title")}</h1>
+          <h1 className="text-display mb-6">{t("contact.title")}</h1>
           <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">{t("contact.subtitle")}</p>
         </div>
       </section>
@@ -32,7 +32,7 @@ export default function Contact() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             <div className="lg:col-span-1 space-y-8">
               <div>
-                <h3 className="font-heading font-bold text-2xl text-sidebar mb-6">{t("contact.info")}</h3>
+                <h3 className="font-bold text-2xl text-sidebar mb-6">{t("contact.info")}</h3>
                 <p className="text-muted-foreground mb-8">{t("contact.infoDesc")}</p>
               </div>
 
@@ -103,7 +103,7 @@ export default function Contact() {
             <div className="lg:col-span-2">
               <Card className="border-none shadow-lg h-full">
                 <CardContent className="p-8 md:p-12">
-                  <h3 className="font-heading font-bold text-2xl text-sidebar mb-6">{t("contact.sendMessage")}</h3>
+                  <h3 className="font-bold text-2xl text-sidebar mb-6">{t("contact.sendMessage")}</h3>
 
                   <form className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

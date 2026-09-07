@@ -85,7 +85,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const LanguageSelect = ({ className }: { className?: string }) => (
     <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
-      <SelectTrigger className={className || "w-[120px] h-8 text-xs"}>
+      <SelectTrigger className={className ||"w-[120px] h-8 text-xs"}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -179,7 +179,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Link href="/">
                   <a className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
                     <img src="/bseva-logo.png" alt="B-Seva Logo" className="h-10 w-auto" />
-                    <span className="font-heading font-bold text-xl text-sidebar">B-SEVA</span>
+                    <span className="font-brand font-bold text-xl text-sidebar">B-SEVA</span>
                   </a>
                 </Link>
                 <LanguageSelect className="w-full" />
@@ -250,7 +250,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </p>
           </div>
           <div>
-            <h4 className="font-heading font-bold text-lg mb-4 text-primary">{t("footer.quickLinks")}</h4>
+            <h4 className="text-h4 mb-4 text-primary">{t("footer.quickLinks")}</h4>
             <ul className="space-y-2 text-sm text-sidebar-foreground/80">
               <li><Link href="/services"><a className="hover:text-primary">{t("nav.services")}</a></Link></li>
               <li><Link href="/astrology"><a className="hover:text-primary">{t("nav.astrology")}</a></Link></li>
@@ -261,14 +261,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </ul>
           </div>
           <div>
-            <h4 className="font-heading font-bold text-lg mb-4 text-primary">{t("footer.contact")}</h4>
+            <h4 className="text-h4 mb-4 text-primary">{t("footer.contact")}</h4>
             <ul className="space-y-3 text-sm text-sidebar-foreground/80">
               <li className="flex items-center gap-2"><Phone size={14} /> {phoneDisplay}</li>
               <li className="flex items-center gap-2"><Mail size={14} /> {supportEmail}</li>
             </ul>
           </div>
           <div>
-            <h4 className="font-heading font-bold text-lg mb-4 text-primary">Legal</h4>
+            <h4 className="text-h4 mb-4 text-primary">Legal</h4>
             <ul className="space-y-2 text-sm text-sidebar-foreground/80">
               <li><Link href="/terms"><a className="hover:text-primary">Terms & Conditions</a></Link></li>
               <li><Link href="/privacy"><a className="hover:text-primary">Privacy Policy</a></Link></li>

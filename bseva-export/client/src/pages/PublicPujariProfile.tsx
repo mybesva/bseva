@@ -42,7 +42,7 @@ export default function PublicPujariProfile() {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle className="font-heading text-2xl flex flex-wrap items-center gap-2">
+              <CardTitle className="text-2xl flex flex-wrap items-center gap-2">
                 {p.name}
                 <Badge variant="secondary">L{p.approved_level}</Badge>
               </CardTitle>
@@ -84,11 +84,11 @@ export default function PublicPujariProfile() {
               )}
               <div>
                 <p className="text-muted-foreground">{t("pujari.public.languages")}</p>
-                <p className="font-medium">{parseList(p.languages).join(", ") || "—"}</p>
+                <p className="font-medium">{parseList(p.languages).join(",") ||"—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">{t("pujari.public.specializations")}</p>
-                <p className="font-medium">{parseList(p.specializations).join(", ") || "—"}</p>
+                <p className="font-medium">{parseList(p.specializations).join(",") ||"—"}</p>
               </div>
               <p className="text-xs text-muted-foreground">{t("pujari.public.privacy")}</p>
               <Link href="/services">

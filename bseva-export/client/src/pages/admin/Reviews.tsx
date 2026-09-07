@@ -131,7 +131,7 @@ export default function Reviews() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Reviews Management</h1>
+            <h1 className="text-h1 text-foreground">Reviews Management</h1>
             <p className="text-muted-foreground">Moderate and manage customer reviews</p>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function Reviews() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{sampleReviews.length}</div>
+              <div className="text-2xl font-bold tabular-nums">{sampleReviews.length}</div>
             </CardContent>
           </Card>
           <Card>

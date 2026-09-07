@@ -118,7 +118,7 @@ export default function Payments() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Payments Management</h1>
+            <h1 className="text-h1 text-foreground">Payments Management</h1>
             <p className="text-muted-foreground">Track all transactions and payouts</p>
           </div>
           <Button variant="outline">
@@ -136,7 +136,7 @@ export default function Payments() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</div>
+              <div className="text-price">₹{totalRevenue.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
@@ -166,7 +166,7 @@ export default function Payments() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{samplePayments.length}</div>
+              <div className="text-2xl font-bold tabular-nums">{samplePayments.length}</div>
             </CardContent>
           </Card>
         </div>

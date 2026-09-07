@@ -67,7 +67,7 @@ function SupportForm({ categories }: { categories: string[] }) {
     <div className="grid lg:grid-cols-2 gap-6 max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Raise a ticket</CardTitle>
+          <CardTitle className="text-base">Raise a ticket</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>
@@ -109,7 +109,7 @@ function SupportForm({ categories }: { categories: string[] }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Your tickets</CardTitle>
+          <CardTitle className="text-base">Your tickets</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {tickets.length === 0 ? (
@@ -137,7 +137,7 @@ export function CustomerSupportPage() {
   const { t } = useI18n();
   return (
     <CustomerPortal>
-      <h1 className="text-2xl font-heading font-bold mb-6">{t("support.title")}</h1>
+      <h1 className="text-h1 mb-6">{t("support.title")}</h1>
       <SupportForm categories={CUSTOMER_CATS} />
     </CustomerPortal>
   );
@@ -147,7 +147,7 @@ export function PujariSupportPage() {
   const { t } = useI18n();
   return (
     <PujariPortal>
-      <h1 className="text-2xl font-heading font-bold mb-6">{t("support.title")}</h1>
+      <h1 className="text-h1 mb-6">{t("support.title")}</h1>
       <SupportForm categories={PUJARI_CATS} />
     </PujariPortal>
   );
@@ -172,7 +172,7 @@ export default function SupportPage() {
   return (
     <Layout>
       <div className="container py-10 max-w-lg">
-        <h1 className="text-2xl font-heading font-bold mb-2">Support</h1>
+        <h1 className="text-h1 mb-2">Support</h1>
         <p className="text-muted-foreground mb-4">Please sign in to raise a support ticket.</p>
         <Link href={getLoginUrl({ role: "pujari", returnPath: "/pujari/support" })}>
           <Button>Sign in</Button>

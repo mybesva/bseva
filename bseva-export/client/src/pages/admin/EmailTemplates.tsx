@@ -231,7 +231,7 @@ export default function EmailTemplates() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#1E3A5F]">Email Templates</h1>
+          <h1 className="text-h1 text-[#1E3A5F]">Email Templates</h1>
           <p className="text-gray-600 mt-1">Manage automated email templates for notifications</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="bg-[#F7931E] hover:bg-[#e8850d]">

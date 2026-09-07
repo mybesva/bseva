@@ -24,7 +24,7 @@ export default function PujariDocumentsPage() {
       <div className="max-w-3xl space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle className="font-heading">{t("pujari.docs.title")}</CardTitle>
+              <CardTitle className="">{t("pujari.docs.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {rows.map((d) => (

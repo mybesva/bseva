@@ -45,7 +45,7 @@ export default function CustomerHistoryPage() {
     <CustomerPortal>
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading">Booking History</CardTitle>
+          <CardTitle className="">Booking History</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading && <Skeleton className="h-24 w-full" />}
@@ -55,7 +55,7 @@ export default function CustomerHistoryPage() {
           {history.map((booking) => (
             <div key={booking.id} className="border rounded-lg p-4 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-heading font-semibold">{booking.service_name}</h3>
+                <h3 className="font-semibold">{booking.service_name}</h3>
                 <Badge className={statusColor(booking.status)}>{booking.status}</Badge>
               </div>
               <p className="text-sm text-muted-foreground">#{booking.booking_number}</p>

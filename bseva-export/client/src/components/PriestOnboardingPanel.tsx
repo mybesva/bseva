@@ -76,7 +76,7 @@ export default function PriestOnboardingPanel() {
   return (
     <Card className="border-border mb-8">
       <CardHeader>
-        <CardTitle className="font-heading text-xl flex items-center gap-2">
+        <CardTitle className="text-xl flex items-center gap-2">
           <FileText size={18} /> Certificates & Aadhaar
         </CardTitle>
       </CardHeader>

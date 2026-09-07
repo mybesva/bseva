@@ -283,12 +283,12 @@ export default function Settings() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-heading font-bold mb-6">Settings</h1>
+      <h1 className="text-h1 mb-6">Settings</h1>
 
       <div className="space-y-8 max-w-4xl">
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading">Platform settings</CardTitle>
+            <CardTitle className="">Platform settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {visiblePlatformKeys.map((item) => {
@@ -344,7 +344,7 @@ export default function Settings() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading">GST and peak-day fee</CardTitle>
+            <CardTitle className="">GST and peak-day fee</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1">
@@ -378,7 +378,7 @@ export default function Settings() {
 
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-            <CardTitle className="font-heading">Pujari roles</CardTitle>
+            <CardTitle className="">Pujari roles</CardTitle>
             <Button size="sm" className="gap-2" onClick={openAddRole}>
               <Plus size={16} />
               Add role
@@ -403,7 +403,7 @@ export default function Settings() {
                           <span className="text-xs font-semibold uppercase tracking-wide text-primary">
                             Level {role.level}
                           </span>
-                          <h3 className="font-heading text-base font-semibold text-sidebar">{role.title}</h3>
+                          <h3 className="text-base font-semibold text-sidebar">{role.title}</h3>
                         </div>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                           {role.summary || "No description"}
@@ -436,7 +436,7 @@ export default function Settings() {
       <Dialog open={roleOpen} onOpenChange={setRoleOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-heading">
+            <DialogTitle className="">
               {editingRole ? `Edit Level ${editingRole.level}` : "Add pujari role"}
             </DialogTitle>
           </DialogHeader>

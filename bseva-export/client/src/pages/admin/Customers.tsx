@@ -79,7 +79,7 @@ export default function CustomersPage() {
   return (
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-heading font-bold">Customers</h1>
+        <h1 className="text-h1">Customers</h1>
         <Button onClick={() => setOpen(true)} className="gap-2">
           <Plus size={16} />
           Add customer
@@ -89,7 +89,7 @@ export default function CustomersPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading">Add customer</DialogTitle>
+            <DialogTitle className="">Add customer</DialogTitle>
           </DialogHeader>
           <form id="add-customer-form" onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">

@@ -55,7 +55,7 @@ function RatingsForm() {
     <div className="grid lg:grid-cols-2 gap-6 max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Rate a Pujari</CardTitle>
+          <CardTitle className="text-base">Rate a Pujari</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={submit}>
@@ -86,7 +86,7 @@ function RatingsForm() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Assessment history</CardTitle>
+          <CardTitle className="text-base">Assessment history</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
           {rows.length === 0 && <p className="text-sm text-muted-foreground">No assessments yet.</p>}
@@ -110,14 +110,14 @@ export default function HeadRatingsPage() {
   if (user?.role === "admin" || user?.role === "super_admin") {
     return (
       <AdminLayout>
-        <h1 className="text-2xl font-heading font-bold mb-6">Head Pujari assessments</h1>
+        <h1 className="text-h1 mb-6">Head Pujari assessments</h1>
         <RatingsForm />
       </AdminLayout>
     );
   }
   return (
     <PujariPortal>
-      <h1 className="text-2xl font-heading font-bold mb-6">Assess Pujaris</h1>
+      <h1 className="text-h1 mb-6">Assess Pujaris</h1>
       <RatingsForm />
     </PujariPortal>
   );

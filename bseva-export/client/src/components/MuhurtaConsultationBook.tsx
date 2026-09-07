@@ -96,7 +96,7 @@ export default function MuhurtaConsultationBook({
         <div className="flex items-start gap-3 min-w-0">
           <Sparkles className="text-primary mt-0.5 shrink-0" size={20} />
           <div className="min-w-0">
-            <p className="font-heading font-semibold text-sidebar">
+            <p className="font-semibold text-sidebar">
               {requiresMuhurta
                 ? "This puja needs an auspicious time (muhurta)"
                 : "Book a muhurta consultation"}
@@ -128,7 +128,7 @@ export default function MuhurtaConsultationBook({
       {open && !receipt && (
         <div className="rounded-md border bg-white p-4 space-y-4">
           <div>
-            <p className="font-heading font-semibold text-[#1E3A5F]">Muhurta consultation booking</p>
+            <p className="font-semibold text-[#1E3A5F]">Muhurta consultation booking</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Service: {serviceName} · Select your appointment date and time
             </p>
@@ -141,7 +141,7 @@ export default function MuhurtaConsultationBook({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn("w-full justify-start", !apptDate && "text-muted-foreground")}
+                    className={cn("w-full justify-start", !apptDate &&"text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {apptDate ? format(apptDate, "PPP") : "Select date"}
@@ -208,7 +208,7 @@ export default function MuhurtaConsultationBook({
             </div>
             <div className="flex justify-between gap-2 border-t pt-1 font-semibold">
               <span>Total</span>
-              <span className="text-[#F7931E]">{feePaise > 0 ? rupees(feePaise) : "Free"}</span>
+              <span className="text-[#F7931E]">{feePaise > 0 ? rupees(feePaise) :"Free"}</span>
             </div>
           </div>
 
@@ -229,7 +229,7 @@ export default function MuhurtaConsultationBook({
 
       {receipt && (
         <div className="rounded-md border bg-white px-4 py-3 text-sm space-y-2">
-          <p className="font-heading font-semibold text-[#1E3A5F]">Consultation receipt</p>
+          <p className="font-semibold text-[#1E3A5F]">Consultation receipt</p>
           <div className="space-y-1">
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">Reference</span>

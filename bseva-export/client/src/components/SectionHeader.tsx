@@ -26,7 +26,7 @@ export default function SectionHeader({
     )}>
       {subtitle && (
         <span className={cn(
-          "text-sm font-bold tracking-[0.2em] uppercase",
+          "text-eyebrow",
           light ? "text-primary/90" : "text-primary"
         )}>
           {subtitle}
@@ -34,7 +34,7 @@ export default function SectionHeader({
       )}
       
       <h2 className={cn(
-        "font-heading font-bold text-3xl md:text-4xl lg:text-5xl leading-tight",
+        "text-h2 text-3xl md:text-4xl leading-tight",
         light ? "text-white" : "text-sidebar"
       )}>
         {title}
@@ -49,7 +49,7 @@ export default function SectionHeader({
       
       {description && (
         <p className={cn(
-          "max-w-2xl text-lg leading-relaxed",
+          "max-w-2xl text-body-lg",
           light ? "text-white/80" : "text-muted-foreground"
         )}>
           {description}

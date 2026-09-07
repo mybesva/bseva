@@ -97,7 +97,7 @@ function LegalBody({ kind }: { kind: LegalKind }) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="font-heading">{title}</DialogTitle>
+        <DialogTitle className="">{title}</DialogTitle>
         {selected?.version && <p className="text-sm text-muted-foreground">Version {selected.version}</p>}
       </DialogHeader>
       {loading && <Skeleton className="h-32 w-full" />}
@@ -135,7 +135,7 @@ export function LegalModal({
 export function LegalInlineLink({
   kind,
   children,
-  className = "text-primary underline hover:text-primary/80",
+  className ="text-primary underline hover:text-primary/80",
 }: {
   kind: LegalKind;
   children: React.ReactNode;

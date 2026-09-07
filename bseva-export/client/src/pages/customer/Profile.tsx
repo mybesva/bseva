@@ -122,7 +122,7 @@ export default function CustomerProfilePage() {
     <CustomerPortal>
       <Card className="max-w-lg">
         <CardHeader>
-          <CardTitle className="font-heading">My Profile</CardTitle>
+          <CardTitle className="">My Profile</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-6" onSubmit={save}>

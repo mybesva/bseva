@@ -80,7 +80,7 @@ export default function PujariExperiencePage() {
     <PujariPortal>
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="font-heading">Experience</CardTitle>
+          <CardTitle className="">Experience</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-6" onSubmit={save}>

@@ -100,12 +100,12 @@ function PortalShell({
     <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="p-4 border-b border-sidebar-border shrink-0">
         <div className="flex flex-col items-center text-center gap-2 py-2">
-          <Avatar className={cn("border-2 border-primary/30", photoRequired ? "h-24 w-24" : "h-16 w-16")}>
+          <Avatar className={cn("border-2 border-primary/30", photoRequired ?"h-24 w-24" :"h-16 w-16")}>
             {photoUrl ? <AvatarImage src={photoUrl} alt="" /> : null}
             <AvatarFallback className="bg-sidebar-accent text-lg">{initials}</AvatarFallback>
           </Avatar>
           <div className="w-full text-center">
-            <p className="font-heading font-bold">{user?.name}</p>
+            <p className="font-bold">{user?.name}</p>
             <p className="text-xs text-sidebar-foreground/70 capitalize">{role}</p>
             {headerBelow}
           </div>
@@ -152,7 +152,7 @@ function PortalShell({
             <Menu size={22} />
           </Button>
           <Link href="/">
-            <a className="font-heading font-bold text-sidebar">BSeva</a>
+            <a className="font-brand font-bold text-sidebar">BSeva</a>
           </Link>
           <span className="text-sm text-muted-foreground capitalize ml-1">{role} portal</span>
           <Button
@@ -242,7 +242,7 @@ function PujariShell({ children }: { children: ReactNode }) {
         </div>
         {pendingUpgrade ? (
           <p className="text-[11px] leading-snug text-sidebar-foreground/75 text-left px-0.5">
-            <span className="text-sidebar-foreground/55">{t("pujari.level.requested")}:</span>{" "}
+            <span className="text-sidebar-foreground/55">{t("pujari.level.requested")}:</span>{""}
             {t(`pujari.level.l${requested}`)}
           </p>
         ) : null}

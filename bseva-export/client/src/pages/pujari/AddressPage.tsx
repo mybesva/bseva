@@ -73,7 +73,7 @@ export default function PujariAddressPage() {
     <PujariPortal>
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="font-heading">Address</CardTitle>
+          <CardTitle className="">Address</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

@@ -69,7 +69,7 @@ export default function CustomerBookingsPage() {
     <CustomerPortal>
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading">My Bookings</CardTitle>
+          <CardTitle className="">My Bookings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading && <Skeleton className="h-24 w-full" />}
@@ -84,8 +84,8 @@ export default function CustomerBookingsPage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-heading font-semibold">{booking.service_name}</h3>
-                  <Badge className={statusColor(booking.status)}>{booking.status.replace(/_/g, " ")}</Badge>
+                  <h3 className="font-semibold">{booking.service_name}</h3>
+                  <Badge className={statusColor(booking.status)}>{booking.status.replace(/_/g,"")}</Badge>
                 </div>
                 <Button
                   size="sm"

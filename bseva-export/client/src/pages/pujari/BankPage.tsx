@@ -49,7 +49,7 @@ export default function PujariBankPage() {
     <PujariPortal>
       <Card className="max-w-lg">
         <CardHeader>
-          <CardTitle className="font-heading">Bank / Settlement</CardTitle>
+          <CardTitle className="">Bank / Settlement</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

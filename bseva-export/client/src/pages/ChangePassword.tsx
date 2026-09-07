@@ -42,7 +42,7 @@ export default function ChangePasswordForm() {
   return (
     <Card className="max-w-md">
       <CardHeader>
-        <CardTitle className="font-heading">Change Password</CardTitle>
+        <CardTitle className="">Change Password</CardTitle>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={onSubmit}>

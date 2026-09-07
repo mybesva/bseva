@@ -25,7 +25,7 @@ export default function GrihaPraveshPuja() {
           <span className="inline-block py-1 px-3 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/40 text-primary-foreground text-xs font-bold tracking-[0.2em] uppercase mb-6">
             New Beginnings
           </span>
-          <h1 className="font-heading font-bold text-4xl md:text-6xl text-white mb-6 drop-shadow-lg">
+          <h1 className="text-display text-white mb-6 drop-shadow-lg">
             Griha Pravesh Puja
           </h1>
           <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
@@ -55,7 +55,7 @@ export default function GrihaPraveshPuja() {
               The puja invokes the blessings of the Vastu Purusha (deity of directions) and the Navagrahas (nine planets) to ensure health, wealth, and harmony for the family residing in the new dwelling.
             </p>
             
-            <h3 className="font-heading font-bold text-xl text-sidebar mb-4">Types of Griha Pravesh</h3>
+            <h3 className="font-bold text-xl text-sidebar mb-4">Types of Griha Pravesh</h3>
             <ul className="space-y-4">
               {[
                 { title: "Apoorva", desc: "First entry into a newly constructed home." },
@@ -108,7 +108,7 @@ export default function GrihaPraveshPuja() {
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold mb-3">
                     {i + 1}
                   </div>
-                  <h3 className="font-heading font-bold text-lg text-sidebar">{ritual.title}</h3>
+                  <h3 className="font-bold text-lg text-sidebar">{ritual.title}</h3>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{ritual.desc}</p>
@@ -132,8 +132,8 @@ export default function GrihaPraveshPuja() {
             {/* Essential Package */}
             <Card className="border border-border shadow-sm hover:shadow-lg transition-all relative">
               <CardHeader className="text-center pb-2">
-                <h3 className="font-heading font-bold text-2xl text-sidebar">Essential</h3>
-                <div className="text-4xl font-bold text-primary mt-4">₹5,100</div>
+                <h3 className="font-bold text-2xl text-sidebar">Essential</h3>
+                <div className="text-price text-primary mt-4">₹5,100</div>
                 <p className="text-sm text-muted-foreground mt-2">Basic purification ceremony</p>
               </CardHeader>
               <CardContent className="pt-6">
@@ -171,8 +171,8 @@ export default function GrihaPraveshPuja() {
                 Most Popular
               </div>
               <CardHeader className="text-center pb-2 pt-8">
-                <h3 className="font-heading font-bold text-2xl text-sidebar">Standard</h3>
-                <div className="text-4xl font-bold text-primary mt-4">₹11,000</div>
+                <h3 className="font-bold text-2xl text-sidebar">Standard</h3>
+                <div className="text-price text-primary mt-4">₹11,000</div>
                 <p className="text-sm text-muted-foreground mt-2">Complete traditional ceremony</p>
               </CardHeader>
               <CardContent className="pt-6">
@@ -207,8 +207,8 @@ export default function GrihaPraveshPuja() {
             {/* Premium Package */}
             <Card className="border border-border shadow-sm hover:shadow-lg transition-all relative">
               <CardHeader className="text-center pb-2">
-                <h3 className="font-heading font-bold text-2xl text-sidebar">Premium</h3>
-                <div className="text-4xl font-bold text-primary mt-4">₹21,000</div>
+                <h3 className="font-bold text-2xl text-sidebar">Premium</h3>
+                <div className="text-price text-primary mt-4">₹21,000</div>
                 <p className="text-sm text-muted-foreground mt-2">Grand celebration scale</p>
               </CardHeader>
               <CardContent className="pt-6">
@@ -260,7 +260,7 @@ export default function GrihaPraveshPuja() {
             
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1">
-                <AccordionTrigger className="font-heading font-bold text-lg text-sidebar">General Puja Items</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-sidebar">General Puja Items</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Turmeric & Kumkum", "Sandalwood Paste", "Incense Sticks & Camphor", "Betel Leaves & Nuts", "Coconuts (5 pcs)", "Rice (5 kg)", "Flowers & Garlands (Mango leaves essential)", "Fruits (5 types)", "Milk (1 liter for boiling)", "New Vessel for boiling milk"].map((item, i) => (
@@ -272,7 +272,7 @@ export default function GrihaPraveshPuja() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-2">
-                <AccordionTrigger className="font-heading font-bold text-lg text-sidebar">Vastu & Havan Samagri</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-sidebar">Vastu & Havan Samagri</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Havan Kund (Copper/Brick)", "Wood for Havan", "Ghee (1 kg)", "Havan Samagri Mix", "Navadhanya (9 Grains)", "White Pumpkin (Ash Gourd)", "Lemons", "Dry Coconut", "Vastu Yantra (optional)"].map((item, i) => (
@@ -284,7 +284,7 @@ export default function GrihaPraveshPuja() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-3">
-                <AccordionTrigger className="font-heading font-bold text-lg text-sidebar">Kitchen & Grocery Items</AccordionTrigger>
+                <AccordionTrigger className="font-bold text-lg text-sidebar">Kitchen & Grocery Items</AccordionTrigger>
                 <AccordionContent>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                     {["Jaggery", "Sugar", "Cardamom & Cloves", "Oil & Ghee", "Matchbox", "Plates & Bowls", "Tumblers & Spoons", "Napkins/Towels", "Rangoli Powder"].map((item, i) => (
@@ -303,7 +303,7 @@ export default function GrihaPraveshPuja() {
       {/* CTA */}
       <section className="py-20">
         <div className="container text-center">
-          <h2 className="font-heading font-bold text-3xl md:text-4xl text-sidebar mb-6">
+          <h2 className="text-h2 text-3xl md:text-4xl text-sidebar mb-6">
             Planning your House Warming?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">

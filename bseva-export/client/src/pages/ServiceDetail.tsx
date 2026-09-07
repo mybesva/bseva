@@ -115,7 +115,7 @@ export default function ServiceDetail() {
                   ))}
                   {!svc.bookable && <Badge variant="outline">Coming soon</Badge>}
                 </div>
-                <h1 className="font-heading font-bold text-3xl md:text-4xl text-sidebar mb-2">{svc.name}</h1>
+                <h1 className="text-h1 text-sidebar mb-2">{svc.name}</h1>
                 {svc.local_name && <p className="text-muted-foreground mb-4">{svc.local_name}</p>}
                 <p className="text-lg text-muted-foreground leading-relaxed">
                   {svc.short_description || svc.description || "Authentic Vedic ritual through BSeva."}
@@ -126,13 +126,13 @@ export default function ServiceDetail() {
                 <div className="space-y-4 bg-secondary/20 rounded-xl p-6">
                   {svc.full_description && (
                     <div>
-                      <h2 className="font-heading font-bold text-xl mb-2">About this puja</h2>
+                      <h2 className="font-bold text-xl mb-2">About this puja</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.full_description}</p>
                     </div>
                   )}
                   {svc.benefits && (
                     <div>
-                      <h2 className="font-heading font-bold text-xl mb-2">Benefits / purpose</h2>
+                      <h2 className="font-bold text-xl mb-2">Benefits / purpose</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.benefits}</p>
                     </div>
                   )}
@@ -163,7 +163,7 @@ export default function ServiceDetail() {
                 <div className="rounded-lg border bg-white">
                   <button
                     type="button"
-                    className="w-full flex items-center justify-between px-4 py-3 text-left font-heading font-semibold"
+                    className="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"
                     onClick={() => setPrepOpen((o) => !o)}
                   >
                     <span>Typical Samagri checklist</span>

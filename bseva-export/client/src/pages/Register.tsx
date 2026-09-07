@@ -109,7 +109,7 @@ export default function Register() {
       <div className="min-h-[70vh] py-12 px-4">
         <Card className="w-full max-w-lg mx-auto border-border shadow-lg">
           <CardHeader>
-            <CardTitle className="font-heading text-2xl">Create your BSeva account</CardTitle>
+            <CardTitle className="text-2xl">Create your BSeva account</CardTitle>
             <CardDescription>
               Register as Customer or Pujari. Address and location can be added after you sign in.
             </CardDescription>
@@ -196,7 +196,7 @@ export default function Register() {
                   <LegalInlineLink kind="privacy">Privacy Policy</LegalInlineLink>.
                 </span>
               </label>
-              <Button type="submit" className="w-full" disabled={pending}>{pending ? "Creating account…" : "Create account"}</Button>
+              <Button type="submit" className="w-full" disabled={pending}>{pending ?"Creating account…" :"Create account"}</Button>
               <p className="text-sm text-center text-muted-foreground">
                 Already registered? <Link href="/login">Sign in</Link>
               </p>

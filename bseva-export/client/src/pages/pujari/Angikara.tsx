@@ -17,7 +17,7 @@ function Row({ label, value }: { label: string; value?: any }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-1 py-2 border-b">
       <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="md:col-span-2 text-sm font-medium whitespace-pre-wrap">{value || "—"}</div>
+      <div className="md:col-span-2 text-sm font-medium whitespace-pre-wrap">{value ||"—"}</div>
     </div>
   );
 }
@@ -50,9 +50,9 @@ export default function AngikaraPage() {
           <Card className="print:shadow-none print:border">
             <CardContent className="p-8 space-y-4">
               <div className="text-center space-y-1">
-                <h1 className="font-heading text-xl font-bold">{t("pujari.angikara.header")}</h1>
+                <h1 className="text-xl font-bold">{t("pujari.angikara.header")}</h1>
                 <p className="text-sm text-muted-foreground">{t("pujari.angikara.address")}</p>
-                <h2 className="font-heading text-2xl mt-4">{t("pujari.angikara.formTitle")}</h2>
+                <h2 className="text-2xl mt-4">{t("pujari.angikara.formTitle")}</h2>
               </div>
               {photo && <img src={photo} alt="" className="h-28 w-28 object-cover rounded-md mx-auto border" />}
               <Row label={t("pujari.fullName")} value={source.full_name} />
@@ -71,7 +71,7 @@ export default function AngikaraPage() {
               <Row label={t("pujari.consent")} value={source.website_publication_consent ? "Yes" : "No"} />
               <div>
                 <div className="text-sm text-muted-foreground mb-1">{t("pujari.signature")}</div>
-                {sign ? <img src={sign} alt="" className="h-16 border bg-white" /> : "—"}
+                {sign ? <img src={sign} alt="" className="h-16 border bg-white" /> :"—"}
               </div>
               <div className="flex flex-wrap gap-2 print:hidden pt-4">
                 <Link href="/pujari/profile">

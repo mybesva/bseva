@@ -62,7 +62,7 @@ export default function PujariLevelApply({
     <section id="level" className="space-y-3 scroll-mt-24">
       {!hideHeader ? (
         <>
-          <h2 className="font-heading text-xl">
+          <h2 className="text-xl">
             {compact && !upgrading ? t("pujari.level.current") : t("pujari.level.title")}
           </h2>
           {(!compact || upgrading) && (

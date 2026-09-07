@@ -28,14 +28,14 @@ export default function CustomerRewardsPage() {
 
   return (
     <CustomerPortal>
-      <h1 className="text-2xl font-heading font-bold mb-4">{t("rewards.title")}</h1>
+      <h1 className="text-h1 mb-4">{t("rewards.title")}</h1>
       <div className="grid lg:grid-cols-2 gap-4 max-w-4xl">
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">{t("rewards.yourCode")}</CardTitle>
+            <CardTitle className="text-base">{t("rewards.yourCode")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-2xl font-semibold tracking-wide">{code || "…"}</p>
+            <p className="text-2xl font-semibold tracking-wide">{code ||"…"}</p>
             <Button
               variant="outline"
               disabled={!code}
@@ -52,7 +52,7 @@ export default function CustomerRewardsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">{t("rewards.applyTitle")}</CardTitle>
+            <CardTitle className="text-base">{t("rewards.applyTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {applied ? (
@@ -87,7 +87,7 @@ export default function CustomerRewardsPage() {
         </Card>
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="font-heading text-base">{t("rewards.history")}</CardTitle>
+            <CardTitle className="text-base">{t("rewards.history")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {rewards.length === 0 && <p className="text-sm text-muted-foreground">{t("rewards.empty")}</p>}

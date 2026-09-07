@@ -36,7 +36,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 font-heading">
+        <CardTitle className="flex items-center gap-2">
           <Wallet size={20} className="text-primary" />
           {variant === "priest" ? "Pujari wallet" : "Customer wallet"}
         </CardTitle>
@@ -46,7 +46,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 rounded-lg bg-orange-50">
             <p className="text-xs text-muted-foreground">Balance</p>
-            <p className="text-2xl font-bold text-[#F7931E]">{rupees(balance)}</p>
+            <p className="text-price text-[#F7931E]">{rupees(balance)}</p>
           </div>
           <div className="p-3 rounded-lg bg-green-50">
             <p className="text-xs text-muted-foreground">Credits</p>
@@ -85,7 +85,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
           {data.transactions.slice(0, 8).map((tx) => (
             <div key={tx.id} className="flex justify-between border-b py-1">
               <span>{tx.description}</span>
-              <span className={tx.type === "credit" ? "text-green-700" : "text-red-700"}>
+              <span className={tx.type ==="credit" ?"text-green-700" :"text-red-700"}>
                 {tx.type === "credit" ? "+" : "-"}
                 {rupees(tx.amount_paise)}
               </span>

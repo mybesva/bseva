@@ -68,8 +68,8 @@ export default function PreparationChecklist({
 
   if (!preparation.verified) {
     return (
-      <div className={compact ? "space-y-1" : "rounded-lg border p-4 space-y-2"}>
-        <h3 className="font-heading font-semibold">{title}</h3>
+      <div className={compact ?"space-y-1" :"rounded-lg border p-4 space-y-2"}>
+        <h3 className="font-semibold">{title}</h3>
         <p className="text-sm text-muted-foreground">
           {preparation.pending_message || "Your detailed Samagri checklist will be confirmed shortly."}
         </p>
@@ -81,9 +81,9 @@ export default function PreparationChecklist({
   }
 
   return (
-    <div className={compact ? "space-y-3" : "rounded-lg border p-4 space-y-4"}>
+    <div className={compact ?"space-y-3" :"rounded-lg border p-4 space-y-4"}>
       <div>
-        <h3 className="font-heading font-semibold">{title}</h3>
+        <h3 className="font-semibold">{title}</h3>
         {preparation.display_name && (
           <p className="text-sm text-muted-foreground">{preparation.display_name}</p>
         )}

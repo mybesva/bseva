@@ -159,7 +159,7 @@ export default function Bookings() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-heading font-bold mb-4">Bookings</h1>
+      <h1 className="text-h1 mb-4">Bookings</h1>
       <div className="flex flex-wrap gap-2 mb-4 items-end">
         <div className="space-y-1">
           <Label className="text-xs">Status filter</Label>
@@ -204,7 +204,7 @@ export default function Bookings() {
             const needsAttention = Boolean(b.needs_reassignment) || b.status === "rejected";
             const canPenalise = ["confirmed", "in_progress", "completed", "cancelled"].includes(b.status);
             return (
-              <TableRow key={b.id} className={cn(needsAttention && "bg-red-50 hover:bg-red-100/70")}>
+              <TableRow key={b.id} className={cn(needsAttention &&"bg-red-50 hover:bg-red-100/70")}>
                 <TableCell>{b.booking_number}</TableCell>
                 <TableCell>{b.service_name}</TableCell>
                 <TableCell>{b.customer_name}</TableCell>
@@ -269,7 +269,7 @@ export default function Bookings() {
       >
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading">
+            <DialogTitle className="">
               Reassign {reassignFor?.booking_number || "booking"}
             </DialogTitle>
           </DialogHeader>

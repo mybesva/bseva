@@ -97,7 +97,7 @@ function PolicyEditor({
   return (
     <Card>
       <CardHeader className="space-y-3">
-        <CardTitle className="font-heading">{policy.title}</CardTitle>
+        <CardTitle className="">{policy.title}</CardTitle>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Section title</Label>
@@ -202,7 +202,7 @@ export default function AdminLegalPage() {
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold">Terms & Conditions</h1>
+        <h1 className="text-h1">Terms & Conditions</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Choose a section below. Only that section opens for edit — add, update, or remove points, then save.
         </p>
@@ -236,7 +236,7 @@ export default function AdminLegalPage() {
                   >
                     <Icon size={20} />
                   </span>
-                  <span className={cn("text-sm font-medium leading-snug", active ? "text-sidebar" : "text-muted-foreground")}>
+                  <span className={cn("text-sm font-medium leading-snug", active ?"text-sidebar" :"text-muted-foreground")}>
                     {policy.title}
                   </span>
                 </button>

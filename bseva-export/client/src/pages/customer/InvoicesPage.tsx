@@ -38,13 +38,13 @@ export default function CustomerInvoicesPage() {
 
   return (
     <CustomerPortal>
-      <h1 className="text-2xl font-heading font-bold mb-4">{t("invoice.title")}</h1>
+      <h1 className="text-h1 mb-4">{t("invoice.title")}</h1>
       <div className="space-y-3 max-w-2xl">
         {rows.length === 0 && <p className="text-sm text-muted-foreground">{t("invoice.empty")}</p>}
         {rows.map((inv) => (
           <Card key={inv.id}>
             <CardHeader className="py-3">
-              <CardTitle className="text-base font-heading flex justify-between gap-2">
+              <CardTitle className="text-base flex justify-between gap-2">
                 <span>{inv.invoice_number}</span>
                 <span>{rupees(inv.total_paise)}</span>
               </CardTitle>

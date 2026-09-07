@@ -430,7 +430,7 @@ export default function BulkImportPage() {
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <div className="text-center p-4 bg-muted rounded-lg">
-                      <p className="text-2xl font-bold">{importResult.total}</p>
+                      <p className="text-2xl font-bold tabular-nums">{importResult.total}</p>
                       <p className="text-sm text-muted-foreground">Total Records</p>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">

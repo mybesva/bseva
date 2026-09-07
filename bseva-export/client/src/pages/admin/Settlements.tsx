@@ -80,7 +80,7 @@ export default function AdminSettlements() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-heading font-bold mb-6">Settlements</h1>
+      <h1 className="text-h1 mb-6">Settlements</h1>
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : rows.length === 0 ? (
@@ -102,7 +102,7 @@ export default function AdminSettlements() {
             <TableBody>
               {rows.map((s) => (
                 <TableRow key={s.id}>
-                  <TableCell className="font-mono text-xs">{String(s.booking_id || "").slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-xs">{String(s.booking_id ||"").slice(0, 8)}</TableCell>
                   <TableCell>
                     <Badge variant={s.status === "settled" ? "default" : "secondary"}>{s.status}</Badge>
                   </TableCell>

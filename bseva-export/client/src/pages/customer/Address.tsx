@@ -69,7 +69,7 @@ export default function CustomerAddressPage() {
     <CustomerPortal>
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="font-heading">My Address</CardTitle>
+          <CardTitle className="">My Address</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

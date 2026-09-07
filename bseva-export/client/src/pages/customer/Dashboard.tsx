@@ -87,14 +87,14 @@ function CustomerDashboardContent() {
   return (
     <>
       <section className="bg-sidebar text-sidebar-foreground py-10 px-6 rounded-xl mb-8">
-        <h1 className="font-heading text-3xl font-bold mb-2">{t("customer.welcome")}, {user?.name || "Customer"}</h1>
+        <h1 className="text-h1 mb-2">{t("customer.welcome")}, {user?.name || "Customer"}</h1>
         <p className="text-sidebar-foreground/80">{t("customer.subtitle")}</p>
       </section>
       <div className="space-y-12">
         {!isLoading && ongoingBookings.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-heading text-2xl font-bold text-sidebar flex items-center gap-2">
+              <h2 className="text-h2 text-sidebar flex items-center gap-2">
                 <PlayCircle className="text-blue-600" size={22} />
                 {t("customer.ongoingPuja")}
               </h2>
@@ -109,8 +109,8 @@ function CustomerDashboardContent() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-heading font-semibold text-lg text-sidebar">{booking.service_name}</h3>
-                          <Badge className={getStatusColor(booking.status)}>{booking.status.replace("_", " ")}</Badge>
+                          <h3 className="font-semibold text-lg text-sidebar">{booking.service_name}</h3>
+                          <Badge className={getStatusColor(booking.status)}>{booking.status.replace("_","")}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -141,7 +141,7 @@ function CustomerDashboardContent() {
           <WalletPanel variant="customer" />
           <Card>
             <CardHeader>
-              <CardTitle className="font-heading">{t("calendar.panchangam")}</CardTitle>
+              <CardTitle className="">{t("calendar.panchangam")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-2">
@@ -179,7 +179,7 @@ function CustomerDashboardContent() {
         {recommendations.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="font-heading text-2xl font-bold text-sidebar flex items-center gap-2">
+              <h2 className="text-h2 text-sidebar flex items-center gap-2">
                 <Sparkles className="text-primary" size={22} />
                 Recommended for you
               </h2>
@@ -188,7 +188,7 @@ function CustomerDashboardContent() {
               {recommendations.map((rec) => (
                 <Card key={rec.id} className="border-primary/30 bg-orange-50/40">
                   <CardHeader className="pb-2">
-                    <CardTitle className="font-heading text-lg text-sidebar">{rec.title}</CardTitle>
+                    <CardTitle className="text-lg text-sidebar">{rec.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {rec.description && (
@@ -219,7 +219,7 @@ function CustomerDashboardContent() {
         {/* Booking cards — services */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-heading text-2xl font-bold text-sidebar">{t("customer.bookServices")}</h2>
+            <h2 className="text-h2 text-sidebar">{t("customer.bookServices")}</h2>
             <Link href="/services">
               <Button variant="outline" className="gap-2">
                 View All <ArrowRight size={16} />
@@ -230,7 +230,7 @@ function CustomerDashboardContent() {
             {(pujas || []).slice(0, 6).map((puja) => (
               <Card key={puja.id} className="hover:shadow-md transition-shadow border-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="font-heading text-lg text-sidebar flex items-center gap-2">
+                  <CardTitle className="text-lg text-sidebar flex items-center gap-2">
                     <Sparkles className="text-primary" size={18} />
                     {puja.name}
                   </CardTitle>
@@ -255,7 +255,7 @@ function CustomerDashboardContent() {
         {/* My bookings */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-heading text-2xl font-bold text-sidebar">{t("customer.myBookings")}</h2>
+            <h2 className="text-h2 text-sidebar">{t("customer.myBookings")}</h2>
             <Link href="/customer/bookings">
               <Button variant="outline">{t("common.viewAll")}</Button>
             </Link>
@@ -278,7 +278,7 @@ function CustomerDashboardContent() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-heading font-semibold text-lg text-sidebar">{booking.service_name}</h3>
+                        <h3 className="font-semibold text-lg text-sidebar">{booking.service_name}</h3>
                         <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>

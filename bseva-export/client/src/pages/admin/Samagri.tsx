@@ -99,7 +99,7 @@ export default function AdminSamagri() {
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold">Samagri catalog</h1>
+          <h1 className="text-h1">Samagri catalog</h1>
           <p className="text-sm text-muted-foreground">
             Master items with en / hi / te names. Link them per service in Services admin.
           </p>
@@ -112,7 +112,7 @@ export default function AdminSamagri() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Puja preparation items</CardTitle>
+          <CardTitle className="text-base">Puja preparation items</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -133,7 +133,7 @@ export default function AdminSamagri() {
               <TableBody>
                 {items.map((it) => (
                   <TableRow key={it.id}>
-                    <TableCell className="font-mono text-xs">{it.item_key || "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">{it.item_key ||"—"}</TableCell>
                     <TableCell className="font-medium">{it.name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {(it.translations?.hi || "—") + " / " + (it.translations?.te || "—")}

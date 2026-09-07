@@ -109,7 +109,7 @@ function ProfileForm() {
       />
 
       <section className="space-y-4">
-        <h2 className="font-heading text-xl">{t("pujari.personal")}</h2>
+        <h2 className="text-xl">{t("pujari.personal")}</h2>
         <div>
           <Label>{t("pujari.photo")}</Label>
           {photoUrl && <img src={photoUrl} alt="" className="mt-2 h-28 w-28 object-cover rounded-md border" />}
@@ -172,7 +172,7 @@ function ProfileForm() {
 
         <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
           <div>
-            <h3 className="font-heading font-semibold text-sidebar">Gotra &amp; Pravara</h3>
+            <h3 className="font-semibold text-sidebar">Gotra &amp; Pravara</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Enter your family Gotra and Pravara (rishi lineage). Both appear on Angikara Patram.
             </p>
@@ -236,7 +236,7 @@ function ProfileForm() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-heading text-xl">{t("pujari.qualification")} *</h2>
+        <h2 className="text-xl">{t("pujari.qualification")} *</h2>
         {QUALS.map((q) => (
           <label key={q.id} className="flex items-center gap-2 text-sm">
             <Checkbox
@@ -262,7 +262,7 @@ function ProfileForm() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-heading text-xl">{t("pujari.sampradaya")} *</h2>
+        <h2 className="text-xl">{t("pujari.sampradaya")} *</h2>
         {(["smartha", "madhwa", "vaishnava"] as const).map((s) => (
           <label key={s} className="flex items-center gap-2 text-sm">
             <input
@@ -285,7 +285,7 @@ function ProfileForm() {
       </label>
 
       <section>
-        <h2 className="font-heading text-xl mb-2">{t("pujari.signature")}</h2>
+        <h2 className="text-xl mb-2">{t("pujari.signature")}</h2>
         {signUrl && <img src={signUrl} alt="" className="h-20 border rounded mb-2 bg-white" />}
         <SignaturePad
           onSave={async (file) => {
@@ -320,7 +320,7 @@ export default function PujariProfilePage() {
     <PujariPortal>
       <Card className="max-w-3xl">
         <CardHeader>
-          <CardTitle className="font-heading">{t("pujari.profile.title")}</CardTitle>
+          <CardTitle className="">{t("pujari.profile.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ProfileForm />

@@ -79,7 +79,7 @@ export default function BookingReceipt() {
     return (
       <Layout>
         <div className="container py-16 text-center space-y-4">
-          <h1 className="font-heading text-2xl font-bold">Booking not found</h1>
+          <h1 className="text-h1">Booking not found</h1>
           <Button onClick={() => setLocation("/customer/bookings")}>My Bookings</Button>
         </div>
       </Layout>
@@ -132,9 +132,9 @@ export default function BookingReceipt() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Booking receipt</p>
-                <CardTitle className="font-heading text-2xl mt-1">{booking.service_name || "Puja"}</CardTitle>
+                <CardTitle className="text-2xl mt-1">{booking.service_name ||"Puja"}</CardTitle>
               </div>
-              <Badge className={statusColor(String(booking.status || ""))}>
+              <Badge className={statusColor(String(booking.status ||""))}>
                 {String(booking.status || "").replace(/_/g, " ")}
               </Badge>
             </div>
@@ -155,19 +155,19 @@ export default function BookingReceipt() {
               </div>
               <div>
                 <p className="text-muted-foreground">Package</p>
-                <p className="font-medium capitalize">{booking.package_type || "—"}</p>
+                <p className="font-medium capitalize">{booking.package_type ||"—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
                   <Calendar size={14} /> Booking date
                 </p>
-                <p className="font-medium">{booking.booking_date || "—"}</p>
+                <p className="font-medium">{booking.booking_date ||"—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
                   <Clock size={14} /> Booking time
                 </p>
-                <p className="font-medium">{booking.start_time || "—"}</p>
+                <p className="font-medium">{booking.start_time ||"—"}</p>
               </div>
               <div className="sm:col-span-2">
                 <p className="text-muted-foreground">Puja slot (date & time)</p>
@@ -178,21 +178,21 @@ export default function BookingReceipt() {
               </div>
               <div>
                 <p className="text-muted-foreground">Mode</p>
-                <p className="font-medium capitalize">{String(booking.mode || "").replace(/_/g, " ") || "—"}</p>
+                <p className="font-medium capitalize">{String(booking.mode ||"").replace(/_/g,"") ||"—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
                   <MapPin size={14} /> Location
                 </p>
-                <p className="font-medium">{booking.location_label || booking.address || "—"}</p>
+                <p className="font-medium">{booking.location_label || booking.address ||"—"}</p>
               </div>
             </div>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h3 className="font-heading font-semibold">Payment</h3>
+              <h3 className="font-semibold">Payment</h3>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status</span>
-                <span className="font-medium capitalize">{String(booking.payment_status || "—").replace(/_/g, " ")}</span>
+                <span className="font-medium capitalize">{String(booking.payment_status ||"—").replace(/_/g,"")}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Base</span>
@@ -231,8 +231,8 @@ export default function BookingReceipt() {
             </div>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h3 className="font-heading font-semibold">Booking status</h3>
-              <p className="capitalize">{String(booking.status || "").replace(/_/g, " ")}</p>
+              <h3 className="font-semibold">Booking status</h3>
+              <p className="capitalize">{String(booking.status ||"").replace(/_/g,"")}</p>
               {booking.special_instructions && (
                 <div>
                   <p className="text-muted-foreground text-xs">Special instructions</p>
@@ -242,7 +242,7 @@ export default function BookingReceipt() {
             </div>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h3 className="font-heading font-semibold">Pujari</h3>
+              <h3 className="font-semibold">Pujari</h3>
               {showPujari ? (
                 <div className="space-y-1">
                   <p className="font-medium">{booking.pujari_name}</p>
@@ -260,7 +260,7 @@ export default function BookingReceipt() {
               <PreparationChecklist preparation={booking.preparation} />
             ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
               <div className="rounded-lg border p-4 space-y-2">
-                <h3 className="font-heading font-semibold">Recommended List</h3>
+                <h3 className="font-semibold">Recommended List</h3>
                 <ul className="list-disc pl-5 space-y-1">
                   {booking.samagri.map((it: any, i: number) => (
                     <li key={i}>

@@ -207,7 +207,7 @@ export default function Notifications() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+            <h1 className="text-h1 text-foreground">Notifications</h1>
             <p className="text-muted-foreground">Manage templates and send notifications</p>
           </div>
           <div className="flex gap-2">
@@ -231,7 +231,7 @@ export default function Notifications() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,234</div>
+              <div className="text-2xl font-bold tabular-nums">1,234</div>
               <div className="text-sm text-muted-foreground">This month</div>
             </CardContent>
           </Card>
@@ -242,7 +242,7 @@ export default function Notifications() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">567</div>
+              <div className="text-2xl font-bold tabular-nums">567</div>
               <div className="text-sm text-muted-foreground">This month</div>
             </CardContent>
           </Card>
@@ -253,7 +253,7 @@ export default function Notifications() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">890</div>
+              <div className="text-2xl font-bold tabular-nums">890</div>
               <div className="text-sm text-muted-foreground">This month</div>
             </CardContent>
           </Card>

@@ -54,11 +54,11 @@ export default function AdminPermissionsPage() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-heading font-bold mb-4">{t("admin.permissions.title")}</h1>
+      <h1 className="text-h1 mb-4">{t("admin.permissions.title")}</h1>
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">{t("admin.permissions.admins")}</CardTitle>
+            <CardTitle className="text-base">{t("admin.permissions.admins")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {admins.map((a) => (
@@ -80,7 +80,7 @@ export default function AdminPermissionsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">
+            <CardTitle className="text-base">
               {current ? current.name : t("admin.permissions.select")}
             </CardTitle>
           </CardHeader>

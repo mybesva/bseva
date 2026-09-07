@@ -52,7 +52,7 @@ export default function Book() {
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Service Not Found</h1>
+            <h1 className="text-h1 text-gray-800 mb-2">Service Not Found</h1>
             <p className="text-gray-600">The requested puja service could not be found.</p>
             <Button onClick={() => setLocation("/services")}>Browse services</Button>
           </div>
@@ -71,7 +71,7 @@ export default function Book() {
     <Layout>
       <section className="bg-sidebar text-sidebar-foreground py-10">
         <div className="container">
-          <h1 className="font-heading text-3xl font-bold">{pujaType.name}</h1>
+          <h1 className="text-h1">{pujaType.name}</h1>
           <p className="text-sidebar-foreground/80 mt-1">
             {publicConfig?.virtual_puja_enabled
               ? "Book Standard or Premium · In-person or Virtual"

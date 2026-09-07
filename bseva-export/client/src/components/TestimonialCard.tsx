@@ -19,7 +19,7 @@ export default function TestimonialCard({ name, location, text, rating = 5, imag
       <CardContent className="pt-12 pb-8 px-8">
         <div className="flex gap-1 mb-4 text-accent">
           {[...Array(5)].map((_, i) => (
-            <Star key={i} size={16} fill={i < rating ? "currentColor" : "none"} className={i < rating ? "" : "text-muted-foreground/30"} />
+            <Star key={i} size={16} fill={i < rating ?"currentColor" :"none"} className={i < rating ?"" :"text-muted-foreground/30"} />
           ))}
         </div>
         
@@ -36,8 +36,8 @@ export default function TestimonialCard({ name, location, text, rating = 5, imag
             </div>
           )}
           <div>
-            <h4 className="font-heading font-bold text-sidebar">{name}</h4>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">{location}</p>
+            <h4 className="text-h4 text-sidebar">{name}</h4>
+            <p className="text-caption text-muted-foreground uppercase tracking-wider">{location}</p>
           </div>
         </div>
       </CardContent>

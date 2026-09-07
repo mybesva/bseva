@@ -76,12 +76,12 @@ export default function AdminSupport() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-heading font-bold mb-6">Support tickets</h1>
+      <h1 className="text-h1 mb-6">Support tickets</h1>
 
       <div className="grid lg:grid-cols-2 gap-6 max-w-5xl">
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Create ticket</CardTitle>
+            <CardTitle className="text-base">Create ticket</CardTitle>
           </CardHeader>
           <CardContent>
             <form className="space-y-3" onSubmit={createTicket}>
@@ -117,7 +117,7 @@ export default function AdminSupport() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">All tickets</CardTitle>
+            <CardTitle className="text-base">All tickets</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 max-h-[70vh] overflow-y-auto">
             {loading && <p className="text-sm text-muted-foreground">Loading…</p>}

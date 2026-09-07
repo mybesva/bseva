@@ -32,11 +32,11 @@ export default function AdminPricingRules() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-heading font-bold mb-4">Location & Surge Pricing</h1>
+      <h1 className="text-h1 mb-4">Location & Surge Pricing</h1>
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">City / location adjustments</CardTitle>
+            <CardTitle className="text-base">City / location adjustments</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-2 flex-wrap">
@@ -92,7 +92,7 @@ export default function AdminPricingRules() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Surge rules</CardTitle>
+            <CardTitle className="text-base">Surge rules</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid sm:grid-cols-3 gap-2">

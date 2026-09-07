@@ -176,9 +176,9 @@ export default function RolePortalGate({
         <div className="container text-center max-w-2xl">
           <div className="inline-flex items-center gap-2 text-primary mb-3">
             <Sparkles size={20} />
-            <span className="text-sm font-medium uppercase tracking-wide">BSeva</span>
+            <span className="text-eyebrow text-primary">BSeva</span>
           </div>
-          <h1 className="font-heading font-bold text-4xl mb-2 capitalize">{expected} portal</h1>
+          <h1 className="text-display mb-2 capitalize">{expected} portal</h1>
           <p className="text-white/80">Sign in or register to continue.</p>
         </div>
       </section>
@@ -218,7 +218,7 @@ export default function RolePortalGate({
                     autoComplete="new-password"
                     name={`${expected}-login-password`}
                   />
-                  <Button className="w-full" disabled={pending}>{pending ? "Signing in…" : "Sign in"}</Button>
+                  <Button className="w-full" disabled={pending}>{pending ?"Signing in…" :"Sign in"}</Button>
                 </form>
               </TabsContent>
               <TabsContent value="register">
@@ -253,7 +253,7 @@ export default function RolePortalGate({
                       <LegalInlineLink kind="privacy">Privacy Policy</LegalInlineLink>.
                     </span>
                   </label>
-                  <Button className="w-full" disabled={pending}>{pending ? "Creating…" : "Create account"}</Button>
+                  <Button className="w-full" disabled={pending}>{pending ?"Creating…" :"Create account"}</Button>
                 </form>
               </TabsContent>
             </Tabs>

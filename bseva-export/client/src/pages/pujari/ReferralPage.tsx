@@ -19,7 +19,7 @@ export default function PujariReferralPage() {
 
   return (
     <PujariPortal>
-      <h1 className="text-2xl font-heading font-bold mb-2">Referral</h1>
+      <h1 className="text-h1 mb-2">Referral</h1>
       <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
         Share your referral code with new customers or pujaris. When they join using your code, you get
         credit as per B-Seva referral rewards.
@@ -34,7 +34,7 @@ export default function PujariReferralPage() {
           <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Your referral code</p>
-              <p className="font-heading font-semibold text-lg tracking-wide text-sidebar">
+              <p className="font-semibold text-lg tracking-wide text-sidebar">
                 {code || "—"}
               </p>
             </div>
