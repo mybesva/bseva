@@ -104,6 +104,8 @@ function ProfileForm() {
         approvedLevel={profile.approved_level}
         requestedLevel={profile.requested_level}
         onUpdated={setProfile}
+        compact
+        upgradeOnly
       />
 
       <section className="space-y-4">

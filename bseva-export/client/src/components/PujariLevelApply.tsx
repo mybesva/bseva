@@ -9,8 +9,13 @@ type Props = {
   approvedLevel?: number | null;
   requestedLevel?: number | null;
   onUpdated?: (profile: any) => void;
+  /** Only list levels above the approved one (upgrade page). */
   upgradeOnly?: boolean;
   hideHeader?: boolean;
+  /**
+   * Profile view: show current role only; expand level picker after Upgrade click.
+   */
+  compact?: boolean;
 };
 
 export default function PujariLevelApply({
@@ -19,6 +24,7 @@ export default function PujariLevelApply({
   onUpdated,
   upgradeOnly = false,
   hideHeader = false,
+  compact = false,
 }: Props) {
   const { t } = useI18n();
   const { levels: allLevels } = usePujariLevels();
@@ -33,6 +39,7 @@ export default function PujariLevelApply({
       : Number(requestedLevel || approvedLevel || 2);
   const [pick, setPick] = useState<number>(defaultPick);
   const [saving, setSaving] = useState(false);
+  const [upgrading, setUpgrading] = useState(!compact);
 
   async function apply() {
     setSaving(true);
@@ -43,6 +50,7 @@ export default function PujariLevelApply({
       });
       toast.success(t("pujari.level.apply"));
       onUpdated?.(p);
+      if (compact) setUpgrading(false);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -54,22 +62,40 @@ export default function PujariLevelApply({
     <section id="level" className="space-y-3 scroll-mt-24">
       {!hideHeader ? (
         <>
-          <h2 className="font-heading text-xl">{t("pujari.level.title")}</h2>
-          <p className="text-sm text-muted-foreground">{t("pujari.level.hint")}</p>
+          <h2 className="font-heading text-xl">
+            {compact && !upgrading ? t("pujari.level.current") : t("pujari.level.title")}
+          </h2>
+          {(!compact || upgrading) && (
+            <p className="text-sm text-muted-foreground">{t("pujari.level.hint")}</p>
+          )}
         </>
       ) : null}
-      <p className="text-sm">
-        <span className="font-medium">{t("pujari.level.current")}: </span>
-        {approved ? t(`pujari.level.l${approved}`) : t("pujari.level.pending")}
-      </p>
-      {pendingUpgrade ? (
+
+      <div className="rounded-md border bg-secondary/20 px-3 py-3 space-y-1">
         <p className="text-sm">
-          <span className="font-medium">{t("pujari.level.requested")}: </span>
-          {t(`pujari.level.l${requested}`)}
-          {` — ${t("pujari.level.waiting")}`}
+          <span className="font-medium">{t("pujari.level.current")}: </span>
+          {approved ? t(`pujari.level.l${approved}`) : t("pujari.level.pending")}
         </p>
-      ) : null}
-      {levels.length === 0 ? (
+        {pendingUpgrade ? (
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{t("pujari.level.requested")}: </span>
+            {t(`pujari.level.l${requested}`)}
+            {` — ${t("pujari.level.waiting")}`}
+          </p>
+        ) : null}
+      </div>
+
+      {compact && !upgrading ? (
+        <div className="flex flex-wrap gap-2">
+          {levels.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You are already at the highest service level.</p>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setUpgrading(true)}>
+              {t("pujari.menu.upgradeRole")}
+            </Button>
+          )}
+        </div>
+      ) : levels.length === 0 ? (
         <p className="text-sm text-muted-foreground border rounded-md p-3 bg-secondary/20">
           You are already at the highest service level.
         </p>
@@ -86,15 +112,24 @@ export default function PujariLevelApply({
                   onChange={() => setPick(lvl.level)}
                 />
                 <span>
-                  <span className="font-medium">Level {lvl.level} — {lvl.title}</span>
+                  <span className="font-medium">
+                    Level {lvl.level} — {lvl.title}
+                  </span>
                   <span className="block text-muted-foreground">{lvl.summary}</span>
                 </span>
               </label>
             ))}
           </div>
-          <Button type="button" onClick={() => void apply()} disabled={saving}>
-            {upgradeOnly ? t("pujari.menu.upgradeRole") : t("pujari.level.apply")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => void apply()} disabled={saving}>
+              {upgradeOnly || compact ? t("pujari.menu.upgradeRole") : t("pujari.level.apply")}
+            </Button>
+            {compact && (
+              <Button type="button" variant="ghost" onClick={() => setUpgrading(false)}>
+                Cancel
+              </Button>
+            )}
+          </div>
         </>
       )}
     </section>
