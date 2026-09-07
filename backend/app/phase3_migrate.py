@@ -54,6 +54,9 @@ _PHASE3_STMTS = [
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    "ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS appointment_date DATE",
+    "ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS appointment_time TEXT",
+    "ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS consultation_number TEXT",
     # --- Monthly / recommended pujas (config, not AI) ---
     """
     CREATE TABLE IF NOT EXISTS service_recommendations (

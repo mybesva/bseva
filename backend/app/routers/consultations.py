@@ -158,12 +158,23 @@ def create_muhurta_consultation(
         raise HTTPException(404, "Service not found")
     if not svc.get("muhurta_consultation_enabled") and not svc.get("requires_muhurta"):
         raise HTTPException(400, "Muhurta consultation is not enabled for this service")
+    if body.appointment_date < date.today():
+        raise HTTPException(400, "Appointment date cannot be in the past")
+    # Normalize time to HH:MM:SS
+    raw_time = (body.appointment_time or "").strip()
+    if len(raw_time) == 5 and raw_time[2] == ":":
+        appt_time = f"{raw_time}:00"
+    elif len(raw_time) >= 7:
+        appt_time = raw_time[:8]
+    else:
+        raise HTTPException(400, "Invalid appointment time")
     fee = svc.get("muhurta_fee_paise")
     if fee is None:
         fee = int(get_setting(db, "muhurta_consultation_fee_paise", 30000) or 0)
     fee = int(fee)
     cid = str(uuid4())
-    prefs = [d.isoformat() for d in (body.preferred_dates or [])]
+    cnum = f"MUH-{cid[:8].upper()}"
+    prefs = [d.isoformat() for d in (body.preferred_dates or [body.appointment_date])]
     # Charge wallet when fee > 0
     pay_status = "not_required"
     if fee > 0:
@@ -173,9 +184,9 @@ def create_muhurta_consultation(
                 str(user["id"]),
                 -fee,
                 "debit",
-                f"Muhurta consultation for {svc.get('name')}",
+                f"Muhurta consultation for {svc.get('name')} on {body.appointment_date.isoformat()} {raw_time[:5]}",
                 None,
-                f"MUH-{cid[:8]}",
+                cnum,
             )
             pay_status = "paid"
         except ValueError as e:
@@ -184,10 +195,11 @@ def create_muhurta_consultation(
         text(
             """
             INSERT INTO muhurta_consultations (
-              id, customer_id, service_id, fee_paise, payment_status, status, preferred_dates, guidance_notes
+              id, customer_id, service_id, fee_paise, payment_status, status,
+              preferred_dates, guidance_notes, appointment_date, appointment_time, consultation_number
             ) VALUES (
               CAST(:id AS uuid), CAST(:cid AS uuid), CAST(:sid AS uuid), :fee, :pay, 'requested',
-              CAST(:prefs AS jsonb), :notes
+              CAST(:prefs AS jsonb), :notes, :adate, :atime, :cnum
             )
             """
         ),
@@ -199,11 +211,24 @@ def create_muhurta_consultation(
             "pay": pay_status,
             "prefs": __import__("json").dumps(prefs),
             "notes": body.notes,
+            "adate": body.appointment_date.isoformat(),
+            "atime": appt_time,
+            "cnum": cnum,
         },
     )
     write_audit(db, str(user["id"]), "muhurta_request", "muhurta_consultation", cid)
     db.commit()
-    return {"ok": True, "id": cid, "fee_paise": fee, "payment_status": pay_status, "status": "requested"}
+    return {
+        "ok": True,
+        "id": cid,
+        "consultation_number": cnum,
+        "fee_paise": fee,
+        "payment_status": pay_status,
+        "status": "requested",
+        "appointment_date": body.appointment_date.isoformat(),
+        "appointment_time": appt_time,
+        "service_name": svc.get("name"),
+    }
 
 
 @router.get("/muhurta-consultations")

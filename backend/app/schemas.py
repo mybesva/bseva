@@ -266,6 +266,8 @@ class NoShowPenaltyIn(BaseModel):
 
 class MuhurtaConsultationIn(BaseModel):
     service_id: UUID
+    appointment_date: date
+    appointment_time: str = Field(min_length=4, max_length=16)  # HH:MM or HH:MM:SS
     preferred_dates: Optional[list[date]] = None
     notes: Optional[str] = Field(default=None, max_length=2000)
 
