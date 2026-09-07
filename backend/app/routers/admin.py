@@ -17,6 +17,7 @@ from app.schemas import (
     PujariLevelIn,
     PujariRoleIn,
     PujariRoleUpdateIn,
+    ServiceCategoryIn,
     ServiceIn,
     VerifyPujariIn,
 )
@@ -59,7 +60,7 @@ def list_users(
     user=Depends(require_any_permission("view_customers", "view_pujaris", "manage_admins")),
     db: Session = Depends(get_db),
 ):
-    sql = "SELECT id, name, email, phone, role, blocked, blocked_at, block_reason, created_at FROM users WHERE 1=1"
+    sql = "SELECT id, name, email, phone, role, blocked, blocked_at, block_reason, created_at, preferred_language FROM users WHERE 1=1"
     params: dict = {}
     if role:
         sql += " AND role = :role"
@@ -218,7 +219,8 @@ def update_customer(
             UPDATE users SET
               name = COALESCE(:name, name),
               email = COALESCE(:email, email),
-              phone = COALESCE(:phone, phone)
+              phone = COALESCE(:phone, phone),
+              preferred_language = COALESCE(:lang, preferred_language)
             WHERE id = CAST(:id AS uuid)
             """
         ),
@@ -226,9 +228,20 @@ def update_customer(
             "name": body.name,
             "email": str(body.email) if body.email else None,
             "phone": body.phone,
+            "lang": body.preferred_language,
             "id": user_id,
         },
     )
+    if body.preferred_language:
+        db.execute(
+            text(
+                """
+                UPDATE customer_profiles SET preferred_language = :lang
+                WHERE user_id = CAST(:id AS uuid)
+                """
+            ),
+            {"lang": body.preferred_language, "id": user_id},
+        )
     if body.location is not None:
         db.execute(
             text(
@@ -269,6 +282,7 @@ def list_pujaris(user=Depends(require_any_permission("view_pujaris", "verify_puj
             """
             SELECT u.id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
                    p.requested_level, p.approved_level, p.verification_status, p.available, p.location_label,
+                   p.experience_years, p.specializations, p.pravara, p.joining_fee_status,
                    COALESCE(p.is_head_pujari, FALSE) AS is_head_pujari,
                    COALESCE(p.profile_complete, FALSE) AS profile_complete,
                    COALESCE(p.profile_completion_percentage, 0) AS profile_completion_percentage
@@ -340,42 +354,165 @@ def set_pujari_level(pujari_id: str, body: PujariLevelIn, admin=Depends(require_
 
 @router.get("/services")
 def admin_services(user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
-    return [row_dict(r) for r in db.execute(text("SELECT * FROM services ORDER BY name")).mappings().all()]
+    from app.catalog import enrich_service
+
+    rows = db.execute(
+        text("SELECT * FROM services ORDER BY display_order NULLS LAST, name")
+    ).mappings().all()
+    try:
+        return [enrich_service(db, r, include_inactive_meta=True) for r in rows]
+    except Exception:
+        return [row_dict(r) for r in rows]
+
+
+def _sync_service_categories(db: Session, service_id: str, category_slugs: list[str] | None) -> None:
+    if category_slugs is None:
+        return
+    db.execute(
+        text("DELETE FROM service_category_map WHERE service_id = CAST(:id AS uuid)"),
+        {"id": service_id},
+    )
+    for slug in category_slugs:
+        row = db.execute(
+            text("SELECT id FROM service_categories WHERE slug = :s"),
+            {"s": slug},
+        ).first()
+        if not row:
+            continue
+        db.execute(
+            text(
+                """
+                INSERT INTO service_category_map (service_id, category_id)
+                VALUES (CAST(:sid AS uuid), CAST(:cid AS uuid))
+                ON CONFLICT DO NOTHING
+                """
+            ),
+            {"sid": service_id, "cid": str(row[0])},
+        )
+
+
+def _pricing_status(body: ServiceIn) -> str:
+    if body.pricing_status:
+        return body.pricing_status
+    if body.standard_price_paise is None:
+        return "awaiting_pricing"
+    return "priced"
 
 
 @router.post("/services")
 def create_service(body: ServiceIn, user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
+    import json
+    from uuid import uuid4
+
+    main = body.main_puja_price_paise
+    if main is None:
+        main = body.standard_price_paise
+    pst = _pricing_status(body)
+    active = bool(body.active) and pst == "priced" and body.standard_price_paise is not None
+    sid = str(uuid4())
     db.execute(
         text(
             """
-            INSERT INTO services (name, slug, description, required_level, standard_price_paise, premium_price_paise, duration_minutes, virtual_available, active)
-            VALUES (:name, :slug, :desc, :lvl, :std, :prm, :dur, :virt, :act)
+            INSERT INTO services (
+              id, name, slug, description, short_description, full_description, benefits, local_name,
+              category, required_level,
+              standard_price_paise, premium_price_paise, main_puja_price_paise,
+              samagri_price_paise, alankaram_price_paise, food_price_paise,
+              samagri_provider, alankaram_provider, food_provider,
+              muhurta_consultation_enabled, muhurta_fee_paise, requires_muhurta,
+              duration_minutes, pujaris_required, virtual_available, active,
+              samagri_available, alankaram_available, food_available,
+              image_path, image_url, search_aliases,
+              is_popular, is_featured_home, is_seasonal, display_order, homepage_rank, pricing_status
+            ) VALUES (
+              CAST(:id AS uuid), :name, :slug, :desc, :short, :full, :ben, :local,
+              :cat, :lvl,
+              :std, :prm, :main,
+              :sam, :alan, :food,
+              :samp, :alanp, :foodp,
+              :muh_en, :muh_fee, :req_muh,
+              :dur, :pujn, :virt, :act,
+              :sam_av, :alan_av, :food_av,
+              :img_p, :img_u, CAST(:aliases AS jsonb),
+              :pop, :feat, :season, :ord, :rank, :pst
+            )
             """
         ),
         {
+            "id": sid,
             "name": body.name,
             "slug": body.slug,
             "desc": body.description,
+            "short": body.short_description,
+            "full": body.full_description,
+            "ben": body.benefits,
+            "local": body.local_name,
+            "cat": body.category or "puja",
             "lvl": body.required_level,
             "std": body.standard_price_paise,
             "prm": body.premium_price_paise,
+            "main": main,
+            "sam": body.samagri_price_paise or 0,
+            "alan": body.alankaram_price_paise or 0,
+            "food": body.food_price_paise or 0,
+            "samp": body.samagri_provider or "included",
+            "alanp": body.alankaram_provider or "included",
+            "foodp": body.food_provider or "included",
+            "muh_en": bool(body.muhurta_consultation_enabled),
+            "muh_fee": body.muhurta_fee_paise,
+            "req_muh": bool(body.requires_muhurta),
             "dur": body.duration_minutes,
+            "pujn": body.pujaris_required or 1,
             "virt": body.virtual_available,
-            "act": body.active,
+            "act": active,
+            "sam_av": bool(body.samagri_available) if body.samagri_available is not None else True,
+            "alan_av": bool(body.alankaram_available),
+            "food_av": bool(body.food_available),
+            "img_p": body.image_path,
+            "img_u": body.image_url,
+            "aliases": json.dumps(body.search_aliases or []),
+            "pop": bool(body.is_popular),
+            "feat": bool(body.is_featured_home),
+            "season": bool(body.is_seasonal),
+            "ord": body.display_order if body.display_order is not None else 1000,
+            "rank": body.homepage_rank,
+            "pst": pst,
         },
     )
+    _sync_service_categories(db, sid, body.category_slugs)
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "id": sid}
 
 
 @router.put("/services/{service_id}")
 def update_service(service_id: str, body: ServiceIn, user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
+    import json
+
+    main = body.main_puja_price_paise
+    if main is None:
+        main = body.standard_price_paise
+    pst = _pricing_status(body)
+    # Admin can activate only when priced
+    active = bool(body.active)
+    if active and (body.standard_price_paise is None or pst == "awaiting_pricing"):
+        raise HTTPException(400, "Set pricing before activating this service")
     result = db.execute(
         text(
             """
-            UPDATE services SET name=:name, slug=:slug, description=:desc, required_level=:lvl,
-              standard_price_paise=:std, premium_price_paise=:prm, duration_minutes=:dur,
-              virtual_available=:virt, active=:act
+            UPDATE services SET name=:name, slug=:slug, description=:desc,
+              short_description=:short, full_description=:full, benefits=:ben, local_name=:local,
+              category=:cat, required_level=:lvl,
+              standard_price_paise=:std, premium_price_paise=:prm, main_puja_price_paise=:main,
+              samagri_price_paise=:sam, alankaram_price_paise=:alan, food_price_paise=:food,
+              samagri_provider=:samp, alankaram_provider=:alanp, food_provider=:foodp,
+              muhurta_consultation_enabled=:muh_en, muhurta_fee_paise=:muh_fee, requires_muhurta=:req_muh,
+              duration_minutes=:dur, pujaris_required=:pujn, virtual_available=:virt, active=:act,
+              samagri_available=:sam_av, alankaram_available=:alan_av, food_available=:food_av,
+              image_path=:img_p, image_url=:img_u, search_aliases=CAST(:aliases AS jsonb),
+              is_popular=:pop, is_featured_home=:feat, is_seasonal=:season,
+              display_order=:ord, homepage_rank=:rank, pricing_status=:pst,
+              samagri_review_status=COALESCE(:srev, samagri_review_status),
+              updated_at=NOW()
             WHERE id = CAST(:id AS uuid)
             """
         ),
@@ -383,17 +520,110 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
             "name": body.name,
             "slug": body.slug,
             "desc": body.description,
+            "short": body.short_description,
+            "full": body.full_description,
+            "ben": body.benefits,
+            "local": body.local_name,
+            "cat": body.category or "puja",
             "lvl": body.required_level,
             "std": body.standard_price_paise,
             "prm": body.premium_price_paise,
+            "main": main,
+            "sam": body.samagri_price_paise or 0,
+            "alan": body.alankaram_price_paise or 0,
+            "food": body.food_price_paise or 0,
+            "samp": body.samagri_provider or "included",
+            "alanp": body.alankaram_provider or "included",
+            "foodp": body.food_provider or "included",
+            "muh_en": bool(body.muhurta_consultation_enabled),
+            "muh_fee": body.muhurta_fee_paise,
+            "req_muh": bool(body.requires_muhurta),
             "dur": body.duration_minutes,
+            "pujn": body.pujaris_required or 1,
             "virt": body.virtual_available,
-            "act": body.active,
+            "act": active,
+            "sam_av": bool(body.samagri_available) if body.samagri_available is not None else True,
+            "alan_av": bool(body.alankaram_available),
+            "food_av": bool(body.food_available),
+            "img_p": body.image_path,
+            "img_u": body.image_url,
+            "aliases": json.dumps(body.search_aliases or []),
+            "pop": bool(body.is_popular),
+            "feat": bool(body.is_featured_home),
+            "season": bool(body.is_seasonal),
+            "ord": body.display_order if body.display_order is not None else 1000,
+            "rank": body.homepage_rank,
+            "pst": pst,
+            "srev": body.samagri_review_status,
             "id": service_id,
         },
     )
     if result.rowcount == 0:
         raise HTTPException(404, "Service not found")
+    _sync_service_categories(db, service_id, body.category_slugs)
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/service-categories")
+def admin_list_categories(user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
+    rows = db.execute(
+        text("SELECT * FROM service_categories ORDER BY sort_order, name")
+    ).mappings().all()
+    return [row_dict(r) for r in rows]
+
+
+@router.post("/service-categories")
+def admin_create_category(
+    body: ServiceCategoryIn,
+    user=Depends(require_permission("manage_services")),
+    db: Session = Depends(get_db),
+):
+    db.execute(
+        text(
+            """
+            INSERT INTO service_categories (slug, name, description, sort_order, active)
+            VALUES (:slug, :name, :desc, :ord, :act)
+            """
+        ),
+        {
+            "slug": body.slug,
+            "name": body.name,
+            "desc": body.description,
+            "ord": body.sort_order,
+            "act": body.active,
+        },
+    )
+    db.commit()
+    return {"ok": True}
+
+
+@router.put("/service-categories/{category_id}")
+def admin_update_category(
+    category_id: str,
+    body: ServiceCategoryIn,
+    user=Depends(require_permission("manage_services")),
+    db: Session = Depends(get_db),
+):
+    result = db.execute(
+        text(
+            """
+            UPDATE service_categories SET
+              slug=:slug, name=:name, description=:desc, sort_order=:ord, active=:act, updated_at=NOW()
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {
+            "slug": body.slug,
+            "name": body.name,
+            "desc": body.description,
+            "ord": body.sort_order,
+            "act": body.active,
+            "id": category_id,
+        },
+    )
+    if result.rowcount == 0:
+        raise HTTPException(404, "Category not found")
     db.commit()
     return {"ok": True}
 

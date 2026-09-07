@@ -20,18 +20,122 @@ def panchang(on: date = Query(..., alias="date"), calendar: str = "north"):
     return panchang_for(on, cal)
 
 
+@router.get("/service-categories")
+def list_service_categories(db: Session = Depends(get_db)):
+    from app.catalog import list_categories_public
+
+    try:
+        return list_categories_public(db)
+    except Exception:
+        return []
+
+
 @router.get("/services")
-def list_services(db: Session = Depends(get_db)):
-    rows = db.execute(text("SELECT * FROM services WHERE active = TRUE ORDER BY name")).mappings().all()
-    return [row_dict(r) for r in rows]
+def list_services(
+    q: str | None = None,
+    category: str | None = None,
+    popular: bool | None = None,
+    featured: bool | None = None,
+    include_inactive: bool = False,
+    db: Session = Depends(get_db),
+):
+    """Catalog discovery. By default only active+priced (bookable) services.
+    featured=1 returns homepage Top N (may include awaiting_pricing for display).
+    category=popular is a virtual filter (is_popular).
+    """
+    from app.catalog import enrich_service, normalize_search
+
+    params: dict = {}
+    where = ["1=1"]
+    if featured:
+        where.append("s.is_featured_home = TRUE")
+        # Featured home may include inactive drafts awaiting pricing
+    elif not include_inactive:
+        # Bookable services + draft catalog awaiting Admin pricing (Coming soon)
+        where.append(
+            """
+            (
+              (s.active = TRUE AND s.standard_price_paise IS NOT NULL
+                AND COALESCE(s.pricing_status, 'priced') <> 'awaiting_pricing')
+              OR COALESCE(s.pricing_status, 'priced') = 'awaiting_pricing'
+            )
+            """
+        )
+
+    if popular or (category and category.lower() == "popular"):
+        where.append("s.is_popular = TRUE")
+
+    if category and category.lower() not in ("all", "popular", ""):
+        where.append(
+            """
+            EXISTS (
+              SELECT 1 FROM service_category_map m
+              JOIN service_categories c ON c.id = m.category_id
+              WHERE m.service_id = s.id AND c.slug = :cat AND c.active = TRUE
+            )
+            """
+        )
+        params["cat"] = category
+
+    nq = normalize_search(q or "")
+    if nq:
+        # Match name, slug, description, aliases (case-insensitive)
+        where.append(
+            """
+            (
+              s.name ILIKE :like
+              OR s.slug ILIKE :like
+              OR COALESCE(s.short_description, '') ILIKE :like
+              OR COALESCE(s.description, '') ILIKE :like
+              OR COALESCE(s.local_name, '') ILIKE :like
+              OR CAST(COALESCE(s.search_aliases, '[]'::jsonb) AS text) ILIKE :like
+              OR EXISTS (
+                SELECT 1 FROM service_slug_aliases a
+                WHERE a.service_id = s.id AND a.alias_slug ILIKE :like
+              )
+            )
+            """
+        )
+        params["like"] = f"%{nq}%"
+        # Also try original query tokens
+        if q and q.strip().lower() != nq:
+            where.append(
+                """
+                (
+                  s.name ILIKE :like2
+                  OR CAST(COALESCE(s.search_aliases, '[]'::jsonb) AS text) ILIKE :like2
+                )
+                """
+            )
+            params["like2"] = f"%{q.strip()}%"
+
+    order = "s.homepage_rank NULLS LAST, s.display_order, s.name" if featured else "s.display_order, s.name"
+    limit = " LIMIT 10" if featured else ""
+    sql = f"SELECT s.* FROM services s WHERE {' AND '.join(where)} ORDER BY {order}{limit}"
+    try:
+        rows = db.execute(text(sql), params).mappings().all()
+    except Exception:
+        # Fallback for pre-migration DBs
+        rows = db.execute(text("SELECT * FROM services WHERE active = TRUE ORDER BY name")).mappings().all()
+    return [enrich_service(db, r) for r in rows]
 
 
 @router.get("/services/{slug}")
 def get_service(slug: str, db: Session = Depends(get_db)):
-    row = db.execute(text("SELECT * FROM services WHERE slug = :s AND active = TRUE"), {"s": slug}).mappings().first()
+    from app.catalog import enrich_service, resolve_service_by_slug
+
+    # Resolve alias; allow inactive for admin-style preview via active_only=False then gate bookable
+    row = resolve_service_by_slug(db, slug, active_only=False)
     if not row:
         raise HTTPException(404, "Service not found")
-    return row_dict(row)
+    data = enrich_service(db, row)
+    # Public detail: active services always; inactive featured allowed for "coming soon"
+    if not row["active"] and not row.get("is_featured_home"):
+        raise HTTPException(404, "Service not found")
+    # Canonical slug for client redirects
+    data["canonical_slug"] = row["slug"]
+    data["requested_slug"] = slug
+    return data
 
 
 @router.get("/pujari-roles")
@@ -102,6 +206,8 @@ def quote(
     ).mappings().first()
     if not svc:
         raise HTTPException(404, "Service not found")
+    if svc.get("standard_price_paise") is None or svc.get("pricing_status") == "awaiting_pricing":
+        raise HTTPException(400, "This service is not yet priced for booking")
     return compute_quote(
         db,
         service=svc,
@@ -175,6 +281,8 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     ).mappings().first()
     if not svc:
         raise HTTPException(404, "Service not found")
+    if svc.get("standard_price_paise") is None or svc.get("pricing_status") == "awaiting_pricing":
+        raise HTTPException(400, "This service is not yet available for booking")
     if body.mode == "virtual" and not bool(get_setting(db, "virtual_puja_enabled", False)):
         raise HTTPException(400, "Virtual Puja is currently disabled by Admin")
     pujari = db.execute(
@@ -248,11 +356,14 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
               booking_date, start_time, end_time, location_label, address, latitude, longitude,
               meeting_url, status, payment_status, settlement_status, rating_status,
               base_price_paise, peak_fee_paise, platform_fee_paise, pujari_payable_paise,
-              gst_percent, gst_amount_paise, total_paise, terms_accepted, special_instructions
+              gst_percent, gst_amount_paise, total_paise, terms_accepted, special_instructions,
+              main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
+              pujari_reimbursement_paise
             ) VALUES (
               CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
               :d, :st, :et, :loc, :addr, :lat, :lng, :meet, 'pending_acceptance', 'paid', 'pending', 'not_applicable',
-              :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, :instr
+              :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, :instr,
+              :mainc, :samc, :alanc, :foodc, :reimb
             )
             """
         ),
@@ -280,6 +391,11 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             "gsta": gst_amt,
             "total": total,
             "instr": body.special_instructions,
+            "mainc": int(bill.get("mainPuja") or bill["basePrice"]),
+            "samc": int(bill.get("samagri") or 0),
+            "alanc": int(bill.get("alankaram") or 0),
+            "foodc": int(bill.get("foodPrasadam") or 0),
+            "reimb": int(bill.get("pujariReimbursement") or 0),
         },
     )
     try:
@@ -291,54 +407,47 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         text("INSERT INTO payments (booking_id, amount_paise, status, provider) VALUES (CAST(:id AS uuid), :amt, 'successful', 'wallet')"),
         {"id": booking_id, "amt": total},
     )
-    # Snapshot samagri
-    samagri_items: list = []
+    # Snapshot preparation / Samagri (localized, package-aware, frozen)
+    prep_view: dict = {}
     try:
-        items = db.execute(
-            text(
-                """
-                SELECT si.name, ss.required, ss.optional, ss.customer_provided, ss.instructions, ss.sort_order
-                FROM service_samagri ss JOIN samagri_items si ON si.id = ss.samagri_item_id
-                WHERE ss.service_id = CAST(:s AS uuid) AND si.active = TRUE
-                """
-            ),
-            {"s": str(body.service_id)},
-        ).mappings().all()
-        samagri_items = [dict(it) for it in items]
-        for it in items:
-            db.execute(
-                text(
-                    """
-                    INSERT INTO booking_samagri_snapshot (
-                      booking_id, name, required, optional, customer_provided, instructions, sort_order
-                    ) VALUES (CAST(:b AS uuid), :n, :req, :opt, :cp, :ins, :ord)
-                    """
-                ),
-                {
-                    "b": booking_id,
-                    "n": it["name"],
-                    "req": it["required"],
-                    "opt": it["optional"],
-                    "cp": it["customer_provided"],
-                    "ins": it["instructions"],
-                    "ord": it["sort_order"],
-                },
-            )
+        from app.preparation import create_booking_preparation_snapshot
+
+        b_row = db.execute(
+            text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
+            {"id": booking_id},
+        ).mappings().first()
+        prep_view = create_booking_preparation_snapshot(
+            db,
+            booking_id=booking_id,
+            booking=dict(b_row) if b_row else {},
+            service_id=str(body.service_id),
+            customer_id=str(user["id"]),
+        )
     except Exception:
-        pass
-    # Recommended List email (real SMTP when configured; else queued)
+        prep_view = {}
+    # Recommended List email (localized short confirmation + link; full list on page)
     email_result = {"status": "skipped"}
     try:
-        from app.email_service import send_recommended_list_email
+        from app.email_service import send_booking_preparation_email
         from app.platform_config import get_setting as _gs
+        from app.preparation import customer_preferred_language
 
-        cust_email = db.execute(text("SELECT email FROM users WHERE id = CAST(:id AS uuid)"), {"id": user["id"]}).scalar()
-        if cust_email:
-            email_result = send_recommended_list_email(
-                to=str(cust_email),
+        cust = db.execute(
+            text("SELECT email, name FROM users WHERE id = CAST(:id AS uuid)"),
+            {"id": user["id"]},
+        ).mappings().first()
+        lang = customer_preferred_language(db, str(user["id"]))
+        if cust and cust.get("email"):
+            email_result = send_booking_preparation_email(
+                to=str(cust["email"]),
+                customer_name=str(cust.get("name") or ""),
                 booking_number=number,
+                booking_id=booking_id,
                 service_name=str(svc.get("name") or "Puja"),
-                items=samagri_items,
+                booking_date=str(body.booking_date),
+                start_time=str(body.start_time),
+                preparation=prep_view,
+                language=lang,
                 from_addr=str(_gs(db, "email_from_accounts", "accounts@b-seva.com")),
             )
     except Exception as e:
@@ -529,7 +638,11 @@ def list_bookings(user=Depends(current_user), db: Session = Depends(get_db)):
                 JOIN users cu ON cu.id = b.customer_id
                 LEFT JOIN users pu ON pu.id = b.pujari_id
                 JOIN services s ON s.id = b.service_id
-                ORDER BY b.created_at DESC LIMIT 200
+                ORDER BY
+                  CASE WHEN COALESCE(b.needs_reassignment, FALSE) THEN 0 ELSE 1 END,
+                  CASE WHEN b.status = 'rejected' THEN 0 ELSE 1 END,
+                  b.created_at DESC
+                LIMIT 200
                 """
             )
         ).mappings().all()

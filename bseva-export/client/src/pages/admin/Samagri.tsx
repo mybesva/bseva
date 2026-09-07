@@ -29,7 +29,9 @@ type SamagriItem = {
   name: string;
   description?: string | null;
   unit?: string | null;
+  item_key?: string | null;
   active?: boolean;
+  translations?: Record<string, string>;
 };
 
 export default function AdminSamagri() {
@@ -39,6 +41,9 @@ export default function AdminSamagri() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState("pcs");
+  const [itemKey, setItemKey] = useState("");
+  const [nameHi, setNameHi] = useState("");
+  const [nameTe, setNameTe] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function load() {
@@ -60,15 +65,28 @@ export default function AdminSamagri() {
     e.preventDefault();
     setSaving(true);
     try {
+      const translations: Record<string, string> = { en: name };
+      if (nameHi.trim()) translations.hi = nameHi.trim();
+      if (nameTe.trim()) translations.te = nameTe.trim();
       await api("/admin/samagri/items", {
         method: "POST",
-        body: JSON.stringify({ name, description: description || null, unit, active: true }),
+        body: JSON.stringify({
+          name,
+          description: description || null,
+          unit,
+          item_key: itemKey.trim() || null,
+          active: true,
+          translations,
+        }),
       });
       toast.success("Item added");
       setOpen(false);
       setName("");
       setDescription("");
       setUnit("pcs");
+      setItemKey("");
+      setNameHi("");
+      setNameTe("");
       await load();
     } catch (err: any) {
       toast.error(err.message);
@@ -80,7 +98,12 @@ export default function AdminSamagri() {
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-3">
-        <h1 className="text-2xl font-heading font-bold">Recommended List</h1>
+        <div>
+          <h1 className="text-2xl font-heading font-bold">Samagri catalog</h1>
+          <p className="text-sm text-muted-foreground">
+            Master items with en / hi / te names. Link them per service in Services admin.
+          </p>
+        </div>
         <Button onClick={() => setOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add item
@@ -89,7 +112,7 @@ export default function AdminSamagri() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Puja Recommended List (Samagri catalog)</CardTitle>
+          <CardTitle className="font-heading text-base">Puja preparation items</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -100,18 +123,22 @@ export default function AdminSamagri() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Key</TableHead>
+                  <TableHead>Name (EN)</TableHead>
+                  <TableHead>HI / TE</TableHead>
                   <TableHead>Unit</TableHead>
-                  <TableHead>Description</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((it) => (
                   <TableRow key={it.id}>
+                    <TableCell className="font-mono text-xs">{it.item_key || "—"}</TableCell>
                     <TableCell className="font-medium">{it.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {(it.translations?.hi || "—") + " / " + (it.translations?.te || "—")}
+                    </TableCell>
                     <TableCell>{it.unit || "pcs"}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{it.description || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={it.active === false ? "secondary" : "default"}>
                         {it.active === false ? "Inactive" : "Active"}
@@ -132,12 +159,32 @@ export default function AdminSamagri() {
           </DialogHeader>
           <form className="space-y-3" onSubmit={createItem}>
             <div className="space-y-1">
-              <Label>Name</Label>
+              <Label>Name (English)</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
-            <div className="space-y-1">
-              <Label>Unit</Label>
-              <Input value={unit} onChange={(e) => setUnit(e.target.value)} />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label>Name (Hindi)</Label>
+                <Input value={nameHi} onChange={(e) => setNameHi(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Name (Telugu)</Label>
+                <Input value={nameTe} onChange={(e) => setNameTe(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label>Item key</Label>
+                <Input
+                  value={itemKey}
+                  onChange={(e) => setItemKey(e.target.value)}
+                  placeholder="e.g. turmeric"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Unit</Label>
+                <Input value={unit} onChange={(e) => setUnit(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-1">
               <Label>Description</Label>

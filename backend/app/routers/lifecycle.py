@@ -17,6 +17,7 @@ from app.deps import current_user, require_roles
 from app.domain import apply_wallet, hours_until, row_dict
 from app.platform_config import get_setting
 from app.rbac import require_admin, require_permission
+from app.schemas import BookingRejectIn, NoShowPenaltyIn
 from app.security import hash_password, verify_password
 
 router = APIRouter(tags=["lifecycle"])
@@ -90,7 +91,7 @@ def get_booking(booking_id: str, user=Depends(current_user), db: Session = Depen
         data = booking_for_role(db, dict(row), user)
     except PermissionError:
         raise HTTPException(403, "Not allowed")
-    # Samagri snapshot
+    # Samagri snapshot + localized preparation view
     try:
         sam = db.execute(
             text("SELECT * FROM booking_samagri_snapshot WHERE booking_id = CAST(:id AS uuid) ORDER BY sort_order"),
@@ -99,7 +100,35 @@ def get_booking(booking_id: str, user=Depends(current_user), db: Session = Depen
         data["samagri"] = [row_dict(r) for r in sam]
     except Exception:
         data["samagri"] = []
+    try:
+        from app.preparation import get_booking_preparation
+
+        data["preparation"] = get_booking_preparation(db, str(row["id"]))
+    except Exception:
+        data["preparation"] = None
     return data
+
+
+@router.get("/bookings/{booking_id}/preparation")
+def booking_preparation(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    row = db.execute(
+        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
+        {"id": booking_id},
+    ).mappings().first()
+    if not row:
+        row = db.execute(
+            text("SELECT * FROM bookings WHERE booking_number = :num"),
+            {"num": booking_id},
+        ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Booking not found")
+    try:
+        booking_for_role(db, dict(row), user)
+    except PermissionError:
+        raise HTTPException(403, "Not allowed")
+    from app.preparation import get_booking_preparation
+
+    return get_booking_preparation(db, str(row["id"]))
 
 
 @router.post("/bookings/{booking_id}/accept")
@@ -154,6 +183,116 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
     except Exception:
         pass
     return {"ok": True, "status": "confirmed"}
+
+
+@router.post("/bookings/{booking_id}/reject")
+def reject_booking(
+    booking_id: str,
+    body: BookingRejectIn = BookingRejectIn(),
+    user=Depends(require_roles("pujari")),
+    db: Session = Depends(get_db),
+):
+    reason = body.reason
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if str(b["pujari_id"]) != str(user["id"]):
+        raise HTTPException(403, "Not allowed")
+    if b["status"] not in ("pending", "pending_acceptance"):
+        raise HTTPException(400, "Only pending bookings can be rejected")
+    set_booking_status(db, booking_id, "rejected", actor_id=str(user["id"]))
+    db.execute(
+        text(
+            """
+            UPDATE bookings SET
+              rejection_reason = :reason,
+              needs_reassignment = TRUE,
+              rejected_at = COALESCE(rejected_at, NOW())
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"reason": reason, "id": booking_id},
+    )
+    write_audit(db, str(user["id"]), f"booking_reject:{reason or 'no_reason'}", "booking", booking_id)
+    db.commit()
+    return {"ok": True, "status": "rejected", "needs_reassignment": True}
+
+
+@router.post("/bookings/{booking_id}/no-show-penalty")
+def mark_no_show_penalty(
+    booking_id: str,
+    body: NoShowPenaltyIn = NoShowPenaltyIn(),
+    admin=Depends(require_permission("manage_bookings")),
+    db: Session = Depends(get_db),
+):
+    """Admin marks accepted pujari as no-show and applies configurable wallet penalty (unless waived)."""
+    waive = bool(body.waive)
+    reason = body.reason
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if not b.get("pujari_id"):
+        raise HTTPException(400, "No pujari assigned")
+    if b["status"] not in ("confirmed", "in_progress", "cancelled", "completed"):
+        raise HTTPException(400, "No-show penalty requires an accepted booking")
+    if b.get("no_show_marked_at") and int(b.get("no_show_penalty_paise") or 0) > 0 and not waive:
+        raise HTTPException(400, "No-show penalty already applied")
+
+    enabled = bool(get_setting(db, "pujari_no_show_penalty_enabled", True))
+    amount = int(get_setting(db, "pujari_no_show_penalty_paise", 50000) or 0)
+    applied = 0
+    if waive or not enabled or amount <= 0:
+        db.execute(
+            text(
+                """
+                UPDATE bookings SET no_show_penalty_paise = 0, no_show_marked_at = NOW()
+                WHERE id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": booking_id},
+        )
+        write_audit(
+            db,
+            str(admin["id"]),
+            f"no_show_waived:{reason or 'waived'}",
+            "booking",
+            booking_id,
+        )
+        db.commit()
+        return {"ok": True, "waived": True, "penalty_paise": 0}
+
+    try:
+        apply_wallet(
+            db,
+            str(b["pujari_id"]),
+            -amount,
+            "debit",
+            f"No-show penalty for booking {b.get('booking_number') or booking_id}",
+            booking_id,
+            f"NOSHOW-{booking_id[:8]}",
+        )
+        applied = amount
+    except ValueError as e:
+        raise HTTPException(400, f"Cannot deduct penalty: {e}")
+
+    db.execute(
+        text(
+            """
+            UPDATE bookings SET no_show_penalty_paise = :amt, no_show_marked_at = NOW()
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"amt": applied, "id": booking_id},
+    )
+    write_audit(
+        db,
+        str(admin["id"]),
+        f"no_show_penalty:{applied}:{reason or ''}",
+        "booking",
+        booking_id,
+    )
+    db.commit()
+    return {"ok": True, "waived": False, "penalty_paise": applied}
 
 
 @router.post("/bookings/{booking_id}/start-otp/request")
@@ -249,6 +388,9 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
     base = int(b["base_price_paise"])
     platform = int(round(base * (1 - share)))
     payable = int(round(base * share))
+    # Reimbursement is additive and separate from service earnings
+    reimbursement = int(b.get("pujari_reimbursement_paise") or 0)
+    settlement_total = payable + reimbursement
     due = date.today() + timedelta(days=days)
     try:
         st = b.get("settlement_status") or "not_applicable"
@@ -259,9 +401,9 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
                     INSERT INTO settlements (
                       booking_id, pujari_id, customer_payment_paise, base_puja_paise,
                       platform_fee_paise, gst_paise, pujari_payable_paise, settlement_amount_paise,
-                      due_date, status
+                      due_date, status, reimbursement_paise
                     ) VALUES (
-                      CAST(:bid AS uuid), CAST(:pid AS uuid), :pay, :base, :plat, :gst, :payable, :payable, :due, 'pending'
+                      CAST(:bid AS uuid), CAST(:pid AS uuid), :pay, :base, :plat, :gst, :payable, :settle, :due, 'pending', :reimb
                     )
                     ON CONFLICT (booking_id) DO NOTHING
                     """
@@ -274,12 +416,14 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
                     "plat": platform,
                     "gst": int(b["gst_amount_paise"] or 0),
                     "payable": payable,
+                    "settle": settlement_total,
                     "due": due,
+                    "reimb": reimbursement,
                 },
             )
             db.execute(
                 text("UPDATE bookings SET settlement_status = 'pending', pujari_payable_paise = :p WHERE id = CAST(:id AS uuid)"),
-                {"p": payable, "id": booking_id},
+                {"p": settlement_total, "id": booking_id},
             )
     except Exception:
         pass
@@ -597,6 +741,7 @@ def public_config(db: Session = Depends(get_db)):
         "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919876543210")),
         "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 24)),
         "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 10)),
+        "muhurta_consultation_fee_paise": int(get_setting(db, "muhurta_consultation_fee_paise", 30000)),
         "email_from_contact": str(get_setting(db, "email_from_contact", "contact@b-seva.com")),
         "email_from_support": str(get_setting(db, "email_from_support", "support@b-seva.com")),
         "email_delivery": smtp_status(),

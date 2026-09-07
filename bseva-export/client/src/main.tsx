@@ -5,7 +5,7 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getLoginUrl } from "./const";
+import { getLoginUrl, isAdminUiPath } from "./const";
 import { I18nProvider } from "./i18n/I18nProvider";
 import "./index.css";
 
@@ -25,7 +25,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
     path === "/customer" ||
     path === "/pujaris" ||
     path === "/pujari" ||
-    path.startsWith("/admin")
+    isAdminUiPath(path)
   ) {
     return;
   }

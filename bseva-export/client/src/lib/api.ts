@@ -1,3 +1,5 @@
+import { adminPath } from "@/const";
+
 const TOKEN_KEY = "bseva_token";
 
 /**
@@ -157,7 +159,7 @@ export function logoutApi() {
 }
 
 export function dashboardPath(role: string) {
-  if (role === "admin" || role === "super_admin") return "/admin";
+  if (role === "admin" || role === "super_admin") return adminPath();
   if (role === "pujari" || role === "priest" || role === "head_pujari") return "/pujari";
   return "/customer";
 }

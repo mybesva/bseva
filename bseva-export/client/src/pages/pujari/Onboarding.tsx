@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api, pujariMediaUrl, uploadPujariAsset } from "@/lib/api";
+import { api, pujariMediaUrl, rupees, uploadPujariAsset } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ export default function PujariOnboardingPage() {
   const [consent, setConsent] = useState(false);
   const [langCustom, setLangCustom] = useState("");
   const [specCustom, setSpecCustom] = useState("");
+  const [payingFee, setPayingFee] = useState(false);
 
   async function load() {
     const p = await api<any>("/pujari/profile");
@@ -96,6 +97,8 @@ export default function PujariOnboardingPage() {
         full_name: profile.full_name,
         date_of_birth: profile.date_of_birth || null,
         mobile_number: profile.mobile_number || user?.phone,
+        gotra: profile.gotra || null,
+        pravara: profile.pravara || null,
       });
       return;
     }
@@ -156,6 +159,21 @@ export default function PujariOnboardingPage() {
     }
   }
 
+  async function payJoiningFee() {
+    setPayingFee(true);
+    try {
+      const out = await api<{ joining_fee_status: string }>("/pujari/joining-fee/pay", { method: "POST" });
+      toast.success(
+        out.joining_fee_status === "paid" ? "Joining fee paid" : "No joining fee is due"
+      );
+      await load();
+    } catch (err: any) {
+      toast.error(err.message || "Could not pay joining fee");
+    } finally {
+      setPayingFee(false);
+    }
+  }
+
   async function finalSubmit() {
     if (!consent) {
       toast.error("Please confirm final submission consent");
@@ -210,8 +228,34 @@ export default function PujariOnboardingPage() {
     longitude: profile.longitude ?? null,
   };
 
+  const feeStatus = String(profile.joining_fee_status || "not_required");
+  const feeAmount = Number(profile.joining_fee_paise || 0);
+
   return (
     <PujariPortal>
+      {feeStatus !== "not_required" && (
+        <Card className="max-w-3xl mb-6 border-primary/30 bg-orange-50/60">
+          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Joining fee</p>
+              <p className="font-heading font-semibold text-lg capitalize">
+                {feeStatus.replace(/_/g, " ")}
+                {feeAmount > 0 ? ` · ${rupees(feeAmount)}` : ""}
+              </p>
+              {feeStatus === "pending" && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  The fee is deducted from your BSeva wallet. Top up your wallet if the balance is short.
+                </p>
+              )}
+            </div>
+            {feeStatus === "pending" && (
+              <Button size="sm" disabled={payingFee} onClick={() => void payJoiningFee()}>
+                {payingFee ? "Paying…" : "Pay joining fee"}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
       <Card className="max-w-3xl">
         <CardHeader>
           <CardTitle className="font-heading">Complete onboarding</CardTitle>
@@ -273,6 +317,14 @@ export default function PujariOnboardingPage() {
                     value={profile.mobile_number || user?.phone || ""}
                     onChange={(e) => setField("mobile_number", e.target.value)}
                   />
+                </div>
+                <div>
+                  <Label>{t("pujari.gotra")}</Label>
+                  <Input value={profile.gotra || ""} onChange={(e) => setField("gotra", e.target.value)} />
+                </div>
+                <div>
+                  <Label>{t("pujari.pravara")}</Label>
+                  <Input value={profile.pravara || ""} onChange={(e) => setField("pravara", e.target.value)} />
                 </div>
                 <div className="md:col-span-2">
                   <Label>Email</Label>

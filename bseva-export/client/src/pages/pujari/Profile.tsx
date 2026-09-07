@@ -60,6 +60,7 @@ function ProfileForm() {
           full_name: profile.full_name,
           father_name: profile.father_name,
           gotra: profile.gotra,
+          pravara: profile.pravara,
           date_of_birth: profile.date_of_birth || null,
           native_place: profile.native_place,
           permanent_address: profile.permanent_address,
@@ -160,6 +161,10 @@ function ProfileForm() {
           <div>
             <Label>{t("pujari.gotra")}</Label>
             <Input value={profile.gotra || ""} onChange={(e) => setField("gotra", e.target.value)} />
+          </div>
+          <div>
+            <Label>{t("pujari.pravara")}</Label>
+            <Input value={profile.pravara || ""} onChange={(e) => setField("pravara", e.target.value)} />
           </div>
           <div>
             <Label>{t("pujari.dob")} *</Label>

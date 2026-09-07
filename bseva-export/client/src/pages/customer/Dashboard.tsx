@@ -38,6 +38,7 @@ function CustomerDashboardContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [pujas, setPujas] = useState<any[]>([]);
   const [panchang, setPanchang] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
     const pref = (user?.calendar_preference as "north" | "south" | "lunar") || "north";
@@ -62,6 +63,9 @@ function CustomerDashboardContent() {
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setIsLoading(false));
+    api<{ items: any[] }>("/recommendations")
+      .then((r) => setRecommendations(r.items || []))
+      .catch(() => setRecommendations([]));
   }, [user]);
 
   const getStatusColor = (status: string) => {
@@ -171,6 +175,46 @@ function CustomerDashboardContent() {
             </CardContent>
           </Card>
         </div>
+
+        {recommendations.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-heading text-2xl font-bold text-sidebar flex items-center gap-2">
+                <Sparkles className="text-primary" size={22} />
+                Recommended for you
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendations.map((rec) => (
+                <Card key={rec.id} className="border-primary/30 bg-orange-50/40">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="font-heading text-lg text-sidebar">{rec.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {rec.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-3">{rec.description}</p>
+                    )}
+                    {rec.recurrence_hint && (
+                      <p className="text-xs text-muted-foreground">{rec.recurrence_hint}</p>
+                    )}
+                    <div className="text-sm font-medium text-sidebar">
+                      {rec.service_name}
+                      {rec.standard_price_paise
+                        ? ` · From ₹${(rec.standard_price_paise / 100).toLocaleString("en-IN")}`
+                        : ""}
+                    </div>
+                    <Button
+                      className="w-full bg-primary hover:bg-primary/90 font-bold"
+                      onClick={() => setLocation(`/book/${rec.service_slug}`)}
+                    >
+                      {t("customer.bookNow")}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Booking cards — services */}
         <div>

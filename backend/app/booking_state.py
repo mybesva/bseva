@@ -21,11 +21,11 @@ ALLOWED = {
 TRANSITIONS: dict[str, set[str]] = {
     "pending": {"pending_acceptance", "confirmed", "cancelled"},
     "pending_acceptance": {"confirmed", "rejected", "cancelled"},
-    "confirmed": {"in_progress", "cancelled"},
+    "confirmed": {"in_progress", "cancelled", "pending_acceptance"},  # admin reassignment
     "in_progress": {"completed", "cancelled"},
     "completed": set(),
     "cancelled": set(),
-    "rejected": set(),
+    "rejected": {"pending_acceptance", "cancelled"},  # admin reassignment
 }
 
 
@@ -59,7 +59,11 @@ def set_booking_status(
     elif new_status == "completed":
         extras = ", completed_at = COALESCE(completed_at, NOW()), rating_status = 'pending', settlement_status = CASE WHEN settlement_status = 'legacy' THEN 'legacy' ELSE 'pending' END"
     elif new_status == "confirmed":
-        extras = ", accepted_at = COALESCE(accepted_at, NOW())"
+        extras = ", accepted_at = COALESCE(accepted_at, NOW()), needs_reassignment = FALSE"
+    elif new_status == "rejected":
+        extras = ", rejected_at = COALESCE(rejected_at, NOW()), needs_reassignment = TRUE"
+    elif new_status == "pending_acceptance":
+        extras = ", needs_reassignment = FALSE, rejected_at = NULL"
     db.execute(
         text(f"UPDATE bookings SET status = :st{extras} WHERE id = CAST(:id AS uuid)"),
         params,

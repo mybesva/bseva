@@ -8,19 +8,22 @@ import { FileText, Upload } from "lucide-react";
 
 const DOC_SLOTS = [
   {
+    type: "identity",
+    label: "Aadhaar",
+    hint: "Upload your Aadhaar card (PDF or image).",
+    required: true,
+  },
+  {
     type: "certificate",
     label: "Professional Certificate",
     hint: "Upload your main pujari qualification certificate (PDF or image).",
-  },
-  {
-    type: "identity",
-    label: "Aadhar",
-    hint: "Upload your Aadhar card (PDF or image).",
+    required: false,
   },
   {
     type: "supporting",
     label: "Additional Documents",
     hint: "Upload additional documents (PDF or image).",
+    required: false,
   },
 ] as const;
 
@@ -74,12 +77,12 @@ export default function PriestOnboardingPanel() {
     <Card className="border-border mb-8">
       <CardHeader>
         <CardTitle className="font-heading text-xl flex items-center gap-2">
-          <FileText size={18} /> Certificates & Aadhar
+          <FileText size={18} /> Certificates & Aadhaar
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <p className="text-muted-foreground">
-          Upload all three documents below. Each file can be a PDF or image.
+          Aadhaar is required. Professional certificate and additional documents are optional. Each file can be a PDF or image.
         </p>
         {DOC_SLOTS.map((slot) => {
           const uploaded = latestByType[slot.type];
@@ -88,7 +91,14 @@ export default function PriestOnboardingPanel() {
             <div key={slot.type} className="rounded-md border p-4 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="font-medium">{slot.label}</div>
+                  <div className="font-medium">
+                    {slot.label}
+                    {slot.required ? (
+                      <span className="text-destructive"> *</span>
+                    ) : (
+                      <span className="text-muted-foreground font-normal"> (optional)</span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">{slot.hint}</p>
                 </div>
                 {uploaded ? <Badge variant="secondary">{uploaded.status || "uploaded"}</Badge> : null}

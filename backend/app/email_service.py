@@ -77,6 +77,7 @@ def send_recommended_list_email(
     items: list[dict],
     from_addr: str | None = None,
 ) -> dict[str, Any]:
+    """Legacy helper — prefer send_booking_preparation_email."""
     lines = [f"- {it.get('name')}" + (" (required)" if it.get("required") else "") for it in items]
     body = (
         f"Namaste,\n\nYour booking {booking_number} for {service_name} is confirmed.\n\n"
@@ -88,6 +89,70 @@ def send_recommended_list_email(
         text_body=body,
         from_addr=from_addr,
     )
+
+
+def send_booking_preparation_email(
+    *,
+    to: str,
+    customer_name: str,
+    booking_number: str,
+    booking_id: str,
+    service_name: str,
+    booking_date: str,
+    start_time: str,
+    preparation: dict[str, Any],
+    language: str = "en",
+    from_addr: str | None = None,
+    app_base_url: str | None = None,
+) -> dict[str, Any]:
+    """Short confirmation + link. Full checklist lives on the auth-gated booking page."""
+    import os
+
+    base = (app_base_url or os.getenv("PUBLIC_APP_URL") or os.getenv("VITE_APP_URL") or "https://bseva.vercel.app").rstrip(
+        "/"
+    )
+    link = f"{base}/booking/{booking_id}"
+    lang = (language or "en").lower()
+    verified = bool(preparation.get("verified"))
+    if lang == "te":
+        subject = f"BSeva — పూజ బుకింగ్ నిర్ధారణ ({booking_number})"
+        greeting = f"నమస్తే {customer_name or ''},"
+        body_core = (
+            f"మీ BSeva పూజ బుకింగ్ నిర్ధారించబడింది.\n\n"
+            f"పూజ: {service_name}\nతేదీ: {booking_date}\nసమయం: {start_time}\nబుకింగ్ ID: {booking_number}\n\n"
+        )
+        if verified:
+            body_core += "దయచేసి మీ పూజకు అవసరమైన సామగ్రి జాబితాను చూడండి:\n"
+        else:
+            body_core += "మీ వివరమైన సామగ్రి జాబితా త్వరలో నిర్ధారించబడుతుంది.\n"
+        body_core += f"\n[బుకింగ్ & సామగ్రి చూడండి]\n{link}\n\nఓం శాంతి,\nBSeva\n"
+    elif lang == "hi":
+        subject = f"BSeva — पूजा बुकिंग पुष्टि ({booking_number})"
+        greeting = f"नमस्ते {customer_name or ''},"
+        body_core = (
+            f"आपकी BSeva पूजा बुकिंग पुष्टि हो गई है।\n\n"
+            f"पूजा: {service_name}\nतिथि: {booking_date}\nसमय: {start_time}\nबुकिंग ID: {booking_number}\n\n"
+        )
+        if verified:
+            body_core += "कृपया अपनी पूजा की सामग्री सूची देखें:\n"
+        else:
+            body_core += "आपकी विस्तृत सामग्री सूची शीघ्र पुष्टि की जाएगी।\n"
+        body_core += f"\n[बुकिंग और सामग्री देखें]\n{link}\n\nॐ शांति,\nBSeva\n"
+    else:
+        subject = f"BSeva — Puja booking confirmed ({booking_number})"
+        greeting = f"Namaste {customer_name or ''},"
+        body_core = (
+            f"Your BSeva Puja booking is confirmed.\n\n"
+            f"Puja: {service_name}\nDate: {booking_date}\nTime: {start_time}\nBooking ID: {booking_number}\n\n"
+        )
+        if verified:
+            body_core += "Please review the items required for your Puja:\n"
+        else:
+            body_core += "Your detailed Samagri checklist will be confirmed shortly.\n"
+        body_core += f"\n[View Booking & Samagri]\n{link}\n\nOm Shanti,\nBSeva\n"
+
+    text_body = f"{greeting}\n\n{body_core}"
+    return send_email(to=to, subject=subject, text_body=text_body, from_addr=from_addr)
 
 
 def send_booking_event_email(

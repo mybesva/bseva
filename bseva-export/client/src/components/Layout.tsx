@@ -34,9 +34,9 @@ const TelegramIcon = ({ size = 16 }: { size?: number }) => (
 );
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { t, lang, setLang, labels } = useI18n();
   const { config } = usePublicConfig();
   const phoneDisplay = whatsappDisplay(config.bseva_whatsapp_number);
@@ -46,6 +46,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const base = [
       { label: t("nav.home"), path: "/" },
       { label: t("nav.services"), path: "/services" },
+      { label: t("nav.astrology"), path: "/astrology" },
       { label: t("nav.about"), path: "/about" },
       { label: t("nav.contact"), path: "/contact" },
     ];
@@ -53,7 +54,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const portals = [
       { label: t("nav.customer"), path: "/customer", role: "customer" as const },
       { label: t("nav.pujaris"), path: "/pujari", role: "pujari" as const },
-      { label: t("nav.admin"), path: "/admin", role: "admin" as const },
     ];
 
     if (!user) {
@@ -61,7 +61,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
 
     const mine = portals.find(
-      (p) => p.role === user.role || (p.role === "admin" && user.role === "super_admin")
+      (p) =>
+        p.role === user.role ||
+        (p.role === "pujari" && user.role === "head_pujari")
     );
     return [
       ...base,
@@ -150,9 +152,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Button>
               </Link>
             )}
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-1"
+                onClick={async () => {
+                  await logout();
+                  setLocation("/");
+                }}
+              >
+                {t("nav.logout")}
+              </Button>
+            )}
           </nav>
 
-          <div className="flex items-center gap-1 lg:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild className="lg:hidden">
               <Button variant="ghost" size="icon">
@@ -191,10 +206,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       </Button>
                     </Link>
                   )}
+                  {user && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2"
+                      onClick={async () => {
+                        setIsMobileMenuOpen(false);
+                        await logout();
+                        setLocation("/");
+                      }}
+                    >
+                      {t("nav.logout")}
+                    </Button>
+                  )}
                 </nav>
               </div>
             </SheetContent>
           </Sheet>
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  await logout();
+                  setLocation("/");
+                }}
+              >
+                {t("nav.logout")}
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -213,9 +253,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <h4 className="font-heading font-bold text-lg mb-4 text-primary">{t("footer.quickLinks")}</h4>
             <ul className="space-y-2 text-sm text-sidebar-foreground/80">
               <li><Link href="/services"><a className="hover:text-primary">{t("nav.services")}</a></Link></li>
+              <li><Link href="/astrology"><a className="hover:text-primary">{t("nav.astrology")}</a></Link></li>
               <li><Link href="/customer"><a className="hover:text-primary">{t("nav.customer")}</a></Link></li>
               <li><Link href="/pujari"><a className="hover:text-primary">{t("nav.pujaris")}</a></Link></li>
-              <li><Link href="/admin"><a className="hover:text-primary">{t("nav.admin")}</a></Link></li>
               <li><Link href="/about"><a className="hover:text-primary">{t("nav.about")}</a></Link></li>
               <li><Link href="/contact"><a className="hover:text-primary">{t("nav.contact")}</a></Link></li>
             </ul>

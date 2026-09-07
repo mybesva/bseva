@@ -3,11 +3,12 @@ import { useParams, useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import BookingWizard from "@/components/BookingWizard";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
+import { api, rupees } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Book() {
   const params = useParams();
@@ -17,6 +18,29 @@ export default function Book() {
   const { config: publicConfig } = usePublicConfig();
   const [pujaType, setPujaType] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [muhurtaRequested, setMuhurtaRequested] = useState(false);
+  const [requestingMuhurta, setRequestingMuhurta] = useState(false);
+
+  async function requestMuhurta() {
+    if (!pujaType) return;
+    setRequestingMuhurta(true);
+    try {
+      const out = await api<{ fee_paise: number; payment_status: string }>("/muhurta-consultations", {
+        method: "POST",
+        body: JSON.stringify({ service_id: pujaType.id }),
+      });
+      setMuhurtaRequested(true);
+      toast.success(
+        out.payment_status === "paid"
+          ? `Consultation requested. ${rupees(out.fee_paise)} was debited from your wallet.`
+          : "Consultation requested. A pujari will share muhurta guidance shortly."
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Could not request a consultation");
+    } finally {
+      setRequestingMuhurta(false);
+    }
+  }
 
   useEffect(() => {
     if (authLoading) return;
@@ -60,6 +84,12 @@ export default function Book() {
     );
   }
 
+  const muhurtaFee = Number(
+    pujaType.muhurta_fee_paise ?? publicConfig?.muhurta_consultation_fee_paise ?? 0
+  );
+  const showMuhurta =
+    user?.role === "customer" && (pujaType.muhurta_consultation_enabled || pujaType.requires_muhurta);
+
   return (
     <Layout>
       <section className="bg-sidebar text-sidebar-foreground py-10">
@@ -73,6 +103,36 @@ export default function Book() {
         </div>
       </section>
       <div className="container pb-12">
+        {showMuhurta && (
+          <div className="mt-6 rounded-lg border border-primary/30 bg-orange-50/60 p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Sparkles className="text-primary mt-0.5 shrink-0" size={20} />
+              <div>
+                <p className="font-heading font-semibold text-sidebar">
+                  {pujaType.requires_muhurta
+                    ? "This puja needs an auspicious time (muhurta)"
+                    : "Not sure about the right muhurta?"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {muhurtaRequested
+                    ? "Your request is in. A pujari will share the recommended dates and times, then you can complete this booking."
+                    : muhurtaFee > 0
+                      ? `Request guidance from a pujari for ${rupees(muhurtaFee)}, debited from your wallet. You can still pick a date below.`
+                      : "Request guidance from a pujari before you pick a date. You can still continue booking below."}
+                </p>
+              </div>
+            </div>
+            {!muhurtaRequested && (
+              <Button
+                variant="secondary"
+                disabled={requestingMuhurta}
+                onClick={() => void requestMuhurta()}
+              >
+                {requestingMuhurta ? "Requesting…" : "Request muhurta consultation"}
+              </Button>
+            )}
+          </div>
+        )}
         <BookingWizard
           serviceId={pujaType.id}
           pujaName={pujaType.name}

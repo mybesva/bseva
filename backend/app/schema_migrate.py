@@ -487,6 +487,12 @@ def _seed_platform_settings(conn) -> None:
         "weekend_days": [6, 7],
         "weekend_surge_percent": 0,
         "weekend_surge_paise": 0,
+        "pujari_joining_fee_enabled": False,
+        "pujari_joining_fee_paise": 0,
+        "muhurta_consultation_fee_paise": 30000,
+        "pujari_no_show_penalty_enabled": True,
+        "pujari_no_show_penalty_paise": 50000,
+        "assign_distance_rings_km": [10, 15, 20, 30],
     }
     for k, v in defaults.items():
         conn.execute(
@@ -548,24 +554,79 @@ def _seed_pujari_booking_terms(conn) -> None:
     )
 
 
+def _exec_safe(conn, stmt: str) -> None:
+    """Run a statement; on failure roll back to savepoint so the outer txn can continue (Postgres)."""
+    conn.execute(text("SAVEPOINT bseva_mig"))
+    try:
+        conn.execute(text(stmt))
+        conn.execute(text("RELEASE SAVEPOINT bseva_mig"))
+    except Exception:
+        conn.execute(text("ROLLBACK TO SAVEPOINT bseva_mig"))
+
+
 def ensure_schema() -> None:
     with engine.begin() as conn:
         for stmt in _STMTS:
             conn.execute(text(stmt))
         for stmt in _FOUNDATION_STMTS:
-            try:
-                conn.execute(text(stmt))
-            except Exception:
-                # Some ALTER/DO blocks may fail on partially migrated DBs; continue
-                pass
+            _exec_safe(conn, stmt)
         try:
             from app.phase2_migrate import _PHASE2_STMTS
 
             for stmt in _PHASE2_STMTS:
-                try:
-                    conn.execute(text(stmt))
-                except Exception:
-                    pass
+                _exec_safe(conn, stmt)
+        except Exception:
+            pass
+        try:
+            from app.phase3_migrate import _PHASE3_STMTS
+
+            for stmt in _PHASE3_STMTS:
+                _exec_safe(conn, stmt)
+        except Exception:
+            pass
+        try:
+            from app.phase4_catalog_migrate import _PHASE4_STMTS
+
+            for stmt in _PHASE4_STMTS:
+                _exec_safe(conn, stmt)
+        except Exception:
+            pass
+        try:
+            from app.phase5_samagri_migrate import _PHASE5_STMTS
+
+            for stmt in _PHASE5_STMTS:
+                _exec_safe(conn, stmt)
+        except Exception:
+            pass
+        # Backfill main_puja_price from standard when null
+        _exec_safe(
+            conn,
+            """
+            UPDATE services SET main_puja_price_paise = standard_price_paise
+            WHERE main_puja_price_paise IS NULL
+              AND standard_price_paise IS NOT NULL
+            """,
+        )
+        try:
+            from app.catalog_seed import ensure_catalog
+
+            conn.execute(text("SAVEPOINT bseva_catalog"))
+            try:
+                ensure_catalog(conn)
+                conn.execute(text("RELEASE SAVEPOINT bseva_catalog"))
+            except Exception:
+                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_catalog"))
+        except Exception:
+            pass
+        try:
+            from app.samagri_seed import ensure_samagri_content
+
+            conn.execute(text("SAVEPOINT bseva_samagri"))
+            try:
+                ensure_samagri_content(conn)
+                conn.execute(text("RELEASE SAVEPOINT bseva_samagri"))
+            except Exception:
+                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_samagri"))
         except Exception:
             pass
         _seed_pujari_roles(conn)
@@ -577,19 +638,15 @@ def ensure_schema() -> None:
         except Exception:
             pass
         # Mark historical payouts as legacy settlements
-        try:
-            conn.execute(
-                text(
-                    """
-                    UPDATE bookings SET settlement_status = 'legacy'
-                    WHERE (settlement_status IS NULL OR settlement_status = 'not_applicable')
-                      AND status IN ('confirmed', 'completed', 'in_progress')
-                      AND pujari_id IS NOT NULL
-                    """
-                )
-            )
-        except Exception:
-            pass
+        _exec_safe(
+            conn,
+            """
+            UPDATE bookings SET settlement_status = 'legacy'
+            WHERE (settlement_status IS NULL OR settlement_status = 'not_applicable')
+              AND status IN ('confirmed', 'completed', 'in_progress')
+              AND pujari_id IS NOT NULL
+            """,
+        )
 
 
 def ensure_pujari_profile_schema() -> None:

@@ -9,6 +9,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import PreparationChecklist from "@/components/PreparationChecklist";
 
 function statusColor(status: string) {
   switch (status) {
@@ -217,7 +218,9 @@ export default function BookingReceipt() {
               )}
             </div>
 
-            {Array.isArray(booking.samagri) && booking.samagri.length > 0 && (
+            {booking.preparation ? (
+              <PreparationChecklist preparation={booking.preparation} />
+            ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
               <div className="rounded-lg border p-4 space-y-2">
                 <h3 className="font-heading font-semibold">Recommended List</h3>
                 <ul className="list-disc pl-5 space-y-1">
@@ -229,7 +232,7 @@ export default function BookingReceipt() {
                   ))}
                 </ul>
               </div>
-            )}
+            ) : null}
 
             <div className="print:hidden flex flex-wrap gap-2 pt-2">
               <Button onClick={() => window.print()}>

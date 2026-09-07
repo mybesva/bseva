@@ -38,7 +38,15 @@ class SamagriItemIn(BaseModel):
     name: str
     description: str | None = None
     unit: str = "pcs"
+    item_key: str | None = None
     active: bool = True
+    translations: dict[str, str] | None = None  # lang -> name
+
+
+class SamagriTranslationIn(BaseModel):
+    language_code: str
+    item_name: str
+    notes: str | None = None
 
 
 class ServiceSamagriIn(BaseModel):
@@ -48,6 +56,27 @@ class ServiceSamagriIn(BaseModel):
     customer_provided: bool = False
     instructions: str | None = None
     sort_order: int = 0
+    quantity: float | None = None
+    unit: str | None = None
+    category: str = "PUJA_SAMAGRI"
+    provided_by: str = "CUSTOMER"
+    notes: str | None = None
+    active: bool = True
+
+
+class ServicePrepContentIn(BaseModel):
+    language_code: str
+    display_name: str | None = None
+    short_description: str | None = None
+    preparation_notes: str | None = None
+    special_instructions: str | None = None
+    prasadam_notes: str | None = None
+    venue_notes: str | None = None
+    disclaimer: str | None = None
+
+
+class SamagriReviewIn(BaseModel):
+    samagri_review_status: str  # UNVERIFIED | VERIFIED | NEEDS_REVIEW
 
 
 class SettingIn(BaseModel):
@@ -145,34 +174,110 @@ def update_ticket(ticket_id: str, body: TicketUpdateIn, user=Depends(require_per
 @router.get("/samagri/items")
 def list_samagri(db: Session = Depends(get_db), user=Depends(current_user)):
     rows = db.execute(text("SELECT * FROM samagri_items WHERE active = TRUE ORDER BY name")).mappings().all()
-    return [row_dict(r) for r in rows]
+    out = []
+    for r in rows:
+        d = row_dict(r)
+        try:
+            tr = db.execute(
+                text(
+                    """
+                    SELECT language_code, item_name, notes
+                    FROM samagri_item_translations
+                    WHERE samagri_item_id = CAST(:id AS uuid)
+                    """
+                ),
+                {"id": str(r["id"])},
+            ).mappings().all()
+            d["translations"] = {t["language_code"]: t["item_name"] for t in tr}
+        except Exception:
+            d["translations"] = {}
+        out.append(d)
+    return out
 
 
 @router.post("/admin/samagri/items")
 def create_samagri(body: SamagriItemIn, user=Depends(require_permission("manage_samagri")), db: Session = Depends(get_db)):
     iid = str(uuid4())
     db.execute(
-        text("INSERT INTO samagri_items (id, name, description, unit, active) VALUES (CAST(:id AS uuid), :n, :d, :u, :a)"),
-        {"id": iid, "n": body.name, "d": body.description, "u": body.unit, "a": body.active},
+        text(
+            """
+            INSERT INTO samagri_items (id, name, description, unit, default_unit, item_key, active)
+            VALUES (CAST(:id AS uuid), :n, :d, :u, :u, :k, :a)
+            """
+        ),
+        {
+            "id": iid,
+            "n": body.name,
+            "d": body.description,
+            "u": body.unit,
+            "k": body.item_key,
+            "a": body.active,
+        },
     )
+    # Always seed English translation; optional hi/te from body.translations
+    langs = {"en": body.name}
+    if body.translations:
+        langs.update({k: v for k, v in body.translations.items() if v})
+    for lang, name in langs.items():
+        try:
+            db.execute(
+                text(
+                    """
+                    INSERT INTO samagri_item_translations (samagri_item_id, language_code, item_name)
+                    VALUES (CAST(:id AS uuid), :lang, :name)
+                    ON CONFLICT (samagri_item_id, language_code) DO UPDATE SET item_name = EXCLUDED.item_name
+                    """
+                ),
+                {"id": iid, "lang": lang, "name": name},
+            )
+        except Exception:
+            break
     db.commit()
     return {"id": iid}
 
 
+@router.put("/admin/samagri/items/{item_id}/translations")
+def upsert_samagri_translation(
+    item_id: str,
+    body: SamagriTranslationIn,
+    user=Depends(require_permission("manage_samagri")),
+    db: Session = Depends(get_db),
+):
+    db.execute(
+        text(
+            """
+            INSERT INTO samagri_item_translations (samagri_item_id, language_code, item_name, notes)
+            VALUES (CAST(:id AS uuid), :lang, :name, :notes)
+            ON CONFLICT (samagri_item_id, language_code) DO UPDATE SET
+              item_name = EXCLUDED.item_name, notes = EXCLUDED.notes
+            """
+        ),
+        {"id": item_id, "lang": body.language_code, "name": body.item_name, "notes": body.notes},
+    )
+    db.commit()
+    return {"ok": True}
+
+
 @router.post("/admin/services/{service_id}/samagri")
 def link_samagri(service_id: str, body: ServiceSamagriIn, user=Depends(require_permission("manage_samagri")), db: Session = Depends(get_db)):
+    provided_by = (body.provided_by or "CUSTOMER").upper()
+    customer_provided = body.customer_provided if body.customer_provided else provided_by == "CUSTOMER"
     db.execute(
         text(
             """
             INSERT INTO service_samagri (
-              service_id, samagri_item_id, required, optional, customer_provided, instructions, sort_order
+              service_id, samagri_item_id, required, optional, customer_provided, instructions, sort_order,
+              quantity, unit, category, provided_by, notes, active
             ) VALUES (
-              CAST(:s AS uuid), CAST(:i AS uuid), :req, :opt, :cp, :ins, :ord
+              CAST(:s AS uuid), CAST(:i AS uuid), :req, :opt, :cp, :ins, :ord,
+              :qty, :unit, :cat, :prov, :notes, :act
             )
             ON CONFLICT (service_id, samagri_item_id) DO UPDATE SET
               required = EXCLUDED.required, optional = EXCLUDED.optional,
               customer_provided = EXCLUDED.customer_provided, instructions = EXCLUDED.instructions,
-              sort_order = EXCLUDED.sort_order
+              sort_order = EXCLUDED.sort_order, quantity = EXCLUDED.quantity, unit = EXCLUDED.unit,
+              category = EXCLUDED.category, provided_by = EXCLUDED.provided_by,
+              notes = EXCLUDED.notes, active = EXCLUDED.active
             """
         ),
         {
@@ -180,9 +285,15 @@ def link_samagri(service_id: str, body: ServiceSamagriIn, user=Depends(require_p
             "i": body.samagri_item_id,
             "req": body.required,
             "opt": body.optional,
-            "cp": body.customer_provided,
+            "cp": customer_provided,
             "ins": body.instructions,
             "ord": body.sort_order,
+            "qty": body.quantity,
+            "unit": body.unit,
+            "cat": (body.category or "PUJA_SAMAGRI").upper(),
+            "prov": provided_by,
+            "notes": body.notes,
+            "act": body.active,
         },
     )
     db.commit()
@@ -194,16 +305,109 @@ def service_samagri(service_id: str, db: Session = Depends(get_db)):
     rows = db.execute(
         text(
             """
-            SELECT ss.*, si.name, si.unit, si.description AS item_description
+            SELECT ss.*, si.name, si.unit AS item_unit, si.item_key, si.description AS item_description
             FROM service_samagri ss
             JOIN samagri_items si ON si.id = ss.samagri_item_id
             WHERE ss.service_id = CAST(:s AS uuid) AND si.active = TRUE
+              AND COALESCE(ss.active, TRUE) = TRUE
             ORDER BY ss.sort_order, si.name
             """
         ),
         {"s": service_id},
     ).mappings().all()
     return [row_dict(r) for r in rows]
+
+
+@router.get("/services/{service_id}/preparation")
+def service_preparation_public(service_id: str, lang: str = "en", db: Session = Depends(get_db)):
+    """Typical preparation preview — VERIFIED content only for customers."""
+    from app.preparation import build_preparation_view, load_service_preparation_master, normalize_lang
+
+    master = load_service_preparation_master(db, service_id, normalize_lang(lang))
+    if not master.get("ok"):
+        raise HTTPException(404, "Service not found")
+    # Public: assume no package purchased → customer-arrange heavy view
+    view = build_preparation_view(master, samagri_purchased=False, lang=normalize_lang(lang))
+    view["review_status"] = (master.get("service") or {}).get("samagri_review_status")
+    return view
+
+
+@router.get("/admin/services/{service_id}/preparation-content")
+def get_prep_content(service_id: str, user=Depends(require_permission("manage_samagri")), db: Session = Depends(get_db)):
+    rows = db.execute(
+        text("SELECT * FROM service_preparation_content WHERE service_id = CAST(:id AS uuid) ORDER BY language_code"),
+        {"id": service_id},
+    ).mappings().all()
+    return [row_dict(r) for r in rows]
+
+
+@router.put("/admin/services/{service_id}/preparation-content")
+def upsert_prep_content(
+    service_id: str,
+    body: ServicePrepContentIn,
+    user=Depends(require_permission("manage_samagri")),
+    db: Session = Depends(get_db),
+):
+    db.execute(
+        text(
+            """
+            INSERT INTO service_preparation_content (
+              service_id, language_code, display_name, short_description,
+              preparation_notes, special_instructions, prasadam_notes, venue_notes, disclaimer
+            ) VALUES (
+              CAST(:sid AS uuid), :lang, :dn, :sd, :pn, :si, :pr, :vn, :disc
+            )
+            ON CONFLICT (service_id, language_code) DO UPDATE SET
+              display_name = EXCLUDED.display_name,
+              short_description = EXCLUDED.short_description,
+              preparation_notes = EXCLUDED.preparation_notes,
+              special_instructions = EXCLUDED.special_instructions,
+              prasadam_notes = EXCLUDED.prasadam_notes,
+              venue_notes = EXCLUDED.venue_notes,
+              disclaimer = EXCLUDED.disclaimer,
+              updated_at = NOW()
+            """
+        ),
+        {
+            "sid": service_id,
+            "lang": body.language_code,
+            "dn": body.display_name,
+            "sd": body.short_description,
+            "pn": body.preparation_notes,
+            "si": body.special_instructions,
+            "pr": body.prasadam_notes,
+            "vn": body.venue_notes,
+            "disc": body.disclaimer,
+        },
+    )
+    db.commit()
+    return {"ok": True}
+
+
+@router.patch("/admin/services/{service_id}/samagri-review")
+def set_samagri_review(
+    service_id: str,
+    body: SamagriReviewIn,
+    user=Depends(require_permission("manage_samagri")),
+    db: Session = Depends(get_db),
+):
+    st = (body.samagri_review_status or "").upper()
+    if st not in ("UNVERIFIED", "VERIFIED", "NEEDS_REVIEW"):
+        raise HTTPException(400, "Invalid review status")
+    db.execute(
+        text(
+            """
+            UPDATE services SET
+              samagri_review_status = :st,
+              samagri_last_reviewed_at = CASE WHEN :st = 'VERIFIED' THEN NOW() ELSE samagri_last_reviewed_at END,
+              updated_at = NOW()
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"st": st, "id": service_id},
+    )
+    db.commit()
+    return {"ok": True, "samagri_review_status": st}
 
 
 @router.get("/admin/config")

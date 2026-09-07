@@ -32,6 +32,16 @@ _DEFAULTS: dict[str, Any] = {
     "invoice_company_address": "",
     "invoice_prefix_customer": "INV-C",
     "invoice_prefix_settlement": "INV-S",
+    # Pujari joining fee (optional)
+    "pujari_joining_fee_enabled": False,
+    "pujari_joining_fee_paise": 0,
+    # Muhurta consultation default fee (per-service override allowed)
+    "muhurta_consultation_fee_paise": 30000,
+    # Pujari no-show / late cancel penalty
+    "pujari_no_show_penalty_enabled": True,
+    "pujari_no_show_penalty_paise": 50000,
+    # Admin reassignment distance rings (km)
+    "assign_distance_rings_km": [10, 15, 20, 30],
 }
 
 

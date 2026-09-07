@@ -16,14 +16,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api, openAdminPujariDocument, uploadAdminPujariDocument } from "@/lib/api";
+import { adminPath } from "@/const";
 import { usePujariLevels } from "@/hooks/usePujariLevels";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 const DOC_LABELS: Record<string, string> = {
-  certificate: "Professional",
-  identity: "Aadhaar",
-  supporting: "Additional",
+  identity: "Aadhaar (required)",
+  certificate: "Professional (optional)",
+  supporting: "Additional (optional)",
 };
 
 const QUAL_OPTS = [
@@ -124,7 +125,7 @@ export default function PujariDetailPage() {
     setDraft({ ...profile });
     setEditing(false);
     if (new URLSearchParams(search).get("edit") === "1") {
-      setLocation(`/admin/pujaris/${id}`);
+      setLocation(adminPath(`/pujaris/${id}`));
     }
   }
 
@@ -136,6 +137,7 @@ export default function PujariDetailPage() {
         full_name: draft.full_name || null,
         father_name: draft.father_name || null,
         gotra: draft.gotra || null,
+        pravara: draft.pravara || null,
         date_of_birth: draft.date_of_birth ? String(draft.date_of_birth).slice(0, 10) : null,
         native_place: draft.native_place || null,
         permanent_address: draft.permanent_address || null,
@@ -170,7 +172,7 @@ export default function PujariDetailPage() {
       setEditing(false);
       await load();
       if (new URLSearchParams(search).get("edit") === "1") {
-        setLocation(`/admin/pujaris/${id}`);
+        setLocation(adminPath(`/pujaris/${id}`));
       }
     } catch (e: any) {
       toast.error(e.message);
@@ -231,7 +233,7 @@ export default function PujariDetailPage() {
     <AdminLayout>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <Link href="/admin/pujaris" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link href={adminPath("/pujaris")} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft size={14} />
             Back to pujaris
           </Link>
@@ -329,6 +331,10 @@ export default function PujariDetailPage() {
                   <Input value={p.gotra || ""} onChange={(e) => setField("gotra", e.target.value)} />
                 </div>
                 <div className="space-y-2">
+                  <Label>Pravara</Label>
+                  <Input value={p.pravara || ""} onChange={(e) => setField("pravara", e.target.value)} />
+                </div>
+                <div className="space-y-2">
                   <Label>Date of birth</Label>
                   <Input
                     type="date"
@@ -366,6 +372,7 @@ export default function PujariDetailPage() {
                 <Field label="Full name">{p.full_name || p.name}</Field>
                 <Field label="Father name">{p.father_name}</Field>
                 <Field label="Gotra">{p.gotra}</Field>
+                <Field label="Pravara">{p.pravara}</Field>
                 <Field label="Date of birth">{p.date_of_birth ? String(p.date_of_birth).slice(0, 10) : null}</Field>
                 <Field label="Gender">{p.gender}</Field>
                 <Field label="Native place">{p.native_place}</Field>
@@ -663,7 +670,7 @@ export default function PujariDetailPage() {
               ))}
             </ul>
             <div className="grid gap-4 md:grid-cols-3 pt-2 border-t">
-              {(["certificate", "identity", "supporting"] as const).map((typ) => (
+              {(["identity", "certificate", "supporting"] as const).map((typ) => (
                 <div key={typ} className="space-y-2">
                   <Label>Upload {DOC_LABELS[typ]}</Label>
                   <Input

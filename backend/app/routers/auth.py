@@ -161,13 +161,20 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
             },
         )
     else:
+        from app.platform_config import get_setting
+
+        fee_enabled = bool(get_setting(db, "pujari_joining_fee_enabled", False))
+        fee_amt = int(get_setting(db, "pujari_joining_fee_paise", 0) or 0) if fee_enabled else 0
+        fee_status = "pending" if fee_enabled and fee_amt > 0 else "not_required"
         db.execute(
             text(
                 """
                 INSERT INTO pujari_profiles
                   (user_id, requested_level, verification_status, location_label, address, address_line1, address_line2,
-                   city, district, state, pincode, country, latitude, longitude, backup_phone)
-                VALUES (CAST(:id AS uuid), :lvl, 'pending', :loc, :addr, :a1, :a2, :city, :district, :state, :pin, :country, :lat, :lng, :backup)
+                   city, district, state, pincode, country, latitude, longitude, backup_phone,
+                   joining_fee_status, joining_fee_paise)
+                VALUES (CAST(:id AS uuid), :lvl, 'pending', :loc, :addr, :a1, :a2, :city, :district, :state, :pin, :country, :lat, :lng, :backup,
+                        :jfs, :jfa)
                 """
             ),
             {
@@ -185,6 +192,8 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
                 "lat": body.latitude,
                 "lng": body.longitude,
                 "backup": body.backup_phone,
+                "jfs": fee_status,
+                "jfa": fee_amt,
             },
         )
     if body.account_type == "pujari":
@@ -235,6 +244,11 @@ def patch_me(body: MePatchIn, user=Depends(current_user), db: Session = Depends(
         db.execute(text("UPDATE users SET name = :v WHERE id = CAST(:id AS uuid)"), {"v": body.name, "id": user["id"]})
     if body.preferred_language:
         db.execute(text("UPDATE users SET preferred_language = :v WHERE id = CAST(:id AS uuid)"), {"v": body.preferred_language, "id": user["id"]})
+        if user["role"] == "customer":
+            db.execute(
+                text("UPDATE customer_profiles SET preferred_language = :v WHERE user_id = CAST(:id AS uuid)"),
+                {"v": body.preferred_language, "id": user["id"]},
+            )
     if body.calendar_preference:
         db.execute(text("UPDATE users SET calendar_preference = :v WHERE id = CAST(:id AS uuid)"), {"v": body.calendar_preference, "id": user["id"]})
         if user["role"] == "customer":

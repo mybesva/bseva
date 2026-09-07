@@ -141,6 +141,7 @@ export default function CustomersPage() {
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
+            <TableHead>Language</TableHead>
             <TableHead>Status</TableHead>
             <TableHead></TableHead>
           </TableRow>
@@ -151,6 +152,29 @@ export default function CustomersPage() {
               <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>{u.phone}</TableCell>
+              <TableCell>
+                <select
+                  className="border rounded px-2 py-1 text-sm bg-background"
+                  value={u.preferred_language || "en"}
+                  onChange={async (e) => {
+                    const preferred_language = e.target.value;
+                    try {
+                      await api(`/admin/users/${u.id}/customer`, {
+                        method: "PUT",
+                        body: JSON.stringify({ preferred_language }),
+                      });
+                      toast.success("Language updated");
+                      await load();
+                    } catch (err: any) {
+                      toast.error(err.message);
+                    }
+                  }}
+                >
+                  <option value="en">English</option>
+                  <option value="hi">Hindi</option>
+                  <option value="te">Telugu</option>
+                </select>
+              </TableCell>
               <TableCell>
                 <Badge variant={u.blocked ? "destructive" : "secondary"}>{u.blocked ? "Blocked" : "Active"}</Badge>
               </TableCell>

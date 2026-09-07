@@ -10,13 +10,14 @@ import { usePujariLevels } from "@/hooks/usePujariLevels";
 import { api, apiBase, registerApi } from "@/lib/api";
 import { REGISTRATION_CONSENT_LABEL, TERMS_VERSION, PRIVACY_VERSION } from "@/lib/legal";
 import { useI18n } from "@/i18n/I18nProvider";
+import type { Lang } from "@/i18n/translations";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
 
 export default function Register() {
-  const { t } = useI18n();
+  const { t, lang, setLang, labels } = useI18n();
   const [, setLocation] = useLocation();
   const roleHint = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("role");
   const returnUrl = safeReturnUrl(
@@ -34,6 +35,7 @@ export default function Register() {
   const [consent, setConsent] = useState(false);
   const [pending, setPending] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const [language, setLanguage] = useState<Lang>(lang);
   const { levels: pujariLevels } = usePujariLevels();
 
   async function sendOtp() {
@@ -80,7 +82,7 @@ export default function Register() {
         phone,
         password,
         otp,
-        language: "en",
+        language,
         calendar_preference: "north",
         requested_level: accountType === "pujari" ? requestedLevel : undefined,
         registration_consent: true,
@@ -88,6 +90,7 @@ export default function Register() {
         privacy_version: PRIVACY_VERSION,
         referral_code: referralCode.trim() || undefined,
       });
+      setLang(language);
       toast.success(`Welcome, ${name}. You can add your address after signing in.`);
       if (returnUrl && accountType === "customer") {
         setLocation(returnUrl);
@@ -137,6 +140,23 @@ export default function Register() {
                 <div className="space-y-2">
                   <Label>Confirm password</Label>
                   <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} minLength={8} required autoComplete="new-password" />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label>Preferred language</Label>
+                  <select
+                    className="w-full h-10 rounded-md border px-2 text-sm"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as Lang)}
+                  >
+                    {(Object.keys(labels) as Lang[]).map((code) => (
+                      <option key={code} value={code}>
+                        {labels[code]}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    We will show the site and send notifications in this language.
+                  </p>
                 </div>
               </div>
               {accountType === "pujari" && (

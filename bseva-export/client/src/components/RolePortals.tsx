@@ -20,7 +20,6 @@ import {
   Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -96,8 +95,8 @@ function PortalShell({
     .toUpperCase();
 
   const Sidebar = (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="p-4 border-b border-sidebar-border">
+    <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
+      <div className="p-4 border-b border-sidebar-border shrink-0">
         <div className="flex flex-col items-center text-center gap-2 py-2">
           <Avatar className={cn("border-2 border-primary/30", photoRequired ? "h-24 w-24" : "h-16 w-16")}>
             {photoUrl ? <AvatarImage src={photoUrl} alt="" /> : null}
@@ -110,8 +109,7 @@ function PortalShell({
           </div>
         </div>
       </div>
-      <ScrollArea className="flex-1 px-2 py-3">
-        <nav className="space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-3 space-y-1">
           {nav.map((item) => {
             const active = location === item.href || (item.href !== "/customer" && item.href !== "/pujari" && location.startsWith(item.href));
             return (
@@ -133,25 +131,13 @@ function PortalShell({
             <FileText size={18} />
             Terms & Conditions
           </LegalInlineLink>
-          <button
-            type="button"
-            className={sidebarActionClass}
-            onClick={() => {
-              setOpen(false);
-              void handleLogout();
-            }}
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
-        </nav>
-      </ScrollArea>
+      </nav>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-background flex">
-      <aside className="hidden lg:block w-64 shrink-0 border-r border-border">{Sidebar}</aside>
+      <aside className="hidden lg:block w-64 shrink-0 border-r border-border h-screen sticky top-0">{Sidebar}</aside>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
@@ -167,6 +153,15 @@ function PortalShell({
             <a className="font-heading font-bold text-sidebar">BSeva</a>
           </Link>
           <span className="text-sm text-muted-foreground capitalize ml-1">{role} portal</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto shrink-0"
+            onClick={() => void handleLogout()}
+          >
+            <LogOut size={16} className="mr-1.5" />
+            Logout
+          </Button>
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
         <footer className="border-t py-4 text-center text-xs text-muted-foreground">© BSeva. All rights reserved.</footer>

@@ -6,6 +6,7 @@ export type PublicConfig = {
   bseva_whatsapp_number: string;
   pujari_full_booking_details_before_hours: number;
   puja_start_otp_before_minutes: number;
+  muhurta_consultation_fee_paise: number;
   email_from_contact: string;
   email_from_support: string;
 };
@@ -15,6 +16,7 @@ const DEFAULTS: PublicConfig = {
   bseva_whatsapp_number: "919876543210",
   pujari_full_booking_details_before_hours: 24,
   puja_start_otp_before_minutes: 10,
+  muhurta_consultation_fee_paise: 30000,
   email_from_contact: "contact@b-seva.com",
   email_from_support: "support@b-seva.com",
 };

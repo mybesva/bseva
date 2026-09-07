@@ -21,7 +21,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 
 const emptyRoleForm = { title: "", summary: "", examplesText: "" };
 
-const PLATFORM_KEYS: { key: string; label: string; type: "string" | "number" | "boolean"; superOnly?: boolean; hint?: string }[] = [
+type SettingType = "string" | "number" | "boolean" | "json";
+
+const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?: boolean; hint?: string }[] = [
   { key: "bseva_whatsapp_number", label: "WhatsApp number (digits, with country code)", type: "string" },
   {
     key: "virtual_puja_enabled",
@@ -46,6 +48,32 @@ const PLATFORM_KEYS: { key: string; label: string; type: "string" | "number" | "
   { key: "invoice_company_address", label: "Invoice company address", type: "string" },
   { key: "invoice_prefix_customer", label: "Customer invoice number prefix", type: "string" },
   { key: "invoice_prefix_settlement", label: "Settlement invoice number prefix", type: "string" },
+  {
+    key: "pujari_joining_fee_enabled",
+    label: "Pujari joining fee",
+    type: "boolean",
+    hint: "When on, new pujaris are asked to pay the joining fee during onboarding.",
+  },
+  { key: "pujari_joining_fee_paise", label: "Pujari joining fee (paise)", type: "number" },
+  {
+    key: "muhurta_consultation_fee_paise",
+    label: "Muhurta consultation fee (paise)",
+    type: "number",
+    hint: "Default fee. Individual services can override this.",
+  },
+  {
+    key: "pujari_no_show_penalty_enabled",
+    label: "Pujari no-show penalty",
+    type: "boolean",
+    hint: "When on, admins can deduct a penalty from the pujari wallet for a no-show.",
+  },
+  { key: "pujari_no_show_penalty_paise", label: "Pujari no-show penalty (paise)", type: "number" },
+  {
+    key: "assign_distance_rings_km",
+    label: "Reassignment distance rings (km)",
+    type: "json",
+    hint: "Comma-separated or JSON list, e.g. 10, 15, 20, 30. Admin reassignment searches each ring in order.",
+  },
 ];
 
 function normalizeExamples(examples: unknown): string[] {
@@ -62,9 +90,25 @@ function normalizeExamples(examples: unknown): string[] {
   return [];
 }
 
-function coerceSettingValue(type: "string" | "number" | "boolean", raw: string | boolean) {
+/** Number lists are edited as "10, 15, 20" but stored as a JSON array. */
+function numberListToText(value: unknown): string {
+  if (Array.isArray(value)) return value.join(", ");
+  if (value == null) return "";
+  return String(value);
+}
+
+function textToNumberList(raw: string): number[] {
+  return raw
+    .replace(/[[\]]/g, "")
+    .split(",")
+    .map((part) => Number(part.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
+function coerceSettingValue(type: SettingType, raw: string | boolean) {
   if (type === "boolean") return Boolean(raw);
   if (type === "number") return Number(raw);
+  if (type === "json") return textToNumberList(String(raw));
   return String(raw);
 }
 
@@ -116,6 +160,7 @@ export default function Settings() {
       for (const item of PLATFORM_KEYS) {
         const v = cfg?.[item.key];
         if (item.type === "boolean") draft[item.key] = Boolean(v);
+        else if (item.type === "json") draft[item.key] = numberListToText(v);
         else draft[item.key] = v == null ? "" : String(v);
       }
       setPlatformDraft(draft);
@@ -177,7 +222,7 @@ export default function Settings() {
     }
   }
 
-  async function savePlatformKey(key: string, type: "string" | "number" | "boolean") {
+  async function savePlatformKey(key: string, type: SettingType) {
     setSavingKey(key);
     try {
       const value = coerceSettingValue(type, platformDraft[key] ?? "");
@@ -250,7 +295,10 @@ export default function Settings() {
               const dirty =
                 item.type === "boolean"
                   ? Boolean(platformDraft[item.key]) !== Boolean(platform[item.key])
-                  : String(platformDraft[item.key] ?? "") !== String(platform[item.key] ?? "");
+                  : item.type === "json"
+                    ? textToNumberList(String(platformDraft[item.key] ?? "")).join(",") !==
+                      numberListToText(platform[item.key]).replace(/\s/g, "")
+                    : String(platformDraft[item.key] ?? "") !== String(platform[item.key] ?? "");
               return (
                 <div
                   key={item.key}

@@ -19,9 +19,9 @@ import {
   FileText,
   LifeBuoy,
   IndianRupee,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import RolePortalGate from "@/components/RolePortalGate";
@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { adminBasePath, adminPath } from "@/const";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -43,30 +44,55 @@ interface AdminLayoutProps {
 
 interface NavItem {
   nameKey: string;
-  href: string;
+  /** Path under the private admin base, e.g. "" or "/customers" */
+  suffix: string;
   icon: React.ComponentType<{ size?: number }>;
-  /** Soft RBAC: hide unless user has one of these permissions (super_admin has all). */
   permissions?: string[];
-  /** Only super_admin when true. */
   superOnly?: boolean;
 }
 
 const navigation: NavItem[] = [
-  { nameKey: "admin.dashboard", href: "/admin", icon: LayoutDashboard },
-  { nameKey: "admin.customers", href: "/admin/customers", icon: Users, permissions: ["view_customers"] },
-  { nameKey: "admin.pujaris", href: "/admin/pujaris", icon: UserCog, permissions: ["view_pujaris", "verify_pujaris", "edit_pujaris"] },
-  { nameKey: "admin.temples", href: "/admin/temples", icon: Church, permissions: ["manage_services"] },
-  { nameKey: "admin.services", href: "/admin/services", icon: Sparkles, permissions: ["manage_services"] },
-  { nameKey: "admin.samagri", href: "/admin/samagri", icon: Flower2, permissions: ["manage_samagri"] },
-  { nameKey: "admin.bookings", href: "/admin/bookings", icon: Calendar, permissions: ["view_bookings", "manage_bookings"] },
-  { nameKey: "admin.settlements", href: "/admin/settlements", icon: CreditCard, permissions: ["manage_settlements", "view_payments"] },
-  { nameKey: "admin.payments", href: "/admin/payments", icon: CreditCard, permissions: ["view_payments", "manage_settlements"] },
-  { nameKey: "admin.pricing", href: "/admin/pricing", icon: IndianRupee, permissions: ["manage_config", "manage_services"] },
-  { nameKey: "admin.permissions", href: "/admin/permissions", icon: UserCog, permissions: ["manage_admins"], superOnly: false },
-  { nameKey: "admin.reviews", href: "/admin/reviews", icon: Star, permissions: ["view_bookings"] },
-  { nameKey: "admin.notifications", href: "/admin/notifications", icon: Bell, permissions: ["manage_config"] },
-  { nameKey: "admin.reports", href: "/admin/reports", icon: BarChart3, permissions: ["view_reports"] },
-  { nameKey: "admin.settings", href: "/admin/settings", icon: Settings, permissions: ["manage_config"], superOnly: false },
+  { nameKey: "admin.dashboard", suffix: "", icon: LayoutDashboard },
+  { nameKey: "admin.customers", suffix: "/customers", icon: Users, permissions: ["view_customers"] },
+  {
+    nameKey: "admin.pujaris",
+    suffix: "/pujaris",
+    icon: UserCog,
+    permissions: ["view_pujaris", "verify_pujaris", "edit_pujaris"],
+  },
+  { nameKey: "admin.temples", suffix: "/temples", icon: Church, permissions: ["manage_services"] },
+  { nameKey: "admin.services", suffix: "/services", icon: Sparkles, permissions: ["manage_services"] },
+  {
+    nameKey: "admin.recommendations",
+    suffix: "/recommendations",
+    icon: Lightbulb,
+    permissions: ["manage_services"],
+  },
+  { nameKey: "admin.samagri", suffix: "/samagri", icon: Flower2, permissions: ["manage_samagri"] },
+  { nameKey: "admin.bookings", suffix: "/bookings", icon: Calendar, permissions: ["view_bookings", "manage_bookings"] },
+  {
+    nameKey: "admin.settlements",
+    suffix: "/settlements",
+    icon: CreditCard,
+    permissions: ["manage_settlements", "view_payments"],
+  },
+  {
+    nameKey: "admin.payments",
+    suffix: "/payments",
+    icon: CreditCard,
+    permissions: ["view_payments", "manage_settlements"],
+  },
+  {
+    nameKey: "admin.pricing",
+    suffix: "/pricing",
+    icon: IndianRupee,
+    permissions: ["manage_config", "manage_services"],
+  },
+  { nameKey: "admin.permissions", suffix: "/permissions", icon: UserCog, permissions: ["manage_admins"] },
+  { nameKey: "admin.reviews", suffix: "/reviews", icon: Star, permissions: ["view_bookings"] },
+  { nameKey: "admin.notifications", suffix: "/notifications", icon: Bell, permissions: ["manage_config"] },
+  { nameKey: "admin.reports", suffix: "/reports", icon: BarChart3, permissions: ["view_reports"] },
+  { nameKey: "admin.settings", suffix: "/settings", icon: Settings, permissions: ["manage_config"] },
 ];
 
 const adminSidebarActionClass =
@@ -79,6 +105,7 @@ function AdminShell({ children }: AdminLayoutProps) {
   const { lang, setLang, labels, t } = useI18n();
   const [permissions, setPermissions] = useState<string[] | null>(null);
   const isSuper = user?.role === "super_admin";
+  const opsBase = adminBasePath();
 
   useEffect(() => {
     if (!user || (user.role !== "admin" && user.role !== "super_admin")) return;
@@ -91,8 +118,7 @@ function AdminShell({ children }: AdminLayoutProps) {
     return navigation.filter((item) => {
       if (isSuper) return true;
       if (item.superOnly) return false;
-      // Soft RBAC: until permissions load, show core dashboard only
-      if (permissions == null) return item.href === "/admin";
+      if (permissions == null) return item.suffix === "";
       if (!item.permissions?.length) return true;
       return item.permissions.some((p) => permissions.includes(p));
     });
@@ -103,7 +129,12 @@ function AdminShell({ children }: AdminLayoutProps) {
 
   const handleLogout = async () => {
     await logout();
-    setLocation("/admin");
+    setLocation(opsBase);
+  };
+
+  const navActive = (suffix: string) => {
+    const href = adminPath(suffix);
+    return location === href || (suffix !== "" && location.startsWith(href));
   };
 
   if (loading) {
@@ -122,13 +153,13 @@ function AdminShell({ children }: AdminLayoutProps) {
 
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full w-64 bg-sidebar border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0",
+          "fixed top-0 left-0 z-50 h-full w-64 overflow-hidden bg-sidebar border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full">
-          <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border">
-            <Link href="/admin">
+        <div className="flex flex-col h-full min-h-0">
+          <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border shrink-0">
+            <Link href={opsBase}>
               <div className="flex items-center gap-2">
                 <img src="/bseva-mark.png" alt="B-Seva" className="h-8 w-auto" />
                 <span className="font-heading font-bold text-lg text-sidebar-foreground">Admin</span>
@@ -139,17 +170,15 @@ function AdminShell({ children }: AdminLayoutProps) {
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 px-3 py-4">
-            <nav className="space-y-1">
+          <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-1">
               {filteredNavigation.map((item) => {
-                const isActive =
-                  location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
+                const href = adminPath(item.suffix);
                 return (
-                  <Link key={item.href} href={item.href}>
+                  <Link key={item.suffix || "dashboard"} href={href}>
                     <a
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                        isActive
+                        navActive(item.suffix)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       )}
@@ -162,12 +191,11 @@ function AdminShell({ children }: AdminLayoutProps) {
                 );
               })}
               {showSupport && (
-                <Link href="/admin/support">
+                <Link href={adminPath("/support")}>
                   <a
                     className={cn(
                       adminSidebarActionClass,
-                      (location === "/admin/support" || location.startsWith("/admin/support")) &&
-                        "bg-sidebar-accent text-sidebar-accent-foreground"
+                      navActive("/support") && "bg-sidebar-accent text-sidebar-accent-foreground"
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -176,12 +204,11 @@ function AdminShell({ children }: AdminLayoutProps) {
                   </a>
                 </Link>
               )}
-              <Link href="/admin/head-ratings">
+              <Link href={adminPath("/head-ratings")}>
                 <a
                   className={cn(
                     adminSidebarActionClass,
-                    (location === "/admin/head-ratings" || location.startsWith("/admin/head-ratings")) &&
-                      "bg-sidebar-accent text-sidebar-accent-foreground"
+                    navActive("/head-ratings") && "bg-sidebar-accent text-sidebar-accent-foreground"
                   )}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -190,12 +217,11 @@ function AdminShell({ children }: AdminLayoutProps) {
                 </a>
               </Link>
               {showLegal && (
-                <Link href="/admin/legal">
+                <Link href={adminPath("/legal")}>
                   <a
                     className={cn(
                       adminSidebarActionClass,
-                      (location === "/admin/legal" || location.startsWith("/admin/legal")) &&
-                        "bg-sidebar-accent text-sidebar-accent-foreground"
+                      navActive("/legal") && "bg-sidebar-accent text-sidebar-accent-foreground"
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -204,19 +230,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                   </a>
                 </Link>
               )}
-              <button
-                type="button"
-                className={adminSidebarActionClass}
-                onClick={() => {
-                  setSidebarOpen(false);
-                  void handleLogout();
-                }}
-              >
-                <LogOut size={18} />
-                Logout
-              </button>
-            </nav>
-          </ScrollArea>
+          </nav>
 
           <div className="p-4 border-t border-sidebar-border space-y-3 shrink-0">
             <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
@@ -247,23 +261,27 @@ function AdminShell({ children }: AdminLayoutProps) {
       </aside>
 
       <div className="lg:pl-64">
-        <header className="h-16 bg-background border-b border-border flex items-center px-4 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={() => setSidebarOpen(true)}>
+        <header className="h-16 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-3">
+          <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-foreground">
-              {navigation.find(
-                (item) => location === item.href || (item.href !== "/admin" && location.startsWith(item.href))
-              )?.nameKey
-                ? t(
-                    navigation.find(
-                      (item) => location === item.href || (item.href !== "/admin" && location.startsWith(item.href))
-                    )!.nameKey
-                  )
-                : "Dashboard"}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-semibold text-foreground truncate">
+              {(() => {
+                const match = navigation.find((item) => navActive(item.suffix));
+                return match ? t(match.nameKey) : "Dashboard";
+              })()}
             </h1>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 ml-auto"
+            onClick={() => void handleLogout()}
+          >
+            <LogOut size={16} className="mr-1.5" />
+            Logout
+          </Button>
         </header>
         <main className="p-4 lg:p-6">{children}</main>
       </div>

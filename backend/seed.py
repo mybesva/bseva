@@ -234,6 +234,57 @@ def run() -> None:
                   ('Vehicle Puja', 'vehicle-puja', 'New vehicle puja', 1, 150000, 250000, 45, FALSE)
                 """
             )
+        # Ensure death / death-anniversary / astrology service rows (idempotent by slug)
+        for name, slug, desc, cat, lvl, std, prm, muh in [
+            ("Antyeshti (Death Rituals)", "antyeshti", "Death-related funeral and last rites support", "death", 3, 500000, 800000, False),
+            ("Shraddha / Death Anniversary", "shraddha-death-anniversary", "Annual death anniversary rituals", "death_anniversary", 2, 350000, 550000, False),
+            ("Astrology Consultation", "astrology-consultation", "General astrology consultation", "astrology", 2, 50000, 100000, False),
+            ("Horoscope / Kundali Consultation", "kundali-consultation", "Kundali and horoscope reading", "astrology", 2, 75000, 150000, False),
+            ("Muhurta Consultation", "muhurta-consultation", "Standalone muhurta guidance", "astrology", 2, 30000, 50000, True),
+        ]:
+            cur.execute("SELECT 1 FROM services WHERE slug = %s", (slug,))
+            if not cur.fetchone():
+                cur.execute(
+                    """
+                    INSERT INTO services (
+                      name, slug, description, category, required_level,
+                      standard_price_paise, premium_price_paise, main_puja_price_paise,
+                      duration_minutes, virtual_available, active,
+                      muhurta_consultation_enabled, requires_muhurta
+                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,60,TRUE,TRUE,%s,%s)
+                    """,
+                    (name, slug, desc, cat, lvl, std, prm, std, muh, muh),
+                )
+        # Enable muhurta on marriage / griha pravesh if columns exist
+        try:
+            cur.execute(
+                """
+                UPDATE services SET muhurta_consultation_enabled = TRUE, requires_muhurta = TRUE
+                WHERE slug IN ('marriage-ceremony', 'griha-pravesham')
+                """
+            )
+        except Exception:
+            pass
+        # Sample monthly recommendations
+        try:
+            cur.execute("SELECT COUNT(*) AS n FROM service_recommendations")
+            if int(cur.fetchone()["n"] or 0) == 0:
+                cur.execute(
+                    """
+                    INSERT INTO service_recommendations (service_id, title, description, month_number, recurrence_hint, sort_order)
+                    SELECT id, 'Office Puja — Monthly', 'Recommended office wellbeing puja', EXTRACT(MONTH FROM CURRENT_DATE)::int, 'monthly', 1
+                    FROM services WHERE slug = 'ganapathi-puja' LIMIT 1
+                    """
+                )
+                cur.execute(
+                    """
+                    INSERT INTO service_recommendations (service_id, title, description, recurrence_hint, sort_order)
+                    SELECT id, 'Shop Puja', 'Everyday / recurring shop puja recommendation', 'everyday', 2
+                    FROM services WHERE slug = 'satyanarayana-puja' LIMIT 1
+                    """
+                )
+        except Exception:
+            pass
 
         # Wallet opening balances (only bump if zero)
         cur.execute(
@@ -318,6 +369,11 @@ def run() -> None:
 
 if __name__ == "__main__":
     try:
+        # Apply schema + Phase-1 catalog seed (idempotent; never overwrites live prices)
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from app.schema_migrate import ensure_schema
+
+        ensure_schema()
         run()
     except Exception as exc:
         print(f"Seed failed: {exc}", file=sys.stderr)

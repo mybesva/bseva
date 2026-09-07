@@ -158,11 +158,50 @@ class ServiceIn(BaseModel):
     name: str
     slug: str
     description: Optional[str] = None
+    short_description: Optional[str] = None
+    full_description: Optional[str] = None
+    benefits: Optional[str] = None
+    local_name: Optional[str] = None
+    category: Optional[str] = "puja"  # legacy coarse tag
+    category_slugs: Optional[list[str]] = None  # multi-category assignment
     required_level: int = Field(ge=1, le=4)
-    standard_price_paise: int
-    premium_price_paise: int
+    standard_price_paise: Optional[int] = None
+    premium_price_paise: Optional[int] = None
+    main_puja_price_paise: Optional[int] = None
+    samagri_price_paise: Optional[int] = 0
+    alankaram_price_paise: Optional[int] = 0
+    food_price_paise: Optional[int] = 0
+    # included | customer | pujari | reimbursable
+    samagri_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
+    alankaram_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
+    food_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
+    muhurta_consultation_enabled: Optional[bool] = False
+    muhurta_fee_paise: Optional[int] = None
+    requires_muhurta: Optional[bool] = False
     duration_minutes: int = 90
+    pujaris_required: Optional[int] = Field(default=1, ge=1, le=20)
     virtual_available: bool = False
+    active: bool = True
+    samagri_available: Optional[bool] = True
+    alankaram_available: Optional[bool] = False
+    food_available: Optional[bool] = False
+    image_path: Optional[str] = None
+    image_url: Optional[str] = None
+    search_aliases: Optional[list[str]] = None
+    is_popular: Optional[bool] = False
+    is_featured_home: Optional[bool] = False
+    is_seasonal: Optional[bool] = False
+    display_order: Optional[int] = 1000
+    homepage_rank: Optional[int] = None
+    pricing_status: Optional[Literal["priced", "awaiting_pricing"]] = None
+    samagri_review_status: Optional[Literal["UNVERIFIED", "VERIFIED", "NEEDS_REVIEW"]] = None
+
+
+class ServiceCategoryIn(BaseModel):
+    slug: str = Field(min_length=2, max_length=80)
+    name: str = Field(min_length=2, max_length=120)
+    description: Optional[str] = None
+    sort_order: int = 0
     active: bool = True
 
 
@@ -175,6 +214,7 @@ class PujariProfileIn(BaseModel):
     full_name: Optional[str] = None
     father_name: Optional[str] = None
     gotra: Optional[str] = None
+    pravara: Optional[str] = None
     date_of_birth: Optional[date] = None
     gender: Optional[Literal["male", "female", "other"]] = None
     native_place: Optional[str] = None
@@ -205,6 +245,36 @@ class PujariProfileIn(BaseModel):
     bank_ifsc: Optional[str] = Field(default=None, max_length=11)
     bank_holder_name: Optional[str] = Field(default=None, max_length=120)
     onboarding_step: Optional[int] = Field(default=None, ge=1, le=6)
+
+
+class JoiningFeeWaiveIn(BaseModel):
+    reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class BookingRejectIn(BaseModel):
+    reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class NoShowPenaltyIn(BaseModel):
+    waive: bool = False
+    reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class MuhurtaConsultationIn(BaseModel):
+    service_id: UUID
+    preferred_dates: Optional[list[date]] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+
+class ServiceRecommendationIn(BaseModel):
+    service_id: UUID
+    title: str = Field(min_length=2, max_length=200)
+    description: Optional[str] = None
+    audience: Optional[str] = "customer"
+    month_number: Optional[int] = Field(default=None, ge=1, le=12)
+    recurrence_hint: Optional[str] = None
+    active: bool = True
+    sort_order: int = 0
 
 
 class PujariProfileSubmitIn(BaseModel):
@@ -240,6 +310,7 @@ class AdminCustomerUpdateIn(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(default=None, min_length=10, max_length=15)
     location: Optional[str] = None
+    preferred_language: Optional[Literal["en", "hi", "te"]] = None
 
 
 class BookingAssignIn(BaseModel):

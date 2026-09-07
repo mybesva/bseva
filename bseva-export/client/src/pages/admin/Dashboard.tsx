@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCog, Calendar, DollarSign, AlertTriangle, Ban, CheckCircle, Clock } from "lucide-react";
 import { api, rupees } from "@/lib/api";
 import { Link } from "wouter";
+import { adminPath } from "@/const";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -13,10 +14,10 @@ export default function AdminDashboard() {
 
   const ps = stats?.pujariStatus || {};
   const metrics = [
-    { title: "Total Customers", value: stats?.totalCustomers ?? "—", icon: Users, href: "/admin/customers" },
-    { title: "Active Pujaris", value: stats?.activePriests ?? "—", icon: UserCog, href: "/admin/pujaris" },
-    { title: "Total Bookings", value: stats?.totalBookings ?? "—", icon: Calendar, href: "/admin/bookings" },
-    { title: "Revenue", value: stats ? rupees(stats.monthlyRevenue) : "—", icon: DollarSign, href: "/admin/payments" },
+    { title: "Total Customers", value: stats?.totalCustomers ?? "—", icon: Users, href: adminPath("/customers") },
+    { title: "Active Pujaris", value: stats?.activePriests ?? "—", icon: UserCog, href: adminPath("/pujaris") },
+    { title: "Total Bookings", value: stats?.totalBookings ?? "—", icon: Calendar, href: adminPath("/bookings") },
+    { title: "Revenue", value: stats ? rupees(stats.monthlyRevenue) : "—", icon: DollarSign, href: adminPath("/payments") },
   ];
 
   const pujariMetrics = [
@@ -50,7 +51,7 @@ export default function AdminDashboard() {
       <h2 className="text-lg font-heading font-semibold mb-3">Pujari status</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {pujariMetrics.map((m) => (
-          <Link key={m.title} href="/admin/pujaris">
+          <Link key={m.title} href={adminPath("/pujaris")}>
             <Card className="hover:border-primary cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm">{m.title}</CardTitle>

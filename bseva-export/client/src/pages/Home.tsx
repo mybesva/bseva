@@ -5,16 +5,39 @@ import TestimonialCard from "@/components/TestimonialCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Flame, Flower, Heart, Home as HomeIcon, Search, Sparkles, UserCheck, Shield, Users } from "lucide-react";
+import { Calendar, Flame, Flower, Heart, Home as HomeIcon, Search, Sparkles, UserCheck, Users, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { dashboardPath } from "@/lib/api";
+import { api, dashboardPath } from "@/lib/api";
+import { useEffect, useState } from "react";
+
+const PLACEHOLDERS = ["/images/puja-thali.png", "/images/temple-ritual.png", "/images/hero-bg.png", "/images/meditation.png"];
+const ICONS = [Flower, Flame, HomeIcon, Sparkles, Heart, Calendar, Users, UserCheck, Search, StarIcon];
+
+function StarIcon(props: { size?: number }) {
+  return <Sparkles {...props} />;
+}
 
 export default function Home() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const [, setLocation] = useLocation();
+  const [popular, setPopular] = useState<any[]>([]);
+  const [loadingPopular, setLoadingPopular] = useState(true);
+  const [heroQ, setHeroQ] = useState("");
+
+  useEffect(() => {
+    api<any[]>("/services?featured=1")
+      .then((rows) => setPopular((rows || []).slice(0, 10)))
+      .catch(() => setPopular([]))
+      .finally(() => setLoadingPopular(false));
+  }, []);
+
+  function goSearch() {
+    const q = heroQ.trim();
+    setLocation(q ? `/services?q=${encodeURIComponent(q)}` : "/services");
+  }
 
   return (
     <Layout>
@@ -37,54 +60,23 @@ export default function Home() {
               {t("home.heroDesc")}
             </p>
 
-            <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-2 md:p-4 flex flex-col md:flex-row gap-3 items-center">
-              <div className="flex-1 w-full">
-                <Select>
-                  <SelectTrigger className="h-12 border-none bg-secondary/30 focus:ring-0 text-base">
-                    <SelectValue placeholder={t("home.selectPuja")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="satyanarayan">
-                      <a href="/services/satyanarayan-puja" className="block w-full h-full">{t("svc.satyanarayan.title")}</a>
-                    </SelectItem>
-                    <SelectItem value="ganesh">{t("svc.ganapati.title")}</SelectItem>
-                    <SelectItem value="grihapravesh">
-                      <a href="/services/griha-pravesh-puja" className="block w-full h-full">{t("svc.grihapravesh.title")}</a>
-                    </SelectItem>
-                    <SelectItem value="marriage">{t("svc.marriage.title")}</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-2xl p-2 md:p-3 flex flex-col md:flex-row gap-2 items-center">
+              <div className="flex-1 w-full relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input
+                  value={heroQ}
+                  onChange={(e) => setHeroQ(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && goSearch()}
+                  placeholder="Search Pujas, Homams, Vrathams..."
+                  className="h-12 pl-10 border-none bg-secondary/30 focus-visible:ring-0"
+                />
               </div>
-              <div className="w-px h-8 bg-border hidden md:block" />
-              <div className="flex-1 w-full">
-                <Select>
-                  <SelectTrigger className="h-12 border-none bg-secondary/30 focus:ring-0 text-base">
-                    <SelectValue placeholder={t("home.selectLocation")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bangalore">Bangalore</SelectItem>
-                    <SelectItem value="mumbai">Mumbai</SelectItem>
-                    <SelectItem value="delhi">Delhi</SelectItem>
-                    <SelectItem value="chennai">Chennai</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-px h-8 bg-border hidden md:block" />
-              <div className="flex-1 w-full">
-                <Input type="date" className="h-12 border-none bg-secondary/30 focus-visible:ring-0 text-base" />
-              </div>
-              <Button
-                size="lg"
-                className="w-full md:w-auto h-12 px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shadow-lg"
-                onClick={() => (window.location.href = "/pujaris")}
-              >
-                <Search className="mr-2 h-5 w-5" /> {t("home.findPujari")}
+              <Button className="h-12 px-8 w-full md:w-auto bg-primary text-white font-bold" onClick={goSearch}>
+                Search
               </Button>
             </div>
           </div>
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-background" style={{ clipPath: "ellipse(60% 100% at 50% 100%)" }} />
       </section>
 
       {!user && (
@@ -93,13 +85,12 @@ export default function Home() {
           <SectionHeader
             subtitle="Get started"
             title="Choose your BSeva portal"
-            description="Customers book pujas, Pujaris manage services, and Administrators verify profiles and operations."
+            description="Customers book pujas and Pujaris manage services through their portals."
           />
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {[
               { role: "customer", title: "Customer", desc: "Book pujas, manage wallet, and track bookings.", icon: Users, href: "/customer" },
               { role: "pujari", title: "Pujari", desc: "Complete your profile, upload documents, and receive bookings.", icon: UserCheck, href: "/pujari" },
-              { role: "admin", title: "Admin", desc: "Verify pujaris, manage services, and oversee platform operations.", icon: Shield, href: "/admin" },
             ].map((card) => (
               <Card key={card.role} className="border-border shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader>
@@ -117,9 +108,7 @@ export default function Home() {
                   ) : (
                     <div className="flex flex-col gap-2">
                       <Link href={card.href}><Button className="w-full">Sign in</Button></Link>
-                      {card.role !== "admin" && (
-                        <Link href={`/register?role=${card.role}`}><Button variant="outline" className="w-full">Register</Button></Link>
-                      )}
+                      <Link href={`/register?role=${card.role}`}><Button variant="outline" className="w-full">Register</Button></Link>
                     </div>
                   )}
                 </CardContent>
@@ -168,33 +157,46 @@ export default function Home() {
         <div className="container">
           <SectionHeader
             subtitle={t("home.offerings")}
-            title={t("home.servicesTitle")}
+            title="Popular Pujas"
             description={t("home.servicesDesc")}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div onClick={() => (window.location.href = "/services/satyanarayan-puja")} className="cursor-pointer">
-              <ServiceCard title={t("svc.satyanarayan.title")} description={t("svc.satyanarayan.desc")} image="/images/puja-thali.png" icon={<Flower size={24} />} />
+          {loadingPopular ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-            <div onClick={() => (window.location.href = "/services")} className="cursor-pointer">
-              <ServiceCard title={t("svc.havan.title")} description={t("svc.havan.desc")} image="/images/temple-ritual.png" icon={<Flame size={24} />} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              {popular.map((s, i) => {
+                const Icon = ICONS[i % ICONS.length];
+                const img = s.image_url || s.image_path || PLACEHOLDERS[i % PLACEHOLDERS.length];
+                const desc =
+                  s.short_description ||
+                  s.description ||
+                  (s.bookable && s.standard_price_paise != null
+                    ? `From ₹${(s.standard_price_paise / 100).toLocaleString("en-IN")}`
+                    : "Available soon");
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => setLocation(`/services/${s.slug}`)}
+                    className="cursor-pointer"
+                  >
+                    <ServiceCard title={s.name} description={desc} image={img} icon={<Icon size={24} />} />
+                  </div>
+                );
+              })}
             </div>
-            <div onClick={() => (window.location.href = "/services/griha-pravesh-puja")} className="cursor-pointer">
-              <ServiceCard title={t("svc.grihapravesh.title")} description={t("svc.grihapravesh.desc")} image="/images/hero-bg.png" icon={<HomeIcon size={24} />} />
-            </div>
-            <div onClick={() => (window.location.href = "/services")} className="cursor-pointer">
-              <ServiceCard title={t("svc.dosha.title")} description={t("svc.dosha.desc")} image="/images/meditation.png" icon={<Sparkles size={24} />} />
-            </div>
-          </div>
+          )}
 
           <div className="text-center mt-12">
             <Button
               variant="outline"
               size="lg"
               className="border-primary text-primary hover:bg-primary hover:text-white font-bold px-8"
-              onClick={() => (window.location.href = "/services")}
+              onClick={() => setLocation("/services")}
             >
-              {t("home.viewAllServices")}
+              View More Pujas
             </Button>
           </div>
         </div>

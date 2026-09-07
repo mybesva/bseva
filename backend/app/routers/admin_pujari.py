@@ -12,11 +12,14 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.audit import write_audit
+from app.booking_state import set_booking_status
 from app.db import get_db
 from app.domain import row_dict, slot_conflict
+from app.geo import haversine_km
+from app.platform_config import get_setting
 from app.profile_utils import parse_json_list, pujari_completion
 from app.rbac import require_any_permission, require_permission
-from app.schemas import BookingAssignIn, PujariProfileIn
+from app.schemas import BookingAssignIn, JoiningFeeWaiveIn, PujariProfileIn
 from app.storage import content_type_for, file_response, upload_bytes
 
 router = APIRouter(prefix="/admin", tags=["admin-pujari"])
@@ -155,6 +158,7 @@ def patch_pujari_profile(
               full_name = COALESCE(:full_name, full_name),
               father_name = COALESCE(:father_name, father_name),
               gotra = COALESCE(:gotra, gotra),
+              pravara = COALESCE(:pravara, pravara),
               date_of_birth = COALESCE(:dob, date_of_birth),
               native_place = COALESCE(:native_place, native_place),
               permanent_address = COALESCE(:permanent_address, permanent_address),
@@ -191,6 +195,7 @@ def patch_pujari_profile(
             "full_name": body.full_name,
             "father_name": body.father_name,
             "gotra": body.gotra,
+            "pravara": body.pravara,
             "dob": body.date_of_birth,
             "native_place": body.native_place,
             "permanent_address": body.permanent_address,
@@ -327,11 +332,20 @@ def available_pujaris_for_booking(
     if not b:
         raise HTTPException(404, "Booking not found")
     required = int(b["required_level"] or 1)
+    rings_raw = get_setting(db, "assign_distance_rings_km", [10, 15, 20, 30])
+    try:
+        rings = [float(x) for x in (rings_raw if isinstance(rings_raw, list) else [10, 15, 20, 30])]
+    except (TypeError, ValueError):
+        rings = [10.0, 15.0, 20.0, 30.0]
+    if not rings:
+        rings = [10.0, 15.0, 20.0, 30.0]
+
     rows = db.execute(
         text(
             """
             SELECT u.id, u.name, u.phone, p.approved_level, p.verification_status, p.available,
-                   p.location_label, p.city, p.district, p.experience_years
+                   p.location_label, p.city, p.district, p.experience_years, p.specializations,
+                   p.qualifications, p.latitude, p.longitude, p.service_radius_km, p.pravara
             FROM users u
             JOIN pujari_profiles p ON p.user_id = u.id
             WHERE u.blocked = FALSE
@@ -345,7 +359,12 @@ def available_pujaris_for_booking(
         ),
         {"lvl": required},
     ).mappings().all()
-    out = []
+
+    booking_lat = b.get("latitude")
+    booking_lng = b.get("longitude")
+    has_coords = booking_lat is not None and booking_lng is not None
+
+    eligible = []
     for r in rows:
         conflict = _booking_conflict_excluding(
             db, str(r["id"]), b["booking_date"], b["start_time"], b["end_time"], booking_id
@@ -372,13 +391,51 @@ def available_pujaris_for_booking(
             continue
         item = row_dict(r)
         item["eligible"] = True
-        out.append(item)
+        dist = None
+        if has_coords and r.get("latitude") is not None and r.get("longitude") is not None:
+            dist = round(
+                haversine_km(float(booking_lat), float(booking_lng), float(r["latitude"]), float(r["longitude"])),
+                2,
+            )
+        item["distance_km"] = dist
+        item.pop("latitude", None)
+        item.pop("longitude", None)
+        eligible.append(item)
+
+    matched_ring = None
+    filtered = eligible
+    if has_coords:
+        for ring in rings:
+            in_ring = [
+                p
+                for p in eligible
+                if p.get("distance_km") is not None and p["distance_km"] <= ring
+            ]
+            if in_ring:
+                filtered = in_ring
+                matched_ring = ring
+                break
+        else:
+            # No one within configured rings — still return all eligible, farthest first by distance
+            filtered = eligible
+            matched_ring = None
+
+    filtered.sort(
+        key=lambda x: (
+            x["distance_km"] if x.get("distance_km") is not None else 99999,
+            -(x.get("approved_level") or 0),
+            x.get("name") or "",
+        )
+    )
     return {
         "booking_id": booking_id,
         "booking_number": b.get("booking_number"),
         "required_level": required,
         "current_pujari_id": str(b["pujari_id"]) if b.get("pujari_id") else None,
-        "pujaris": out,
+        "distance_rings_km": rings,
+        "matched_ring_km": matched_ring,
+        "booking_has_coordinates": has_coords,
+        "pujaris": filtered,
     }
 
 
@@ -428,10 +485,41 @@ def assign_pujari_to_booking(
         ):
             raise HTTPException(400, "Pujari has a conflicting booking")
     prev = str(b["pujari_id"]) if b.get("pujari_id") else None
-    db.execute(
-        text("UPDATE bookings SET pujari_id = CAST(:pid AS uuid) WHERE id = CAST(:id AS uuid)"),
-        {"pid": body.pujari_id, "id": booking_id},
+    hist = b.get("assignment_history") or []
+    if isinstance(hist, str):
+        try:
+            hist = json.loads(hist)
+        except Exception:
+            hist = []
+    if not isinstance(hist, list):
+        hist = []
+    hist.append(
+        {
+            "from": prev,
+            "to": body.pujari_id,
+            "by": str(admin["id"]),
+            "at": date.today().isoformat(),
+            "prev_status": b.get("status"),
+        }
     )
+    db.execute(
+        text(
+            """
+            UPDATE bookings SET
+              pujari_id = CAST(:pid AS uuid),
+              assignment_history = CAST(:hist AS jsonb),
+              needs_reassignment = FALSE,
+              rejection_reason = NULL
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"pid": body.pujari_id, "hist": json.dumps(hist), "id": booking_id},
+    )
+    # New assignee must accept again
+    if b["status"] in ("rejected", "confirmed"):
+        set_booking_status(db, booking_id, "pending_acceptance", actor_id=str(admin["id"]))
+    elif b["status"] == "pending":
+        set_booking_status(db, booking_id, "pending_acceptance", actor_id=str(admin["id"]))
     write_audit(
         db,
         str(admin["id"]),
@@ -440,4 +528,42 @@ def assign_pujari_to_booking(
         booking_id,
     )
     db.commit()
-    return {"ok": True, "booking_id": booking_id, "pujari_id": body.pujari_id, "previous_pujari_id": prev}
+    return {
+        "ok": True,
+        "booking_id": booking_id,
+        "pujari_id": body.pujari_id,
+        "previous_pujari_id": prev,
+        "status": "pending_acceptance",
+    }
+
+
+@router.post("/pujaris/{pujari_id}/joining-fee/waive")
+def waive_joining_fee(
+    pujari_id: str,
+    body: JoiningFeeWaiveIn | None = None,
+    admin=Depends(require_permission("edit_pujaris")),
+    db: Session = Depends(get_db),
+):
+    reason = (body.reason if body else None) or "waived by admin"
+    row = db.execute(
+        text("SELECT joining_fee_status FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+        {"id": pujari_id},
+    ).first()
+    if not row:
+        raise HTTPException(404, "Pujari not found")
+    db.execute(
+        text(
+            """
+            UPDATE pujari_profiles SET
+              joining_fee_status = 'waived',
+              joining_fee_waived_by = CAST(:aid AS uuid),
+              joining_fee_waived_reason = :reason,
+              updated_at = NOW()
+            WHERE user_id = CAST(:id AS uuid)
+            """
+        ),
+        {"aid": admin["id"], "reason": reason, "id": pujari_id},
+    )
+    write_audit(db, str(admin["id"]), f"joining_fee_waived:{reason}", "pujari", pujari_id)
+    db.commit()
+    return {"ok": True, "joining_fee_status": "waived"}

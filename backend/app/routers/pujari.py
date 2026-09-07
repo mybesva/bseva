@@ -220,6 +220,7 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
               full_name = COALESCE(:full_name, full_name),
               father_name = COALESCE(:father_name, father_name),
               gotra = COALESCE(:gotra, gotra),
+              pravara = COALESCE(:pravara, pravara),
               date_of_birth = COALESCE(:dob, date_of_birth),
               native_place = COALESCE(:native_place, native_place),
               permanent_address = COALESCE(:permanent_address, permanent_address),
@@ -257,6 +258,7 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             "full_name": body.full_name,
             "father_name": body.father_name,
             "gotra": body.gotra,
+            "pravara": body.pravara,
             "dob": body.date_of_birth,
             "native_place": body.native_place,
             "permanent_address": body.permanent_address,
@@ -314,6 +316,55 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
     return _load_profile(db, user)
 
 
+@router.post("/joining-fee/pay")
+def pay_joining_fee(user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
+    from app.domain import apply_wallet
+    from app.platform_config import get_setting
+
+    row = db.execute(
+        text(
+            "SELECT joining_fee_status, joining_fee_paise FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"
+        ),
+        {"id": user["id"]},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Profile not found")
+    status = row["joining_fee_status"] or "not_required"
+    if status in ("paid", "waived", "not_required"):
+        return {"ok": True, "joining_fee_status": status, "already_settled": True}
+    amount = int(row["joining_fee_paise"] or 0)
+    if amount <= 0:
+        amount = int(get_setting(db, "pujari_joining_fee_paise", 0) or 0)
+    if amount <= 0:
+        db.execute(
+            text(
+                "UPDATE pujari_profiles SET joining_fee_status = 'not_required' WHERE user_id = CAST(:id AS uuid)"
+            ),
+            {"id": user["id"]},
+        )
+        db.commit()
+        return {"ok": True, "joining_fee_status": "not_required"}
+    try:
+        apply_wallet(db, str(user["id"]), -amount, "debit", "Pujari joining fee", None, "JOIN-FEE")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    db.execute(
+        text(
+            """
+            UPDATE pujari_profiles SET
+              joining_fee_status = 'paid',
+              joining_fee_paise = :amt,
+              joining_fee_paid_at = NOW(),
+              updated_at = NOW()
+            WHERE user_id = CAST(:id AS uuid)
+            """
+        ),
+        {"amt": amount, "id": user["id"]},
+    )
+    db.commit()
+    return {"ok": True, "joining_fee_status": "paid", "amount_paise": amount}
+
+
 @router.post("/profile/submit")
 def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
     if not body.final_submission_consent:
@@ -328,8 +379,8 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
         {"id": user["id"]},
     ).mappings().all()
     types = {d["document_type"] for d in docs}
-    if not types.intersection({"identity", "certificate"}):
-        raise HTTPException(400, "Upload identity and professional documents before submission")
+    if "identity" not in types:
+        raise HTTPException(400, "Upload Aadhaar (identity document) before submission")
     db.execute(
         text(
             """

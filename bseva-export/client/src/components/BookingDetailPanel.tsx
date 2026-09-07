@@ -9,6 +9,7 @@ import { api, rupees } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
+import PreparationChecklist from "@/components/PreparationChecklist";
 
 export type BookingDetail = {
   id: string;
@@ -32,10 +33,13 @@ export type BookingDetail = {
   pujari_id?: string;
   details_level?: string;
   samagri?: Array<{ name: string; required?: boolean; instructions?: string | null }>;
+  preparation?: any;
   special_instructions?: string | null;
   peak_fee_paise?: number;
   payment_status?: string;
   recurring_series_id?: string | null;
+  rejection_reason?: string | null;
+  needs_reassignment?: boolean;
 };
 
 function statusColor(status: string) {
@@ -51,6 +55,7 @@ function statusColor(status: string) {
     case "completed":
       return "bg-gray-100 text-gray-800";
     case "cancelled":
+    case "rejected":
       return "bg-red-100 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
@@ -148,7 +153,19 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         <Badge className={statusColor(status)}>{status.replace(/_/g, " ")}</Badge>
         {booking.mode && <Badge variant="outline">{booking.mode}</Badge>}
         {booking.package_type && <Badge variant="secondary" className="capitalize">{booking.package_type}</Badge>}
+        {booking.needs_reassignment && <Badge variant="destructive">needs reassignment</Badge>}
       </div>
+
+      {status === "rejected" && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+          {booking.rejection_reason
+            ? `Rejected: ${booking.rejection_reason}`
+            : "Rejected by the assigned pujari."}{" "}
+          {viewerRole === "customer"
+            ? "Our team is finding another pujari for you."
+            : "Admin will assign another pujari."}
+        </div>
+      )}
 
       {!compact && (
         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -187,7 +204,11 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               <div className="font-medium whitespace-pre-wrap">{booking.special_instructions}</div>
             </div>
           )}
-          {Array.isArray(booking.samagri) && booking.samagri.length > 0 && (
+          {booking.preparation ? (
+            <div className="col-span-2">
+              <PreparationChecklist preparation={booking.preparation} compact interactive={false} />
+            </div>
+          ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
             <div className="col-span-2">
               <div className="text-muted-foreground mb-1">Recommended List</div>
               <ul className="list-disc pl-5 space-y-0.5">
@@ -200,7 +221,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 ))}
               </ul>
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -248,21 +269,41 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             <Checkbox checked={termsAccepted} onCheckedChange={(v) => setTermsAccepted(!!v)} className="mt-0.5" />
             <span>I accept the booking terms and will perform this puja as scheduled.</span>
           </label>
-          <Button
-            disabled={busy || !termsAccepted}
-            onClick={() =>
-              run(
-                () =>
-                  api(`/bookings/${bookingId}/accept`, {
-                    method: "POST",
-                    body: JSON.stringify({ terms_accepted: true, terms_version: "2026-01" }),
-                  }).then(() => undefined),
-                "Booking accepted"
-              )
-            }
-          >
-            {t("detail.accept")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={busy || !termsAccepted}
+              onClick={() =>
+                run(
+                  () =>
+                    api(`/bookings/${bookingId}/accept`, {
+                      method: "POST",
+                      body: JSON.stringify({ terms_accepted: true, terms_version: "2026-01" }),
+                    }).then(() => undefined),
+                  "Booking accepted"
+                )
+              }
+            >
+              {t("detail.accept")}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                const reason = window.prompt("Why are you rejecting this booking? (optional)");
+                if (reason === null) return;
+                void run(
+                  () =>
+                    api(`/bookings/${bookingId}/reject`, {
+                      method: "POST",
+                      body: JSON.stringify({ reason: reason.trim() || null }),
+                    }).then(() => undefined),
+                  "Booking rejected — admin will reassign it"
+                );
+              }}
+            >
+              Reject
+            </Button>
+          </div>
         </div>
       )}
 

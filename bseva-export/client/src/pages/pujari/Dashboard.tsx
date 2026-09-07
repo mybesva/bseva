@@ -351,6 +351,14 @@ function PujariDashboardContent() {
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Verification status</p>
               <p className="font-heading font-semibold text-lg">{statusLabels[profileStatus] || profileStatus}</p>
             </div>
+            {pujariProfile?.experience_years != null && pujariProfile.experience_years !== "" && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Experience</p>
+                <p className="font-heading font-semibold text-lg">
+                  {pujariProfile.experience_years} years
+                </p>
+              </div>
+            )}
             {(profileStatus === "profile_incomplete" || profileStatus === "ready_for_submission") && (
               <Button size="sm" onClick={() => setLocation("/pujari/onboarding")}>Complete Profile</Button>
             )}

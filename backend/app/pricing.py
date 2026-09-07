@@ -111,15 +111,60 @@ def compute_quote(
     discount_paise: int = 0,
     wallet_credit_paise: int = 0,
 ) -> dict:
-    base = int(
-        service["premium_price_paise"] if package_type == "premium" else service["standard_price_paise"]
-    )
+    # Prefer explicit main_puja component when set; else standard/premium package price.
+    main = service.get("main_puja_price_paise")
+    if main is not None:
+        base = int(main)
+        if package_type == "premium":
+            # Premium uplift: difference between premium and standard package, if configured
+            std = int(service.get("standard_price_paise") or 0)
+            prem = int(service.get("premium_price_paise") or 0)
+            if prem > std:
+                base = base + (prem - std)
+    else:
+        base = int(
+            service["premium_price_paise"] if package_type == "premium" else service["standard_price_paise"]
+        )
+
+    def _comp(key: str, default: int = 0) -> int:
+        try:
+            return max(0, int(service.get(key) if service.get(key) is not None else default))
+        except (TypeError, ValueError):
+            return default
+
+    samagri = _comp("samagri_price_paise")
+    alankaram = _comp("alankaram_price_paise")
+    food = _comp("food_price_paise")
+    samagri_prov = (service.get("samagri_provider") or "included").lower()
+    alankaram_prov = (service.get("alankaram_provider") or "included").lower()
+    food_prov = (service.get("food_provider") or "included").lower()
+
+    # Customer pays when included or reimbursable (BSeva collects then reimburses pujari).
+    # Customer-provided / pujari-provided (non-reimbursable) are not charged to customer here.
+    chargeable_providers = {"included", "reimbursable"}
+    samagri_charge = samagri if samagri_prov in chargeable_providers else 0
+    alankaram_charge = alankaram if alankaram_prov in chargeable_providers else 0
+    food_charge = food if food_prov in chargeable_providers else 0
+    components_total = samagri_charge + alankaram_charge + food_charge
+
+    reimbursement = 0
+    if samagri_prov == "reimbursable":
+        reimbursement += samagri
+    if alankaram_prov == "reimbursable":
+        reimbursement += alankaram
+    if food_prov == "reimbursable":
+        reimbursement += food
+
     loc_adj = location_adjustment_paise(db, str(service["id"]), city)
     adjusted_base = max(0, base + loc_adj)
     peak, peak_reason = surge_paise(
         db, service_id=str(service["id"]), base=adjusted_base, city=city, booking_date=booking_date
     )
-    subtotal = max(0, adjusted_base + peak - int(discount_paise or 0) - int(wallet_credit_paise or 0))
+    # Share split is on main puja only — components/reimbursements stay separate.
+    subtotal = max(
+        0,
+        adjusted_base + peak + components_total - int(discount_paise or 0) - int(wallet_credit_paise or 0),
+    )
     share = float(get_setting(db, "pujari_share_percent", 85))
     platform_fee = int(round(adjusted_base * (100 - share) / 100))
     pujari_share = adjusted_base - platform_fee
@@ -129,6 +174,15 @@ def compute_quote(
     total = subtotal + gst_amt
     return {
         "basePrice": base,
+        "mainPuja": base,
+        "samagri": samagri_charge,
+        "alankaram": alankaram_charge,
+        "foodPrasadam": food_charge,
+        "componentsTotal": components_total,
+        "pujariReimbursement": reimbursement,
+        "samagriProvider": samagri_prov,
+        "alankaramProvider": alankaram_prov,
+        "foodProvider": food_prov,
         "locationAdjustment": loc_adj,
         "platformFee": platform_fee,
         "pujariShare": pujari_share,

@@ -26,9 +26,23 @@ import { Plus } from "lucide-react";
 
 const emptyForm = { name: "", email: "", phone: "", password: "", requested_level: 2, location: "" };
 
+function parseList(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map(String);
+  if (typeof v === "string") {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return v ? [v] : [];
+    }
+  }
+  return [];
+}
+
 function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; title: string }[]; onChanged: () => Promise<void> }) {
   const [level, setLevel] = useState(Number(u.approved_level || u.requested_level || 1));
   const [saving, setSaving] = useState(false);
+  const specializations = parseList(u.specializations);
 
   useEffect(() => {
     setLevel(Number(u.approved_level || u.requested_level || 1));
@@ -73,6 +87,25 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
               Save level
             </Button>
           </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="min-w-[160px] space-y-1">
+          <span className="text-sm">
+            {u.experience_years == null || u.experience_years === "" ? "—" : `${u.experience_years} yrs`}
+          </span>
+          {specializations.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {specializations.slice(0, 3).map((s) => (
+                <Badge key={s} variant="secondary" className="font-normal">
+                  {s}
+                </Badge>
+              ))}
+              {specializations.length > 3 && (
+                <span className="text-xs text-muted-foreground">+{specializations.length - 3}</span>
+              )}
+            </div>
+          )}
         </div>
       </TableCell>
       <TableCell><Badge>{u.verification_status}</Badge></TableCell>
@@ -319,6 +352,7 @@ export default function PujarisPage() {
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Level</TableHead>
+            <TableHead>Experience</TableHead>
             <TableHead>Verification</TableHead>
             <TableHead>Account</TableHead>
             <TableHead></TableHead>
