@@ -150,19 +150,11 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       .catch(() => setQuote(null));
   }, [bookingDate, serviceId, tier, city, includeSamagri, includeAlankaram]);
 
-  const samagriPrice = Number(
-    addonPrices?.samagri && Number(addonPrices.samagri) > 0
-      ? addonPrices.samagri
-      : quote?.samagriListPrice || 50000
-  );
-  const alankaramPrice = Number(
-    addonPrices?.alankaram && Number(addonPrices.alankaram) > 0
-      ? addonPrices.alankaram
-      : quote?.alankaramListPrice || 30000
-  );
-  // Always offer both optional add-ons unless Admin explicitly disables them.
-  const showSamagriOpt = addonPrices?.samagriAvailable !== false;
-  const showAlankaramOpt = addonPrices?.alankaramAvailable !== false;
+  const samagriPrice = Number(addonPrices?.samagri || quote?.samagriListPrice || 0);
+  const alankaramPrice = Number(addonPrices?.alankaram || quote?.alankaramListPrice || 0);
+  // Admin per-puja flags + prices control what customers see.
+  const showSamagriOpt = Boolean(addonPrices?.samagriAvailable) && samagriPrice > 0;
+  const showAlankaramOpt = Boolean(addonPrices?.alankaramAvailable) && alankaramPrice > 0;
 
   function AddonOptionsCard() {
     if (!showSamagriOpt && !showAlankaramOpt) return null;
@@ -170,7 +162,9 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       <Card className="border-dashed border-[#F7931E]/60 bg-orange-50/40">
         <CardContent className="p-5 space-y-4">
           <div>
-            <p className="font-medium text-[#1E3A5F]">Optional — Samagri & Alankaram</p>
+            <p className="font-medium text-[#1E3A5F]">
+              Optional — {[showSamagriOpt && "Samagri", showAlankaramOpt && "Alankaram"].filter(Boolean).join(" & ")}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
               Tick if you want the pujari to bring these for you. You reimburse the pujari from this booking
               payment. Skip both if you will arrange yourself.

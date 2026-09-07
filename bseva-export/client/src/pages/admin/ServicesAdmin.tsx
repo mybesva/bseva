@@ -745,8 +745,6 @@ export default function ServicesAdmin() {
               </div>
               {(
                 [
-                  { label: "Samagri", priceKey: "samagri_price_paise", providerKey: "samagri_provider" },
-                  { label: "Alankaram", priceKey: "alankaram_price_paise", providerKey: "alankaram_provider" },
                   { label: "Food / prasadam", priceKey: "food_price_paise", providerKey: "food_provider" },
                 ] as const
               ).map((row) => (
@@ -784,28 +782,112 @@ export default function ServicesAdmin() {
                   </div>
                 </div>
               ))}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm pt-1">
+                <Checkbox
+                  checked={form.food_available}
+                  onCheckedChange={(v) => setForm({ ...form, food_available: !!v })}
+                />
+                Food / prasadam available
+              </label>
+            </div>
+
+            <div className="rounded-lg border border-orange-200 bg-orange-50/40 p-3 space-y-4">
+              <div>
+                <p className="text-sm font-medium">Optional booking add-ons (customer checkboxes)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  For this puja only: turn on Samagri and/or Alankaram and set the reimbursement price.
+                  Customers see these as optional ticks on Review / Payment. Leave off (or price ₹0) to hide.
+                </p>
+              </div>
+
+              <div className="rounded-md border bg-white p-3 space-y-3">
+                <label className="flex items-center gap-2 text-sm font-medium">
                   <Checkbox
                     checked={form.samagri_available}
-                    onCheckedChange={(v) => setForm({ ...form, samagri_available: !!v })}
+                    onCheckedChange={(v) => {
+                      const on = !!v;
+                      setForm({
+                        ...form,
+                        samagri_available: on,
+                        samagri_provider: on ? "reimbursable" : form.samagri_provider,
+                      });
+                    }}
                   />
-                  Samagri available
+                  Offer Samagri kit on booking
                 </label>
-                <label className="flex items-center gap-2 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="addon-samagri-price">Samagri price (₹)</Label>
+                    <Input
+                      id="addon-samagri-price"
+                      type="number"
+                      min={0}
+                      step={1}
+                      disabled={!form.samagri_available}
+                      value={Number(form.samagri_price_paise) / 100}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          samagri_price_paise: Math.round(Number(e.target.value || 0) * 100),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>How it works</Label>
+                    <p className="text-xs text-muted-foreground pt-2">
+                      Pujari brings materials; customer reimburses from booking payment.
+                    </p>
+                  </div>
+                </div>
+                {form.samagri_available && Number(form.samagri_price_paise) <= 0 && (
+                  <p className="text-xs text-amber-700 pl-6">Set a price above ₹0 so it appears on booking.</p>
+                )}
+              </div>
+
+              <div className="rounded-md border bg-white p-3 space-y-3">
+                <label className="flex items-center gap-2 text-sm font-medium">
                   <Checkbox
                     checked={form.alankaram_available}
-                    onCheckedChange={(v) => setForm({ ...form, alankaram_available: !!v })}
+                    onCheckedChange={(v) => {
+                      const on = !!v;
+                      setForm({
+                        ...form,
+                        alankaram_available: on,
+                        alankaram_provider: on ? "reimbursable" : form.alankaram_provider,
+                      });
+                    }}
                   />
-                  Alankaram available
+                  Offer Alankaram on booking
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={form.food_available}
-                    onCheckedChange={(v) => setForm({ ...form, food_available: !!v })}
-                  />
-                  Food available
-                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="addon-alankaram-price">Alankaram price (₹)</Label>
+                    <Input
+                      id="addon-alankaram-price"
+                      type="number"
+                      min={0}
+                      step={1}
+                      disabled={!form.alankaram_available}
+                      value={Number(form.alankaram_price_paise) / 100}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          alankaram_price_paise: Math.round(Number(e.target.value || 0) * 100),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>How it works</Label>
+                    <p className="text-xs text-muted-foreground pt-2">
+                      Pujari brings flowers / decoration; customer reimburses from booking payment.
+                    </p>
+                  </div>
+                </div>
+                {form.alankaram_available && Number(form.alankaram_price_paise) <= 0 && (
+                  <p className="text-xs text-amber-700 pl-6">Set a price above ₹0 so it appears on booking.</p>
+                )}
               </div>
             </div>
 

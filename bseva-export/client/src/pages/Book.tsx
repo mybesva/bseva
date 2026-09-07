@@ -99,8 +99,9 @@ export default function Book() {
             samagri: pujaType.samagri_price_paise,
             alankaram: pujaType.alankaram_price_paise,
             food: pujaType.food_price_paise,
-            samagriAvailable: true,
-            alankaramAvailable: true,
+            // Per-puja Admin settings (Services → edit).
+            samagriAvailable: pujaType.samagri_available !== false,
+            alankaramAvailable: Boolean(pujaType.alankaram_available),
             foodAvailable: Boolean(pujaType.food_available),
           }}
         />
