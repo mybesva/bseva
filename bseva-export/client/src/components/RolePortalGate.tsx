@@ -179,86 +179,88 @@ export default function RolePortalGate({
             <span className="text-eyebrow text-primary">BSeva</span>
           </div>
           <h1 className="text-display mb-2 capitalize">{expected} portal</h1>
-          <p className="text-white/80">Sign in or register to continue.</p>
+          <p className="text-sidebar-foreground/80">Sign in or register to continue.</p>
         </div>
       </section>
-      <div className="container py-12 flex justify-center">
-        <Card className="w-full max-w-lg" key={`portal-${role}`}>
-          <CardHeader>
-            <CardTitle>{mode === "login" ? "Sign in" : "Create account"}</CardTitle>
-            <CardDescription>
-              {role === "admin"
-                ? "Admin accounts are provisioned by BSeva."
-                : mode === "register"
-                  ? "Address and location can be added after you sign in."
-                  : "Use your registered credentials."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={mode} onValueChange={(v) => setMode(v as "login" | "register")}>
-              <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register" disabled={role === "admin"}>Register</TabsTrigger>
-              </TabsList>
-              <TabsContent value="login">
-                <form className="space-y-3 mt-4" onSubmit={onLogin} autoComplete="off">
-                  <Label>Email or phone</Label>
-                  <Input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="off"
-                    name={`${expected}-login-id`}
-                  />
-                  <Label>Password</Label>
-                  <PasswordInput
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoComplete="new-password"
-                    name={`${expected}-login-password`}
-                  />
-                  <Button className="w-full" disabled={pending}>{pending ?"Signing in…" :"Sign in"}</Button>
-                </form>
-              </TabsContent>
-              <TabsContent value="register">
-                <form className="space-y-3 mt-4" onSubmit={onRegister} autoComplete="off">
-                  <Label>Name</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} required autoComplete="off" name={`${expected}-reg-name`} />
-                  <Label>Email</Label>
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="off" name={`${expected}-reg-email`} />
-                  <Label>Phone</Label>
-                  <Input value={phone} onChange={(e) => setPhone(e.target.value)} required autoComplete="off" name={`${expected}-reg-phone`} />
-                  <Label>Password</Label>
-                  <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" name={`${expected}-reg-password`} />
-                  <Label>Confirm password</Label>
-                  <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" name={`${expected}-reg-password-confirm`} />
-                  {role === "priest" && (
-                    <select className="w-full h-10 rounded-md border px-2 text-sm" value={requestedLevel} onChange={(e) => setRequestedLevel(Number(e.target.value))}>
-                      {pujariLevels.map((l) => (
-                        <option key={l.level} value={l.level}>Level {l.level} — {l.title}</option>
-                      ))}
-                    </select>
-                  )}
-                  <div className="flex gap-2">
-                    <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="OTP" required />
-                    <Button type="button" variant="secondary" onClick={() => void sendOtp()}>{otpSent ? "Resend" : "Send OTP"}</Button>
-                  </div>
-                  <label className="flex items-start gap-2 text-sm">
-                    <Checkbox checked={consent} onCheckedChange={(v) => setConsent(!!v)} className="mt-0.5" />
-                    <span>
-                      {REGISTRATION_CONSENT_LABEL}{" "}
-                      <LegalInlineLink kind="terms">Terms & Conditions</LegalInlineLink>{" "}
-                      and{" "}
-                      <LegalInlineLink kind="privacy">Privacy Policy</LegalInlineLink>.
-                    </span>
-                  </label>
-                  <Button className="w-full" disabled={pending}>{pending ?"Creating…" :"Create account"}</Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+      <div className="bg-background border-t border-border">
+        <div className="container py-12 flex justify-center">
+          <Card className="w-full max-w-lg border-border shadow-lg" key={`portal-${role}`}>
+            <CardHeader>
+              <CardTitle>{mode === "login" ? "Sign in" : "Create account"}</CardTitle>
+              <CardDescription>
+                {role === "admin"
+                  ? "Admin accounts are provisioned by BSeva."
+                  : mode === "register"
+                    ? "Address and location can be added after you sign in."
+                    : "Use your registered credentials."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={mode} onValueChange={(v) => setMode(v as "login" | "register")}>
+                <TabsList className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="login">Login</TabsTrigger>
+                  <TabsTrigger value="register" disabled={role === "admin"}>Register</TabsTrigger>
+                </TabsList>
+                <TabsContent value="login">
+                  <form className="space-y-3 mt-4" onSubmit={onLogin} autoComplete="off">
+                    <Label>Email or phone</Label>
+                    <Input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="off"
+                      name={`${expected}-login-id`}
+                    />
+                    <Label>Password</Label>
+                    <PasswordInput
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="new-password"
+                      name={`${expected}-login-password`}
+                    />
+                    <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>{pending ?"Signing in…" :"Sign in"}</Button>
+                  </form>
+                </TabsContent>
+                <TabsContent value="register">
+                  <form className="space-y-3 mt-4" onSubmit={onRegister} autoComplete="off">
+                    <Label>Name</Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} required autoComplete="off" name={`${expected}-reg-name`} />
+                    <Label>Email</Label>
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="off" name={`${expected}-reg-email`} />
+                    <Label>Phone</Label>
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} required autoComplete="off" name={`${expected}-reg-phone`} />
+                    <Label>Password</Label>
+                    <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" name={`${expected}-reg-password`} />
+                    <Label>Confirm password</Label>
+                    <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" name={`${expected}-reg-password-confirm`} />
+                    {role === "priest" && (
+                      <select className="w-full h-10 rounded-md border border-input bg-background text-foreground px-2 text-sm" value={requestedLevel} onChange={(e) => setRequestedLevel(Number(e.target.value))}>
+                        {pujariLevels.map((l) => (
+                          <option key={l.level} value={l.level}>Level {l.level} — {l.title}</option>
+                        ))}
+                      </select>
+                    )}
+                    <div className="flex gap-2">
+                      <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="OTP" required />
+                      <Button type="button" variant="secondary" onClick={() => void sendOtp()}>{otpSent ? "Resend" : "Send OTP"}</Button>
+                    </div>
+                    <label className="flex items-start gap-2 text-sm">
+                      <Checkbox checked={consent} onCheckedChange={(v) => setConsent(!!v)} className="mt-0.5" />
+                      <span>
+                        {REGISTRATION_CONSENT_LABEL}{" "}
+                        <LegalInlineLink kind="terms">Terms & Conditions</LegalInlineLink>{" "}
+                        and{" "}
+                        <LegalInlineLink kind="privacy">Privacy Policy</LegalInlineLink>.
+                      </span>
+                    </label>
+                    <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>{pending ?"Creating…" :"Create account"}</Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );

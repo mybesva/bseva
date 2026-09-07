@@ -93,7 +93,7 @@ export default function Login() {
                   name="bseva-login-password"
                 />
               </div>
-              <Button type="submit" className="w-full bg-primary" disabled={pending}>
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
                 <LogIn className="w-4 h-4 mr-2" />
                 {pending ? "Signing in..." : "Sign in"}
               </Button>

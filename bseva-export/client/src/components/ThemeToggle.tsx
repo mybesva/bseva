@@ -23,11 +23,14 @@ export default function ThemeToggle({
       variant={variant}
       size={size}
       onClick={toggleTheme}
-      className={cn(className)}
+      className={cn(
+        "dark:text-primary dark:hover:bg-primary/20 dark:hover:text-primary",
+        className
+      )}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Light mode" : "Dark mode"}
     >
-      {isDark ? <Sun size={18} /> : <Moon size={18} />}
+      {isDark ? <Sun size={18} className="text-primary" /> : <Moon size={18} />}
       {size !== "icon" && <span className="ml-1.5">{isDark ? "Light" : "Dark"}</span>}
     </Button>
   );
