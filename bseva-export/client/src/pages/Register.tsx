@@ -49,7 +49,7 @@ export default function Register() {
         body: JSON.stringify({ phone, email, purpose: "register" }),
       });
       setOtpSent(true);
-      toast.success("Verification code sent");
+      toast.success("Verification code sent. Use 123456");
     } catch (err: any) {
       toast.error(err.message || "Could not send OTP");
     }

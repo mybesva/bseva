@@ -154,6 +154,11 @@ export default function RegisterScreen() {
               ) : null}
               <Field label="Referral code (optional)" value={referralCode} onChangeText={setReferralCode} autoCapitalize="characters" />
               <PrimaryButton title={otpSent ? "Resend OTP" : "Send OTP"} variant="outline" onPress={sendOtp} />
+              {otpSent ? (
+                <AppText variant="small" color={colors.mutedForeground}>
+                  Test OTP is 123456 (no SMS yet).
+                </AppText>
+              ) : null}
               <Field label="OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
               <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                 <Switch value={consent} onValueChange={setConsent} trackColor={{ true: colors.primary }} />

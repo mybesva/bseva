@@ -51,7 +51,8 @@ def _public(row: dict) -> dict:
 def request_otp(body: OtpRequestIn, db: Session = Depends(get_db)):
     if not body.phone and not body.email:
         raise HTTPException(400, "Phone or email required")
-    code = settings.otp_dev_code if settings.environment != "production" else f"{uuid4().int % 1_000_000:06d}"
+    # SMS/email not wired yet — same test OTP locally and on Vercel.
+    code = (settings.otp_dev_code or "123456").strip()
     db.execute(
         text(
             """
@@ -67,7 +68,7 @@ def request_otp(body: OtpRequestIn, db: Session = Depends(get_db)):
         },
     )
     db.commit()
-    out = {"ok": True, "message": "OTP sent"}
+    out = {"ok": True, "message": f"OTP sent. Use {code}"}
     return out
 
 
