@@ -116,18 +116,12 @@ export function createApiClient(opts: ApiClientOptions) {
       return text;
     }
 
-    async function mediaDataUri(path: string): Promise<string | null> {
-      try {
-        const blob = await apiBlob(path);
-        return await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(blob);
-        });
-      } catch {
-        return null;
-      }
+    async function mediaImageSource(path: string) {
+      const token = await opts.tokenStore.getToken();
+      return {
+        uri: `${joinUrl(opts.getBaseUrl(), `/api/v1${path}`)}?t=${Date.now()}`,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      };
     }
 
   return {
@@ -135,7 +129,7 @@ export function createApiClient(opts: ApiClientOptions) {
     apiBlob,
     apiText,
     upload,
-    mediaDataUri,
+    mediaImageSource,
     getBaseUrl: opts.getBaseUrl,
 
     async login(identifier: string, password: string) {
@@ -360,7 +354,7 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     customerPhotoUri() {
-      return mediaDataUri("/customer/profile/photo");
+      return mediaImageSource("/customer/profile/photo");
     },
 
     getCustomerProfile() {
@@ -417,7 +411,7 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     pujariMediaUri(kind: "photo" | "signature") {
-      return mediaDataUri(`/pujari/profile/file/${kind}`);
+      return mediaImageSource(`/pujari/profile/file/${kind}`);
     },
 
     getAngikara() {

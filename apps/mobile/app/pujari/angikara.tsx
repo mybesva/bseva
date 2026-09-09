@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Image, ScrollView, Switch, View } from "react-native";
+import { Image, ScrollView, Switch, View, type ImageSourcePropType } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -14,8 +14,8 @@ export default function AngikaraScreen() {
   });
   const [agree, setAgree] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [sign, setSign] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
+  const [sign, setSign] = useState<ImageSourcePropType | null>(null);
   const profile = q.data?.profile || {};
   const status = q.data?.document?.status || q.data?.status || String(profile.angikara_status || "not_started");
   const locked = status === "submitted" || status === "approved";
@@ -34,7 +34,7 @@ export default function AngikaraScreen() {
         <ErrorBanner message={error} />
         <Card>
           <AppText variant="h3">Status: {status}</AppText>
-          {photo ? <Image source={{ uri: photo }} style={{ width: 72, height: 72, borderRadius: 36, marginTop: 8, backgroundColor: colors.secondary }} /> : null}
+          {photo ? <Image source={photo} style={{ width: 72, height: 72, borderRadius: 36, marginTop: 8, backgroundColor: colors.secondary }} /> : null}
           <AppText>{String(profile.full_name || "")}</AppText>
           <AppText variant="small">Father: {String(profile.father_name || "—")}</AppText>
           <AppText variant="small">Gotra {String(profile.gotra || "—")} · Pravara {String(profile.pravara || "—")}</AppText>
@@ -42,7 +42,7 @@ export default function AngikaraScreen() {
           <AppText variant="small">{String(profile.present_address || profile.permanent_address || "")}</AppText>
           <AppText variant="small">{String(profile.mobile_number || "")}</AppText>
           <AppText variant="small">{String(profile.sampradaya || "")} · {String((profile.qualifications as string[] | undefined)?.join(", ") || "")}</AppText>
-          {sign ? <Image source={{ uri: sign }} style={{ width: "100%", height: 70, resizeMode: "contain", marginTop: 8 }} /> : null}
+          {sign ? <Image source={sign} style={{ width: "100%", height: 70, resizeMode: "contain", marginTop: 8 }} /> : null}
         </Card>
         {locked ? (
           <AppText>This Angikara Patram is locked after submission.</AppText>

@@ -46,6 +46,7 @@
       "expo-location",
       "expo-image-picker",
       "expo-document-picker",
+      "expo-splash-screen",
       [
         "expo-notifications",
         {

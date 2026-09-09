@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BrandSplash } from "@/components/BrandSplash";
 import { AppProviders } from "@/providers/AppProviders";
 import { useAppTheme } from "@/theme/ThemeContext";
 
@@ -35,7 +36,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProviders>
-        <ThemedStack />
+        <BrandSplash>
+          <ThemedStack />
+        </BrandSplash>
       </AppProviders>
     </GestureHandlerRootView>
   );

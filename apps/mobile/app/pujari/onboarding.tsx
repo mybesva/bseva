@@ -11,7 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, ScrollView, Switch, View } from "react-native";
+import { Image, ScrollView, Switch, View, type ImageSourcePropType } from "react-native";
 import { AddressForm, type AddressFormValue } from "@/components/AddressForm";
 import { MediaPicker } from "@/components/MediaPicker";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -29,7 +29,7 @@ export default function PujariOnboarding() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
   const docs = useQuery({ queryKey: ["pujari-docs"], queryFn: () => apiClient.pujariDocuments() });
 
   async function load() {
@@ -103,7 +103,7 @@ export default function PujariOnboarding() {
 
         {step === 1 ? (
           <>
-            {photo ? <Image source={{ uri: photo }} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.secondary }} /> : null}
+            {photo ? <Image source={photo} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.secondary }} /> : null}
             <MediaPicker
               onPicked={async (file) => {
                 await apiClient.uploadPujariAsset("photo", file);

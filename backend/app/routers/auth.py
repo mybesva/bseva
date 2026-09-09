@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db
 from app.deps import ACCOUNT_BLOCKED, current_user
+from app.domain import row_dict
 from app.schemas import ChangePasswordIn, LoginIn, MePatchIn, OtpRequestIn, OtpVerifyIn, RegisterIn, TokenOut
 from app.security import create_access_token, hash_otp, hash_password, verify_otp, verify_password
 from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
@@ -231,10 +232,10 @@ def me(user=Depends(current_user), db: Session = Depends(get_db)):
     extra: dict = {}
     if user["role"] == "customer":
         p = db.execute(text("SELECT * FROM customer_profiles WHERE user_id = :id"), {"id": user["id"]}).mappings().first()
-        extra["profile"] = dict(p) if p else None
-    elif user["role"] == "pujari":
+        extra["profile"] = row_dict(p) if p else None
+    elif user["role"] in ("pujari", "head_pujari"):
         p = db.execute(text("SELECT * FROM pujari_profiles WHERE user_id = :id"), {"id": user["id"]}).mappings().first()
-        extra["profile"] = dict(p) if p else None
+        extra["profile"] = row_dict(p) if p else None
     return {**_public(user), **extra}
 
 
