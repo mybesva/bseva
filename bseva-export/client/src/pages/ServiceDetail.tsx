@@ -113,8 +113,17 @@ export default function ServiceDetail() {
                       {c.name}
                     </Badge>
                   ))}
-                  {!svc.bookable && <Badge variant="outline">Coming soon</Badge>}
+                  {!svc.bookable && (
+                    <Badge className="bg-amber-500 text-white font-extrabold uppercase tracking-wider border-0 text-sm px-3 py-1">
+                      Coming Soon
+                    </Badge>
+                  )}
                 </div>
+                {!svc.bookable && (
+                  <p className="mb-3 text-sm font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
+                    This puja is not open for booking yet. Top available pujas can be booked from Services; Admin will mark this Available when ready.
+                  </p>
+                )}
                 <h1 className="text-h1 text-foreground mb-2">{svc.name}</h1>
                 {svc.local_name && <p className="text-muted-foreground mb-4">{svc.local_name}</p>}
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -192,7 +201,7 @@ export default function ServiceDetail() {
                   disabled={!svc.bookable}
                   onClick={book}
                 >
-                  {svc.bookable ? "Book this puja" : "Pricing coming soon"}
+                  {svc.bookable ? "Book this puja" : "Coming Soon"}
                 </Button>
                 <Link href="/services">
                   <Button size="lg" variant="outline">

@@ -42,6 +42,7 @@ export default function PujariOnboardingPage() {
   const [langCustom, setLangCustom] = useState("");
   const [specCustom, setSpecCustom] = useState("");
   const [payingFee, setPayingFee] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function load() {
     const p = await api<any>("/pujari/profile");
@@ -63,6 +64,86 @@ export default function PujariOnboardingPage() {
 
   function setField(key: string, value: unknown) {
     setProfile((prev: any) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function errClass(key: string) {
+    return fieldErrors[key] ? "border-red-500 focus-visible:ring-red-500" : "";
+  }
+
+  function Err({ name }: { name: string }) {
+    if (!fieldErrors[name]) return null;
+    return <p className="text-xs text-red-600 mt-1">{fieldErrors[name]}</p>;
+  }
+
+  async function validateStep(current: number): Promise<boolean> {
+    if (!profile) return false;
+    const errors: Record<string, string> = {};
+    const req = (key: string, label: string, ok: boolean) => {
+      if (!ok) errors[key] = `${label} is required`;
+    };
+
+    if (current === 1) {
+      req("profile_photo_path", "Profile photo", !!profile.profile_photo_path || !!photoUrl);
+      req("full_name", "Full name", !!String(profile.full_name || "").trim());
+      req("date_of_birth", "Date of birth", !!String(profile.date_of_birth || "").trim());
+      req(
+        "mobile_number",
+        "Mobile number",
+        !!String(profile.mobile_number || user?.phone || "").trim()
+      );
+    }
+    if (current === 2) {
+      req("address_line1", "Address line 1", !!String(profile.address_line1 || "").trim());
+      req("city", "City", !!String(profile.city || "").trim());
+      req("district", "District", !!String(profile.district || "").trim());
+      req("state", "State", !!String(profile.state || "").trim());
+      req("pincode", "Pincode", !!String(profile.pincode || "").trim());
+      req("latitude", "Map location", profile.latitude != null && profile.longitude != null);
+    }
+    if (current === 3) {
+      const quals: string[] = profile.qualifications || [];
+      req("qualifications", "At least one qualification", quals.length > 0);
+      req("qualification_year", "Qualification year", !!profile.qualification_year);
+      req("sampradaya", "Sampradaya", !!String(profile.sampradaya || "").trim());
+      req("experience_years", "Experience (years)", profile.experience_years != null && profile.experience_years !== "");
+      const langs = [...(profile.languages || []), ...csvToList(langCustom)];
+      req("languages", "At least one language", langs.length > 0);
+    }
+    if (current === 4) {
+      try {
+        const docs = await api<any[]>("/pujari/documents");
+        const hasAadhaar = docs.some((d) => d.document_type === "identity");
+        req("identity", "Aadhaar upload", hasAadhaar);
+      } catch {
+        errors.identity = "Could not verify documents — upload Aadhaar and try again";
+      }
+    }
+    if (current === 5) {
+      req("service_radius_km", "Service radius", !!profile.service_radius_km);
+      req("bank_holder_name", "Account holder name", !!String(profile.bank_holder_name || "").trim());
+      req("bank_ifsc", "IFSC", !!String(profile.bank_ifsc || "").trim());
+      req(
+        "bank_account_last4",
+        "Account last 4 digits",
+        String(profile.bank_account_last4 || "").trim().length === 4
+      );
+    }
+    if (current === 6) {
+      req("consent", "Final submission consent", consent);
+    }
+
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fill the required fields marked in red");
+      return false;
+    }
+    return true;
   }
 
   function toggleList(key: "languages" | "specializations", item: string, on: boolean) {
@@ -81,6 +162,7 @@ export default function PujariOnboardingPage() {
       });
       setProfile(updated);
       setStep(nextStep);
+      setFieldErrors({});
       toast.success("Saved");
       await refresh();
     } catch (err: any) {
@@ -92,6 +174,7 @@ export default function PujariOnboardingPage() {
 
   async function saveAndContinue() {
     if (!profile) return;
+    if (!(await validateStep(step))) return;
     if (step === 1) {
       await saveStep(2, {
         full_name: profile.full_name,
@@ -103,10 +186,6 @@ export default function PujariOnboardingPage() {
       return;
     }
     if (step === 2) {
-      if (!String(profile.district || "").trim()) {
-        toast.error("District is required");
-        return;
-      }
       await saveStep(3, {
         address_line1: profile.address_line1,
         address_line2: profile.address_line2,
@@ -175,10 +254,7 @@ export default function PujariOnboardingPage() {
   }
 
   async function finalSubmit() {
-    if (!consent) {
-      toast.error("Please confirm final submission consent");
-      return;
-    }
+    if (!(await validateStep(6))) return;
     setSaving(true);
     try {
       await api("/pujari/profile", {
@@ -259,7 +335,25 @@ export default function PujariOnboardingPage() {
       <Card className="max-w-3xl">
         <CardHeader>
           <CardTitle className="">Complete onboarding</CardTitle>
-          <p className="text-sm text-muted-foreground">Step {step} of 6</p>
+          <p className="text-sm text-muted-foreground">Step {step} of 6 — fill required fields before Save & Continue</p>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <span
+                key={n}
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                  n === step
+                    ? Object.keys(fieldErrors).length
+                      ? "bg-red-600 text-white border-red-600"
+                      : "bg-primary text-white border-primary"
+                    : n < step
+                      ? "bg-emerald-600/15 text-emerald-700 border-emerald-600/30"
+                      : "bg-muted text-muted-foreground border-border"
+                }`}
+              >
+                Step {n}
+              </span>
+            ))}
+          </div>
           <div className="h-2 rounded-full bg-secondary overflow-hidden mt-2">
             <div className="h-full bg-primary transition-all" style={{ width: `${(step / 6) * 100}%` }} />
           </div>
@@ -269,7 +363,9 @@ export default function PujariOnboardingPage() {
             <section className="space-y-4">
               <h2 className="text-xl">Personal details</h2>
               <div>
-                <Label>{t("pujari.photo")}</Label>
+                <Label className={fieldErrors.profile_photo_path ? "text-red-600" : undefined}>
+                  {t("pujari.photo")} *
+                </Label>
                 {photoUrl && <img src={photoUrl} alt="" className="mt-2 h-28 w-28 object-cover rounded-md border" />}
                 <label className="inline-block mt-2">
                   <input
@@ -283,40 +379,58 @@ export default function PujariOnboardingPage() {
                       try {
                         await uploadPujariAsset("photo", f);
                         toast.success("Photo saved");
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.profile_photo_path;
+                          return next;
+                        });
                         await load();
                       } catch (err: any) {
                         toast.error(err.message);
                       }
                     }}
                   />
-                  <Button type="button" size="sm" variant="outline" asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    className={fieldErrors.profile_photo_path ? "border-red-500 text-red-600" : undefined}
+                  >
                     <span>{photoUrl ? t("pujari.photo.replace") : t("pujari.photo")}</span>
                   </Button>
                 </label>
+                <Err name="profile_photo_path" />
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label>{t("pujari.fullName")} *</Label>
+                  <Label className={fieldErrors.full_name ? "text-red-600" : undefined}>{t("pujari.fullName")} *</Label>
                   <Input
+                    className={errClass("full_name")}
                     value={profile.full_name || ""}
                     onChange={(e) => setField("full_name", e.target.value)}
                     required
                   />
+                  <Err name="full_name" />
                 </div>
                 <div>
-                  <Label>{t("pujari.dob")} *</Label>
+                  <Label className={fieldErrors.date_of_birth ? "text-red-600" : undefined}>{t("pujari.dob")} *</Label>
                   <Input
+                    className={errClass("date_of_birth")}
                     type="date"
                     value={(profile.date_of_birth || "").slice(0, 10)}
                     onChange={(e) => setField("date_of_birth", e.target.value)}
                   />
+                  <Err name="date_of_birth" />
                 </div>
                 <div>
-                  <Label>{t("pujari.mobile")} *</Label>
+                  <Label className={fieldErrors.mobile_number ? "text-red-600" : undefined}>{t("pujari.mobile")} *</Label>
                   <Input
+                    className={errClass("mobile_number")}
                     value={profile.mobile_number || user?.phone || ""}
                     onChange={(e) => setField("mobile_number", e.target.value)}
                   />
+                  <Err name="mobile_number" />
                 </div>
                 <div className="md:col-span-2">
                   <Label>Email</Label>
@@ -358,9 +472,24 @@ export default function PujariOnboardingPage() {
           {step === 2 && (
             <section className="space-y-4">
               <h2 className="text-xl">Address</h2>
+              {Object.keys(fieldErrors).length > 0 && (
+                <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2 space-y-0.5">
+                  {Object.values(fieldErrors).map((msg) => (
+                    <p key={msg}>{msg}</p>
+                  ))}
+                </div>
+              )}
               <AddressFields
                 value={addressValue}
-                onChange={(next) => setProfile((prev: any) => ({ ...prev, ...next }))}
+                onChange={(next) => {
+                  setProfile((prev: any) => ({ ...prev, ...next }));
+                  setFieldErrors((prev) => {
+                    const nextErr = { ...prev };
+                    for (const k of Object.keys(next)) delete nextErr[k];
+                    if (next.latitude != null) delete nextErr.latitude;
+                    return nextErr;
+                  });
+                }}
               />
             </section>
           )}
@@ -368,18 +497,31 @@ export default function PujariOnboardingPage() {
           {step === 3 && (
             <section className="space-y-6">
               <h2 className="text-xl">Professional details</h2>
+              {Object.keys(fieldErrors).length > 0 && (
+                <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2 space-y-0.5">
+                  {Object.values(fieldErrors).map((msg) => (
+                    <p key={msg}>{msg}</p>
+                  ))}
+                </div>
+              )}
               <div className="max-w-xs">
-                <Label>Years of experience</Label>
+                <Label className={fieldErrors.experience_years ? "text-red-600" : undefined}>
+                  Years of experience *
+                </Label>
                 <Input
+                  className={errClass("experience_years")}
                   type="number"
                   min={0}
                   max={80}
                   value={profile.experience_years ?? ""}
                   onChange={(e) => setField("experience_years", e.target.value)}
                 />
+                <Err name="experience_years" />
               </div>
-              <div className="space-y-3">
-                <h3 className="font-medium">{t("pujari.qualification")} *</h3>
+              <div className={`space-y-3 rounded-md p-2 ${fieldErrors.qualifications ? "border border-red-500" : ""}`}>
+                <h3 className={`font-medium ${fieldErrors.qualifications ? "text-red-600" : ""}`}>
+                  {t("pujari.qualification")} *
+                </h3>
                 {QUALS.map((q) => (
                   <label key={q.id} className="flex items-center gap-2 text-sm">
                     <Checkbox
@@ -392,19 +534,26 @@ export default function PujariOnboardingPage() {
                     {t(q.key)}
                   </label>
                 ))}
+                <Err name="qualifications" />
                 <div className="max-w-xs">
-                  <Label>{t("pujari.year")} *</Label>
+                  <Label className={fieldErrors.qualification_year ? "text-red-600" : undefined}>
+                    {t("pujari.year")} *
+                  </Label>
                   <Input
+                    className={errClass("qualification_year")}
                     type="number"
                     min={1950}
                     max={yearNow}
                     value={profile.qualification_year || ""}
                     onChange={(e) => setField("qualification_year", e.target.value)}
                   />
+                  <Err name="qualification_year" />
                 </div>
               </div>
-              <div className="space-y-3">
-                <h3 className="font-medium">{t("pujari.sampradaya")} *</h3>
+              <div className={`space-y-3 rounded-md p-2 ${fieldErrors.sampradaya ? "border border-red-500" : ""}`}>
+                <h3 className={`font-medium ${fieldErrors.sampradaya ? "text-red-600" : ""}`}>
+                  {t("pujari.sampradaya")} *
+                </h3>
                 {(["smartha", "madhwa", "vaishnava"] as const).map((s) => (
                   <label key={s} className="flex items-center gap-2 text-sm">
                     <input
@@ -416,9 +565,10 @@ export default function PujariOnboardingPage() {
                     {t(`pujari.${s}`)}
                   </label>
                 ))}
+                <Err name="sampradaya" />
               </div>
-              <div className="space-y-2">
-                <Label>Languages</Label>
+              <div className={`space-y-2 rounded-md p-2 ${fieldErrors.languages ? "border border-red-500" : ""}`}>
+                <Label className={fieldErrors.languages ? "text-red-600" : undefined}>Languages *</Label>
                 <div className="flex flex-wrap gap-3">
                   {LANG_OPTS.map((l) => (
                     <label key={l} className="flex items-center gap-2 text-sm">
@@ -430,8 +580,17 @@ export default function PujariOnboardingPage() {
                 <Input
                   placeholder="Other languages (comma-separated)"
                   value={langCustom}
-                  onChange={(e) => setLangCustom(e.target.value)}
+                  onChange={(e) => {
+                    setLangCustom(e.target.value);
+                    setFieldErrors((prev) => {
+                      if (!prev.languages) return prev;
+                      const next = { ...prev };
+                      delete next.languages;
+                      return next;
+                    });
+                  }}
                 />
+                <Err name="languages" />
               </div>
               <div className="space-y-2">
                 <Label>Specializations</Label>
@@ -463,6 +622,11 @@ export default function PujariOnboardingPage() {
           {step === 4 && (
             <section className="space-y-4">
               <h2 className="text-xl">Documents</h2>
+              {fieldErrors.identity && (
+                <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2">
+                  {fieldErrors.identity}
+                </div>
+              )}
               <PriestOnboardingPanel />
               <p className="text-sm">
                 After uploading documents, complete{" "}
@@ -477,39 +641,63 @@ export default function PujariOnboardingPage() {
           {step === 5 && (
             <section className="space-y-4">
               <h2 className="text-xl">Availability & bank</h2>
+              {Object.keys(fieldErrors).length > 0 && (
+                <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2 space-y-0.5">
+                  {Object.values(fieldErrors).map((msg) => (
+                    <p key={msg}>{msg}</p>
+                  ))}
+                </div>
+              )}
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox checked={!!profile.available} onCheckedChange={(v) => setField("available", !!v)} />
                 Available for new bookings
               </label>
               <div className="max-w-xs">
-                <Label>Service radius (km)</Label>
+                <Label className={fieldErrors.service_radius_km ? "text-red-600" : undefined}>
+                  Service radius (km) *
+                </Label>
                 <Input
+                  className={errClass("service_radius_km")}
                   type="number"
                   min={1}
                   step="0.1"
                   value={profile.service_radius_km ?? ""}
                   onChange={(e) => setField("service_radius_km", e.target.value)}
                 />
+                <Err name="service_radius_km" />
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Account holder name</Label>
+                  <Label className={fieldErrors.bank_holder_name ? "text-red-600" : undefined}>
+                    Account holder name *
+                  </Label>
                   <Input
+                    className={errClass("bank_holder_name")}
                     value={profile.bank_holder_name || ""}
                     onChange={(e) => setField("bank_holder_name", e.target.value)}
                   />
+                  <Err name="bank_holder_name" />
                 </div>
                 <div>
-                  <Label>IFSC</Label>
-                  <Input value={profile.bank_ifsc || ""} onChange={(e) => setField("bank_ifsc", e.target.value)} />
-                </div>
-                <div>
-                  <Label>Account number (last 4)</Label>
+                  <Label className={fieldErrors.bank_ifsc ? "text-red-600" : undefined}>IFSC *</Label>
                   <Input
+                    className={errClass("bank_ifsc")}
+                    value={profile.bank_ifsc || ""}
+                    onChange={(e) => setField("bank_ifsc", e.target.value)}
+                  />
+                  <Err name="bank_ifsc" />
+                </div>
+                <div>
+                  <Label className={fieldErrors.bank_account_last4 ? "text-red-600" : undefined}>
+                    Account number (last 4) *
+                  </Label>
+                  <Input
+                    className={errClass("bank_account_last4")}
                     maxLength={4}
                     value={profile.bank_account_last4 || ""}
                     onChange={(e) => setField("bank_account_last4", e.target.value.replace(/\D/g, "").slice(0, 4))}
                   />
+                  <Err name="bank_account_last4" />
                 </div>
               </div>
             </section>
@@ -542,13 +730,29 @@ export default function PujariOnboardingPage() {
                   <span className="text-muted-foreground">Status:</span> {profile.profile_status ||"—"}
                 </p>
               </div>
-              <label className="flex items-start gap-2 text-sm">
-                <Checkbox checked={consent} onCheckedChange={(v) => setConsent(!!v)} />
+              <label
+                className={`flex items-start gap-2 text-sm rounded-md p-2 ${
+                  fieldErrors.consent ? "border border-red-500 bg-red-50" : ""
+                }`}
+              >
+                <Checkbox
+                  checked={consent}
+                  onCheckedChange={(v) => {
+                    setConsent(!!v);
+                    setFieldErrors((prev) => {
+                      if (!prev.consent) return prev;
+                      const next = { ...prev };
+                      delete next.consent;
+                      return next;
+                    });
+                  }}
+                />
                 <span>
                   I confirm that the information provided is accurate and I consent to final profile submission for
-                  verification under BSeva Terms & Privacy Policy.
+                  verification under BSeva Terms & Privacy Policy. *
                 </span>
               </label>
+              <Err name="consent" />
             </section>
           )}
 

@@ -4,7 +4,6 @@ import SectionHeader from "@/components/SectionHeader";
 import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Flame, Flower, Home, Sparkles, Heart, Star, Sun, Moon, Loader2, Search } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useLocation, useSearch } from "wouter";
@@ -135,25 +134,55 @@ export default function Services() {
           ) : services.length === 0 ? (
             <p className="text-center text-muted-foreground py-16">No pujas match your search.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {services.map((s, i) => {
-                const Icon = ICONS[i % ICONS.length];
-                const img = serviceImageUrl(s);
-                const desc =
-                  s.short_description ||
-                  s.description ||
-                  (s.bookable && s.standard_price_paise != null
-                    ? `From ₹${(s.standard_price_paise / 100).toLocaleString("en-IN")}`
-                    : "Pricing set by Admin soon");
-                return (
-                  <div key={s.id} onClick={() => openService(s.slug, s.bookable)} className="cursor-pointer relative">
-                    {!s.bookable && (
-                      <Badge className="absolute top-3 left-3 z-30 bg-sidebar/90">Coming soon</Badge>
-                    )}
-                    <ServiceCard title={s.name} description={desc} image={img} icon={<Icon size={24} />} />
+            <div className="space-y-10">
+              {(() => {
+                const available = services.filter((s) => s.bookable);
+                const upcoming = services.filter((s) => !s.bookable);
+                const renderGrid = (list: Svc[]) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {list.map((s, i) => {
+                      const Icon = ICONS[i % ICONS.length];
+                      const img = serviceImageUrl(s);
+                      const desc =
+                        s.short_description ||
+                        s.description ||
+                        (s.bookable && s.standard_price_paise != null
+                          ? `From ₹${(s.standard_price_paise / 100).toLocaleString("en-IN")}`
+                          : "Pricing set by Admin soon");
+                      return (
+                        <div key={s.id} onClick={() => openService(s.slug, s.bookable)} className="cursor-pointer">
+                          <ServiceCard
+                            title={s.name}
+                            description={desc}
+                            image={img}
+                            icon={<Icon size={24} />}
+                            comingSoon={!s.bookable}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              })}
+                return (
+                  <>
+                    {available.length > 0 && (
+                      <div>
+                        <h2 className="text-h3 text-foreground mb-4">Available pujas</h2>
+                        {renderGrid(available)}
+                      </div>
+                    )}
+                    {upcoming.length > 0 && (
+                      <div>
+                        <h2 className="text-h3 text-foreground mb-2">Upcoming services</h2>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          These pujas are listed as <span className="font-semibold text-amber-600">Coming Soon</span> and will open for booking when Admin marks them Available.
+                        </p>
+                        {renderGrid(upcoming)}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>

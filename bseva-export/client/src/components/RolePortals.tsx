@@ -60,6 +60,7 @@ const pujariNav: NavItem[] = [
   { label: "Experience", href: "/pujari/experience", icon: Briefcase },
   { label: "Availability", href: "/pujari/availability", icon: Clock },
   { label: "Bank / Settlement", href: "/pujari/bank", icon: Landmark },
+  { label: "Tracking Earnings", href: "/pujari/earnings", icon: Wallet },
   { label: "Referral", href: "/pujari/referral", icon: Gift },
   { label: "Assess Pujaris", href: "/pujari/head-ratings", icon: Star },
   { label: "Support", href: "/pujari/support", icon: FileText },
@@ -214,7 +215,11 @@ function PujariShell({ children }: { children: ReactNode }) {
     api<any>("/pujari/profile")
       .then((p) => {
         setProfile(p);
-        const profileDone = !!p.profile_submitted_at;
+        const pct = Number(p.profile_completion_percentage || 0);
+        const fullyVerified =
+          p.profile_status === "verified" ||
+          (p.verification_status === "approved" && (!!p.profile_submitted_at || pct >= 100));
+        const profileDone = !!p.profile_submitted_at || fullyVerified;
         const isHead = !!p.is_head_pujari || user?.role === "head_pujari";
         let next = profileDone
           ? pujariNav.filter((item) => item.href !== "/pujari/onboarding")
@@ -231,20 +236,52 @@ function PujariShell({ children }: { children: ReactNode }) {
     const approved = Number(profile.approved_level || 0);
     const requested = Number(profile.requested_level || 0);
     const pendingUpgrade = requested > approved;
+    const status = String(profile.profile_status || "");
+    const pct = Number(profile.profile_completion_percentage || 0);
+    const verified =
+      status === "verified" ||
+      (profile.verification_status === "approved" && (!!profile.profile_submitted_at || pct >= 100));
+    const underReview =
+      !verified &&
+      (status === "under_review" ||
+        status === "submitted" ||
+        profile.verification_status === "under_review" ||
+        !!profile.profile_submitted_at);
+    const badgeLabel = verified
+      ? "Verified"
+      : underReview
+        ? "Under review"
+        : status === "ready_for_submission"
+          ? "Ready to submit"
+          : "Not verified";
 
     return (
-      <div className="mt-3 w-full space-y-2 border-t border-sidebar-border/50 pt-3">
-        <div className="rounded-md bg-sidebar-accent/30 px-2.5 py-2 text-left">
-          <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/55 mb-0.5">
-            {t("pujari.level.current")}
-          </p>
-          <p className="text-xs font-medium leading-snug text-sidebar-foreground">
-            {approved ? t(`pujari.level.l${approved}`) : t("pujari.level.pending")}
-          </p>
+      <div className="mt-2 w-full space-y-2 border-t border-sidebar-border/50 pt-2">
+        <div
+          className={`mx-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+            verified
+              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+              : underReview
+                ? "bg-amber-500/20 text-amber-200 border border-amber-500/40"
+                : "bg-orange-500/20 text-orange-300 border border-orange-500/40"
+          }`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              verified ? "bg-emerald-400" : underReview ? "bg-amber-300" : "bg-orange-400"
+            }`}
+          />
+          {badgeLabel}
         </div>
+        <p className="text-[11px] text-sidebar-foreground/80 text-center leading-snug px-1">
+          <span className="text-sidebar-foreground/55">{t("pujari.level.current")}: </span>
+          <span className="font-semibold text-primary">
+            {approved ? t(`pujari.level.l${approved}`) : t("pujari.level.pending")}
+          </span>
+        </p>
         {pendingUpgrade ? (
-          <p className="text-[11px] leading-snug text-sidebar-foreground/75 text-left px-0.5">
-            <span className="text-sidebar-foreground/55">{t("pujari.level.requested")}:</span>{""}
+          <p className="text-[11px] leading-snug text-sidebar-foreground/75 text-center px-0.5">
+            <span className="text-sidebar-foreground/55">{t("pujari.level.requested")}: </span>
             {t(`pujari.level.l${requested}`)}
           </p>
         ) : null}

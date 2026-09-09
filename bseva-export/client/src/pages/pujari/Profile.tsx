@@ -86,18 +86,35 @@ function ProfileForm() {
   const pct = Number(profile.profile_completion_percentage || 0);
   const quals: string[] = profile.qualifications || [];
   const yearNow = new Date().getFullYear();
+  const isVerified =
+    profile.profile_status === "verified" ||
+    (profile.verification_status === "approved" && (!!profile.profile_submitted_at || pct >= 100));
 
   return (
     <form className="space-y-8" onSubmit={save}>
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span>{t("pujari.profile.completion")}</span>
-          <span>{pct}%</span>
+          <span className={pct < 100 ? "font-semibold text-primary" : "font-semibold text-emerald-600"}>
+            {pct}%
+          </span>
         </div>
         <div className="h-2 rounded-full bg-secondary overflow-hidden">
           <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-sm text-muted-foreground mt-2">{pct >= 100 ? t("pujari.profile.done") : t("pujari.profile.prompt")}</p>
+        <p className={`text-sm mt-2 ${isVerified || pct >= 100 ? "text-muted-foreground" : "font-medium text-primary"}`}>
+          {isVerified || pct >= 100 ? t("pujari.profile.done") : t("pujari.profile.prompt")}
+        </p>
+        {!isVerified && pct < 100 && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Status: <span className="font-semibold text-orange-600">Not verified</span> until profile is 100% and submitted.
+          </p>
+        )}
+        {isVerified && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Status: <span className="font-semibold text-emerald-600">Verified</span>
+          </p>
+        )}
       </div>
 
       <PujariLevelApply

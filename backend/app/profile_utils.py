@@ -47,7 +47,9 @@ def pujari_profile_status(row: dict, angikara_status: str | None = None) -> str:
     pct = int(row.get("profile_completion_percentage") or 0)
     submitted = row.get("profile_submitted_at")
     vstatus = row.get("verification_status") or "pending"
-    if vstatus == "approved":
+    # Admin-approved only counts as Verified when profile is submitted or 100% complete.
+    # Seed/test accounts may be approved early — UI should not say Verified at 77%.
+    if vstatus == "approved" and (submitted or pct >= 100):
         return "verified"
     if vstatus == "rejected":
         return "rejected"

@@ -40,6 +40,14 @@ _DEFAULTS: dict[str, Any] = {
     # Pujari no-show / late cancel penalty
     "pujari_no_show_penalty_enabled": True,
     "pujari_no_show_penalty_paise": 50000,
+    # Cancellation charges (customer) — % of booking total
+    "customer_cancel_fee_over_48h_percent": 10,
+    "customer_cancel_fee_24_48h_percent": 50,
+    "customer_cancel_min_hours": 24,
+    # Cancellation charges (pujari) — % of booking total as pujari penalty; customer refunded in full
+    "pujari_cancel_fee_over_48h_percent": 10,
+    "pujari_cancel_fee_24_48h_percent": 50,
+    "pujari_cancel_min_hours": 24,
     # Admin reassignment distance rings (km)
     "assign_distance_rings_km": [10, 15, 20, 30],
 }

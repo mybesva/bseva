@@ -118,7 +118,7 @@ export default function PujariDetailPage() {
 
   function toggleList(key: "languages" | "specializations" | "qualifications", item: string, on: boolean) {
     const cur: string[] = draft?.[key] || [];
-    setField(key, on ? Array.from(new Set([...cur, item])) : cur.filter((x) => x !== x || x !== item));
+    setField(key, on ? Array.from(new Set([...cur, item])) : cur.filter((x) => x !== item));
   }
 
   function cancelEdit() {
@@ -167,8 +167,15 @@ export default function PujariDetailPage() {
         bank_ifsc: draft.bank_ifsc || null,
         bank_holder_name: draft.bank_holder_name || null,
       };
-      await api(`/admin/pujaris/${id}`, { method: "PATCH", body: JSON.stringify(body) });
-      toast.success("Profile saved");
+      const updated = await api<{ auto_verified?: boolean } & Record<string, unknown>>(`/admin/pujaris/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      if (updated?.auto_verified) {
+        toast.success("Profile saved and automatically verified (admin completed)");
+      } else {
+        toast.success("Profile saved");
+      }
       setEditing(false);
       await load();
       if (new URLSearchParams(search).get("edit") === "1") {
@@ -250,18 +257,24 @@ export default function PujariDetailPage() {
           </div>
           <p className="text-sm text-muted-foreground">
             Completion {profile.profile_completion_percentage ?? 0}%
+            {" · "}
+            {editing ? (
+              <span className="font-semibold text-primary">Editing — save to update. Completing the profile auto-verifies.</span>
+            ) : (
+              <span>Read-only view. Click Edit to change details or upload documents.</span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {!editing ? (
-            <Button onClick={() => setEditing(true)}>Edit</Button>
+            <Button onClick={() => setEditing(true)}>Edit profile</Button>
           ) : (
             <>
               <Button variant="outline" onClick={cancelEdit} disabled={saving}>
                 Cancel
               </Button>
               <Button onClick={() => void saveProfile()} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? "Saving…" : "Save profile"}
               </Button>
             </>
           )}
@@ -670,22 +683,28 @@ export default function PujariDetailPage() {
               ))}
             </ul>
             <div className="grid gap-4 md:grid-cols-3 pt-2 border-t">
-              {(["identity", "certificate", "supporting"] as const).map((typ) => (
-                <div key={typ} className="space-y-2">
-                  <Label>Upload {DOC_LABELS[typ]}</Label>
-                  <Input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp"
-                    disabled={!!uploading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      e.target.value = "";
-                      void uploadDoc(typ, f);
-                    }}
-                  />
-                  {uploading === typ && <p className="text-xs text-muted-foreground">Uploading…</p>}
-                </div>
-              ))}
+              {editing ? (
+                (["identity", "certificate", "supporting"] as const).map((typ) => (
+                  <div key={typ} className="space-y-2">
+                    <Label>Upload {DOC_LABELS[typ]}</Label>
+                    <Input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp"
+                      disabled={!!uploading}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        void uploadDoc(typ, f);
+                      }}
+                    />
+                    {uploading === typ && <p className="text-xs text-muted-foreground">Uploading…</p>}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground md:col-span-3">
+                  Documents are view-only. Click <strong>Edit profile</strong> to upload or replace files.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

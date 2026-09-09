@@ -244,8 +244,50 @@ def patch_pujari_profile(
         {"c": out["profile_complete"], "pct": out["profile_completion_percentage"], "id": pujari_id},
     )
     write_audit(db, str(admin["id"]), "admin_pujari_update", "pujari", pujari_id)
+
+    auto_verified = False
+    # When admin completes the profile on behalf of the pujari, auto-verify.
+    if out.get("profile_complete") and out.get("verification_status") != "approved":
+        has_aadhaar = db.execute(
+            text(
+                """
+                SELECT 1 FROM pujari_documents
+                WHERE pujari_id = CAST(:id AS uuid) AND document_type = 'identity'
+                LIMIT 1
+                """
+            ),
+            {"id": pujari_id},
+        ).first()
+        if has_aadhaar:
+            level = out.get("approved_level") or out.get("requested_level") or 1
+            db.execute(
+                text(
+                    """
+                    UPDATE pujari_profiles SET
+                      verification_status = 'approved',
+                      approved_level = COALESCE(approved_level, :lvl),
+                      available = TRUE,
+                      profile_submitted_at = COALESCE(profile_submitted_at, NOW()),
+                      final_submission_consent = TRUE,
+                      rejection_reason = NULL
+                    WHERE user_id = CAST(:id AS uuid)
+                    """
+                ),
+                {"lvl": int(level), "id": pujari_id},
+            )
+            write_audit(
+                db,
+                str(admin["id"]),
+                "verify_pujari:approved:admin_completed_profile",
+                "pujari",
+                pujari_id,
+            )
+            auto_verified = True
+
     db.commit()
-    return _load_admin_pujari(db, pujari_id)
+    result = _load_admin_pujari(db, pujari_id)
+    result["auto_verified"] = auto_verified
+    return result
 
 
 @router.post("/pujaris/{pujari_id}/documents/upload")

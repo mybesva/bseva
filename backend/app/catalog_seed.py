@@ -489,7 +489,8 @@ def ensure_catalog(conn) -> dict:
     try:
         from app.service_images_seed import apply_service_images
 
-        images_n = apply_service_images(conn, only_if_empty=True)
+        # Always sync image_url/image_path from ATTRIBUTION (unique per-slug AI assets).
+        images_n = apply_service_images(conn, only_if_empty=False)
     except Exception:
         images_n = 0
     return {

@@ -234,14 +234,6 @@ function PujariDashboardContent() {
     }
   };
 
-  const statusLabels: Record<string, string> = {
-    profile_incomplete: "Profile Incomplete",
-    ready_for_submission: "Ready for Submission",
-    submitted: "Submitted",
-    under_review: "Under Review",
-    verified: "Verified",
-    rejected: "Rejected / Resubmission Required",
-  };
   const profileStatus = pujariProfile?.profile_status || "profile_incomplete";
 
   const metricCards = [
@@ -365,32 +357,16 @@ function PujariDashboardContent() {
 
   return (
     <>
-      <section className="bg-sidebar text-sidebar-foreground py-10 px-6 rounded-xl mb-6">
-        <h1 className="text-h1 mb-2">{t("priest.dashboard")}</h1>
-        <p className="text-sidebar-foreground/80">Namaste, {user?.name}. {t("priest.subtitle")}</p>
+      <section className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary tracking-tight">
+          Namaste, {user?.name}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("priest.subtitle")}</p>
       </section>
 
       <div className="space-y-8">
-        <Card className="border-primary/30">
-          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Verification status</p>
-              <p className="font-semibold text-lg">{statusLabels[profileStatus] || profileStatus}</p>
-            </div>
-            {pujariProfile?.experience_years != null && pujariProfile.experience_years !== "" && (
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Experience</p>
-                <p className="font-semibold text-lg">
-                  {pujariProfile.experience_years} years
-                </p>
-              </div>
-            )}
-            {(profileStatus === "profile_incomplete" || profileStatus === "ready_for_submission") && (
-              <Button size="sm" onClick={() => setLocation("/pujari/onboarding")}>Complete Profile</Button>
-            )}
-          </CardContent>
-        </Card>
-        {(profileStatus === "profile_incomplete" || !pujariProfile?.profile_submitted_at) && (
+        {(profileStatus === "profile_incomplete" || profileStatus === "ready_for_submission") &&
+          !pujariProfile?.profile_submitted_at && (
           <Card className="border-primary/30 bg-orange-50">
             <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm">{t("pujari.profile.prompt")}</p>

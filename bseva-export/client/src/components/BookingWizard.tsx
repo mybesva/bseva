@@ -31,6 +31,16 @@ import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -101,6 +111,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [submitting, setSubmitting] = useState(false);
   const [includeSamagri, setIncludeSamagri] = useState(false);
   const [includeAlankaram, setIncludeAlankaram] = useState(false);
+  const [addonConfirm, setAddonConfirm] = useState<null | "samagri" | "alankaram">(null);
   const [wallet, setWallet] = useState<{ balance?: number; wallet?: { balance_paise: number } } | null>(null);
   const [quote, setQuote] = useState<any>(null);
   const [nearby, setNearby] = useState<any[]>([]);
@@ -152,88 +163,152 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
   const samagriPrice = Number(addonPrices?.samagri || quote?.samagriListPrice || 0);
   const alankaramPrice = Number(addonPrices?.alankaram || quote?.alankaramListPrice || 0);
-  // Admin per-puja flags + prices control what customers see.
-  const showSamagriOpt = Boolean(addonPrices?.samagriAvailable) && samagriPrice > 0;
-  const showAlankaramOpt = Boolean(addonPrices?.alankaramAvailable) && alankaramPrice > 0;
+
+  // Always offer Samagri & Alankaram on every puja (customer opt-in).
+  function requestAddon(kind: "samagri" | "alankaram", checked: boolean) {
+    if (!checked) {
+      if (kind === "samagri") setIncludeSamagri(false);
+      else setIncludeAlankaram(false);
+      return;
+    }
+    setAddonConfirm(kind);
+  }
+
+  function confirmAddon() {
+    if (addonConfirm === "samagri") setIncludeSamagri(true);
+    if (addonConfirm === "alankaram") setIncludeAlankaram(true);
+    setAddonConfirm(null);
+  }
 
   function AddonOptionsCard() {
-    if (!showSamagriOpt && !showAlankaramOpt) return null;
     return (
-      <Card className="border-dashed border-[#F7931E]/60 bg-orange-50/40">
-        <CardContent className="p-5 space-y-4">
-          <div>
-            <p className="font-medium text-foreground">
-              Optional — {[showSamagriOpt && "Samagri", showAlankaramOpt && "Alankaram"].filter(Boolean).join(" & ")}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Tick if you want the pujari to bring these for you. You reimburse the pujari from this booking
-              payment. Skip both if you will arrange yourself.
-            </p>
-          </div>
-          {showSamagriOpt && (
-            <label className="flex items-start gap-3 rounded-md border bg-card p-3 cursor-pointer hover:bg-muted/40">
+      <>
+        <Card className="border-dashed border-primary/50 bg-primary/5">
+          <CardContent className="p-5 space-y-4">
+            <div>
+              <p className="font-semibold text-foreground">Samagri &amp; Alankaram (optional)</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Tick if you want the pujari to arrange these for you. You will reimburse the pujari.
+                Leave unchecked if you will arrange yourself.
+              </p>
+            </div>
+            <label
+              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                includeSamagri ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"
+              }`}
+            >
               <Checkbox
                 checked={includeSamagri}
-                onCheckedChange={(v) => setIncludeSamagri(!!v)}
+                onCheckedChange={(v) => requestAddon("samagri", !!v)}
                 className="mt-0.5"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between gap-2">
                   <span className="font-medium">Samagri kit</span>
-                  <span className="font-semibold text-[#F7931E] shrink-0">
-                    ₹{(samagriPrice / 100).toLocaleString("en-IN")}
+                  <span className="font-semibold text-primary shrink-0">
+                    {samagriPrice > 0
+                      ? `₹${(samagriPrice / 100).toLocaleString("en-IN")}`
+                      : "Reimbursable"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Puja materials — pujari brings them; reimbursed to pujari.
+                  Puja materials — pujari will get them for you; you reimburse the pujari.
                 </p>
+                {includeSamagri && (
+                  <p className="text-xs font-semibold text-primary mt-1">
+                    Selected — pujari will arrange Samagri (reimbursement to pujari).
+                  </p>
+                )}
               </div>
             </label>
-          )}
-          {showAlankaramOpt && (
-            <label className="flex items-start gap-3 rounded-md border bg-card p-3 cursor-pointer hover:bg-muted/40">
+            <label
+              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                includeAlankaram ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"
+              }`}
+            >
               <Checkbox
                 checked={includeAlankaram}
-                onCheckedChange={(v) => setIncludeAlankaram(!!v)}
+                onCheckedChange={(v) => requestAddon("alankaram", !!v)}
                 className="mt-0.5"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between gap-2">
                   <span className="font-medium">Alankaram</span>
-                  <span className="font-semibold text-[#F7931E] shrink-0">
-                    ₹{(alankaramPrice / 100).toLocaleString("en-IN")}
+                  <span className="font-semibold text-primary shrink-0">
+                    {alankaramPrice > 0
+                      ? `₹${(alankaramPrice / 100).toLocaleString("en-IN")}`
+                      : "Reimbursable"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Flowers / decoration — pujari brings them; reimbursed to pujari.
+                  Flowers / decoration — pujari will get them for you; you reimburse the pujari.
                 </p>
+                {includeAlankaram && (
+                  <p className="text-xs font-semibold text-primary mt-1">
+                    Selected — pujari will arrange Alankaram (reimbursement to pujari).
+                  </p>
+                )}
               </div>
             </label>
-          )}
-          {(includeSamagri || includeAlankaram) && (
-            <div className="text-sm border-t pt-3 space-y-1">
-              {includeSamagri && (
-                <div className="flex justify-between">
-                  <span>Samagri (reimbursement)</span>
-                  <span>₹{(samagriPrice / 100).toLocaleString("en-IN")}</span>
+            {(includeSamagri || includeAlankaram) && (
+              <div className="text-sm border-t pt-3 space-y-1">
+                {includeSamagri && (
+                  <div className="flex justify-between">
+                    <span>Samagri (reimbursement to pujari)</span>
+                    <span>
+                      {samagriPrice > 0
+                        ? `₹${(samagriPrice / 100).toLocaleString("en-IN")}`
+                        : "As arranged"}
+                    </span>
+                  </div>
+                )}
+                {includeAlankaram && (
+                  <div className="flex justify-between">
+                    <span>Alankaram (reimbursement to pujari)</span>
+                    <span>
+                      {alankaramPrice > 0
+                        ? `₹${(alankaramPrice / 100).toLocaleString("en-IN")}`
+                        : "As arranged"}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between font-semibold">
+                  <span>Updated total</span>
+                  <span className="text-primary">
+                    ₹{(Number(bill.totalAmount || 0) / 100).toLocaleString("en-IN")}
+                  </span>
                 </div>
-              )}
-              {includeAlankaram && (
-                <div className="flex justify-between">
-                  <span>Alankaram (reimbursement)</span>
-                  <span>₹{(alankaramPrice / 100).toLocaleString("en-IN")}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-semibold">
-                <span>Updated total</span>
-                <span className="text-[#F7931E]">
-                  ₹{(Number(bill.totalAmount || 0) / 100).toLocaleString("en-IN")}
-                </span>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+
+        <AlertDialog open={!!addonConfirm} onOpenChange={(o) => !o && setAddonConfirm(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {addonConfirm === "alankaram" ? "Alankaram by pujari" : "Samagri by pujari"}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2 text-left">
+                <span className="block">
+                  If you continue, the <strong>pujari will get{" "}
+                  {addonConfirm === "alankaram" ? "Alankaram (flowers / decoration)" : "Samagri (puja materials)"}{" "}
+                  for you</strong>.
+                </span>
+                <span className="block">
+                  You need to <strong>reimburse the pujari</strong> for this cost (included in booking when priced,
+                  or settled with the pujari as arranged).
+                </span>
+                <span className="block">Click OK to confirm, or Cancel to arrange it yourself.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmAddon}>OK</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
     );
   }
 

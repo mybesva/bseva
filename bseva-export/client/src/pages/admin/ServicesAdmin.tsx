@@ -145,6 +145,28 @@ export default function ServicesAdmin() {
     setRows(await api<any[]>("/admin/services"));
   }
 
+  function isAvailable(s: any) {
+    return (
+      s.active !== false &&
+      s.pricing_status === "priced" &&
+      s.standard_price_paise != null &&
+      (s.bookable === undefined ? true : Boolean(s.bookable))
+    );
+  }
+
+  async function toggleAvailability(s: any, available: boolean) {
+    try {
+      await api(`/admin/services/${s.id}/availability`, {
+        method: "PATCH",
+        body: JSON.stringify({ available }),
+      });
+      toast.success(available ? `${s.name} is now Available` : `${s.name} set to Coming Soon`);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message || "Could not update availability");
+    }
+  }
+
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
     void loadCategories().catch((e) => toast.error(e.message));
@@ -1290,106 +1312,147 @@ export default function ServicesAdmin() {
               <TableHead>Name</TableHead>
               <TableHead>Categories</TableHead>
               <TableHead>Standard</TableHead>
-              <TableHead>Pricing</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead>Popular</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Featured</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell>
-                  <button
-                    type="button"
-                    className="block w-14 h-10 rounded overflow-hidden border bg-muted shrink-0"
-                    onClick={() => openEdit(s)}
-                    title="Edit image"
-                  >
-                    <img
-                      src={serviceImageUrl(s)}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{s.name}</div>
-                  <div className="text-muted-foreground text-xs">{s.slug}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1 max-w-[12rem]">
-                    {(s.categories || []).map((c: { slug: string; name: string }) => (
-                      <Badge key={c.slug} variant="outline" className="text-xs">
-                        {c.name}
-                      </Badge>
-                    ))}
-                    {(!s.categories || s.categories.length === 0) && (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {s.standard_price_paise != null ? rupees(s.standard_price_paise) : "—"}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={s.pricing_status === "priced" ? "default" : "secondary"}>
-                    {s.pricing_status === "priced" ? "priced" : "awaiting"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={s.active ? "default" : "secondary"}>{s.active ? "yes" : "no"}</Badge>
-                </TableCell>
-                <TableCell>{s.is_popular ? "yes" : "—"}</TableCell>
-                <TableCell>
-                  {s.is_featured_home ? (s.homepage_rank != null ? `#${s.homepage_rank}` : "yes") : "—"}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2 justify-end">
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(s)}>
-                      <Pencil size={14} />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="gap-1.5"
-                      onClick={() => openEdit(s)}
-                      title="Replace image"
-                    >
-                      <ImageIcon size={14} />
-                      Image
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={async () => {
-                        if (!confirm(`Remove ${s.name}?`)) return;
-                        try {
-                          const out = await api<{ deactivated?: boolean }>(`/admin/services/${s.id}`, {
-                            method: "DELETE",
-                          });
-                          toast.success(out.deactivated ? "Hidden (has bookings)" : "Deleted");
-                          await load();
-                        } catch (e: any) {
-                          toast.error(e.message);
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                  No services yet. Add your first puja service.
-                </TableCell>
-              </TableRow>
-            )}
+            {(() => {
+              const available = rows.filter((s) => isAvailable(s));
+              const upcoming = rows.filter((s) => !isAvailable(s));
+              const renderRow = (s: any) => {
+                const avail = isAvailable(s);
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell>
+                      <button
+                        type="button"
+                        className="block w-14 h-10 rounded overflow-hidden border bg-muted shrink-0"
+                        onClick={() => openEdit(s)}
+                        title="Edit image"
+                      >
+                        <img src={serviceImageUrl(s)} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{s.name}</div>
+                      <div className="text-muted-foreground text-xs">{s.slug}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[12rem]">
+                        {(s.categories || []).map((c: { slug: string; name: string }) => (
+                          <Badge key={c.slug} variant="outline" className="text-xs">
+                            {c.name}
+                          </Badge>
+                        ))}
+                        {(!s.categories || s.categories.length === 0) && (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {s.standard_price_paise != null ? rupees(s.standard_price_paise) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1.5 items-start">
+                        <Badge
+                          className={
+                            avail
+                              ? "bg-emerald-600 text-white border-0"
+                              : "bg-amber-500 text-white border-0"
+                          }
+                        >
+                          {avail ? "Available" : "Coming Soon"}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={Boolean(s.is_featured_home) && avail}
+                          title={
+                            s.is_featured_home && avail
+                              ? "Top 10 / featured pujas must stay Available"
+                              : undefined
+                          }
+                          onClick={() => void toggleAvailability(s, !avail)}
+                        >
+                          {avail ? "Set Coming Soon" : "Set Available"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {s.is_featured_home ? (s.homepage_rank != null ? `#${s.homepage_rank}` : "yes") : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(s)}>
+                          <Pencil size={14} />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="gap-1.5"
+                          onClick={() => openEdit(s)}
+                          title="Replace image"
+                        >
+                          <ImageIcon size={14} />
+                          Image
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={async () => {
+                            if (!confirm(`Remove ${s.name}?`)) return;
+                            try {
+                              const out = await api<{ deactivated?: boolean }>(`/admin/services/${s.id}`, {
+                                method: "DELETE",
+                              });
+                              toast.success(out.deactivated ? "Hidden (has bookings)" : "Deleted");
+                              await load();
+                            } catch (e: any) {
+                              toast.error(e.message);
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              };
+              if (rows.length === 0) {
+                return (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No services yet. Add your first puja service.
+                    </TableCell>
+                  </TableRow>
+                );
+              }
+              return (
+                <>
+                  {available.length > 0 && (
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableCell colSpan={7} className="font-semibold text-foreground py-2">
+                        Available pujas ({available.length})
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {available.map(renderRow)}
+                  {upcoming.length > 0 && (
+                    <TableRow className="bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-50/80 dark:hover:bg-amber-950/30">
+                      <TableCell colSpan={7} className="font-semibold text-amber-800 dark:text-amber-300 py-2">
+                        Upcoming services — Coming Soon ({upcoming.length})
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {upcoming.map(renderRow)}
+                </>
+              );
+            })()}
           </TableBody>
         </Table>
       </div>

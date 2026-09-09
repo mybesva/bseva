@@ -42,6 +42,7 @@ function parseList(v: unknown): string[] {
 }
 
 function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; title: string }[]; onChanged: () => Promise<void> }) {
+  const [, setLocation] = useLocation();
   const [level, setLevel] = useState(Number(u.approved_level || u.requested_level || 1));
   const [saving, setSaving] = useState(false);
   const specializations = parseList(u.specializations);
@@ -68,7 +69,18 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
 
   return (
     <TableRow>
-      <TableCell>{u.name}</TableCell>
+      <TableCell>
+        <button
+          type="button"
+          className="text-left font-medium text-primary hover:underline"
+          onClick={() => setLocation(adminPath(`/pujaris/${u.id}`))}
+        >
+          {u.name}
+        </button>
+        <div className="text-xs text-muted-foreground mt-0.5">
+          {u.profile_completion_percentage != null ? `${u.profile_completion_percentage}% profile` : ""}
+        </div>
+      </TableCell>
       <TableCell>{u.email}</TableCell>
       <TableCell>
         <div className="flex flex-col gap-2 min-w-[220px]">
@@ -113,6 +125,13 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
       <TableCell><Badge>{u.verification_status}</Badge></TableCell>
       <TableCell><Badge variant={u.blocked ? "destructive" : "secondary"}>{u.blocked ? "Blocked" : "Active"}</Badge></TableCell>
       <TableCell className="space-x-2 whitespace-nowrap">
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setLocation(adminPath(`/pujaris/${u.id}`))}
+        >
+          Profile
+        </Button>
         <Button
           size="sm"
           onClick={async () => {

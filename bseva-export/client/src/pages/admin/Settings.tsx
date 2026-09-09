@@ -33,7 +33,7 @@ const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?
     hint: "When off, customers only see in-person booking. Super Admin only.",
   },
   { key: "pujari_share_percent", label: "Pujari share %", type: "number" },
-  { key: "pujari_settlement_days", label: "Settlement hold days", type: "number" },
+  { key: "pujari_settlement_days", label: "Settlement hold days (auto every N days ≈ 2 weeks)", type: "number" },
   { key: "puja_start_otp_before_minutes", label: "OTP available minutes before start", type: "number" },
   { key: "pujari_full_booking_details_before_hours", label: "Full booking details before (hours)", type: "number" },
   { key: "weekend_surge_percent", label: "Weekend surge %", type: "number" },
@@ -73,6 +73,51 @@ const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?
     label: "Reassignment distance rings (km)",
     type: "json",
     hint: "First number is the default nearby radius (e.g. 10). Reassign shows within that distance first, then other available pujaris farther away.",
+  },
+];
+
+const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: string; group: "customer" | "pujari" }[] = [
+  {
+    key: "customer_cancel_fee_over_48h_percent",
+    label: "Customer fee % when cancelling >48h before",
+    type: "number",
+    group: "customer",
+    hint: "Default 10. Refund = 100 − this %.",
+  },
+  {
+    key: "customer_cancel_fee_24_48h_percent",
+    label: "Customer fee % when cancelling 24–48h before",
+    type: "number",
+    group: "customer",
+    hint: "Default 50.",
+  },
+  {
+    key: "customer_cancel_min_hours",
+    label: "Customer minimum hours before cancel blocked",
+    type: "number",
+    group: "customer",
+    hint: "Default 24. Below this, customer cannot cancel.",
+  },
+  {
+    key: "pujari_cancel_fee_over_48h_percent",
+    label: "Pujari penalty % when cancelling >48h before",
+    type: "number",
+    group: "pujari",
+    hint: "Charged to pujari wallet. Customer gets full refund.",
+  },
+  {
+    key: "pujari_cancel_fee_24_48h_percent",
+    label: "Pujari penalty % when cancelling 24–48h before",
+    type: "number",
+    group: "pujari",
+    hint: "Default 50. Charged to pujari wallet.",
+  },
+  {
+    key: "pujari_cancel_min_hours",
+    label: "Pujari minimum hours before cancel blocked",
+    type: "number",
+    group: "pujari",
+    hint: "Default 24. Below this, pujari cannot cancel an accepted booking.",
   },
 ];
 
@@ -157,7 +202,7 @@ export default function Settings() {
       const cfg = await api<Record<string, unknown>>("/admin/config");
       setPlatform(cfg || {});
       const draft: Record<string, string | boolean> = {};
-      for (const item of PLATFORM_KEYS) {
+      for (const item of [...PLATFORM_KEYS, ...CANCEL_KEYS]) {
         const v = cfg?.[item.key];
         if (item.type === "boolean") draft[item.key] = Boolean(v);
         else if (item.type === "json") draft[item.key] = numberListToText(v);
@@ -339,6 +384,60 @@ export default function Settings() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="">Cancellation charges</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Time-based fees for customer and pujari cancellations. Values are percentages of booking total.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {(
+              [
+                { id: "customer" as const, title: "Customer cancellation" },
+                { id: "pujari" as const, title: "Pujari cancellation (accepted bookings)" },
+              ] as const
+            ).map((section) => (
+              <div key={section.id} className="space-y-4 rounded-lg border border-border p-4">
+                <h3 className="font-semibold text-foreground">{section.title}</h3>
+                {CANCEL_KEYS.filter((item) => item.group === section.id).map((item) => {
+                  const dirty =
+                    String(platformDraft[item.key] ?? "") !== String(platform[item.key] ?? "");
+                  return (
+                    <div
+                      key={item.key}
+                      className="flex flex-col sm:flex-row sm:items-end gap-3 border-b border-border/60 pb-4 last:border-0 last:pb-0"
+                    >
+                      <div className="flex-1 space-y-1">
+                        <Label>{item.label}</Label>
+                        {item.hint && <p className="text-xs text-muted-foreground">{item.hint}</p>}
+                        <Input
+                          type="number"
+                          min={0}
+                          max={item.key.includes("percent") ? 100 : undefined}
+                          value={String(platformDraft[item.key] ?? "")}
+                          onChange={(e) =>
+                            setPlatformDraft((prev) => ({ ...prev, [item.key]: e.target.value }))
+                          }
+                        />
+                      </div>
+                      {dirty && (
+                        <Button
+                          size="sm"
+                          disabled={savingKey === item.key}
+                          onClick={() => void savePlatformKey(item.key, item.type)}
+                        >
+                          {savingKey === item.key ? "Saving…" : "Save"}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </CardContent>
         </Card>
 

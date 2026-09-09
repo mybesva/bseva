@@ -182,7 +182,13 @@ export default function Home() {
                     onClick={() => setLocation(`/services/${s.slug}`)}
                     className="cursor-pointer"
                   >
-                    <ServiceCard title={s.name} description={desc} image={img} icon={<Icon size={24} />} />
+                    <ServiceCard
+                      title={s.name}
+                      description={desc}
+                      image={img}
+                      icon={<Icon size={24} />}
+                      comingSoon={!s.bookable}
+                    />
                   </div>
                 );
               })}

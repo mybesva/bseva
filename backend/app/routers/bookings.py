@@ -384,12 +384,12 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
               base_price_paise, peak_fee_paise, platform_fee_paise, pujari_payable_paise,
               gst_percent, gst_amount_paise, total_paise, terms_accepted, special_instructions,
               main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
-              pujari_reimbursement_paise
+              pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested
             ) VALUES (
               CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
               :d, :st, :et, :loc, :addr, :lat, :lng, :meet, 'pending_acceptance', 'paid', 'pending', 'not_applicable',
               :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, :instr,
-              :mainc, :samc, :alanc, :foodc, :reimb
+              :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq
             )
             """
         ),
@@ -422,6 +422,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             "alanc": int(bill.get("alankaram") or 0),
             "foodc": int(bill.get("foodPrasadam") or 0),
             "reimb": int(bill.get("pujariReimbursement") or 0),
+            "samreq": bool(body.include_samagri),
+            "alanreq": bool(body.include_alankaram),
+            "foodreq": bool(body.include_food),
         },
     )
     try:
@@ -463,6 +466,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             {"id": user["id"]},
         ).mappings().first()
         lang = customer_preferred_language(db, str(user["id"]))
+        # Only emphasize Samagri checklist when customer opted in for pujari-arranged items
+        opted_samagri = bool(body.include_samagri) or int(bill.get("samagri") or 0) > 0
+        opted_alan = bool(body.include_alankaram) or int(bill.get("alankaram") or 0) > 0
         if cust and cust.get("email"):
             email_result = send_booking_preparation_email(
                 to=str(cust["email"]),
@@ -472,7 +478,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                 service_name=str(svc.get("name") or "Puja"),
                 booking_date=str(body.booking_date),
                 start_time=str(body.start_time),
-                preparation=prep_view,
+                preparation=prep_view if (opted_samagri or opted_alan) else {**prep_view, "verified": False, "skip_samagri_cta": True},
                 language=lang,
                 from_addr=str(_gs(db, "email_from_accounts", "accounts@b-seva.com")),
             )
@@ -575,12 +581,15 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                           booking_date, start_time, end_time, location_label, address, latitude, longitude,
                           status, payment_status, settlement_status, rating_status,
                           base_price_paise, peak_fee_paise, platform_fee_paise, pujari_payable_paise,
-                          gst_percent, gst_amount_paise, total_paise, terms_accepted, recurring_series_id
+                          gst_percent, gst_amount_paise, total_paise, terms_accepted, recurring_series_id,
+                          main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
+                          pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested
                         ) VALUES (
                           CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
                           :d, :st, :et, :loc, :addr, :lat, :lng,
                           'pending', 'pending', 'not_applicable', 'not_applicable',
-                          :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, CAST(:rs AS uuid)
+                          :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, CAST(:rs AS uuid),
+                          :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq
                         )
                         """
                     ),
@@ -607,6 +616,14 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                         "gsta": c_gsta,
                         "total": c_total,
                         "rs": series_id,
+                        "mainc": int(child_bill.get("mainPuja") or child_bill["basePrice"]),
+                        "samc": int(child_bill.get("samagri") or 0),
+                        "alanc": int(child_bill.get("alankaram") or 0),
+                        "foodc": int(child_bill.get("foodPrasadam") or 0),
+                        "reimb": int(child_bill.get("pujariReimbursement") or 0),
+                        "samreq": bool(body.include_samagri),
+                        "alanreq": bool(body.include_alankaram),
+                        "foodreq": bool(body.include_food),
                     },
                 )
             if skipped:
@@ -729,24 +746,86 @@ def update_status(booking_id: str, status: str = Query(...), user=Depends(requir
     return {"ok": True}
 
 
+def _cancel_actor(user: dict, booking: dict) -> str:
+    role = user.get("role") or ""
+    if role in ("admin", "super_admin"):
+        return "customer"  # admin cancel uses customer fee schedule for refund math
+    if str(booking.get("customer_id")) == str(user.get("id")):
+        return "customer"
+    if role == "pujari" and str(booking.get("pujari_id")) == str(user.get("id")):
+        return "pujari"
+    raise HTTPException(403, "Not allowed")
+
+
+@router.get("/bookings/{booking_id}/cancel-preview")
+def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    actor = _cancel_actor(user, b)
+    if b["status"] not in ("pending", "pending_acceptance", "confirmed"):
+        raise HTTPException(400, f"Cannot cancel a booking in status {b['status']}")
+    hours = hours_until(b["booking_date"], b["start_time"])
+    policy = cancel_policy(hours, db=db, actor=actor)
+    total = int(b["total_paise"] or 0)
+    paid = b["payment_status"] == "paid"
+    fee = int(round(total * policy["fee_percent"] / 100)) if policy["allowed"] and paid else 0
+    if actor == "pujari":
+        # Pujari pays time-based penalty; customer is refunded in full when paid
+        refund = total if (policy["allowed"] and paid) else 0
+    else:
+        refund = int(round(total * policy["refund_percent"] / 100)) if (policy["allowed"] and paid) else 0
+        if not paid:
+            fee, refund = 0, 0
+    return {
+        "ok": True,
+        "actor": actor,
+        "allowed": policy["allowed"],
+        "policy": policy["policy"],
+        "hours_until": policy.get("hours"),
+        "min_hours": policy.get("min_hours"),
+        "fee_percent": policy["fee_percent"],
+        "refund_percent": policy["refund_percent"] if actor == "customer" else (100 if paid else 0),
+        "fee_paise": fee,
+        "refund_paise": refund,
+        "total_paise": total,
+        "payment_status": b["payment_status"],
+        "message": (
+            None
+            if policy["allowed"]
+            else f"Cancellation is not allowed less than {int(policy.get('min_hours') or 24)} hours before the puja."
+        ),
+    }
+
+
 @router.post("/bookings/{booking_id}/cancel")
 def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(current_user), db: Session = Depends(get_db)):
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    if user["role"] != "admin" and user["role"] != "super_admin" and str(b["customer_id"]) != str(user["id"]):
-        raise HTTPException(403, "Not allowed")
+    actor = _cancel_actor(user, b)
     if b["status"] == "cancelled":
         raise HTTPException(400, "Already cancelled")
-    policy = cancel_policy(hours_until(b["booking_date"], b["start_time"]))
+    if b["status"] not in ("pending", "pending_acceptance", "confirmed"):
+        raise HTTPException(400, f"Cannot cancel a booking in status {b['status']}")
+    policy = cancel_policy(hours_until(b["booking_date"], b["start_time"]), db=db, actor=actor)
     if not policy["allowed"]:
-        raise HTTPException(400, "Cancellation is not allowed less than 24 hours before the booking")
-    total = int(b["total_paise"])
-    fee = int(round(total * policy["fee_percent"] / 100))
-    refund = int(round(total * policy["refund_percent"] / 100))
-    # Unpaid children: cancel with no refund
-    if b["payment_status"] != "paid":
-        fee, refund = 0, 0
+        raise HTTPException(
+            400,
+            f"Cancellation is not allowed less than {int(policy.get('min_hours') or 24)} hours before the booking",
+        )
+    total = int(b["total_paise"] or 0)
+    paid = b["payment_status"] == "paid"
+    fee = int(round(total * policy["fee_percent"] / 100)) if paid else 0
+    if actor == "pujari":
+        refund = total if paid else 0
+    else:
+        refund = int(round(total * policy["refund_percent"] / 100)) if paid else 0
+        if not paid:
+            fee, refund = 0, 0
+    reason_full = (reason or "").strip() or None
+    if actor == "pujari":
+        reason_full = f"[pujari] {reason_full}" if reason_full else "[pujari]"
     db.execute(
         text(
             """
@@ -755,7 +834,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             WHERE id = CAST(:id AS uuid)
             """
         ),
-        {"p": policy["policy"], "fee": fee, "ref": refund, "reason": reason, "id": booking_id},
+        {"p": f"{actor}:{policy['policy']}", "fee": fee, "ref": refund, "reason": reason_full, "id": booking_id},
     )
     db.execute(
         text(
@@ -764,12 +843,38 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             VALUES (CAST(:id AS uuid), :pol, :pct, :fee, :ref, :reason)
             """
         ),
-        {"id": booking_id, "pol": policy["policy"], "pct": policy["fee_percent"], "fee": fee, "ref": refund, "reason": reason},
+        {
+            "id": booking_id,
+            "pol": f"{actor}:{policy['policy']}",
+            "pct": policy["fee_percent"],
+            "fee": fee,
+            "ref": refund,
+            "reason": reason_full,
+        },
     )
     if refund:
         apply_wallet(db, str(b["customer_id"]), refund, "credit", f"Refund {b['booking_number']}", booking_id)
+    if actor == "pujari" and fee > 0 and b.get("pujari_id"):
+        try:
+            apply_wallet(
+                db,
+                str(b["pujari_id"]),
+                -fee,
+                "debit",
+                f"Cancel penalty {b['booking_number']}",
+                booking_id,
+            )
+        except ValueError as e:
+            db.rollback()
+            raise HTTPException(400, f"Pujari cancel fee could not be deducted: {e}") from e
     db.commit()
-    return {"ok": True, "fee_paise": fee, "refund_paise": refund, "policy": policy["policy"]}
+    return {
+        "ok": True,
+        "actor": actor,
+        "fee_paise": fee,
+        "refund_paise": refund,
+        "policy": policy["policy"],
+    }
 
 
 @router.post("/recurring/{series_id}/cancel")

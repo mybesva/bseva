@@ -7,17 +7,25 @@ interface ServiceCardProps {
   description: string;
   image: string;
   icon?: React.ReactNode;
+  comingSoon?: boolean;
 }
 
-export default function ServiceCard({ title, description, image, icon }: ServiceCardProps) {
+export default function ServiceCard({ title, description, image, icon, comingSoon }: ServiceCardProps) {
   return (
-    <Card className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 bg-card h-full flex flex-col">
+    <Card className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 bg-card h-full flex flex-col relative">
+      {comingSoon && (
+        <div className="absolute top-0 right-0 z-30">
+          <div className="bg-amber-500 text-white font-extrabold text-[11px] sm:text-xs uppercase tracking-wider shadow-lg px-3 py-1.5 rounded-bl-lg">
+            Coming Soon
+          </div>
+        </div>
+      )}
       <div className="relative h-48 overflow-hidden">
-        <div className="absolute inset-0 bg-sidebar/20 group-hover:bg-sidebar/0 transition-colors z-10" />
-        <img 
-          src={image} 
-          alt={title} 
-          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+        <div className={`absolute inset-0 transition-colors z-10 ${comingSoon ? "bg-amber-950/35" : "bg-sidebar/20 group-hover:bg-sidebar/0"}`} />
+        <img
+          src={image}
+          alt={title}
+          className={`w-full h-full object-cover transform transition-transform duration-700 ${comingSoon ? "grayscale-[40%] opacity-90" : "group-hover:scale-110"}`}
         />
         {icon && (
           <div className="absolute -bottom-6 right-6 w-12 h-12 bg-card rounded-full shadow-lg flex items-center justify-center text-primary z-20 group-hover:scale-110 transition-transform">
@@ -25,23 +33,34 @@ export default function ServiceCard({ title, description, image, icon }: Service
           </div>
         )}
       </div>
-      
+
       <CardHeader className="pt-10 pb-2">
         <h3 className="text-h3 text-foreground group-hover:text-primary transition-colors">
           {title}
         </h3>
       </CardHeader>
-      
+
       <CardContent className="flex-1">
         <p className="text-muted-foreground text-sm leading-relaxed">
           {description}
         </p>
+        {comingSoon && (
+          <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
+            This puja will be available for booking soon.
+          </p>
+        )}
       </CardContent>
-      
+
       <CardFooter className="pt-0 pb-6">
-        <Button variant="link" className="p-0 h-auto text-primary font-bold group-hover:translate-x-1 transition-transform">
-          Book Now <ArrowRight size={16} className="ml-1" />
-        </Button>
+        {comingSoon ? (
+          <span className="text-sm font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+            Coming Soon
+          </span>
+        ) : (
+          <Button variant="link" className="p-0 h-auto text-primary font-bold group-hover:translate-x-1 transition-transform">
+            Book Now <ArrowRight size={16} className="ml-1" />
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

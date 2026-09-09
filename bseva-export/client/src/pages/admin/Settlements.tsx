@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ function paise(n: number | null | undefined) {
 export default function AdminSettlements() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [holdDays, setHoldDays] = useState(14);
   const [active, setActive] = useState<any | null>(null);
   const [reason, setReason] = useState("");
   const [ref, setRef] = useState("");
@@ -38,7 +40,13 @@ export default function AdminSettlements() {
   async function load() {
     setLoading(true);
     try {
-      setRows(await api<any[]>("/settlements"));
+      const [list, cfg] = await Promise.all([
+        api<any[]>("/settlements"),
+        api<Record<string, unknown>>("/admin/config").catch(() => ({})),
+      ]);
+      setRows(list || []);
+      const days = Number(cfg?.pujari_settlement_days ?? 14);
+      if (Number.isFinite(days) && days > 0) setHoldDays(days);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -66,7 +74,7 @@ export default function AdminSettlements() {
           payment_reference: ref.trim() || null,
         }),
       });
-      toast.success("Settlement marked settled");
+      toast.success("Settlement marked settled (override)");
       setActive(null);
       setReason("");
       setRef("");
@@ -78,9 +86,39 @@ export default function AdminSettlements() {
     }
   }
 
+  const pending = rows.filter((s) => s.status === "pending" || s.status === "eligible").length;
+  const settled = rows.filter((s) => s.status === "settled").length;
+
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-6">Settlements</h1>
+      <h1 className="text-h1 mb-2">Settlements</h1>
+      <p className="text-sm text-muted-foreground mb-4 max-w-3xl">
+        Pujari earnings settle automatically every <strong>{holdDays} days</strong> (about 2 weeks) after a
+        completed puja. When the due date arrives, the pujari wallet is credited without manual action.
+        Use <strong>Settle / override</strong> only for early payout or special cases.
+      </p>
+
+      <div className="grid sm:grid-cols-3 gap-3 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Auto cycle</p>
+            <p className="text-lg font-semibold text-primary">Every {holdDays} days</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Awaiting cycle</p>
+            <p className="text-lg font-semibold">{pending}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Settled</p>
+            <p className="text-lg font-semibold">{settled}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : rows.length === 0 ? (
@@ -102,9 +140,13 @@ export default function AdminSettlements() {
             <TableBody>
               {rows.map((s) => (
                 <TableRow key={s.id}>
-                  <TableCell className="font-mono text-xs">{String(s.booking_id ||"").slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-xs">{String(s.booking_id || "").slice(0, 8)}</TableCell>
                   <TableCell>
-                    <Badge variant={s.status === "settled" ? "default" : "secondary"}>{s.status}</Badge>
+                    <Badge variant={s.status === "settled" ? "default" : "secondary"}>
+                      {s.status}
+                      {s.status === "settled" && s.payment_reference === "AUTO_BIWEEKLY" ? " · auto" : ""}
+                      {s.status === "settled" && s.override_flag ? " · override" : ""}
+                    </Badge>
                   </TableCell>
                   <TableCell>{s.due_date || "—"}</TableCell>
                   <TableCell>{paise(s.customer_payment_paise)}</TableCell>
@@ -127,11 +169,12 @@ export default function AdminSettlements() {
       <Dialog open={!!active} onOpenChange={(o) => !o && setActive(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Mark settlement paid</DialogTitle>
+            <DialogTitle>Override — settle early</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Credits pujari wallet with {paise(active?.settlement_amount_paise)} and marks settled.
+              Normally this settles automatically on the due date ({active?.due_date || "—"}). Override credits the
+              pujari wallet now with {paise(active?.settlement_amount_paise)}.
             </p>
             <div className="space-y-1">
               <Label>Reason</Label>
@@ -147,7 +190,7 @@ export default function AdminSettlements() {
               Cancel
             </Button>
             <Button onClick={() => void settle()} disabled={saving}>
-              {saving ? "Saving…" : "Confirm"}
+              {saving ? "Saving…" : "Confirm override"}
             </Button>
           </DialogFooter>
         </DialogContent>

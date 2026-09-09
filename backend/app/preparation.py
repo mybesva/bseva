@@ -82,7 +82,7 @@ def _section_for(category: str, provided_by: str, samagri_purchased: bool) -> st
         # Kit not purchased — customer must arrange equivalent items
         return SECTION_CUSTOMER
     if prov == PROVIDER_PUJARI:
-        return SECTION_INCLUDED
+        return SECTION_INCLUDED if samagri_purchased else SECTION_CUSTOMER
     return SECTION_CUSTOMER
 
 
@@ -171,11 +171,10 @@ def load_service_preparation_master(db: Session, service_id: str, lang: str) -> 
 
 
 def package_flags_from_booking(booking: dict) -> dict[str, bool]:
-    # Component charges > 0 or provider reimbursable/included imply purchase intent
-    sam = int(booking.get("samagri_charge_paise") or 0) > 0
-    alan = int(booking.get("alankaram_charge_paise") or 0) > 0
-    food = int(booking.get("food_charge_paise") or 0) > 0
-    # Also treat samagri_provider included with active package as purchased when charge recorded in base historically
+    # Opt-in via charge > 0 OR explicit request flags (when price was 0 but customer asked)
+    sam = int(booking.get("samagri_charge_paise") or 0) > 0 or bool(booking.get("samagri_requested"))
+    alan = int(booking.get("alankaram_charge_paise") or 0) > 0 or bool(booking.get("alankaram_requested"))
+    food = int(booking.get("food_charge_paise") or 0) > 0 or bool(booking.get("food_requested"))
     return {"samagri_purchased": sam, "alankaram_purchased": alan, "food_purchased": food}
 
 
@@ -218,8 +217,10 @@ def build_preparation_view(
         if raw.get("customer_provided") and provided_by == PROVIDER_CUSTOMER:
             provided_by = PROVIDER_CUSTOMER
         category = (raw.get("category") or "PUJA_SAMAGRI").upper()
-        # Kit line only relevant when package purchased
+        # Kit / pujari-brought lines only when customer opted into Samagri
         if provided_by == PROVIDER_INCLUDED and not samagri_purchased:
+            continue
+        if provided_by == PROVIDER_PUJARI and not samagri_purchased:
             continue
         section = _section_for(category, provided_by, samagri_purchased)
         name = raw.get("translated_name") or raw.get("item_name_en") or raw.get("name") or "Item"

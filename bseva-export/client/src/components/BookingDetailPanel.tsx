@@ -5,6 +5,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { api, rupees } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -28,6 +38,8 @@ export type BookingDetail = {
   pujari_payable_paise?: number;
   samagri_charge_paise?: number;
   alankaram_charge_paise?: number;
+  samagri_requested?: boolean;
+  alankaram_requested?: boolean;
   food_charge_paise?: number;
   customer_name?: string;
   pujari_name?: string;
@@ -89,6 +101,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
   const [lastPing, setLastPing] = useState<{ latitude?: number; longitude?: number; recorded_at?: string } | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelPreview, setCancelPreview] = useState<any>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -146,7 +164,25 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const status = booking.status;
   const canAccept =
     viewerRole === "pujari" && ["pending", "pending_acceptance"].includes(status);
+  const canCancelBooking =
+    ["pending", "pending_acceptance", "confirmed"].includes(status) &&
+    (viewerRole === "customer" || (viewerRole === "pujari" && status === "confirmed"));
   const canStartOtp = viewerRole === "pujari" && status === "confirmed";
+
+  async function openCancelDialog() {
+    setCancelReason("");
+    setCancelLoading(true);
+    setCancelOpen(true);
+    try {
+      setCancelPreview(await api(`/bookings/${bookingId}/cancel-preview`));
+    } catch (e: any) {
+      setCancelPreview(null);
+      toast.error(e.message || "Could not load cancellation charges");
+      setCancelOpen(false);
+    } finally {
+      setCancelLoading(false);
+    }
+  }
   const canComplete = viewerRole === "pujari" && status === "in_progress";
   const ratingDoneForRole =
     booking.rating_status === "completed" ||
@@ -217,9 +253,34 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           )}
           {booking.preparation ? (
             <div className="col-span-2">
-              <PreparationChecklist preparation={booking.preparation} compact interactive={false} />
+              {viewerRole === "pujari" &&
+              !(
+                Number(booking.samagri_charge_paise || 0) > 0 ||
+                Number(booking.alankaram_charge_paise || 0) > 0 ||
+                Boolean((booking as any).samagri_requested) ||
+                Boolean((booking as any).alankaram_requested)
+              ) ? (
+                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  Customer will arrange Samagri / Alankaram themselves. No pujari purchase or reimbursement for this booking.
+                </div>
+              ) : (
+                <PreparationChecklist
+                  preparation={booking.preparation}
+                  compact
+                  interactive={false}
+                  title={
+                    viewerRole === "pujari"
+                      ? "Samagri / items to arrange (customer requested)"
+                      : "Puja preparation & Samagri"
+                  }
+                />
+              )}
             </div>
-          ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
+          ) : Array.isArray(booking.samagri) &&
+            booking.samagri.length > 0 &&
+            (viewerRole !== "pujari" ||
+              Number(booking.samagri_charge_paise || 0) > 0 ||
+              Boolean((booking as any).samagri_requested)) ? (
             <div className="col-span-2">
               <div className="text-muted-foreground mb-1">Recommended List</div>
               <ul className="list-disc pl-5 space-y-0.5">
@@ -313,59 +374,144 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             >
               {t("detail.accept")}
             </Button>
-            <Button
-              variant="outline"
-              disabled={busy}
-              onClick={() => {
-                const reason = window.prompt("Why are you rejecting this booking? (optional)");
-                if (reason === null) return;
-                void run(
-                  () =>
-                    api(`/bookings/${bookingId}/reject`, {
-                      method: "POST",
-                      body: JSON.stringify({ reason: reason.trim() || null }),
-                    }).then(() => undefined),
-                  "Rejected — admin will reassign this booking",
-                  "rejected"
-                );
-              }}
-            >
+            <Button variant="destructive" disabled={busy} onClick={() => { setRejectReason(""); setRejectOpen(true); }}>
               Reject
             </Button>
           </div>
         </div>
       )}
 
-      {viewerRole === "customer" &&
-        ["pending", "pending_acceptance", "confirmed"].includes(status) && (
-          <div className="rounded-lg border border-border p-3 space-y-2">
-            <p className="text-sm text-muted-foreground">
-              You can cancel this booking (policy applies within 24 hours of the puja time).
-            </p>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                const reason = window.prompt("Reason for cancellation? (optional)");
-                if (reason === null) return;
+      <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-700">Reject this booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rejecting will notify admin to reassign this puja to another pujari. This cannot be undone from your side.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reject-reason">Reason (optional)</Label>
+            <Textarea
+              id="reject-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Not available on this date / outside service area"
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep booking</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() =>
+                void run(
+                  () =>
+                    api(`/bookings/${bookingId}/reject`, {
+                      method: "POST",
+                      body: JSON.stringify({ reason: rejectReason.trim() || null }),
+                    }).then(() => undefined),
+                  "Rejected — admin will reassign this booking",
+                  "rejected"
+                )
+              }
+            >
+              Confirm reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {canCancelBooking && (
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <p className="text-sm text-muted-foreground">
+            {viewerRole === "pujari"
+              ? "You can cancel an accepted booking. Time-based cancellation charges may apply."
+              : "You can cancel this booking. Time-based cancellation charges may apply."}
+          </p>
+          <Button variant="destructive" size="sm" disabled={busy} onClick={() => void openCancelDialog()}>
+            Cancel booking
+          </Button>
+        </div>
+      )}
+
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelLoading
+                ? "Loading charges…"
+                : cancelPreview && !cancelPreview.allowed
+                  ? cancelPreview.message || "Cancellation not allowed at this time."
+                  : "Review the time-based charges below before confirming."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {!cancelLoading && cancelPreview?.allowed && (
+            <div className="text-sm space-y-2 rounded-md border border-border bg-muted/40 p-3">
+              <p>
+                Time until puja: <strong>{cancelPreview.hours_until ?? "—"} hours</strong> (policy:{" "}
+                {cancelPreview.policy})
+              </p>
+              {viewerRole === "pujari" ? (
+                <>
+                  <p>
+                    Cancellation charge for you:{" "}
+                    <strong>
+                      {rupees(Number(cancelPreview.fee_paise || 0))} ({cancelPreview.fee_percent}%)
+                    </strong>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Customer refund: {rupees(Number(cancelPreview.refund_paise || 0))} (full paid amount)
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Cancellation fee:{" "}
+                    <strong>
+                      {rupees(Number(cancelPreview.fee_paise || 0))} ({cancelPreview.fee_percent}%)
+                    </strong>
+                  </p>
+                  <p>
+                    Refund to your wallet: <strong>{rupees(Number(cancelPreview.refund_paise || 0))}</strong>
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="cancel-reason">Reason (optional)</Label>
+            <Textarea
+              id="cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep booking</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={!cancelPreview?.allowed || cancelLoading || busy}
+              onClick={() =>
                 void run(
                   () =>
                     api(
                       `/bookings/${bookingId}/cancel${
-                        reason.trim() ? `?reason=${encodeURIComponent(reason.trim())}` : ""
+                        cancelReason.trim() ? `?reason=${encodeURIComponent(cancelReason.trim())}` : ""
                       }`,
                       { method: "POST" }
                     ).then(() => undefined),
                   "Booking cancelled",
                   "cancelled"
-                );
-              }}
+                )
+              }
             >
-              Cancel booking
-            </Button>
-          </div>
-        )}
+              Confirm cancel
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {canStartOtp && (
         <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/40 p-3">

@@ -24,12 +24,53 @@ def hours_until(booking_date: date, start: time) -> float:
     return (datetime.combine(booking_date, start) - datetime.now()).total_seconds() / 3600.0
 
 
-def cancel_policy(hours: float) -> dict:
+def cancel_policy(hours: float, db: Session | None = None, actor: str = "customer") -> dict:
+    """Time-based cancel fees. `actor` is customer|pujari — each has admin-configurable %.
+
+    Defaults match legacy: >48h → 10% fee, 24–48h → 50% fee, <24h → not allowed.
+    """
+    prefix = "pujari" if actor == "pujari" else "customer"
+    over_48 = 10
+    mid = 50
+    min_hours = 24.0
+    if db is not None:
+        from app.platform_config import get_setting
+
+        over_48 = int(get_setting(db, f"{prefix}_cancel_fee_over_48h_percent", over_48) or over_48)
+        mid = int(get_setting(db, f"{prefix}_cancel_fee_24_48h_percent", mid) or mid)
+        min_hours = float(get_setting(db, f"{prefix}_cancel_min_hours", min_hours) or min_hours)
+    over_48 = max(0, min(100, over_48))
+    mid = max(0, min(100, mid))
+    min_hours = max(0.0, min_hours)
     if hours > 48:
-        return {"allowed": True, "policy": ">48h", "fee_percent": 10, "refund_percent": 90}
-    if hours >= 24:
-        return {"allowed": True, "policy": "24-48h", "fee_percent": 50, "refund_percent": 50}
-    return {"allowed": False, "policy": "<24h", "fee_percent": 0, "refund_percent": 0}
+        return {
+            "allowed": True,
+            "policy": ">48h",
+            "fee_percent": over_48,
+            "refund_percent": 100 - over_48,
+            "hours": round(hours, 1),
+            "min_hours": min_hours,
+            "actor": prefix,
+        }
+    if hours >= min_hours:
+        return {
+            "allowed": True,
+            "policy": f"{int(min_hours)}-48h",
+            "fee_percent": mid,
+            "refund_percent": 100 - mid,
+            "hours": round(hours, 1),
+            "min_hours": min_hours,
+            "actor": prefix,
+        }
+    return {
+        "allowed": False,
+        "policy": f"<{int(min_hours)}h",
+        "fee_percent": 0,
+        "refund_percent": 0,
+        "hours": round(hours, 1),
+        "min_hours": min_hours,
+        "actor": prefix,
+    }
 
 
 def slot_conflict(db: Session, pujari_id: str, booking_date: date, start: time, end: time) -> bool:

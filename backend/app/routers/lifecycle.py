@@ -667,24 +667,74 @@ def get_location(booking_id: str, user=Depends(current_user), db: Session = Depe
 
 @router.get("/settlements")
 def list_settlements(user=Depends(current_user), db: Session = Depends(get_db)):
+    if user["role"] not in ("admin", "super_admin", "pujari"):
+        raise HTTPException(403, "Not allowed")
+
+    days = int(get_setting(db, "pujari_settlement_days", 14) or 14)
+
+    # Biweekly auto-settle: when hold period ends, credit pujari wallet and mark settled.
+    due = db.execute(
+        text(
+            """
+            SELECT * FROM settlements
+            WHERE status IN ('pending', 'eligible')
+              AND due_date IS NOT NULL
+              AND due_date <= CURRENT_DATE
+            ORDER BY due_date
+            FOR UPDATE SKIP LOCKED
+            """
+        )
+    ).mappings().all()
+    for s in due:
+        try:
+            apply_wallet(
+                db,
+                str(s["pujari_id"]),
+                int(s["settlement_amount_paise"] or 0),
+                "credit",
+                f"Auto settlement (every {days} days)",
+                str(s["booking_id"]),
+            )
+            db.execute(
+                text(
+                    """
+                    UPDATE settlements SET
+                      status = 'settled',
+                      settled_at = NOW(),
+                      override_flag = FALSE,
+                      override_reason = :reason,
+                      payment_reference = COALESCE(payment_reference, 'AUTO_BIWEEKLY')
+                    WHERE id = :id AND status IN ('pending', 'eligible')
+                    """
+                ),
+                {
+                    "id": s["id"],
+                    "reason": f"Automatic settlement after {days}-day (2-week) hold",
+                },
+            )
+            db.execute(
+                text("UPDATE bookings SET settlement_status = 'settled' WHERE id = CAST(:id AS uuid)"),
+                {"id": str(s["booking_id"])},
+            )
+        except ValueError:
+            db.execute(
+                text(
+                    """
+                    UPDATE settlements SET status = 'eligible'
+                    WHERE id = :id AND status = 'pending'
+                    """
+                ),
+                {"id": s["id"]},
+            )
+    db.commit()
+
     if user["role"] in ("admin", "super_admin"):
         rows = db.execute(text("SELECT * FROM settlements ORDER BY created_at DESC LIMIT 200")).mappings().all()
-    elif user["role"] == "pujari":
+    else:
         rows = db.execute(
             text("SELECT * FROM settlements WHERE pujari_id = CAST(:id AS uuid) ORDER BY created_at DESC"),
             {"id": user["id"]},
         ).mappings().all()
-    else:
-        raise HTTPException(403, "Not allowed")
-    # Mark eligible
-    days = int(get_setting(db, "pujari_settlement_days", 14))
-    for r in rows:
-        if r["status"] == "pending" and r["due_date"] and r["due_date"] <= date.today():
-            db.execute(
-                text("UPDATE settlements SET status = 'eligible' WHERE id = :id AND status = 'pending'"),
-                {"id": r["id"]},
-            )
-    db.commit()
     return [row_dict(r) for r in rows]
 
 

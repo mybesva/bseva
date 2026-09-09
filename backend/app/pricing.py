@@ -146,20 +146,21 @@ def compute_quote(
     food_prov = (service.get("food_provider") or "included").lower()
 
     # Explicit customer opt-in (booking wizard): charge as reimbursable line items.
+    # Always allow Samagri / Alankaram opt-in for every puja (availability flags no longer hide options).
     if include_samagri is not None or include_alankaram is not None or include_food is not None:
-        samagri_on = service.get("samagri_available") is not False
-        alankaram_on = bool(service.get("alankaram_available"))
         food_on = bool(service.get("food_available"))
-        samagri_charge = samagri_list if include_samagri and samagri_on and samagri_list > 0 else 0
-        alankaram_charge = alankaram_list if include_alankaram and alankaram_on and alankaram_list > 0 else 0
+        samagri_charge = samagri_list if include_samagri and samagri_list > 0 else 0
+        alankaram_charge = alankaram_list if include_alankaram and alankaram_list > 0 else 0
         food_charge = food if include_food and food_on and food > 0 else 0
         reimbursement = 0
-        if include_samagri and samagri_charge:
-            reimbursement += samagri_charge
+        if include_samagri:
             samagri_prov = "reimbursable"
-        if include_alankaram and alankaram_charge:
-            reimbursement += alankaram_charge
+            if samagri_charge:
+                reimbursement += samagri_charge
+        if include_alankaram:
             alankaram_prov = "reimbursable"
+            if alankaram_charge:
+                reimbursement += alankaram_charge
         if include_food and food_charge:
             reimbursement += food_charge
             food_prov = "reimbursable"

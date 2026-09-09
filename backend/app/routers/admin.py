@@ -381,13 +381,86 @@ def set_pujari_level(pujari_id: str, body: PujariLevelIn, admin=Depends(require_
 def admin_services(user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
     from app.catalog import enrich_service
 
+    # Available (priced + active) first, then Upcoming / Coming Soon
     rows = db.execute(
-        text("SELECT * FROM services ORDER BY display_order NULLS LAST, name")
+        text(
+            """
+            SELECT * FROM services
+            ORDER BY
+              CASE
+                WHEN COALESCE(active, FALSE) = TRUE
+                 AND COALESCE(pricing_status, 'awaiting_pricing') = 'priced'
+                 AND standard_price_paise IS NOT NULL
+                THEN 0
+                ELSE 1
+              END,
+              homepage_rank NULLS LAST,
+              display_order NULLS LAST,
+              name
+            """
+        )
     ).mappings().all()
     try:
         return [enrich_service(db, r, include_inactive_meta=True) for r in rows]
     except Exception:
         return [row_dict(r) for r in rows]
+
+
+@router.patch("/services/{service_id}/availability")
+def set_service_availability(
+    service_id: str,
+    body: dict,
+    user=Depends(require_permission("manage_services")),
+    db: Session = Depends(get_db),
+):
+    """Toggle Available ↔ Coming Soon. Featured Top-10 services must stay Available."""
+    available = bool(body.get("available"))
+    row = db.execute(
+        text(
+            """
+            SELECT id, name, active, pricing_status, standard_price_paise,
+                   is_featured_home, homepage_rank
+            FROM services WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"id": service_id},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Service not found")
+
+    featured = bool(row.get("is_featured_home"))
+    if not available and featured:
+        raise HTTPException(
+            400,
+            "Homepage Top 10 / featured pujas must stay Available. Unfeature first if you need Coming Soon.",
+        )
+
+    if available:
+        if row.get("standard_price_paise") is None:
+            raise HTTPException(400, "Set a standard price before marking Available")
+        db.execute(
+            text(
+                """
+                UPDATE services
+                SET active = TRUE, pricing_status = 'priced', updated_at = NOW()
+                WHERE id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": service_id},
+        )
+    else:
+        db.execute(
+            text(
+                """
+                UPDATE services
+                SET active = FALSE, pricing_status = 'awaiting_pricing', updated_at = NOW()
+                WHERE id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": service_id},
+        )
+    db.commit()
+    return {"ok": True, "available": available}
 
 
 def _sync_service_categories(db: Session, service_id: str, category_slugs: list[str] | None) -> None:
@@ -521,6 +594,11 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
     active = bool(body.active)
     if active and (body.standard_price_paise is None or pst == "awaiting_pricing"):
         raise HTTPException(400, "Set pricing before activating this service")
+    # Featured / Top 10 must remain Available
+    if bool(body.is_featured_home) and (
+        not active or body.standard_price_paise is None or pst == "awaiting_pricing"
+    ):
+        raise HTTPException(400, "Featured (Top 10) pujas must be Available with pricing set")
     result = db.execute(
         text(
             """
