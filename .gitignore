@@ -72,3 +72,5 @@ data/
 *.sqlite3
 .vercel
 .env*
+!.env.example
+!**/.env.example

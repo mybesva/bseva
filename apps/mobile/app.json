@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "BSeva",
+    "slug": "bseva",
+    "scheme": "bseva",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A2B4A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bseva.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "BSeva uses the camera so you can take a profile photo, signature photo, or document photo instead of only picking from the library.",
+        "NSPhotoLibraryUsageDescription": "BSeva needs photo library access to attach documents and profile photos.",
+        "NSLocationWhenInUseUsageDescription": "BSeva uses your location to find nearby pujaris and save your address for bookings.",
+        "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it."
+      }
+    },
+    "android": {
+      "package": "com.bseva.app",
+      "versionCode": 1,
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A2B4A"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-location",
+      "expo-image-picker",
+      "expo-document-picker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#FF9933"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "ndkVersion": "27.1.12297006"
+          }
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "tsconfigPaths": true
+    }
+  }
+}
