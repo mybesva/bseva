@@ -19,8 +19,14 @@ _UUID_RE = re.compile(
 
 
 def normalize_mobile(raw: str | None) -> str:
-    s = (raw or "").strip()
-    m = _MOBILE_RE.match(s.replace(" ", ""))
+    digits = re.sub(r"\D", "", (raw or "").strip())
+    if len(digits) > 10:
+        # Prefer last 10 when prefixed with country code (91…) or legacy bad concatenations
+        if digits.startswith("91") and len(digits) >= 12:
+            digits = digits[-10:]
+        else:
+            digits = digits[-10:]
+    m = _MOBILE_RE.match(digits)
     if not m:
         raise HTTPException(400, "Enter a valid 10-digit Indian mobile number")
     return m.group(1)

@@ -5,8 +5,14 @@ const PIN_RE = /^\d{6}$/;
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
 export function normalizeMobile(raw: string): string | null {
-  const m = String(raw || "").replace(/\s/g, "").trim().match(MOBILE_RE);
-  return m ? m[1] : null;
+  let digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length > 10 && digits.startsWith("91")) {
+    digits = digits.slice(-10);
+  } else if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  if (!/^[6-9]\d{9}$/.test(digits)) return null;
+  return digits;
 }
 
 export function isValidMobile(raw: string): boolean {

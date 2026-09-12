@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot: rename demo pujari 'Pandit Reddy' -> 'Pandit' in the live DB."""
+"""One-shot: rename demo pujari 'Pandit Reddy' -> 'Pandit' and normalize mobile."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,10 +38,30 @@ def main() -> None:
     )
     rows = cur.fetchall()
     if not rows:
-        print("No matching rows (already updated?)")
+        print("users: no matching rows (already updated?)")
     else:
         for r in rows:
-            print("updated:", r)
+            print("users updated:", r)
+
+    cur.execute(
+        """
+        UPDATE pujari_profiles pp
+        SET full_name = 'Pandit',
+            mobile_number = CASE
+              WHEN length(regexp_replace(COALESCE(pp.mobile_number, u.phone, ''), '\\D', '', 'g')) >= 10
+                THEN right(regexp_replace(COALESCE(pp.mobile_number, u.phone, ''), '\\D', '', 'g'), 10)
+              ELSE regexp_replace(COALESCE(pp.mobile_number, u.phone, ''), '\\D', '', 'g')
+            END
+        FROM users u
+        WHERE pp.user_id = u.id
+          AND (pp.full_name ILIKE %s OR lower(u.email) = 'pujari2@bseva.test')
+        RETURNING pp.user_id::text, pp.full_name, pp.mobile_number
+        """,
+        ("%Reddy%",),
+    )
+    for r in cur.fetchall():
+        print("profile updated:", r)
+
     cur.close()
     conn.close()
 

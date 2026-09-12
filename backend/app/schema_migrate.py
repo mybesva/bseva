@@ -762,6 +762,32 @@ def ensure_schema() -> None:
                OR (lower(email) = 'pujari2@bseva.test' AND name <> 'Pandit')
             """,
         )
+        _exec_safe(
+            conn,
+            """
+            UPDATE pujari_profiles pp
+            SET full_name = 'Pandit',
+                mobile_number = COALESCE(
+                  NULLIF(regexp_replace(pp.mobile_number, '\\D', '', 'g'), ''),
+                  NULLIF(regexp_replace(u.phone, '\\D', '', 'g'), '')
+                )
+            FROM users u
+            WHERE pp.user_id = u.id
+              AND (
+                pp.full_name ILIKE '%Reddy%'
+                OR lower(u.email) = 'pujari2@bseva.test'
+              )
+            """,
+        )
+        _exec_safe(
+            conn,
+            """
+            UPDATE pujari_profiles
+            SET mobile_number = right(regexp_replace(mobile_number, '\\D', '', 'g'), 10)
+            WHERE mobile_number IS NOT NULL
+              AND length(regexp_replace(mobile_number, '\\D', '', 'g')) > 10
+            """,
+        )
 
 
 def ensure_pujari_profile_schema() -> None:

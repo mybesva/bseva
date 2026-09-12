@@ -80,11 +80,39 @@ export async function uploadPujariAsset(kind: "photo" | "signature", file: File)
   const headers = new Headers();
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const name = file.name || `${kind}.jpg`;
+  const lower = name.toLowerCase();
+  const hasExt = /\.(jpe?g|png|webp)$/i.test(lower);
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("File must be under 8 MB");
+  }
+  if (file.type && !allowed.includes(file.type) && !hasExt) {
+    throw new Error("Upload a JPG, PNG or WebP image (HEIC is not supported)");
+  }
+  // Ensure the multipart part has a filename with extension (Safari sometimes omits it)
+  let uploadFile = file;
+  if (!hasExt) {
+    const ext =
+      file.type === "image/png" ? ".png" : file.type === "image/webp" ? ".webp" : ".jpg";
+    uploadFile = new File([file], `${kind}${ext}`, { type: file.type || "image/jpeg" });
+  }
+
   const body = new FormData();
-  body.append("file", file);
+  body.append("file", uploadFile);
   const res = await fetch(`${apiBase()}/api/v1/pujari/profile/${kind}`, { method: "POST", headers, body });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { detail?: string }).detail || "Upload failed");
+  if (!res.ok) {
+    const detail = (data as { detail?: unknown }).detail;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join(", ")
+          : "Upload failed";
+    throw new Error(message);
+  }
   return data;
 }
 

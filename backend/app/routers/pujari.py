@@ -445,15 +445,45 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
 
 
 async def _store_asset(user_id: str, file: UploadFile, stem: str) -> str:
-    ext = Path(file.filename or "").suffix.lower()
+    """Store profile/signature image. Infer extension from filename, content-type, or magic bytes."""
+    raw_name = (file.filename or "").strip()
+    ext = Path(raw_name).suffix.lower()
+    ctype = (file.content_type or "").lower().split(";")[0].strip()
+    ctype_ext = {
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/pjpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
     if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
-        raise HTTPException(400, "Upload a JPG, PNG or WebP image")
-    stored = f"{stem}{ext}"
-    rel = f"{user_id}/{stored}"
+        ext = ctype_ext.get(ctype, "")
+
     data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty file — choose a photo and try again")
     if len(data) > 8 * 1024 * 1024:
         raise HTTPException(400, "File must be under 8 MB")
-    upload_bytes(rel, data, content_type_for(file.filename or stored))
+
+    if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
+        # Magic-byte sniff when browser omits extension (common on mobile)
+        if data[:3] == b"\xff\xd8\xff":
+            ext = ".jpg"
+        elif data[:8] == b"\x89PNG\r\n\x1a\n":
+            ext = ".png"
+        elif len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            ext = ".webp"
+        else:
+            raise HTTPException(
+                400,
+                "Upload a JPG, PNG or WebP image (HEIC/HEIF is not supported — convert to JPG first)",
+            )
+
+    if ext == ".jpeg":
+        ext = ".jpg"
+    stored = f"{stem}{ext}"
+    rel = f"{user_id}/{stored}"
+    upload_bytes(rel, data, content_type_for(raw_name or stored))
     return rel
 
 
