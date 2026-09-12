@@ -752,6 +752,16 @@ def ensure_schema() -> None:
               AND pujari_id IS NOT NULL
             """,
         )
+        # Demo pujari display name: "Pandit Reddy" → "Pandit"
+        _exec_safe(
+            conn,
+            """
+            UPDATE users
+            SET name = 'Pandit'
+            WHERE name ILIKE '%Reddy%'
+               OR (lower(email) = 'pujari2@bseva.test' AND name <> 'Pandit')
+            """,
+        )
 
 
 def ensure_pujari_profile_schema() -> None:

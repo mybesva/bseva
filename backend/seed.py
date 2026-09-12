@@ -68,7 +68,7 @@ USERS = [
         "cal": "north",
     },
     {
-        "name": "Pandit Reddy",
+        "name": "Pandit",
         "email": "pujari2@bseva.test",
         "phone": "9000000006",
         "role": "pujari",
