@@ -28,7 +28,6 @@ import { api, apiBase, getToken, pujariMediaUrl } from "@/lib/api";
 import RolePortalGate from "@/components/RolePortalGate";
 import PujariProfileGate from "@/components/PujariProfileGate";
 import { LegalInlineLink } from "@/components/LegalModal";
-import { useI18n } from "@/i18n/I18nProvider";
 import ThemeToggle from "@/components/ThemeToggle";
 import SeasonalPopup from "@/components/SeasonalPopup";
 
