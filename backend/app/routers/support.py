@@ -175,3 +175,63 @@ def close_conversation(conversation_id: str, user=Depends(require_roles("admin",
     )
     db.commit()
     return {"ok": True}
+
+
+class ContactFormIn(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: str = Field(min_length=5, max_length=200)
+    phone: str = Field(min_length=10, max_length=20)
+    subject: str = Field(min_length=3, max_length=200)
+    message: str = Field(min_length=10, max_length=4000)
+
+
+@router.post("/contact")
+def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
+    """Public contact form — emails BSeva contact/support inbox via Zoho SMTP."""
+    import re
+
+    from app.mail.smtp_client import send_email
+    from app.mail.templates import admin_notification_email
+    from app.platform_config import get_setting
+    from app.validation_rules import normalize_mobile
+
+    name = body.name.strip()
+    email = body.email.strip().lower()
+    subject = body.subject.strip()
+    message = body.message.strip()
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(400, "Enter a valid email address")
+    phone = normalize_mobile(body.phone)
+
+    inbox = str(
+        get_setting(db, "email_from_contact", None)
+        or get_setting(db, "email_from_support", None)
+        or "contact@b-seva.com"
+    ).strip()
+    from_addr = str(get_setting(db, "email_from_support", "support@b-seva.com") or "support@b-seva.com")
+
+    content = admin_notification_email(
+        title=f"Website contact: {subject}",
+        message=message,
+        details=[
+            ("Name", name),
+            ("Email", email),
+            ("Phone", f"+91 {phone}"),
+            ("Subject", subject),
+        ],
+    )
+    result = send_email(
+        to=inbox,
+        subject=content.subject,
+        text_body=content.text,
+        html_body=content.html,
+        from_addr=from_addr,
+        reply_to=email,
+    )
+    if not result.get("ok"):
+        raise HTTPException(502, "Unable to send your message right now. Please try again or email us directly.")
+
+    return {
+        "ok": True,
+        "message": "Thank you. Your message has been sent. We will get back to you soon.",
+    }
