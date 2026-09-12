@@ -40,6 +40,7 @@ def send_login_otp_email(
     customer_name: str = "",
     language: str = "en",
     test_mode: bool = False,
+    purpose: str = "login",
     from_addr: str | None = None,
 ) -> dict[str, Any]:
     return _dispatch(
@@ -49,6 +50,7 @@ def send_login_otp_email(
             customer_name=customer_name,
             language=language,
             test_mode=test_mode,
+            purpose=purpose,
         ),
         from_addr=from_addr,
     )

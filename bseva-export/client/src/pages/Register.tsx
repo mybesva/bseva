@@ -151,7 +151,7 @@ export default function Register() {
     setOtpSending(true);
     try {
       const phoneE164 = toE164(countryCode, phoneDigits);
-      const out = await api<{ ok: boolean; message?: string; expires_in_minutes?: number; dev_hint?: string }>(
+      const out = await api<{ ok: boolean; message?: string; expires_in_minutes?: number; email?: string; dev_hint?: string }>(
         "/auth/otp/request",
         {
           method: "POST",
@@ -159,13 +159,15 @@ export default function Register() {
         }
       );
       const mins = out.expires_in_minutes ?? 10;
+      const sentTo = out.email || emailNorm;
       setOtpSent(true);
       setOtpExpiresAt(Date.now() + mins * 60 * 1000);
       setOtpMessage(
-        `OTP sent to ${emailNorm}. Valid for ${mins} minutes — enter it below before the timer ends.`
+        out.message ||
+          `OTP sent to ${sentTo}. Valid for ${mins} minutes — enter it below before the timer ends.`
       );
       setFieldErrors((prev) => ({ ...prev, otp: undefined }));
-      toast.success(`OTP sent to ${emailNorm}. Valid for ${mins} minutes.`);
+      toast.success(out.message || `OTP sent to ${sentTo}. Valid for ${mins} minutes.`);
       if (out.dev_hint) {
         toast.message(`Dev hint: ${out.dev_hint}`);
       }

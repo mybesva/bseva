@@ -154,19 +154,49 @@ def issue_email_otp(
                 language=language,
             )
         except Exception:
-            logger.exception("OTP_DELIVERY_FAILED channel=email")
+            logger.exception("OTP_DELIVERY_FAILED channel=email to=%s", email_n)
             delivery = {"ok": False, "status": "failed", "channel": "email", "error": "delivery_failed"}
-        # Never log full OTP
+        # Never log full OTP — only destination + delivery status
         logger.info(
-            "OTP_ISSUED purpose=%s channel=email delivery=%s",
+            "OTP_ISSUED purpose=%s to=%s channel=email delivery=%s ok=%s",
             purpose_n,
+            email_n,
             delivery.get("status"),
+            delivery.get("ok"),
         )
+
+        delivery_status = str(delivery.get("status") or "")
+        delivery_ok = bool(delivery.get("ok"))
+        if smtp_configured():
+            # Must be accepted by SMTP for the visitor to receive mail
+            delivery_ok = delivery_ok and delivery_status == "sent"
+        else:
+            # Local stub only — never pretend success in production without SMTP
+            delivery_ok = (
+                delivery_ok
+                and delivery_status in ("queued", "sent")
+                and settings.environment != "production"
+            )
+        if not delivery_ok:
+            invalidate_prior_otps(db, email=email_n, purpose=purpose_n)
+            db.commit()
+            return {
+                "ok": False,
+                "error": "delivery_failed",
+                "message": "Could not deliver OTP email. Please try again shortly.",
+                "expires_in_minutes": OTP_TTL_MINUTES,
+                "delivery": {
+                    "status": delivery.get("status"),
+                    "channel": delivery.get("channel", "email"),
+                    "error": delivery.get("error"),
+                },
+            }
 
     out: dict[str, Any] = {
         "ok": True,
-        "message": "If an account can receive email, an OTP has been sent.",
+        "message": f"OTP sent to {email_n}. Valid for {OTP_TTL_MINUTES} minutes.",
         "expires_in_minutes": OTP_TTL_MINUTES,
+        "email": email_n,
         "delivery": {"status": delivery.get("status"), "channel": delivery.get("channel", "email")},
     }
     # Local-only hint when SMTP not configured

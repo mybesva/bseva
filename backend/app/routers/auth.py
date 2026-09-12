@@ -131,11 +131,16 @@ def request_otp(body: OtpRequestIn, db: Session = Depends(get_db)):
     if not result.get("ok"):
         if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
             raise HTTPException(429, "Please wait before requesting another OTP")
-        raise HTTPException(400, "Could not send OTP")
+        raise HTTPException(
+            502,
+            result.get("message")
+            or "Could not send OTP to your email. Please try again or contact support.",
+        )
     out = {
         "ok": True,
-        "message": "OTP sent to your email. Valid for 10 minutes.",
-        "expires_in_minutes": 10,
+        "message": result.get("message") or f"OTP sent to {email}. Valid for 10 minutes.",
+        "expires_in_minutes": int(result.get("expires_in_minutes") or 10),
+        "email": email,
     }
     if result.get("dev_hint"):
         out["dev_hint"] = result["dev_hint"]

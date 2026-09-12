@@ -123,26 +123,40 @@ def _booking_text(data: BookingEmailData, intro: str) -> str:
     return "\n".join(lines)
 
 
-def login_otp_email(*, otp_code: str, customer_name: str = "", language: str = "en", test_mode: bool = False) -> EmailContent:
-    subject = "BSeva Login Verification" + (" [TEST]" if test_mode else "")
+def login_otp_email(
+    *,
+    otp_code: str,
+    customer_name: str = "",
+    language: str = "en",
+    test_mode: bool = False,
+    purpose: str = "login",
+) -> EmailContent:
+    is_register = purpose == "register"
+    title = "BSeva Registration OTP" if is_register else "BSeva Login Verification"
+    subject = title + (" [TEST]" if test_mode else "")
+    action = (
+        "Use this one-time password to complete your BSeva registration."
+        if is_register
+        else "Use this one-time password to sign in to your BSeva account."
+    )
     body = (
-        heading("BSeva Login Verification")
+        heading(title)
         + paragraph(_greet(customer_name or "Ji", language))
-        + paragraph("Use this one-time password to sign in to your BSeva account.")
+        + paragraph(action)
         + otp_box(otp_code)
         + muted("Valid for: 10 minutes")
         + muted("Do not share this OTP with anyone. BSeva will never ask for your OTP.")
     )
     html = render_email(
         title=subject,
-        preheader="Your BSeva login OTP — valid for 10 minutes",
+        preheader=f"Your BSeva OTP — valid for 10 minutes",
         body_html=body,
         language=language,
         test_banner=test_mode,
     )
     text = (
         f"{'[TEST]\\n' if test_mode else ''}"
-        f"BSeva Login Verification\n\n"
+        f"{title}\n\n"
         f"{_greet(customer_name or 'Ji', language)}\n\n"
         f"Your OTP: {otp_code}\n"
         f"Valid for: 10 minutes\n\n"

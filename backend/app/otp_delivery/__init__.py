@@ -33,13 +33,14 @@ class EmailOtpProvider:
     ) -> dict:
         from app.mail.senders import send_login_otp_email
 
-        # Same branded OTP template for login/register/verify — purpose only affects subject nuance later
+        # Same branded OTP template for login/register/verify
         return send_login_otp_email(
             to=destination,
             otp_code=otp_code,
             customer_name=customer_name,
             language=language,
             test_mode=False,
+            purpose=purpose,
         )
 
 
