@@ -160,6 +160,19 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             {"id": booking_id},
         )
     write_audit(db, str(user["id"]), "booking_accept", "booking", booking_id)
+    try:
+        from app.routers.notifications import create_notification
+
+        create_notification(
+            db,
+            user_id=str(b["customer_id"]),
+            title="Booking accepted",
+            body=f"Your booking {b.get('booking_number') or booking_id[:8]} was accepted.",
+            category="booking",
+            link="/customer/bookings",
+        )
+    except Exception:
+        pass
     db.commit()
     try:
         from app.email_service import send_booking_event_email
@@ -214,6 +227,26 @@ def reject_booking(
         {"reason": reason, "id": booking_id},
     )
     write_audit(db, str(user["id"]), f"booking_reject:{reason or 'no_reason'}", "booking", booking_id)
+    try:
+        from app.routers.notifications import create_notification, notify_super_admins
+
+        create_notification(
+            db,
+            user_id=str(b["customer_id"]),
+            title="Booking declined",
+            body=f"Booking {b.get('booking_number') or booking_id[:8]} was declined by the pujari. We will reassign shortly.",
+            category="booking",
+            link="/customer/bookings",
+        )
+        notify_super_admins(
+            db,
+            title="Booking needs reassignment",
+            body=f"{b.get('booking_number') or booking_id} was rejected by pujari.",
+            category="ops",
+            link="/admin/bookings?status=needs_reassignment",
+        )
+    except Exception:
+        pass
     db.commit()
     return {"ok": True, "status": "rejected", "needs_reassignment": True}
 
@@ -792,6 +825,13 @@ def public_config(db: Session = Depends(get_db)):
         "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 24)),
         "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 10)),
         "muhurta_consultation_fee_paise": int(get_setting(db, "muhurta_consultation_fee_paise", 30000)),
+        "registration_captcha_enabled": bool(get_setting(db, "registration_captcha_enabled", False)),
+        "recaptcha_site_key": __import__("os").environ.get("VITE_RECAPTCHA_SITE_KEY")
+        or __import__("os").environ.get("RECAPTCHA_SITE_KEY")
+        or "",
+        "customer_cancel_fee_over_48h_percent": int(get_setting(db, "customer_cancel_fee_over_48h_percent", 10)),
+        "customer_cancel_fee_24_48h_percent": int(get_setting(db, "customer_cancel_fee_24_48h_percent", 50)),
+        "customer_cancel_min_hours": int(get_setting(db, "customer_cancel_min_hours", 24)),
         "email_from_contact": str(get_setting(db, "email_from_contact", "contact@b-seva.com")),
         "email_from_support": str(get_setting(db, "email_from_support", "support@b-seva.com")),
         "email_delivery": smtp_status(),

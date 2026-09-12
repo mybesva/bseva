@@ -26,7 +26,7 @@ export default function About() {
             <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-6">
               {t("about.badge")}
             </span>
-            <h1 className="text-display mb-6">{t("about.title")}</h1>
+            <h1 className="text-display text-primary mb-6">{t("about.title")}</h1>
             <p className="text-lg text-white/80 mb-8 leading-relaxed">{t("about.heroDesc")}</p>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function About() {
 
       <section className="py-24 text-center">
         <div className="container">
-          <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">{t("about.ctaTitle")}</h2>
+          <h2 className="text-h2 text-3xl md:text-4xl text-primary mb-6">{t("about.ctaTitle")}</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">{t("about.ctaDesc")}</p>
           <Button
             size="lg"

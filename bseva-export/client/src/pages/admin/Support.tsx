@@ -21,6 +21,10 @@ const CATEGORIES_PUJARI = ["Settlement", "Route Map / Location", "Others"];
 
 export default function AdminSupport() {
   const [tickets, setTickets] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [activeConv, setActiveConv] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(true);
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -30,7 +34,12 @@ export default function AdminSupport() {
   async function load() {
     setLoading(true);
     try {
-      setTickets(await api<any[]>("/support/tickets"));
+      const [tix, convs] = await Promise.all([
+        api<any[]>("/support/tickets").catch(() => []),
+        api<any[]>("/support/conversations").catch(() => []),
+      ]);
+      setTickets(tix || []);
+      setConversations(convs || []);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -38,9 +47,48 @@ export default function AdminSupport() {
     }
   }
 
+  async function openConversation(id: string) {
+    setActiveConv(id);
+    try {
+      setMessages(await api<any[]>(`/support/conversations/${id}/messages`));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
+  async function sendReply() {
+    if (!activeConv || !reply.trim()) return;
+    try {
+      await api(`/support/conversations/${activeConv}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ body: reply.trim() }),
+      });
+      setReply("");
+      await openConversation(activeConv);
+      await load();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
+  async function closeConv(id: string) {
+    try {
+      await api(`/support/conversations/${id}/close`, { method: "POST" });
+      toast.success("Conversation resolved");
+      await load();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   useEffect(() => {
     void load();
-  }, []);
+    const t = setInterval(() => {
+      if (activeConv) void openConversation(activeConv);
+      else void load();
+    }, 15000);
+    return () => clearInterval(t);
+  }, [activeConv]);
 
   async function createTicket(e: React.FormEvent) {
     e.preventDefault();
@@ -76,7 +124,56 @@ export default function AdminSupport() {
 
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-6">Support tickets</h1>
+      <h1 className="text-h1 mb-6">Support</h1>
+
+      <Card className="mb-6 max-w-5xl">
+        <CardHeader>
+          <CardTitle className="text-base">Live chat queue (in-app)</CardTitle>
+        </CardHeader>
+        <CardContent className="grid lg:grid-cols-2 gap-4">
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+            {conversations.length === 0 && <p className="text-sm text-muted-foreground">No open chats.</p>}
+            {conversations.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`w-full text-left rounded-md border p-3 text-sm ${activeConv === c.id ? "border-primary bg-primary/5" : ""}`}
+                onClick={() => void openConversation(c.id)}
+              >
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium">{c.subject || "Chat"}</span>
+                  <Badge variant="secondary">{c.status}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {c.customer_name || c.customer_id} · {c.last_response_at || c.created_at}
+                </p>
+              </button>
+            ))}
+          </div>
+          <div className="rounded-md border p-3 space-y-3 min-h-[240px]">
+            {!activeConv && <p className="text-sm text-muted-foreground">Select a conversation</p>}
+            {activeConv && (
+              <>
+                <div className="space-y-2 max-h-[32vh] overflow-y-auto">
+                  {messages.map((m) => (
+                    <div key={m.id} className="text-sm">
+                      <span className="font-medium">{m.sender_role}: </span>
+                      {m.body}
+                    </div>
+                  ))}
+                </div>
+                <Textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Reply as agent…" />
+                <div className="flex gap-2">
+                  <Button onClick={() => void sendReply()}>Send reply</Button>
+                  <Button variant="outline" onClick={() => void closeConv(activeConv)}>
+                    Resolve
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid lg:grid-cols-2 gap-6 max-w-5xl">
         <Card>

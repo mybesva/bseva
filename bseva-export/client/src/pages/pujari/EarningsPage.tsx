@@ -3,7 +3,7 @@ import { PujariPortal } from "@/components/RolePortals";
 import WalletPanel from "@/components/WalletPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { api, rupees } from "@/lib/api";
+import { api, apiBookings, rupees } from "@/lib/api";
 import { toast } from "sonner";
 import { IndianRupee, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 import { format, isSameMonth, parseISO, startOfMonth } from "date-fns";
@@ -19,9 +19,9 @@ export default function PujariEarningsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api<any[]>("/bookings"), api<any[]>("/settlements").catch(() => [])])
+    Promise.all([apiBookings(1, 100), api<any[]>("/settlements").catch(() => [])])
       .then(([b, s]) => {
-        setBookings(b || []);
+        setBookings(b.items || []);
         setSettlements(s || []);
       })
       .catch((e) => toast.error(e.message || "Could not load earnings"))
@@ -60,9 +60,9 @@ export default function PujariEarningsPage() {
   return (
     <PujariPortal>
       <section className="mb-6">
-        <h1 className="text-h1 mb-1">Tracking Earnings</h1>
+        <h1 className="text-h1 mb-1">Dakshina</h1>
         <p className="text-muted-foreground text-sm">
-          Your puja shares, wallet balance, and settlement status.
+          Track your Dakshina from completed pujas, wallet balance, and settlement status.
         </p>
       </section>
 
@@ -84,7 +84,7 @@ export default function PujariEarningsPage() {
               <CheckCircle2 size={18} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Completed earnings</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Completed Dakshina</p>
               <p className="text-xl font-semibold">{loading ? "…" : rupees(stats.completed)}</p>
             </div>
           </CardContent>
@@ -150,7 +150,7 @@ export default function PujariEarningsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Completed puja earnings</CardTitle>
+          <CardTitle className="text-base">Completed puja Dakshina</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {loading && <p className="text-sm text-muted-foreground">Loading…</p>}

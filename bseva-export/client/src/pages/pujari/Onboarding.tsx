@@ -10,9 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, pujariMediaUrl, rupees, uploadPujariAsset } from "@/lib/api";
+import { isValidMobile, isValidPujariDob, validateAddress, validateBank } from "@/lib/fieldValidation";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
+
+import { PUJARI_SPECIALIZATIONS } from "@/lib/pujariSpecializations";
 
 const QUALS = [
   { id: "panchadasha", key: "pujari.q1" },
@@ -21,7 +24,7 @@ const QUALS = [
 ];
 
 const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
-const SPEC_OPTS = ["Satyanarayan Puja", "Griha Pravesh", "Wedding", "Havan", "Vastu Shanti", "Namkaran"];
+const SPEC_OPTS = [...PUJARI_SPECIALIZATIONS];
 
 function csvToList(s: string) {
   return s
@@ -91,19 +94,26 @@ export default function PujariOnboardingPage() {
     if (current === 1) {
       req("profile_photo_path", "Profile photo", !!profile.profile_photo_path || !!photoUrl);
       req("full_name", "Full name", !!String(profile.full_name || "").trim());
-      req("date_of_birth", "Date of birth", !!String(profile.date_of_birth || "").trim());
-      req(
-        "mobile_number",
-        "Mobile number",
-        !!String(profile.mobile_number || user?.phone || "").trim()
-      );
+      const dob = String(profile.date_of_birth || "").trim();
+      req("date_of_birth", "Date of birth", !!dob);
+      if (dob && !isValidPujariDob(dob)) {
+        errors.date_of_birth = "Pujari must be at least 18 years old";
+      }
+      const mobile = String(profile.mobile_number || user?.phone || "").trim();
+      req("mobile_number", "Mobile number", !!mobile);
+      if (mobile && !isValidMobile(mobile)) {
+        errors.mobile_number = "Enter a valid 10-digit Indian mobile number";
+      }
     }
     if (current === 2) {
-      req("address_line1", "Address line 1", !!String(profile.address_line1 || "").trim());
-      req("city", "City", !!String(profile.city || "").trim());
-      req("district", "District", !!String(profile.district || "").trim());
-      req("state", "State", !!String(profile.state || "").trim());
-      req("pincode", "Pincode", !!String(profile.pincode || "").trim());
+      const addrErrs = validateAddress({
+        address_line1: profile.address_line1,
+        city: profile.city,
+        district: profile.district,
+        state: profile.state,
+        pincode: profile.pincode,
+      });
+      Object.assign(errors, addrErrs);
       req("latitude", "Map location", profile.latitude != null && profile.longitude != null);
     }
     if (current === 3) {
@@ -126,13 +136,14 @@ export default function PujariOnboardingPage() {
     }
     if (current === 5) {
       req("service_radius_km", "Service radius", !!profile.service_radius_km);
-      req("bank_holder_name", "Account holder name", !!String(profile.bank_holder_name || "").trim());
-      req("bank_ifsc", "IFSC", !!String(profile.bank_ifsc || "").trim());
-      req(
-        "bank_account_last4",
-        "Account last 4 digits",
-        String(profile.bank_account_last4 || "").trim().length === 4
-      );
+      const bankErrs = validateBank({
+        holder: profile.bank_holder_name,
+        ifsc: profile.bank_ifsc,
+        last4: profile.bank_account_last4,
+      });
+      if (bankErrs.holder) errors.bank_holder_name = bankErrs.holder;
+      if (bankErrs.ifsc) errors.bank_ifsc = bankErrs.ifsc;
+      if (bankErrs.last4) errors.bank_account_last4 = bankErrs.last4;
     }
     if (current === 6) {
       req("consent", "Final submission consent", consent);
@@ -364,7 +375,7 @@ export default function PujariOnboardingPage() {
               <h2 className="text-xl">Personal details</h2>
               <div>
                 <Label className={fieldErrors.profile_photo_path ? "text-red-600" : undefined}>
-                  {t("pujari.photo")} *
+                  {t("pujari.photo")}
                 </Label>
                 {photoUrl && <img src={photoUrl} alt="" className="mt-2 h-28 w-28 object-cover rounded-md border" />}
                 <label className="inline-block mt-2">

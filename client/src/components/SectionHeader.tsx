@@ -33,10 +33,7 @@ export default function SectionHeader({
         </span>
       )}
       
-      <h2 className={cn(
-        "font-heading font-bold text-3xl md:text-4xl lg:text-5xl leading-tight",
-        light ? "text-white" : "text-sidebar"
-      )}>
+      <h2 className="font-heading font-bold text-3xl md:text-4xl lg:text-5xl leading-tight text-primary">
         {title}
       </h2>
       

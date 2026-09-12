@@ -25,7 +25,7 @@ export default function SatyanarayanPuja() {
           <span className="inline-block py-1 px-3 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/40 text-primary-foreground text-xs font-bold tracking-[0.2em] uppercase mb-6">
             Most Popular Service
           </span>
-          <h1 className="text-display text-white mb-6 drop-shadow-lg">
+          <h1 className="text-display text-primary mb-6 drop-shadow-lg">
             Satyanarayan Puja
           </h1>
           <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
@@ -297,7 +297,7 @@ export default function SatyanarayanPuja() {
       {/* CTA */}
       <section className="py-20">
         <div className="container text-center">
-          <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">
+          <h2 className="text-h2 text-3xl md:text-4xl text-primary mb-6">
             Have specific requirements?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">

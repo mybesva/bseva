@@ -21,8 +21,8 @@ router = APIRouter(tags=["ops"])
 
 class TicketIn(BaseModel):
     category: str
-    subject: str = Field(min_length=3)
-    description: str = Field(min_length=3)
+    subject: str = Field(min_length=5, max_length=200)
+    description: str = Field(min_length=10, max_length=5000)
     related_booking_id: str | None = None
     related_settlement_id: str | None = None
     related_payment_id: str | None = None
@@ -91,6 +91,8 @@ class PermissionGrantIn(BaseModel):
 
 @router.post("/support/tickets")
 def create_ticket(body: TicketIn, user=Depends(current_user), db: Session = Depends(get_db)):
+    from app.validation_rules import validate_support_text
+
     cats_c = {
         "Payments", "Wallet", "Bookings", "Others",
         "payments", "wallet", "bookings", "booking", "others",
@@ -104,6 +106,7 @@ def create_ticket(body: TicketIn, user=Depends(current_user), db: Session = Depe
         raise HTTPException(400, "Invalid category for customer")
     if role in ("pujari", "head_pujari") and body.category not in cats_p and body.category not in cats_c:
         raise HTTPException(400, "Invalid category for pujari")
+    subject, description = validate_support_text(body.subject, body.description)
     num = f"TKT-{datetime.utcnow().strftime('%y%m%d')}-{uuid4().hex[:6].upper()}"
     tid = str(uuid4())
     params = {
@@ -112,8 +115,8 @@ def create_ticket(body: TicketIn, user=Depends(current_user), db: Session = Depe
         "u": str(user["id"]),
         "r": role,
         "c": body.category,
-        "subj": body.subject,
-        "d": body.description,
+        "subj": subject,
+        "d": description,
         "b": body.related_booking_id,
         "setl": body.related_settlement_id,
         "pay": body.related_payment_id,
@@ -524,7 +527,11 @@ def invoice_html(invoice_id: str, user=Depends(current_user), db: Session = Depe
 
 
 class ReferralApplyIn(BaseModel):
-    code: str = Field(min_length=3, max_length=40)
+    code: str = Field(default="", max_length=40)
+    referral_code: str | None = Field(default=None, max_length=40)
+
+    def resolved_code(self) -> str:
+        return (self.code or self.referral_code or "").strip()
 
 
 @router.get("/customer/referral-code")
@@ -547,7 +554,12 @@ def customer_referral_code(user=Depends(require_roles("customer")), db: Session 
 def apply_referral(body: ReferralApplyIn, user=Depends(current_user), db: Session = Depends(get_db)):
     from app.referrals import apply_referral_code
 
-    out = apply_referral_code(db, str(user["id"]), body.code)
+    code = body.resolved_code()
+    if not code:
+        raise HTTPException(400, "Referral code is required")
+    if len(code) < 3:
+        raise HTTPException(400, "Referral code must be at least 3 characters")
+    out = apply_referral_code(db, str(user["id"]), code)
     db.commit()
     return out
 
@@ -615,6 +627,75 @@ def assign_head_pujari(pujari_id: str, body: HeadAssignIn, user=Depends(require_
     return {"ok": True, "is_head_pujari": body.is_head_pujari}
 
 
+def _resolve_pujari_user_id(db: Session, raw: str) -> str:
+    """Accept UUID or email/phone/name lookup for head assessments."""
+    from app.validation_rules import is_uuid
+
+    key = (raw or "").strip()
+    if not key:
+        raise HTTPException(400, "Pujari user ID is required")
+    if is_uuid(key):
+        row = db.execute(
+            text(
+                """
+                SELECT id FROM users
+                WHERE id = CAST(:id AS uuid) AND role IN ('pujari', 'head_pujari')
+                """
+            ),
+            {"id": key},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(404, "Pujari not found for that user ID")
+        return str(row["id"])
+    # Numeric legacy display ids are not used — look up by email/phone/name instead
+    row = db.execute(
+        text(
+            """
+            SELECT id FROM users
+            WHERE role IN ('pujari', 'head_pujari')
+              AND (
+                lower(email) = lower(:q)
+                OR phone = :q
+                OR lower(name) = lower(:q)
+              )
+            ORDER BY created_at
+            LIMIT 1
+            """
+        ),
+        {"q": key},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(
+            400,
+            "Enter the pujari's UUID, email, or phone — numeric IDs like '2' are not supported",
+        )
+    return str(row["id"])
+
+
+@router.get("/head/pujaris")
+def list_pujaris_for_head(user=Depends(require_roles("head_pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    if user["role"] == "head_pujari":
+        flag = db.execute(
+            text("SELECT is_head_pujari FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+            {"id": user["id"]},
+        ).scalar()
+        if not flag:
+            raise HTTPException(403, "Not a Head Pujari")
+    rows = db.execute(
+        text(
+            """
+            SELECT u.id, u.name, u.email, u.phone, pp.verification_status, pp.city
+            FROM users u
+            LEFT JOIN pujari_profiles pp ON pp.user_id = u.id
+            WHERE u.role IN ('pujari', 'head_pujari') AND u.blocked = FALSE
+            ORDER BY u.name
+            LIMIT 500
+            """
+        )
+    ).mappings().all()
+    return [row_dict(r) for r in rows]
+
+
 @router.post("/head/ratings")
 def head_rate_pujari(body: HeadRatingIn, user=Depends(require_roles("head_pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
     if user["role"] == "head_pujari":
@@ -626,8 +707,13 @@ def head_rate_pujari(body: HeadRatingIn, user=Depends(require_roles("head_pujari
             raise HTTPException(403, "Not a Head Pujari")
     if not body.comments or len(body.comments.strip()) < 5:
         raise HTTPException(400, "Comments are mandatory")
+    pujari_id = _resolve_pujari_user_id(db, body.pujari_id)
     rid = str(uuid4())
     if body.booking_id:
+        from app.validation_rules import is_uuid
+
+        if not is_uuid(body.booking_id):
+            raise HTTPException(400, "booking_id must be a valid UUID")
         db.execute(
             text(
                 """
@@ -635,7 +721,7 @@ def head_rate_pujari(body: HeadRatingIn, user=Depends(require_roles("head_pujari
                 VALUES (CAST(:id AS uuid), CAST(:h AS uuid), CAST(:p AS uuid), CAST(:b AS uuid), :s, :c)
                 """
             ),
-            {"id": rid, "h": user["id"], "p": body.pujari_id, "b": body.booking_id, "s": body.stars, "c": body.comments.strip()},
+            {"id": rid, "h": user["id"], "p": pujari_id, "b": body.booking_id, "s": body.stars, "c": body.comments.strip()},
         )
     else:
         db.execute(
@@ -645,10 +731,10 @@ def head_rate_pujari(body: HeadRatingIn, user=Depends(require_roles("head_pujari
                 VALUES (CAST(:id AS uuid), CAST(:h AS uuid), CAST(:p AS uuid), :s, :c)
                 """
             ),
-            {"id": rid, "h": user["id"], "p": body.pujari_id, "s": body.stars, "c": body.comments.strip()},
+            {"id": rid, "h": user["id"], "p": pujari_id, "s": body.stars, "c": body.comments.strip()},
         )
     db.commit()
-    return {"id": rid, "ok": True}
+    return {"id": rid, "ok": True, "pujari_id": pujari_id}
 
 
 @router.get("/head/ratings")

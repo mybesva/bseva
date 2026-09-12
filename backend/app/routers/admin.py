@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import time
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -32,17 +32,29 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.get("/stats")
 def stats(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
     customers = db.execute(text("SELECT COUNT(*) FROM users WHERE role = 'customer'")).scalar() or 0
-    pujaris = db.execute(text("SELECT COUNT(*) FROM users WHERE role = 'pujari' AND blocked = FALSE")).scalar() or 0
+    # Active Pujaris = approved + not blocked (aligns with Approved list / ?status=approved)
+    approved_active = db.execute(
+        text(
+            """
+            SELECT COUNT(*)
+            FROM pujari_profiles pp
+            JOIN users u ON u.id = pp.user_id
+            WHERE pp.verification_status = 'approved'
+              AND u.role IN ('pujari', 'head_pujari')
+              AND u.blocked = FALSE
+            """
+        )
+    ).scalar() or 0
     bookings = db.execute(text("SELECT COUNT(*) FROM bookings")).scalar() or 0
     revenue = db.execute(text("SELECT COALESCE(SUM(total_paise),0) FROM bookings WHERE status <> 'cancelled'")).scalar() or 0
     pending_v = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status IN ('pending','under_review')")).scalar() or 0
     correction = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status = 'correction_required'")).scalar() or 0
     rejected = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status = 'rejected'")).scalar() or 0
-    blocked_p = db.execute(text("SELECT COUNT(*) FROM users WHERE role = 'pujari' AND blocked = TRUE")).scalar() or 0
+    blocked_p = db.execute(text("SELECT COUNT(*) FROM users WHERE role IN ('pujari', 'head_pujari') AND blocked = TRUE")).scalar() or 0
     approved = db.execute(text("SELECT COUNT(*) FROM pujari_profiles WHERE verification_status = 'approved'")).scalar() or 0
     return {
         "totalCustomers": int(customers),
-        "activePriests": int(pujaris),
+        "activePriests": int(approved_active),
         "totalBookings": int(bookings),
         "monthlyRevenue": int(revenue),
         "pujariStatus": {
@@ -60,22 +72,38 @@ def list_users(
     role: str | None = None,
     blocked: bool | None = None,
     q: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
     user=Depends(require_any_permission("view_customers", "view_pujaris", "manage_admins")),
     db: Session = Depends(get_db),
 ):
     sql = "SELECT id, name, email, phone, role, blocked, blocked_at, block_reason, created_at, preferred_language FROM users WHERE 1=1"
+    count_sql = "SELECT COUNT(*) FROM users WHERE 1=1"
     params: dict = {}
     if role:
         sql += " AND role = :role"
+        count_sql += " AND role = :role"
         params["role"] = role
     if blocked is not None:
         sql += " AND blocked = :blocked"
+        count_sql += " AND blocked = :blocked"
         params["blocked"] = blocked
     if q:
         sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q)"
+        count_sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q)"
         params["q"] = f"%{q}%"
-    sql += " ORDER BY created_at DESC"
-    return [row_dict(r) for r in db.execute(text(sql), params).mappings().all()]
+    total = int(db.execute(text(count_sql), params).scalar() or 0)
+    params["lim"] = page_size
+    params["off"] = (page - 1) * page_size
+    sql += " ORDER BY created_at DESC LIMIT :lim OFFSET :off"
+    items = [row_dict(r) for r in db.execute(text(sql), params).mappings().all()]
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": max(1, (total + page_size - 1) // page_size) if total else 1,
+    }
 
 
 @router.post("/users/{user_id}/block")
@@ -283,10 +311,40 @@ def list_pujaris(
     status: str | None = None,
     blocked: bool | None = None,
     q: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
     user=Depends(require_any_permission("view_pujaris", "verify_pujaris")),
     db: Session = Depends(get_db),
 ):
-    sql = """
+    base_where = " WHERE u.role IN ('pujari', 'head_pujari') "
+    params: dict = {}
+    st = (status or "").strip().lower()
+    if st in ("blocked",):
+        base_where += " AND u.blocked = TRUE"
+    elif st in ("approved", "active"):
+        base_where += " AND u.blocked = FALSE AND p.verification_status = 'approved'"
+    elif st in ("pending", "pending_verification"):
+        base_where += " AND u.blocked = FALSE AND p.verification_status IN ('pending', 'under_review')"
+    elif st in ("correction_required", "correction"):
+        base_where += " AND u.blocked = FALSE AND p.verification_status = 'correction_required'"
+    elif st == "rejected":
+        base_where += " AND u.blocked = FALSE AND p.verification_status = 'rejected'"
+    elif blocked is not None:
+        base_where += " AND u.blocked = :blocked"
+        params["blocked"] = blocked
+    if q:
+        base_where += " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q)"
+        params["q"] = f"%{q}%"
+    total = int(
+        db.execute(
+            text(f"SELECT COUNT(*) FROM users u JOIN pujari_profiles p ON p.user_id = u.id {base_where}"),
+            params,
+        ).scalar()
+        or 0
+    )
+    params["lim"] = page_size
+    params["off"] = (page - 1) * page_size
+    sql = f"""
             SELECT u.id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
                    p.requested_level, p.approved_level, p.verification_status, p.available, p.location_label,
                    p.experience_years, p.specializations, p.pravara, p.joining_fee_status,
@@ -294,29 +352,18 @@ def list_pujaris(
                    COALESCE(p.profile_complete, FALSE) AS profile_complete,
                    COALESCE(p.profile_completion_percentage, 0) AS profile_completion_percentage
             FROM users u JOIN pujari_profiles p ON p.user_id = u.id
-            WHERE u.role IN ('pujari', 'head_pujari')
+            {base_where}
+            ORDER BY u.created_at DESC
+            LIMIT :lim OFFSET :off
             """
-    params: dict = {}
-    st = (status or "").strip().lower()
-    if st in ("blocked",):
-        sql += " AND u.blocked = TRUE"
-    elif st in ("approved", "active"):
-        sql += " AND u.blocked = FALSE AND p.verification_status = 'approved'"
-    elif st in ("pending", "pending_verification"):
-        sql += " AND u.blocked = FALSE AND p.verification_status IN ('pending', 'under_review')"
-    elif st in ("correction_required", "correction"):
-        sql += " AND u.blocked = FALSE AND p.verification_status = 'correction_required'"
-    elif st == "rejected":
-        sql += " AND u.blocked = FALSE AND p.verification_status = 'rejected'"
-    elif blocked is not None:
-        sql += " AND u.blocked = :blocked"
-        params["blocked"] = blocked
-    if q:
-        sql += " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q)"
-        params["q"] = f"%{q}%"
-    sql += " ORDER BY u.created_at DESC"
     rows = db.execute(text(sql), params).mappings().all()
-    return [row_dict(r) for r in rows]
+    return {
+        "items": [row_dict(r) for r in rows],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": max(1, (total + page_size - 1) // page_size) if total else 1,
+    }
 
 
 @router.post("/pujaris/{pujari_id}/verify")
@@ -514,7 +561,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             INSERT INTO services (
               id, name, slug, description, short_description, full_description, benefits, local_name,
               category, required_level,
-              standard_price_paise, premium_price_paise, main_puja_price_paise,
+              standard_price_paise, premium_price_paise, basic_price_paise, main_puja_price_paise,
               samagri_price_paise, alankaram_price_paise, food_price_paise,
               samagri_provider, alankaram_provider, food_provider,
               muhurta_consultation_enabled, muhurta_fee_paise, requires_muhurta,
@@ -525,7 +572,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             ) VALUES (
               CAST(:id AS uuid), :name, :slug, :desc, :short, :full, :ben, :local,
               :cat, :lvl,
-              :std, :prm, :main,
+              :std, :prm, :basic, :main,
               :sam, :alan, :food,
               :samp, :alanp, :foodp,
               :muh_en, :muh_fee, :req_muh,
@@ -549,6 +596,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             "lvl": body.required_level,
             "std": body.standard_price_paise,
             "prm": body.premium_price_paise,
+            "basic": body.basic_price_paise,
             "main": main,
             "sam": body.samagri_price_paise or 0,
             "alan": body.alankaram_price_paise or 0,
@@ -605,7 +653,7 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
             UPDATE services SET name=:name, slug=:slug, description=:desc,
               short_description=:short, full_description=:full, benefits=:ben, local_name=:local,
               category=:cat, required_level=:lvl,
-              standard_price_paise=:std, premium_price_paise=:prm, main_puja_price_paise=:main,
+              standard_price_paise=:std, premium_price_paise=:prm, basic_price_paise=:basic, main_puja_price_paise=:main,
               samagri_price_paise=:sam, alankaram_price_paise=:alan, food_price_paise=:food,
               samagri_provider=:samp, alankaram_provider=:alanp, food_provider=:foodp,
               muhurta_consultation_enabled=:muh_en, muhurta_fee_paise=:muh_fee, requires_muhurta=:req_muh,
@@ -631,6 +679,7 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
             "lvl": body.required_level,
             "std": body.standard_price_paise,
             "prm": body.premium_price_paise,
+            "basic": body.basic_price_paise,
             "main": main,
             "sam": body.samagri_price_paise or 0,
             "alan": body.alankaram_price_paise or 0,

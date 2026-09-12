@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { api, rupees } from "@/lib/api";
+import { api, apiBookings, rupees } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
@@ -70,6 +70,9 @@ function statusVariant(status: string) {
 
 export default function Bookings() {
   const [rows, setRows] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [reassignFor, setReassignFor] = useState<any | null>(null);
   const [available, setAvailable] = useState<AvailableResponse | null>(null);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
@@ -88,12 +91,16 @@ export default function Bookings() {
     return rows.filter((b) => b.status === statusFilter);
   }, [rows, statusFilter]);
 
-  async function load() {
-    setRows(await api<any[]>("/bookings"));
+  async function load(p = page) {
+    const res = await apiBookings(p, 50);
+    setRows(res.items);
+    setPage(res.page);
+    setPages(res.pages);
+    setTotal(res.total);
   }
 
   useEffect(() => {
-    void load().catch((e) => toast.error(e.message));
+    void load(1).catch((e) => toast.error(e.message));
   }, []);
 
   function setStatus(status: string) {
@@ -185,6 +192,17 @@ export default function Bookings() {
             Showing: {statusFilter.replace(/_/g, " ")} ({filtered.length})
           </Badge>
         )}
+        <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            Page {page} / {pages} · {total} total
+          </span>
+          <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => void load(page - 1)}>
+            Prev
+          </Button>
+          <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => void load(page + 1)}>
+            Next
+          </Button>
+        </div>
       </div>
       <Table>
         <TableHeader>

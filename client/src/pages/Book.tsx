@@ -37,7 +37,7 @@ export default function Book() {
     <Layout>
       <section className="bg-sidebar text-sidebar-foreground py-10">
         <div className="container">
-          <h1 className="font-heading text-3xl font-bold">{pujaType.name}</h1>
+          <h1 className="font-heading text-3xl font-bold text-primary">{pujaType.name}</h1>
           <p className="text-sidebar-foreground/80 mt-1">Book Standard or Premium · In-person or Virtual</p>
         </div>
       </section>

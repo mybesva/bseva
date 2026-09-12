@@ -84,11 +84,20 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
         full = within_window or data.get("status") in ("in_progress", "completed", "cancelled")
         data["details_level"] = "full" if full else "basic"
         data["pujari_details_visible"] = True
+        # Privacy: never expose customer full name to pujari — first name / initials only
+        raw_name = str(data.get("customer_name") or "").strip()
+        if raw_name:
+            parts = [p for p in raw_name.split() if p]
+            if len(parts) == 1:
+                data["customer_name"] = parts[0][0].upper() + "." if parts[0] else "Customer"
+            else:
+                data["customer_name"] = f"{parts[0]} {parts[-1][0].upper()}."
+            data["customer_display_name"] = data["customer_name"]
+        data.pop("customer_email", None)
         if not full:
             for k in (
                 "address",
                 "customer_phone",
-                "customer_email",
                 "latitude",
                 "longitude",
                 "meeting_url",

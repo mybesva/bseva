@@ -229,6 +229,83 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS samagri_requested BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS alankaram_requested BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS food_requested BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS licence_type TEXT",
+    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS licence_number TEXT",
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS basic_price_paise INTEGER",
+    """
+    CREATE TABLE IF NOT EXISTS support_conversations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      customer_id UUID NOT NULL REFERENCES users(id),
+      assigned_agent_id UUID REFERENCES users(id),
+      status TEXT NOT NULL DEFAULT 'open',
+      subject TEXT,
+      last_response_at TIMESTAMPTZ,
+      closed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS support_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      conversation_id UUID NOT NULL REFERENCES support_conversations(id) ON DELETE CASCADE,
+      sender_id UUID REFERENCES users(id),
+      sender_role TEXT NOT NULL DEFAULT 'customer',
+      body TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'system'",
+    "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)",
+    "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link TEXT",
+    "ALTER TABLE promo_banners ADD COLUMN IF NOT EXISTS subtitle TEXT",
+    "ALTER TABLE promo_banners ADD COLUMN IF NOT EXISTS advertiser TEXT",
+    "ALTER TABLE seasonal_popups ADD COLUMN IF NOT EXISTS audience TEXT NOT NULL DEFAULT 'customer'",
+    "ALTER TABLE seasonal_popups ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 100",
+    "ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open'",
+    """
+    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS consultation_type TEXT DEFAULT 'voice'
+    """,
+    """
+    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS provider_session_id TEXT
+    """,
+    """
+    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS join_status TEXT DEFAULT 'pending'
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS promo_banners (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      image_url TEXT,
+      target_url TEXT,
+      audience TEXT NOT NULL DEFAULT 'customer',
+      placement TEXT NOT NULL DEFAULT 'post_login',
+      start_at TIMESTAMPTZ,
+      end_at TIMESTAMPTZ,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      display_order INTEGER NOT NULL DEFAULT 100,
+      is_third_party BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS seasonal_popups (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      description TEXT,
+      image_url TEXT,
+      service_id UUID REFERENCES services(id),
+      cta_label TEXT,
+      cta_url TEXT,
+      languages TEXT DEFAULT 'en,hi,te',
+      start_at TIMESTAMPTZ,
+      end_at TIMESTAMPTZ,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
     """
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check
     """,

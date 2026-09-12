@@ -37,7 +37,7 @@ export default function Book() {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#F7931E]" />
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
       </Layout>
     );
@@ -71,7 +71,7 @@ export default function Book() {
     <Layout>
       <section className="bg-sidebar text-sidebar-foreground py-10">
         <div className="container">
-          <h1 className="text-h1">{pujaType.name}</h1>
+          <h1 className="text-h1 text-primary">{pujaType.name}</h1>
           <p className="text-sidebar-foreground/80 mt-1">
             {publicConfig?.virtual_puja_enabled
               ? "Book Standard or Premium · In-person or Virtual"
@@ -92,6 +92,7 @@ export default function Book() {
           serviceId={pujaType.id}
           pujaName={pujaType.name}
           basePrices={{
+            basic: pujaType.basic_price_paise || undefined,
             standard: pujaType.standard_price_paise,
             premium: pujaType.premium_price_paise,
           }}

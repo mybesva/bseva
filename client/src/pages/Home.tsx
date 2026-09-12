@@ -26,7 +26,7 @@ export default function Home() {
             <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-bold tracking-[0.2em] uppercase mb-6">
               {t("home.badge")}
             </span>
-            <h1 className="font-heading font-bold text-4xl md:text-6xl lg:text-7xl text-white mb-6 leading-tight drop-shadow-lg">
+            <h1 className="font-heading font-bold text-4xl md:text-6xl lg:text-7xl text-primary mb-6 leading-tight drop-shadow-lg">
               {t("home.heroTitle1")} <br />
               <span className="text-gradient-gold">{t("home.heroTitle2")}</span>
             </h1>
@@ -60,6 +60,7 @@ export default function Home() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="bangalore">Bangalore</SelectItem>
+                    <SelectItem value="hyderabad">Hyderabad</SelectItem>
                     <SelectItem value="mumbai">Mumbai</SelectItem>
                     <SelectItem value="delhi">Delhi</SelectItem>
                     <SelectItem value="chennai">Chennai</SelectItem>

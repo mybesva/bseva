@@ -652,6 +652,19 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             apply_referral_code(db, str(user["id"]), body.referral_code)
         except Exception:
             pass
+    try:
+        from app.routers.notifications import create_notification
+
+        create_notification(
+            db,
+            user_id=str(body.pujari_id),
+            title="New booking request",
+            body=f"New booking {number} awaiting your acceptance.",
+            category="booking",
+            link="/pujari",
+        )
+    except Exception:
+        pass
     db.commit()
     return {
         "id": booking_id,
@@ -676,10 +689,18 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
 
 
 @router.get("/bookings")
-def list_bookings(user=Depends(current_user), db: Session = Depends(get_db)):
+def list_bookings(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    user=Depends(current_user),
+    db: Session = Depends(get_db),
+):
     from app.booking_visibility import booking_for_role
 
+    offset = (page - 1) * limit
+
     if user["role"] in ("admin", "super_admin"):
+        total = int(db.execute(text("SELECT COUNT(*) FROM bookings")).scalar() or 0)
         rows = db.execute(
             text(
                 """
@@ -692,12 +713,20 @@ def list_bookings(user=Depends(current_user), db: Session = Depends(get_db)):
                   CASE WHEN COALESCE(b.needs_reassignment, FALSE) THEN 0 ELSE 1 END,
                   CASE WHEN b.status = 'rejected' THEN 0 ELSE 1 END,
                   b.created_at DESC
-                LIMIT 200
+                LIMIT :lim OFFSET :off
                 """
-            )
+            ),
+            {"lim": limit, "off": offset},
         ).mappings().all()
-        return [row_dict(r) for r in rows]
+        items = [row_dict(r) for r in rows]
     elif user["role"] in ("pujari", "head_pujari"):
+        total = int(
+            db.execute(
+                text("SELECT COUNT(*) FROM bookings WHERE pujari_id = :id"),
+                {"id": user["id"]},
+            ).scalar()
+            or 0
+        )
         rows = db.execute(
             text(
                 """
@@ -707,12 +736,20 @@ def list_bookings(user=Depends(current_user), db: Session = Depends(get_db)):
                 JOIN services s ON s.id = b.service_id
                 WHERE b.pujari_id = :id
                 ORDER BY b.created_at DESC
+                LIMIT :lim OFFSET :off
                 """
             ),
-            {"id": user["id"]},
+            {"id": user["id"], "lim": limit, "off": offset},
         ).mappings().all()
-        return [booking_for_role(db, dict(r), user) for r in rows]
+        items = [booking_for_role(db, dict(r), user) for r in rows]
     else:
+        total = int(
+            db.execute(
+                text("SELECT COUNT(*) FROM bookings WHERE customer_id = :id"),
+                {"id": user["id"]},
+            ).scalar()
+            or 0
+        )
         rows = db.execute(
             text(
                 """
@@ -722,11 +759,20 @@ def list_bookings(user=Depends(current_user), db: Session = Depends(get_db)):
                 JOIN services s ON s.id = b.service_id
                 WHERE b.customer_id = :id
                 ORDER BY b.created_at DESC
+                LIMIT :lim OFFSET :off
                 """
             ),
-            {"id": user["id"]},
+            {"id": user["id"], "lim": limit, "off": offset},
         ).mappings().all()
-        return [booking_for_role(db, dict(r), user) for r in rows]
+        items = [booking_for_role(db, dict(r), user) for r in rows]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": max(1, (total + limit - 1) // limit) if total else 1,
+    }
 
 
 @router.patch("/bookings/{booking_id}/status")
@@ -800,6 +846,8 @@ def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = De
 
 @router.post("/bookings/{booking_id}/cancel")
 def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(current_user), db: Session = Depends(get_db)):
+    from app.validation_rules import validate_cancel_reason
+
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
@@ -823,9 +871,11 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
         refund = int(round(total * policy["refund_percent"] / 100)) if paid else 0
         if not paid:
             fee, refund = 0, 0
-    reason_full = (reason or "").strip() or None
+    # Reason required when cancelling (meaningful text)
+    reason_clean = validate_cancel_reason(reason, required=True)
+    reason_full = reason_clean
     if actor == "pujari":
-        reason_full = f"[pujari] {reason_full}" if reason_full else "[pujari]"
+        reason_full = f"[pujari] {reason_full}"
     db.execute(
         text(
             """
@@ -951,24 +1001,26 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
 
 @router.get("/pujaris/{pujari_id}/public")
 def public_pujari_profile(pujari_id: str, db: Session = Depends(get_db)):
+    from app.booking_visibility import public_pujari
+
     row = db.execute(
         text(
             """
             SELECT u.id, u.name, p.approved_level, p.verification_status, p.available,
-                   p.city, p.district, p.state, p.experience_years, p.languages, p.specializations,
-                   p.sampradaya, p.gotra, p.service_radius_km, p.website_publication_consent
+                   p.city, p.experience_years, p.languages, p.specializations,
+                   p.location_label
             FROM pujari_profiles p
             JOIN users u ON u.id = p.user_id
             WHERE u.id = CAST(:id AS uuid) AND u.blocked = FALSE
               AND p.verification_status = 'approved'
+              AND COALESCE(p.website_publication_consent, FALSE) = TRUE
             """
         ),
         {"id": pujari_id},
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Pujari not found")
-    data = row_dict(row)
-    # Safe public only — never expose phone, email, bank, exact coords, docs
+    data = public_pujari(row_dict(row))
     ratings = db.execute(
         text(
             """
@@ -980,7 +1032,4 @@ def public_pujari_profile(pujari_id: str, db: Session = Depends(get_db)):
     ).mappings().first()
     data["avg_stars"] = float(ratings["avg_stars"] or 0) if ratings else 0
     data["rating_count"] = int(ratings["rating_count"] or 0) if ratings else 0
-    if not data.get("website_publication_consent"):
-        data.pop("gotra", None)
-    data.pop("website_publication_consent", None)
     return data

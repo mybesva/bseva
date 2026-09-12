@@ -150,7 +150,7 @@ export default function Reports() {
             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             </Button>
-            <Button className="bg-[#F7931E] hover:bg-[#e8850d]">
+            <Button className="bg-primary hover:bg-primary/90">
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -290,7 +290,7 @@ export default function Reports() {
                           <span className="w-16 text-sm text-gray-500">{day.date}</span>
                           <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
                             <div 
-                              className="h-full bg-[#F7931E] rounded-full flex items-center justify-end pr-2"
+                              className="h-full bg-primary rounded-full flex items-center justify-end pr-2"
                               style={{ width: `${Math.min((day.total / 50) * 100, 100)}%` }}
                             >
                               <span className="text-xs text-white font-medium">{day.total}</span>
@@ -657,7 +657,7 @@ export default function Reports() {
                         </div>
                         <div className="w-full bg-gray-100 rounded-full h-3">
                           <div 
-                            className="h-full bg-gradient-to-r from-sidebar to-[#F7931E] rounded-full"
+                            className="h-full bg-gradient-to-r from-sidebar to-primary rounded-full"
                             style={{ width: `${method.percentage}%` }}
                           />
                         </div>

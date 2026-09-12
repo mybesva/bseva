@@ -68,6 +68,7 @@ const emptyForm = {
   required_level: 2,
   standard_price_paise: null as number | null,
   premium_price_paise: null as number | null,
+  basic_price_paise: null as number | null,
   main_puja_price_paise: null as number | null,
   samagri_price_paise: 0,
   alankaram_price_paise: 0,
@@ -221,6 +222,7 @@ export default function ServicesAdmin() {
       required_level: s.required_level || 2,
       standard_price_paise: s.standard_price_paise != null ? Number(s.standard_price_paise) : null,
       premium_price_paise: s.premium_price_paise != null ? Number(s.premium_price_paise) : null,
+      basic_price_paise: s.basic_price_paise != null ? Number(s.basic_price_paise) : null,
       main_puja_price_paise:
         s.main_puja_price_paise != null
           ? Number(s.main_puja_price_paise)
@@ -348,6 +350,7 @@ export default function ServicesAdmin() {
         category_slugs: form.category_slugs,
         standard_price_paise: form.standard_price_paise,
         premium_price_paise: form.premium_price_paise,
+        basic_price_paise: form.basic_price_paise,
         main_puja_price_paise: form.main_puja_price_paise ?? form.standard_price_paise,
         samagri_price_paise: Math.max(0, Math.round(Number(form.samagri_price_paise) || 0)),
         alankaram_price_paise: Math.max(0, Math.round(Number(form.alankaram_price_paise) || 0)),
@@ -862,9 +865,28 @@ export default function ServicesAdmin() {
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <p className="text-sm font-medium">Cost & pricing</p>
               <p className="text-xs text-muted-foreground">
-                Leave prices blank for drafts. Both Standard and Premium are required before activating.
+                Suggested packages: Basic ₹2,499 · Standard ₹3,499 · Premium ₹4,499 (override per service).
+                Standard and Premium are required before activating; Basic is optional.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="service-basic">Basic price (₹)</Label>
+                  <Input
+                    id="service-basic"
+                    type="number"
+                    min={0}
+                    step={1}
+                    placeholder="Optional e.g. 2499"
+                    value={formatPriceInput(form.basic_price_paise)}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        basic_price_paise:
+                          e.target.value === "" ? null : Math.round(Number(e.target.value) * 100),
+                      })
+                    }
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="service-standard">Standard price (₹)</Label>
                   <Input

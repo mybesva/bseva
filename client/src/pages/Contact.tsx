@@ -17,7 +17,7 @@ export default function Contact() {
           <img src="/images/mandala-pattern.png" alt="Pattern" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10 text-center">
-          <h1 className="font-heading font-bold text-4xl md:text-6xl mb-6">{t("contact.title")}</h1>
+          <h1 className="font-heading font-bold text-4xl md:text-6xl mb-6 text-primary">{t("contact.title")}</h1>
           <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">{t("contact.subtitle")}</p>
         </div>
       </section>

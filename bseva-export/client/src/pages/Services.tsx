@@ -94,7 +94,7 @@ export default function Services() {
           <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10 text-center">
-          <h1 className="text-display mb-4">{t("services.title")}</h1>
+          <h1 className="text-display text-primary mb-4">{t("services.title")}</h1>
           <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">{t("services.subtitle")}</p>
           <div className="max-w-xl mx-auto relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { validateSupport } from "@/lib/fieldValidation";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getLoginUrl } from "@/const";
@@ -40,17 +41,39 @@ function SupportForm({ categories }: { categories: string[] }) {
     }
   }
 
+  async function startChat() {
+    if (!description.trim()) {
+      toast.error("Enter a message to start chat");
+      return;
+    }
+    try {
+      await api("/support/conversations", {
+        method: "POST",
+        body: JSON.stringify({ subject: subject || category, message: description }),
+      });
+      toast.success("Chat started — an agent will respond when available");
+      setDescription("");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   useEffect(() => {
     void load();
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const errs = validateSupport(subject, description);
+    if (Object.keys(errs).length) {
+      toast.error(Object.values(errs)[0]);
+      return;
+    }
     setSaving(true);
     try {
       await api("/support/tickets", {
         method: "POST",
-        body: JSON.stringify({ category, subject, description }),
+        body: JSON.stringify({ category, subject: subject.trim(), description: description.trim() }),
       });
       toast.success(t("support.submitted"));
       setSubject("");
@@ -87,22 +110,27 @@ function SupportForm({ categories }: { categories: string[] }) {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Subject</Label>
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} required minLength={3} />
+              <Label>Subject *</Label>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} required minLength={5} />
             </div>
             <div className="space-y-1">
-              <Label>Description</Label>
+              <Label>Description *</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
-                minLength={3}
+                minLength={10}
                 rows={4}
               />
             </div>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Sending…" : "Submit"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={saving}>
+                {saving ? "Sending…" : "Submit ticket"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void startChat()}>
+                Start live chat
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

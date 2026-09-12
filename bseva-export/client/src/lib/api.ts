@@ -46,6 +46,23 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+/** Bookings list is paginated: { items, total, page, limit, pages }. */
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+};
+
+export async function apiBookings<T = any>(page = 1, limit = 50): Promise<Paginated<T>> {
+  const data = await api<Paginated<T> | T[]>(`/bookings?page=${page}&limit=${limit}`);
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length, page: 1, limit: data.length || limit, pages: 1 };
+  }
+  return data;
+}
+
 export async function uploadPujariDocument(file: File, documentType: string) {
   const headers = new Headers();
   const token = getToken();

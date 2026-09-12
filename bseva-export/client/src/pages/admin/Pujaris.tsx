@@ -216,19 +216,22 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
         </Button>
         <Button
           size="sm"
-          variant="destructive"
+          variant="outline"
           onClick={async () => {
-            if (!confirm(`Delete ${u.name}?`)) return;
+            if (!confirm(`Suspend (block) ${u.name}? Prefer this over permanent delete.`)) return;
             try {
-              await api(`/admin/users/${u.id}`, { method: "DELETE" });
-              toast.success("Deleted");
+              await api(`/admin/users/${u.id}/block`, {
+                method: "POST",
+                body: JSON.stringify({ blocked: true, reason: "Admin suspended account" }),
+              });
+              toast.success("Account suspended (blocked)");
               await onChanged();
             } catch (e: any) {
               toast.error(e.message);
             }
           }}
         >
-          Delete
+          Suspend
         </Button>
       </TableCell>
     </TableRow>
@@ -237,6 +240,9 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
 
 export default function PujarisPage() {
   const [rows, setRows] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -257,16 +263,26 @@ export default function PujarisPage() {
     setLocation(adminPath(`/pujaris${qs ? `?${qs}` : ""}`));
   }
 
-  async function load() {
-    const qs = new URLSearchParams();
+  async function load(p = page) {
+    const qs = new URLSearchParams({ page: String(p), page_size: "50" });
     if (statusFilter && statusFilter !== "all") qs.set("status", statusFilter);
     if (q.trim()) qs.set("q", q.trim());
-    const path = qs.toString() ? `/admin/pujaris?${qs}` : "/admin/pujaris";
-    setRows(await api<any[]>(path));
+    const res = await api<{ items: any[]; total: number; page: number; pages: number } | any[]>(`/admin/pujaris?${qs}`);
+    if (Array.isArray(res)) {
+      setRows(res);
+      setTotal(res.length);
+      setPage(1);
+      setPages(1);
+    } else {
+      setRows(res.items || []);
+      setTotal(res.total || 0);
+      setPage(res.page || p);
+      setPages(res.pages || 1);
+    }
   }
 
   useEffect(() => {
-    void load().catch((e) => toast.error(e.message));
+    void load(1).catch((e) => toast.error(e.message));
   }, [statusFilter, search]);
 
   async function handleAdd(e: React.FormEvent) {
@@ -292,10 +308,21 @@ export default function PujarisPage() {
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h1 className="text-h1">Pujaris</h1>
-        <Button onClick={() => setOpen(true)} className="gap-2">
-          <Plus size={16} />
-          Add pujari
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Page {page}/{pages} · {total}
+          </span>
+          <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => void load(page - 1)}>
+            Prev
+          </Button>
+          <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => void load(page + 1)}>
+            Next
+          </Button>
+          <Button onClick={() => setOpen(true)} className="gap-2">
+            <Plus size={16} />
+            Add pujari
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4 items-end">

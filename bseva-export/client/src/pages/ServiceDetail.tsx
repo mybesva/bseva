@@ -124,7 +124,7 @@ export default function ServiceDetail() {
                     This puja is not open for booking yet. Top available pujas can be booked from Services; Admin will mark this Available when ready.
                   </p>
                 )}
-                <h1 className="text-h1 text-foreground mb-2">{svc.name}</h1>
+                <h1 className="text-h1 text-primary mb-2">{svc.name}</h1>
                 {svc.local_name && <p className="text-muted-foreground mb-4">{svc.local_name}</p>}
                 <p className="text-lg text-muted-foreground leading-relaxed">
                   {svc.short_description || svc.description || "Authentic Vedic ritual through BSeva."}
@@ -151,7 +151,7 @@ export default function ServiceDetail() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <Meta label="Duration" value={svc.duration_minutes ? `${svc.duration_minutes} min` : "—"} />
                 <Meta label="Pujaris" value={String(svc.pujaris_required || 1)} />
-                <Meta label="Muhurta" value={svc.requires_muhurta ? "Required" : "Optional"} />
+                <Meta label="Muhurtham" value={svc.requires_muhurta ? "Required" : "Optional"} />
                 <Meta
                   label="Main price"
                   value={

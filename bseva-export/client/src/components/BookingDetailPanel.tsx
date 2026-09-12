@@ -29,6 +29,8 @@ export type BookingDetail = {
   package_type?: string;
   booking_date?: string;
   start_time?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   location_label?: string;
   mode?: string;
   base_price_paise?: number;
@@ -84,9 +86,11 @@ type Props = {
   role?: "customer" | "pujari" | "admin";
   onUpdated?: (info?: { decision?: "accepted" | "rejected" | "cancelled" }) => void;
   compact?: boolean;
+  /** When opened from dashboard Reject, jump straight to rejection dialog. */
+  initialIntent?: "accept" | "reject" | null;
 };
 
-export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, compact }: Props) {
+export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, compact, initialIntent }: Props) {
   const { t } = useI18n();
   const { user } = useAuth();
   const viewerRole = role || (user?.role === "pujari" ? "pujari" : user?.role === "admin" || user?.role === "super_admin" ? "admin" : "customer");
@@ -129,6 +133,13 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   useEffect(() => {
     void load();
   }, [bookingId]);
+
+  useEffect(() => {
+    if (initialIntent === "reject" && !loading) {
+      setRejectReason("");
+      setRejectOpen(true);
+    }
+  }, [initialIntent, bookingId, loading]);
 
   async function run(
     action: () => Promise<void>,
@@ -238,6 +249,19 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             <div className="col-span-2">
               <div className="text-muted-foreground">Location</div>
               <div className="font-medium">{booking.location_label}</div>
+              {viewerRole === "pujari" &&
+                booking.latitude != null &&
+                booking.longitude != null &&
+                (status === "confirmed" || status === "in_progress") && (
+                  <a
+                    className="text-sm text-primary underline mt-1 inline-block"
+                    href={`https://www.google.com/maps?q=${booking.latitude},${booking.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open service location on map
+                  </a>
+                )}
             </div>
           )}
           {viewerRole === "pujari" && booking.details_level === "basic" && (
@@ -339,7 +363,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         </div>
         {viewerRole === "pujari" && booking.pujari_payable_paise != null && (
           <div className="flex justify-between text-primary">
-            <span>Your share</span>
+            <span>Dakshina</span>
             <span>{rupees(Number(booking.pujari_payable_paise))}</span>
           </div>
         )}
@@ -446,6 +470,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                   : "Review the time-based charges below before confirming."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {!cancelLoading && cancelPreview && !cancelPreview.allowed && (
+            <p className="text-sm text-destructive font-medium">
+              {cancelPreview.message ||
+                "Cancellation is not allowed less than 24 hours before the booking."}
+            </p>
+          )}
           {!cancelLoading && cancelPreview?.allowed && (
             <div className="text-sm space-y-2 rounded-md border border-border bg-muted/40 p-3">
               <p>
@@ -479,21 +509,35 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               )}
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="cancel-reason">Reason (optional)</Label>
-            <Textarea
-              id="cancel-reason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              rows={2}
-            />
-          </div>
+          {cancelPreview?.allowed && (
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason">Reason for cancellation *</Label>
+              <Textarea
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Please explain why you are cancelling (min 5 characters)"
+                rows={2}
+                minLength={5}
+                required
+              />
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Keep booking</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
-              disabled={!cancelPreview?.allowed || cancelLoading || busy}
-              onClick={() =>
+              disabled={
+                !cancelPreview?.allowed ||
+                cancelLoading ||
+                busy ||
+                cancelReason.trim().length < 5
+              }
+              onClick={() => {
+                if (cancelReason.trim().length < 5) {
+                  toast.error("Cancellation reason must be at least 5 characters");
+                  return;
+                }
                 void run(
                   () =>
                     api(
@@ -504,8 +548,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                     ).then(() => undefined),
                   "Booking cancelled",
                   "cancelled"
-                )
-              }
+                );
+              }}
             >
               Confirm cancel
             </AlertDialogAction>

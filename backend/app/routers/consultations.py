@@ -233,6 +233,8 @@ def create_muhurta_consultation(
 
 @router.get("/muhurta-consultations")
 def list_muhurta_consultations(user=Depends(current_user), db: Session = Depends(get_db)):
+    from app.routers.notifications import mask_customer_display_name
+
     if user["role"] in ("admin", "super_admin"):
         rows = db.execute(
             text(
@@ -245,7 +247,8 @@ def list_muhurta_consultations(user=Depends(current_user), db: Session = Depends
                 """
             )
         ).mappings().all()
-    elif user["role"] in ("pujari", "head_pujari"):
+        return [row_dict(r) for r in rows]
+    if user["role"] in ("pujari", "head_pujari"):
         rows = db.execute(
             text(
                 """
@@ -259,19 +262,24 @@ def list_muhurta_consultations(user=Depends(current_user), db: Session = Depends
             ),
             {"id": user["id"]},
         ).mappings().all()
-    else:
-        rows = db.execute(
-            text(
-                """
-                SELECT m.*, s.name AS service_name
-                FROM muhurta_consultations m
-                JOIN services s ON s.id = m.service_id
-                WHERE m.customer_id = CAST(:id AS uuid)
-                ORDER BY m.created_at DESC
-                """
-            ),
-            {"id": user["id"]},
-        ).mappings().all()
+        out = []
+        for r in rows:
+            d = row_dict(r)
+            d["customer_name"] = mask_customer_display_name(d.get("customer_name"))
+            out.append(d)
+        return out
+    rows = db.execute(
+        text(
+            """
+            SELECT m.*, s.name AS service_name
+            FROM muhurta_consultations m
+            JOIN services s ON s.id = m.service_id
+            WHERE m.customer_id = CAST(:id AS uuid)
+            ORDER BY m.created_at DESC
+            """
+        ),
+        {"id": user["id"]},
+    ).mappings().all()
     return [row_dict(r) for r in rows]
 
 

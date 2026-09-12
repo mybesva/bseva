@@ -12,6 +12,7 @@ class RegisterIn(BaseModel):
     phone: str = Field(min_length=10, max_length=15)
     password: str = Field(min_length=8, max_length=128)
     otp: str = Field(min_length=4, max_length=8)
+    captcha_token: Optional[str] = None
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -89,8 +90,8 @@ class TokenOut(BaseModel):
 class BookingCreateIn(BaseModel):
     service_id: UUID
     pujari_id: UUID
-    package_type: Literal["standard", "premium"]
-    mode: Literal["in_person", "virtual"]
+    package_type: Literal["basic", "standard", "premium"]
+    mode: Literal["in_person", "temple", "virtual"]
     booking_date: date
     start_time: time
     location_label: Optional[str] = None
@@ -171,6 +172,7 @@ class ServiceIn(BaseModel):
     required_level: int = Field(ge=1, le=4)
     standard_price_paise: Optional[int] = None
     premium_price_paise: Optional[int] = None
+    basic_price_paise: Optional[int] = None
     main_puja_price_paise: Optional[int] = None
     samagri_price_paise: Optional[int] = 0
     alankaram_price_paise: Optional[int] = 0
@@ -210,7 +212,7 @@ class ServiceCategoryIn(BaseModel):
 
 
 class DocumentMetaIn(BaseModel):
-    document_type: Literal["certificate", "identity", "supporting"]
+    document_type: Literal["certificate", "identity", "supporting", "driving_licence"]
     storage_path: str
 
 
@@ -249,6 +251,8 @@ class PujariProfileIn(BaseModel):
     bank_ifsc: Optional[str] = Field(default=None, max_length=11)
     bank_holder_name: Optional[str] = Field(default=None, max_length=120)
     onboarding_step: Optional[int] = Field(default=None, ge=1, le=6)
+    licence_type: Optional[Literal["driving_licence", "cab_commercial", "other", "none"]] = None
+    licence_number: Optional[str] = Field(default=None, max_length=40)
 
 
 class JoiningFeeWaiveIn(BaseModel):

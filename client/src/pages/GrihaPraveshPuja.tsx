@@ -25,7 +25,7 @@ export default function GrihaPraveshPuja() {
           <span className="inline-block py-1 px-3 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/40 text-primary-foreground text-xs font-bold tracking-[0.2em] uppercase mb-6">
             New Beginnings
           </span>
-          <h1 className="font-heading font-bold text-4xl md:text-6xl text-white mb-6 drop-shadow-lg">
+          <h1 className="font-heading font-bold text-4xl md:text-6xl text-primary mb-6 drop-shadow-lg">
             Griha Pravesh Puja
           </h1>
           <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
@@ -303,7 +303,7 @@ export default function GrihaPraveshPuja() {
       {/* CTA */}
       <section className="py-20">
         <div className="container text-center">
-          <h2 className="font-heading font-bold text-3xl md:text-4xl text-sidebar mb-6">
+          <h2 className="font-heading font-bold text-3xl md:text-4xl text-primary mb-6">
             Planning your House Warming?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">

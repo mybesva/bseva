@@ -86,7 +86,7 @@ export default function CustomerProfilePage() {
       }
       setLang(language);
       await refresh();
-      toast.success("Profile updated");
+      toast.success("Profile details updated");
     } catch (err: any) {
       toast.error(err.message || "Could not save profile");
     } finally {

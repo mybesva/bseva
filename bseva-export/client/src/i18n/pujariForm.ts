@@ -27,7 +27,7 @@ export const pujariFormEn: Record<string, string> = {
   "pujari.profile.done": "Profile Complete",
   "pujari.profile.completion": "Profile Completion",
   "pujari.personal": "Personal Information",
-  "pujari.photo": "Upload Profile Photo",
+  "pujari.photo": "Upload Profile Photo *",
   "pujari.photo.replace": "Replace photo",
   "pujari.photo.remove": "Remove photo",
   "pujari.fullName": "Full Name",

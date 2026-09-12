@@ -227,7 +227,7 @@ export default function SMSTemplates() {
           <h1 className="text-h1 text-foreground">SMS Templates</h1>
           <p className="text-gray-600 mt-1">Manage automated SMS templates for notifications</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-[#F7931E] hover:bg-[#e8850d]">
+        <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
           <Plus className="w-4 h-4 mr-2" />
           Create Template
         </Button>
@@ -430,7 +430,7 @@ export default function SMSTemplates() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="bg-[#F7931E] hover:bg-[#e8850d]">
+            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
               {editingTemplate ? "Update Template" : "Create Template"}
             </Button>
           </DialogFooter>

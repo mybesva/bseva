@@ -17,6 +17,7 @@ import AdminPayments from "./pages/admin/Payments";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminSamagri from "./pages/admin/Samagri";
 import AdminNotifications from "./pages/admin/Notifications";
+import AdminPromos from "./pages/admin/PromosAdmin";
 import AdminSettings from "./pages/admin/Settings";
 import AdminLegal from "./pages/admin/Legal";
 import AdminSupport from "./pages/admin/Support";
@@ -137,6 +138,7 @@ function Router() {
       <Route path={`${ops}/reviews`} component={AdminReviews} />
       <Route path={`${ops}/samagri`} component={AdminSamagri} />
       <Route path={`${ops}/notifications`} component={AdminNotifications} />
+      <Route path={`${ops}/promos`} component={AdminPromos} />
       <Route path={`${ops}/settings`} component={AdminSettings} />
       <Route path={`${ops}/pricing`} component={AdminPricingRules} />
       <Route path={`${ops}/support`} component={AdminSupport} />

@@ -11,19 +11,24 @@ import { api, apiBase, registerApi } from "@/lib/api";
 import { REGISTRATION_CONSENT_LABEL, TERMS_VERSION, PRIVACY_VERSION } from "@/lib/legal";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang } from "@/i18n/translations";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 
 export default function Register() {
   const { t, lang, setLang, labels } = useI18n();
+  const { config: publicConfig } = usePublicConfig();
+  const captchaEnabled = Boolean(publicConfig.registration_captcha_enabled);
+  const captchaSiteKey = String(publicConfig.recaptcha_site_key || "");
   const [, setLocation] = useLocation();
   const roleHint = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("role");
+  const isPujariFlow = roleHint === "pujari";
   const returnUrl = safeReturnUrl(
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("returnUrl")
   );
-  const [accountType, setAccountType] = useState<"customer" | "pujari">(roleHint === "pujari" ? "pujari" : "customer");
+  const [accountType, setAccountType] = useState<"customer" | "pujari">(isPujariFlow ? "pujari" : "customer");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -33,10 +38,23 @@ export default function Register() {
   const [otpSent, setOtpSent] = useState(false);
   const [requestedLevel, setRequestedLevel] = useState(2);
   const [consent, setConsent] = useState(false);
+  const [humanCheck, setHumanCheck] = useState(false);
   const [pending, setPending] = useState(false);
   const [referralCode, setReferralCode] = useState("");
   const [language, setLanguage] = useState<Lang>(lang);
   const { levels: pujariLevels } = usePujariLevels();
+
+  useEffect(() => {
+    if (!captchaEnabled || !captchaSiteKey || typeof document === "undefined") return;
+    const existing = document.querySelector("script[data-bseva-recaptcha]");
+    if (existing) return;
+    const s = document.createElement("script");
+    s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(captchaSiteKey)}`;
+    s.async = true;
+    s.defer = true;
+    s.dataset.bsevaRecaptcha = "1";
+    document.head.appendChild(s);
+  }, [captchaEnabled, captchaSiteKey]);
 
   async function sendOtp() {
     if (!phone && !email) {
@@ -73,8 +91,24 @@ export default function Register() {
       toast.error("Enter the verification code sent to your phone or email");
       return;
     }
+    if (captchaEnabled && !humanCheck && !captchaSiteKey) {
+      toast.error("Please confirm you are not a robot");
+      return;
+    }
     setPending(true);
     try {
+      let captcha_token: string | undefined;
+      if (captchaEnabled) {
+        if (captchaSiteKey && typeof window !== "undefined" && (window as any).grecaptcha) {
+          captcha_token = await (window as any).grecaptcha.execute(captchaSiteKey, { action: "register" });
+        } else if (humanCheck) {
+          captcha_token = "dev-bypass";
+        } else {
+          toast.error("CAPTCHA verification is required");
+          setPending(false);
+          return;
+        }
+      }
       await registerApi({
         account_type: accountType,
         name,
@@ -89,6 +123,7 @@ export default function Register() {
         terms_version: TERMS_VERSION,
         privacy_version: PRIVACY_VERSION,
         referral_code: referralCode.trim() || undefined,
+        captcha_token,
       });
       setLang(language);
       toast.success(`Welcome, ${name}. You can add your address after signing in.`);
@@ -109,17 +144,28 @@ export default function Register() {
       <div className="min-h-[70vh] py-12 px-4">
         <Card className="w-full max-w-lg mx-auto border-border shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl">Create your BSeva account</CardTitle>
+            <CardTitle className="text-2xl">
+              {isPujariFlow ? "Create your Pujari account" : "Create your BSeva account"}
+            </CardTitle>
             <CardDescription>
-              Register as Customer or Pujari. Address and location can be added after you sign in.
+              {isPujariFlow
+                ? "Register as a Pujari. Complete your profile after Login."
+                : "Register as a Customer. Address and location can be added after Login."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={onSubmit} autoComplete="off">
-              <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant={accountType === "customer" ? "default" : "outline"} onClick={() => setAccountType("customer")}>Customer</Button>
-                <Button type="button" variant={accountType === "pujari" ? "default" : "outline"} onClick={() => setAccountType("pujari")}>Pujari</Button>
-              </div>
+              {!isPujariFlow && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant={accountType === "customer" ? "default" : "outline"} onClick={() => setAccountType("customer")}>Customer</Button>
+                  <Button type="button" variant={accountType === "pujari" ? "default" : "outline"} onClick={() => setAccountType("pujari")}>Pujari</Button>
+                </div>
+              )}
+              {isPujariFlow && (
+                <p className="text-sm rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-foreground">
+                  Registering as <strong>Pujari</strong>. Role is assigned securely by BSeva.
+                </p>
+              )}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2 space-y-2">
                   <Label>Full name</Label>
@@ -178,6 +224,17 @@ export default function Register() {
                   <Button type="button" variant="secondary" onClick={() => void sendOtp()}>{otpSent ? "Resend" : "Send OTP"}</Button>
                 </div>
               </div>
+              {captchaEnabled && (
+                <div className="flex items-start gap-2 rounded-md border border-border p-3">
+                  <Checkbox id="human" checked={humanCheck} onCheckedChange={(v) => setHumanCheck(!!v)} />
+                  <Label htmlFor="human" className="text-sm font-normal leading-snug">
+                    I am not a robot
+                    {captchaSiteKey
+                      ? " (reCAPTCHA will verify on submit)"
+                      : " — enable RECAPTCHA_SECRET_KEY=dev-bypass for local testing"}
+                  </Label>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>{t("rewards.codeLabel")} ({t("common.optional")})</Label>
                 <Input
@@ -198,7 +255,7 @@ export default function Register() {
               </label>
               <Button type="submit" className="w-full" disabled={pending}>{pending ?"Creating account…" :"Create account"}</Button>
               <p className="text-sm text-center text-muted-foreground">
-                Already registered? <Link href="/login">Sign in</Link>
+                Already registered? <Link href="/login">{t("auth.login")}</Link>
               </p>
             </form>
           </CardContent>

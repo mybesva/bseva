@@ -46,7 +46,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 rounded-lg bg-orange-50">
             <p className="text-xs text-muted-foreground">Balance</p>
-            <p className="text-price text-[#F7931E]">{rupees(balance)}</p>
+            <p className="text-price text-primary">{rupees(balance)}</p>
           </div>
           <div className="p-3 rounded-lg bg-green-50">
             <p className="text-xs text-muted-foreground">Credits</p>
@@ -60,7 +60,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
         {variant === "customer" && (
           <div className="flex gap-2 items-end">
             <div className="space-y-1">
-              <Label>Load wallet (₹)</Label>
+              <Label>Add money (₹)</Label>
               <Input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-40" />
             </div>
             <Button
@@ -70,14 +70,14 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
                     method: "POST",
                     body: JSON.stringify({ amount_paise: Math.round(Number(amount) * 100) }),
                   });
-                  toast.success("Wallet loaded");
+                  toast.success("Money added");
                   await load();
                 } catch (e: any) {
                   toast.error(e.message);
                 }
               }}
             >
-              Load
+              Add Money
             </Button>
           </div>
         )}

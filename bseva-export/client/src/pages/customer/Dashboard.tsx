@@ -1,9 +1,10 @@
 import { CustomerPortal } from "@/components/RolePortals";
+import PromoBannerCarousel from "@/components/PromoBannerCarousel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
+import { api, apiBookings } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Calendar,
@@ -54,11 +55,11 @@ function CustomerDashboardContent() {
     if (!user || user.role !== "customer") return;
     setIsLoading(true);
     Promise.all([
-      api<any[]>("/bookings"),
+      apiBookings(1, 50),
       api<any[]>("/services"),
     ])
       .then(([b, s]) => {
-        setBookings(b);
+        setBookings(b.items);
         setPujas(s);
       })
       .catch((e) => toast.error(e.message))
@@ -90,6 +91,7 @@ function CustomerDashboardContent() {
         <h1 className="text-h1 mb-2">{t("customer.welcome")}, {user?.name || "Customer"}</h1>
         <p className="text-sidebar-foreground/80">{t("customer.subtitle")}</p>
       </section>
+      <PromoBannerCarousel />
       <div className="space-y-12">
         {!isLoading && ongoingBookings.length > 0 && (
           <div>
@@ -128,7 +130,13 @@ function CustomerDashboardContent() {
                           </span>
                         </div>
                       </div>
-                      <Badge variant="outline" className="capitalize self-start md:self-center">{booking.package_type}</Badge>
+                      <Badge
+                        variant="outline"
+                        className="capitalize self-start md:self-center pointer-events-none select-none"
+                        title="Package type"
+                      >
+                        {booking.package_type}
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -301,7 +309,13 @@ function CustomerDashboardContent() {
                         </span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="capitalize">{booking.package_type}</Badge>
+                    <Badge
+                      variant="outline"
+                      className="capitalize pointer-events-none select-none"
+                      title="Package type"
+                    >
+                      {booking.package_type}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>

@@ -36,9 +36,9 @@ export default function AstrologyPage() {
     <Layout>
       <section className="bg-sidebar text-sidebar-foreground py-12">
         <div className="container">
-          <h1 className="text-h1">{t("nav.astrology")}</h1>
+          <h1 className="text-h1 text-primary">{t("nav.astrology")}</h1>
           <p className="text-sidebar-foreground/80 mt-2 max-w-2xl">
-            Jyotisha guidance from verified pujaris — horoscope readings, muhurta selection and remedial pujas.
+            Jyotisha guidance from verified pujaris — horoscope readings, Muhurtham selection and remedial pujas.
           </p>
         </div>
       </section>
@@ -75,7 +75,7 @@ export default function AstrologyPage() {
                   {s.duration_minutes ? (
                     <Badge variant="outline">{s.duration_minutes} min</Badge>
                   ) : null}
-                  {s.muhurta_consultation_enabled && <Badge variant="secondary">Muhurta</Badge>}
+                  {s.muhurta_consultation_enabled && <Badge variant="secondary">Muhurtham</Badge>}
                 </div>
                 <Link href={`/book/${s.slug}`}>
                   <Button className="w-full bg-primary hover:bg-primary/90 font-bold">

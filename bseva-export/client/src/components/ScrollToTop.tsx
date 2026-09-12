@@ -21,7 +21,7 @@ export default function ScrollToTop() {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
 
-      document.querySelectorAll<HTMLElement>("[data-scroll-reset], main").forEach((el) => {
+      document.querySelectorAll<HTMLElement>("[data-scroll-reset]").forEach((el) => {
         try {
           el.scrollTop = 0;
         } catch {

@@ -1,0 +1,353 @@
+08-09-2026
+Password for all: TestPass123!
+Role	Name	                 Email
+Super Admin	 BSeva Super Admin	super@bseva.test
+Admin	BSeva Admin	              admin@bseva.test
+Customer	Ananya Customer	customer1@bseva.test
+Customer	Rohan Customer	customer2@bseva.test
+Customer	Meera Customer	customer3@bseva.test
+Head Pujari	Pandit Sharma	pujari1@bseva.test
+Pujari	Pandit Reddy	                           pujari2@bseva.test
+QA testing on pujari page:
+1. Dashboard:
+2. Complete profile field:
+Bug Type: Functional / Field Validation
+You can also give the developer these example validation messages:
+Mobile Number: “Please enter a valid 10-digit mobile number.”
+Date of Birth: “You must be at least 18 years old to register as a Pujari.”
+In customer findings:
+Bug: Incorrect sidebar selection for Terms & Conditions
+Module: Customer Portal → Terms & Conditions
+Issue: When the user clicks Terms & Conditions, the Terms & Conditions modal opens correctly, but the sidebar still highlights Change Password as the active menu item.
+Expected: When Terms & Conditions is clicked:
+Terms & Conditions should become the active/highlighted sidebar item.
+Change Password should no longer remain highlighted.
+After closing the modal, the sidebar state should remain logically consistent with the current page/navigation.
+Actual: Terms & Conditions opens, but Change Password remains highlighted, giving the user an incorrect indication of the currently selected menu.
+Super Admin findings:
+Bug: Active Pujaris count mismatch
+Dashboard: The Active Pujaris card shows 10.
+Pujaris → Approved filter: Only 8 approved Pujaris are listed:
+Phase8 Puj – p8p13856
+Phase8 Puj – p8p97890
+tets
+rohit
+pujari12
+pujari10 – chandu3
+pujari10 – nvgopichand68776
+Pandit Reddy
+So based on the screenshots:
+Dashboard Active Pujaris = 10
+Actual Approved Pujaris displayed = 8
+Difference = 2
+Expected: The dashboard's Active Pujaris count should match the actual number of active/approved Pujaris. If "Active" and "Approved" use different definitions, the UI should clearly distinguish them.
+Actual: Dashboard shows 10, while the approved Pujari list shows only 8.
+Bug: Incorrect currency icon on Revenue card
+Module: Super Admin → Dashboard
+Issue: The Revenue card displays the amount correctly in Indian Rupees (₹83,780), but the icon in the top-right corner is a Dollar ($) symbol.
+Expected: Since B-Seva uses INR, the icon should be ₹.
+Actual: Amount = ₹83,780, but icon = $
+Priority: Low
+Type: UI / Currency Consistency
+Fix: Replace the $ icon with ₹ and ensure INR is used consistently across Revenue, Payments, Settlements, Wallet, Invoices, and Bookings.
+A good UI mapping would be:
+Approved → Check circle
+Pending verification → Clock
+Correction required → Edit/Warning
+Rejected → X circle
+Blocked → Lock or Ban/User-blocked
+You can log it as:
+Issue: Status icons do not clearly represent their corresponding Pujari verification states and some icons are semantically similar.
+Expected: Each status should have a distinct, intuitive icon that clearly communicates its meaning.
+Bug: Hyderabad missing from Location dropdown
+Module: Home Page → Find Pujari
+Issue: Hyderabad is not available in the Select Location dropdown.
+Expected: Hyderabad should be included as a selectable location.
+Actual: Only Bangalore, Mumbai, Delhi, and Chennai are displayed.
+1. Profile section not opening — Bug
+Module: Super Admin Portal → Sidebar Profile
+Issue: Clicking the Super Admin profile/profile icon at the bottom-left does not open the profile page/details.
+Expected: Clicking the profile area should open the Super Admin profile, where the user can view/manage account details.
+Actual: Nothing opens when the profile section is clicked.
+Priority: Medium
+Type: Functional / Navigation Bug
+2. Active sidebar highlight color — UI/UX Suggestion
+In the screenshot, Settlements is selected using a blue background. Your orange suggestion makes sense because orange is already B-Seva's primary action/accent color and would make the active menu state more consistent with the branding.
+Suggestion: Change the active sidebar menu highlight from blue to B-Seva orange, while keeping enough contrast for the text/icon.
+For example:
+Current: 🔵 Settlements
+Suggested: 🟠 Settlements
+Admin findings:
+Bug: Admin Dashboard counts not loading initially
+Module: Admin → Dashboard
+Issue: Dashboard cards sometimes display “—” instead of their actual values. This affects:
+Total Customers
+Active Pujaris
+Total Bookings
+Revenue
+Pujari Status counts
+After refreshing the page or navigating/clicking and returning, the values appear correctly (for example, 12 customers, 9 active pujaris, 18 bookings, ₹92,040 revenue).
+Expected: All dashboard counts should automatically load and display when the Admin Dashboard first opens. The user should not need to refresh or perform another action.
+Actual: Cards initially show —; data appears only after refresh/navigation.
+Priority: High
+Type: Functional / API Data Loading / State Management Bug
+Developer note: Check the initial dashboard API call, authentication/session initialization timing, useEffect/query dependencies, loading-state handling, and whether the request is firing before the auth token/session is ready. If the initial API request fails, the UI should also retry or show a proper error instead of remaining as —
+Bug / UI Issue: Incorrect and mismatched dashboard card icons
+Module: Admin → Dashboard
+Issues observed:
+Revenue card
+Revenue value correctly shows ₹92,040.
+But the top-right icon is $.
+This creates mixed currency representation.
+Replace $ with a ₹ / INR-related icon.
+Dashboard card icons are not intuitive
+Total Customers → should use a clear Users/Customers icon.
+Active Pujaris → should use a distinct Pujari/verified-user icon rather than something too similar to Customers.
+Total Bookings → Calendar/booking icon is appropriate.
+Revenue → should use ₹ / Wallet / Indian currency icon.
+Pujari Status icons
+Approved → Check-circle
+Pending Verification → Clock/Hourglass 🕐
+Correction Required → Edit/Document-warning
+Rejected → X-circle
+Blocked → Ban/Lock icon 🚫
+Expected: Every dashboard card should have a distinct icon that clearly represents its data/status, and currency icons must consistently use INR (₹) throughout B-Seva.
+
+--- TABLE 1 ---
+Field | Details
+Bug | Accept and Reject actions display the same booking details screen
+Description | In the Pujari Dashboard under Pending Acceptance, both the Accept and Reject buttons open the same booking details modal. The Reject action does not provide a separate rejection flow or allow the Pujari to specify/confirm the reason for rejecting the booking.
+Role | Pujari
+Module | Dashboard → Pending Acceptance / Booking Request
+Actual Output | Clicking Accept opens the booking details modal with Puja information, preparation & samagri, pricing, booking terms, and Accept Booking / Reject actions. Clicking Reject from the dashboard also opens the same booking details modal with the same information and actions.
+Expected Output | Clicking Accept should open the booking acceptance flow/details and allow the Pujari to confirm acceptance. Clicking Reject should open a dedicated rejection confirmation flow, preferably with a rejection reason field/dropdown and Confirm Reject / Cancel options. The two actions should have clearly different behavior.
+
+--- TABLE 2 ---
+Field | Details
+Bug | Mandatory Profile Photo field is not marked with an asterisk (*)
+Description | In Complete Profile → Step 1 (Personal Details), the Profile Photo upload is required for onboarding, but the field label does not display the mandatory * indicator. Other required fields are correctly marked with *, causing inconsistent required-field indication.
+Role | Pujari
+Module | Complete Profile → Onboarding → Personal Details
+Actual Output | The field is displayed as “Upload Profile Photo” without an asterisk (*).
+Expected Output | If the Profile Photo is mandatory, the field should be displayed as “Upload Profile Photo *”. Required fields throughout the onboarding process should use the same mandatory-field indication consistently.
+
+--- TABLE 3 ---
+3. Field | Details
+Bug | Profile photo upload fails with 403 Unauthorized / AccessDenied error
+Description | While completing the Pujari profile, uploading a profile photo fails. After selecting the image, the system displays a storage upload error and the photo is not uploaded.
+Role | Pujari
+Module | Complete Profile → Personal Details → Profile Photo Upload
+Actual Output | Profile photo upload fails and displays: “Storage upload failed: statusCode 403, Unauthorized, Invalid Compact JWS, AccessDenied.” The selected profile photo is not saved/uploaded.
+Expected Output | The Pujari should be able to upload a valid profile photo successfully. After upload, the selected image should be saved and preferably displayed as a preview/profile image without any authorization or storage error.
+
+--- TABLE 4 ---
+4. Field | Details
+Bug | Invalid mobile number and unrealistic Date of Birth are accepted without validation
+Description | In Complete Profile → Personal Details, the system allows the Pujari to enter an invalid mobile number with more than the expected number of digits and also accepts a Date of Birth that results in the user being underage. No validation message is displayed, and the user is allowed to proceed/save the information.
+Role | Pujari
+Module | Complete Profile → Onboarding → Personal Details
+Actual Output | The Mobile Number field accepts an invalid/overlength number, and the Date of Birth field accepts a date that makes the Pujari approximately 2 years old. The system does not display any error and allows the user to continue.
+Expected Output | The Mobile Number field should validate the allowed phone-number format and length before saving. For Indian numbers, it should normally accept a valid 10-digit mobile number, with country-code handling if supported. The Date of Birth should enforce an appropriate minimum age for a Pujari account, and an error message should be displayed if the entered DOB does not meet the required age criteria.
+
+--- TABLE 5 ---
+6. Field | Details
+Bug | Current Location button is not working
+Description | In the Pujari onboarding address section, clicking the Current location button does not trigger any visible action. The location fields and coordinates are not updated, and no permission request or error message is shown.
+Role | Pujari
+Module | Complete Profile → Address / Location
+Actual Output | Clicking Current location gives no response. The current device location is not fetched, and no feedback is displayed to the user.
+Expected Output | Clicking Current location should request browser location permission if required, fetch the user’s current coordinates, and populate/update the relevant location/address fields. If location permission is denied or location retrieval fails, the application should show a clear error message.
+
+--- TABLE 6 ---
+7. Field | Details
+Bug | Address form accepts invalid data without field-level validation
+Description | During Pujari onboarding, the Address section allows invalid/random values to be entered in required address fields. The application does not display validation warnings and allows the user to save the data and proceed to the next onboarding step.
+Role | Pujari
+Module | Complete Profile → Onboarding → Address Details
+Actual Output | Invalid values such as special/random characters in Address Line 1, a single character in State, and alphabetic characters in PIN Code are accepted. After clicking Save & Continue, the application displays “Saved” and proceeds to the next step without validation errors.
+Expected Output | The system should validate all required address fields before saving. PIN Code should accept only a valid supported postal/PIN format (for India, normally 6 numeric digits). State, District, City/Village, and address fields should have appropriate format/length validation. Invalid values should show clear field-level error messages, and Save & Continue should not proceed until mandatory fields contain valid data.
+
+--- TABLE 7 ---
+Field | Details
+Bug | Onboarding proceeds without uploading mandatory Aadhaar document
+Description | In the Pujari onboarding Certificates & Aadhaar step, Aadhaar is explicitly marked as a mandatory document. However, the Pujari can leave the Aadhaar upload empty, click Save & Continue, and proceed to the next onboarding step.
+Role | Pujari
+Module | Complete Profile → Onboarding → Certificates & Aadhaar
+Actual Output | No Aadhaar document was uploaded, but the system accepts the step, shows it as saved/completed, and allows the Pujari to continue to Step 5 – Availability & Bank. No mandatory-field warning is displayed.
+Expected Output | The system should not allow the Pujari to complete or proceed past this step without uploading Aadhaar. A clear validation message such as “Aadhaar document is required” should be displayed. Save & Continue should proceed only after a valid Aadhaar document has been successfully uploaded.
+
+--- TABLE 8 ---
+Field | Details
+Bug | Unable to save Pujari signature due to storage authorization error
+Description | In My Profile, after drawing a signature and clicking Save signature, the signature is not saved. The application displays a storage upload failure notification with a 403 authorization error.
+Role | Pujari
+Module | My Profile → Signature
+Actual Output | Clicking Save signature displays: “Storage upload failed: 403 Unauthorized – Invalid Compact JWS – AccessDenied.” The signature is not successfully uploaded/saved.
+Expected Output | After drawing a valid signature and clicking Save signature, the signature should be successfully uploaded and saved to the Pujari's profile. A success confirmation should be displayed, and the saved signature should remain available when the profile is reopened/refreshed.
+
+--- TABLE 9 ---
+Field | Details
+Bug / Improvement | Complete Profile remains visible after onboarding completion and duplicates profile-related sections
+Description | The Pujari completes onboarding through Complete Profile, which includes personal details, address, documents, and other onboarding information. After completion, the same information is separately available under My Profile, Address, My Documents, and Angikara Patram. Keeping Complete Profile visible in the sidebar after completion creates duplication and may confuse users about where profile information should be maintained.
+Role | Pujari
+Module | Sidebar Navigation / Profile Management
+Actual Output | Complete Profile remains available even after onboarding is completed, while the entered information is also accessible through separate profile-related menu items.
+Expected Output | After successful onboarding, Complete Profile should either be hidden/disabled, marked as Completed, or renamed to Edit Profile/Profile Setup. Profile maintenance should clearly happen through My Profile, Address, My Documents, and Angikara Patram without duplicate/confusing navigation.
+
+--- TABLE 10 ---
+Field | Details
+Bug | Page/side navigation scroll position jumps upward when opening Experience
+Description | When the Pujari clicks Experience from the left sidebar, the Experience page opens correctly, but the page/sidebar scroll position automatically shifts upward. This causes the selected menu item to move away from the current viewport and creates an inconsistent navigation experience.
+Role | Pujari
+Module | Sidebar Navigation → Experience
+Actual Output | After clicking Experience, the Experience page loads, but the sidebar/page scroll position automatically moves upward instead of remaining around the selected Experience menu item.
+Expected Output | After selecting Experience, the page should open without an unnecessary scroll jump. The sidebar should retain its current scroll position or automatically keep the active Experience menu item visible.
+
+--- TABLE 11 ---
+Field | Details
+Bug | Bank details can be saved with all mandatory fields empty
+Description | In the Pujari Bank / Settlement section, the user can click Save without entering any bank information. The system still shows a success message indicating that bank details were saved.
+Role | Pujari
+Module | Bank / Settlement
+Actual Output | Account holder name, IFSC, and Account number are left empty. After clicking Save, the application displays “Bank details saved” without any validation warning.
+Expected Output | The system should validate all required bank fields before saving. If any mandatory field is empty, it should display clear field-level validation messages and should not show a success notification or save the record.
+
+--- TABLE 12 ---
+Field | Details
+Bug | Support tickets can be submitted with invalid/meaningless Subject and Description
+Description | In the Pujari Support → Raise a ticket form, the application does not properly validate the Subject and Description fields. The user can enter meaningless text or values consisting primarily/entirely of special characters and successfully create a support ticket.
+Role | Pujari
+Module | Support → Raise a Ticket
+Actual Output | Values such as “aaa”, repeated hyphens/commas, and other meaningless content are accepted as Subject/Description. The system creates the ticket, generates a Ticket ID, marks it Open, and displays “Ticket submitted.”
+Expected Output | Subject and Description should be mandatory and should meet reasonable validation rules before a ticket can be submitted. The system should reject empty, whitespace-only, special-character-only, and clearly insufficient inputs and display field-level validation messages.
+Severity | Medium
+Priority | High
+Bug Type | Functional / Input Validation
+
+--- TABLE 13 ---
+Field | Details
+Bug | Sidebar scroll position jumps upward when navigating to lower menu items
+Description | In the Pujari portal, when the user clicks lower sidebar options such as Experience, Availability, Referral, Change Password, and Terms & Conditions, the selected page opens but the sidebar automatically scrolls upward instead of keeping the selected menu item in view.
+Role | Pujari
+Module | Sidebar Navigation
+Actual Output | After clicking these menu items, the sidebar scroll position resets or moves upward. The active menu item is no longer maintained at its current visible position, forcing the user to scroll down again.
+Expected Output | The sidebar should preserve its current scroll position during navigation, or automatically keep the selected/active menu item visible after the route changes. The sidebar should not jump back upward unnecessarily.
+
+--- TABLE 14 ---
+Field | Details
+Bug | Premium button is not responding in Customer booking card
+Description | In the Customer Dashboard under My Bookings, the booking card displays a Premium button/tag. When the user clicks or taps it, no page, modal, tooltip, or details view opens, and there is no visible response.
+Role | Customer
+Module | Dashboard → My Bookings
+Actual Output | Clicking Premium does nothing. No navigation, popup, or information is displayed.
+Expected Output | If Premium is intended to be interactive, clicking it should open the relevant Premium booking/package details or explanation. If it is only a status/label, it should be styled as a non-clickable badge and should not appear interactive.
+
+--- TABLE 15 ---
+Field | Details
+Bug | Customer profile photo upload fails with 403 Unauthorized / AccessDenied
+Description | In the Customer My Profile page, when the user tries to upload a profile photo, the upload fails and the application shows a storage authorization error.
+Role | Customer
+Module | My Profile → Profile Photo
+Actual Output | After selecting a photo, the application displays “Storage upload failed: 403 Unauthorized – Invalid Compact JWS – AccessDenied.” The photo is not uploaded or saved.
+Expected Output | The customer should be able to upload a valid profile photo successfully. After upload, the photo should be saved and displayed in the profile without any storage or authorization error.
+
+--- TABLE 16 ---
+Field | Details
+Bug | Profile shows successful update even though profile photo upload failed
+Description | In the Customer My Profile page, the profile photo cannot be uploaded successfully. However, after clicking the main Save button, the application displays “Profile updated” even though the profile still shows “No photo uploaded yet.”
+Role | Customer
+Module | My Profile → Profile Photo / Profile Update
+Actual Output | Photo upload fails and no photo is stored. Clicking Save still displays “Profile updated”, while the profile continues to show “No photo uploaded yet.”
+Expected Output | If the profile photo upload fails, the system should clearly indicate that the photo was not saved. It should not give a misleading overall success message suggesting that all requested profile changes were completed. If other profile fields are saved successfully, the message should distinguish this, e.g., “Profile details updated, but profile photo upload failed.”
+
+--- TABLE 17 ---
+Field | Details
+Bug | Customer address form accepts invalid values and saves without validation
+Description | In the Customer My Address page, the application allows invalid or meaningless values to be entered in required address fields and still saves the address successfully. No field-level validation messages are displayed.
+Role | Customer
+Module | My Address
+Actual Output | Fields such as Address Line 1, District, State, and PIN Code accept invalid special-character-only values. After clicking Save address, the application displays “Address saved.”
+Expected Output | The system should validate all mandatory address fields before saving. Invalid values should be rejected and clear field-level warnings should be displayed. For example, PIN Code should accept only a valid supported postal format, and State/District/Address fields should not accept meaningless special-character-only input.
+
+--- TABLE 18 ---
+Field | Details
+Issue | Wallet action button uses unclear wording
+Current | Amount field: Load wallet (₹) → Button: Load
+Recommended | Amount field: Add money (₹) → Button: Add Money
+Reason | “Add Money” is more intuitive and customer-friendly than “Load”.
+Type | UI/UX Improvement
+Priority | Low
+
+--- TABLE 19 ---
+Field | Details
+Issue | Cancellation reason accepts invalid/insufficient input
+Observed | Entering only a single letter (e.g., “N”) is accepted by the cancellation prompt and the cancellation request proceeds to the next validation.
+Expected | If a cancellation reason is collected, it should require a meaningful minimum length (for example, 5–10 characters) and reject whitespace/symbol-only input.
+Additional issue | The UI says “Reason for cancellation? (optional)”. If it is truly optional, a single letter technically should not block cancellation. So either keep it optional with no content validation, or make it required and validate it properly.
+Current final response | “Cancellation is not allowed less than 24 hours before the booking.”
+Recommended behavior | Check the 24-hour cancellation eligibility first. If cancellation isn't allowed, show that message immediately and do not ask for a cancellation reason.
+Priority | Medium
+Type | Validation / UX
+
+--- TABLE 20 ---
+Field | Details
+Bug | Valid-length referral code incorrectly shows minimum-length validation error
+Page | Customer → Rewards & Referral
+Input | CUST1234-RC
+Actual Result | Error: “String should have at least 3 characters”
+Expected Result | Since the input exceeds 3 characters, minimum-length validation should pass. The system should then validate whether the referral code actually exists/is valid.
+Expected error if code is invalid | “Invalid referral code” or “Referral code not found.”
+Priority | Medium
+Type | Functional / Validation Bug
+
+--- TABLE 21 ---
+Field | Details
+Module | Customer → Support → Raise a Ticket
+Issue | Ticket is created even when Subject/Description contain insufficient or invalid data
+Observed | Ticket was successfully created despite incomplete/poor-quality input
+Expected | Subject and Description should have proper validation before submission
+Suggested Subject validation | Required, minimum 5 characters, reject only-spaces/special-character-only input
+Suggested Description validation | Required, minimum 10–20 characters, reject only-spaces/special-character-only input
+Error examples | “Subject must contain at least 5 characters.” / “Description must contain at least 10 characters.”
+Important | Validation should exist on both frontend and backend so invalid tickets cannot be created by bypassing the UI
+Priority | High
+Type | Functional / Input Validation
+
+--- TABLE 22 ---
+Status | Current impression | Better icon suggestion
+Pending verification | Small clock is acceptable but not very strong | Clock / Hourglass
+Correction required | Warning triangle is understandable, but it feels like a generic error | Edit/Pencil + Alert or Document with warning
+Rejected | Circle-slash can mean blocked/prohibited, so it overlaps with Blocked | X-circle / Cross mark
+Blocked | Current blocked icon is too similar in meaning to Rejected | Ban / Lock / User blocked
+
+--- TABLE 23 ---
+Field | Details
+Bug | Admin profile section is not clickable / does not open profile
+Description | In the Admin portal, clicking the profile section at the bottom-left sidebar, where BSeva Admin and the email are displayed, does not trigger any action. No profile page, menu, or account details open.
+Role | Admin
+Module | Sidebar → Admin Profile
+Actual Output | Clicking the Admin profile area does nothing.
+Expected Output | Clicking the profile section should open the Admin profile/account page or a profile menu where the user can view or manage account details. If the section is not intended to be interactive, it should not appear clickable.
+Priority | Medium
+Type | Functional / Navigation Bug
+
+--- TABLE 24 ---
+Field | Details
+Bug | Customer search does not work with a single character
+Module | Admin → Customers → Search
+Description | Searching with a full name such as “Rohit” works correctly. However, when entering a single character such as “C” and clicking Search or pressing Enter, the expected matching customers are not filtered/displayed correctly.
+Actual Output | Single-character search does not return/filter matching customer records.
+Expected Output | If single-character search is supported, entering “C” should return customers whose searchable fields match “C”. Otherwise, the UI should enforce a minimum search length (e.g., 2–3 characters) and display a clear validation message.
+Priority | Medium
+Type | Functional / Search Bug
+
+--- TABLE 25 ---
+Field | Details
+Bug | Head Pujari assessment submission fails
+Module | Admin → Head Assessments
+Description | Admin enters a Pujari User ID, valid 1–5 star rating, and mandatory comments. After clicking Submit assessment, the assessment is not created and the application displays “Request failed.”
+Test Data | Pujari User ID: 2, Stars: 5, Comments: entered
+Actual Output | Generic “Request failed” message appears and Assessment History remains empty.
+Expected Output | For a valid Pujari ID, the assessment should be saved successfully and immediately appear under Assessment history.
+Priority | High
+Type | Functional / API / Assessment Submission Bug

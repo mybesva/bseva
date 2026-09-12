@@ -21,8 +21,11 @@ import { usePujariLevels } from "@/hooks/usePujariLevels";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
+import { PUJARI_SPECIALIZATIONS } from "@/lib/pujariSpecializations";
+
 const DOC_LABELS: Record<string, string> = {
   identity: "Aadhaar (required)",
+  driving_licence: "Driving Licence",
   certificate: "Professional (optional)",
   supporting: "Additional (optional)",
 };
@@ -34,7 +37,13 @@ const QUAL_OPTS = [
 ];
 
 const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
-const SPEC_OPTS = ["Satyanarayan Puja", "Griha Pravesh", "Wedding", "Havan", "Vastu Shanti", "Namkaran"];
+const SPEC_OPTS = [...PUJARI_SPECIALIZATIONS];
+const LICENCE_TYPES = [
+  { id: "", label: "Not required / N/A" },
+  { id: "driving_licence", label: "Driving Licence" },
+  { id: "cab_commercial", label: "Cab / Commercial Licence" },
+  { id: "other", label: "Other licence" },
+];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

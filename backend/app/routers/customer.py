@@ -35,22 +35,23 @@ def get_profile(user=Depends(require_roles("customer", "admin")), db: Session = 
 
 @router.patch("/profile")
 def patch_profile(body: CustomerProfileIn, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
-    # When updating address fields, district is mandatory
-    touching_address = any(
+    from app.validation_rules import validate_address_fields
+
+    touching_core_address = any(
         v is not None
-        for v in (body.address_line1, body.city, body.state, body.pincode, body.district, body.location_label)
+        for v in (body.address_line1, body.city, body.state, body.pincode, body.district, body.address_line2)
     )
-    if touching_address:
-        if body.district is not None:
-            if not str(body.district).strip():
-                raise HTTPException(400, "District is required")
-        else:
-            existing = db.execute(
-                text("SELECT district FROM customer_profiles WHERE user_id = CAST(:id AS uuid)"),
-                {"id": user["id"]},
-            ).scalar()
-            if not (existing and str(existing).strip()):
-                raise HTTPException(400, "District is required")
+    addr = {}
+    if touching_core_address:
+        addr = validate_address_fields(
+            address_line1=body.address_line1,
+            address_line2=body.address_line2,
+            city=body.city,
+            district=body.district,
+            state=body.state,
+            pincode=body.pincode,
+            require_all=True,
+        )
     db.execute(
         text(
             """
@@ -73,12 +74,12 @@ def patch_profile(body: CustomerProfileIn, user=Depends(require_roles("customer"
             """
         ),
         {
-            "a1": body.address_line1,
-            "a2": body.address_line2,
-            "city": body.city,
-            "district": body.district,
-            "state": body.state,
-            "pincode": body.pincode,
+            "a1": addr.get("address_line1", body.address_line1),
+            "a2": addr.get("address_line2", body.address_line2),
+            "city": addr.get("city", body.city),
+            "district": addr.get("district", body.district),
+            "state": addr.get("state", body.state),
+            "pincode": addr.get("pincode", body.pincode),
             "country": body.country,
             "loc": body.location_label,
             "lat": body.latitude,

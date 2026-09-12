@@ -14,6 +14,12 @@ const DOC_SLOTS = [
     required: true,
   },
   {
+    type: "driving_licence",
+    label: "Driving Licence",
+    hint: "Required when your services involve travel by vehicle / commercial driving.",
+    required: false,
+  },
+  {
     type: "certificate",
     label: "Professional Certificate",
     hint: "Upload your main pujari qualification certificate (PDF or image).",
@@ -37,6 +43,76 @@ function fileLabel(path: string) {
 
 function docTypeLabel(type: string) {
   return DOC_SLOTS.find((s) => s.type === type)?.label || type;
+}
+
+function LicenceTypeFields() {
+  const [licenceType, setLicenceType] = useState("none");
+  const [licenceNumber, setLicenceNumber] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api<any>("/pujari/profile")
+      .then((p) => {
+        setLicenceType(p.licence_type || "none");
+        setLicenceNumber(p.licence_number || "");
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await api("/pujari/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          licence_type: licenceType === "none" ? "none" : licenceType,
+          licence_number: licenceNumber || null,
+        }),
+      });
+      toast.success("Licence details saved");
+    } catch (e: any) {
+      toast.error(e.message || "Could not save licence details");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const requiresUpload = licenceType === "driving_licence" || licenceType === "cab_commercial";
+
+  return (
+    <div className="rounded-md border p-4 space-y-3">
+      <div className="font-medium">Licence Type</div>
+      <p className="text-xs text-muted-foreground">
+        Select the licence that applies to your travel/service role. Upload becomes required for Driving or Cab/Commercial.
+      </p>
+      <select
+        className="w-full h-10 rounded-md border px-2 text-sm"
+        value={licenceType}
+        onChange={(e) => setLicenceType(e.target.value)}
+      >
+        <option value="none">Not required / None</option>
+        <option value="driving_licence">Driving Licence</option>
+        <option value="cab_commercial">Cab / Commercial Licence</option>
+        <option value="other">Other</option>
+      </select>
+      {licenceType !== "none" && (
+        <input
+          className="w-full h-10 rounded-md border px-2 text-sm"
+          placeholder="Licence number"
+          value={licenceNumber}
+          onChange={(e) => setLicenceNumber(e.target.value)}
+        />
+      )}
+      {requiresUpload && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+          Upload your Driving Licence document below before submitting for verification.
+        </p>
+      )}
+      <Button size="sm" variant="outline" disabled={saving} onClick={() => void save()}>
+        {saving ? "Saving…" : "Save licence type"}
+      </Button>
+    </div>
+  );
 }
 
 export default function PriestOnboardingPanel() {
@@ -82,8 +158,9 @@ export default function PriestOnboardingPanel() {
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <p className="text-muted-foreground">
-          Aadhaar is required. Professional certificate and additional documents are optional. Each file can be a PDF or image.
+          Aadhaar is required. Driving Licence is mandatory when you select a licence type that requires documentation.
         </p>
+        <LicenceTypeFields />
         {DOC_SLOTS.map((slot) => {
           const uploaded = latestByType[slot.type];
           const busy = busyType === slot.type;

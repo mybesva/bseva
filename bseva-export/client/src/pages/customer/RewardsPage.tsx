@@ -63,14 +63,27 @@ export default function CustomerRewardsPage() {
               <>
                 <div className="space-y-1">
                   <Label>{t("rewards.codeLabel")}</Label>
-                  <Input value={applyCode} onChange={(e) => setApplyCode(e.target.value)} placeholder="CUST1234-RC" />
+                  <Input
+                    value={applyCode}
+                    onChange={(e) => setApplyCode(e.target.value)}
+                    placeholder="e.g. CUST9876-RC"
+                  />
                 </div>
                 <Button
                   onClick={async () => {
+                    const code = applyCode.trim();
+                    if (!code) {
+                      toast.error("Enter a referral code");
+                      return;
+                    }
+                    if (code.length < 3) {
+                      toast.error("Referral code must be at least 3 characters");
+                      return;
+                    }
                     try {
                       await api("/referrals/apply", {
                         method: "POST",
-                        body: JSON.stringify({ code: applyCode.trim() }),
+                        body: JSON.stringify({ code }),
                       });
                       toast.success(t("rewards.applyOk"));
                       await load();

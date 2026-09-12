@@ -4,6 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+function toastError(msg: string) {
+  toast.error(msg);
+}
 
 export type AddressValue = {
   address_line1: string;
@@ -58,11 +63,14 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
   const mapRef = useRef<HTMLDivElement>(null);
   const mapObj = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
   const [search, setSearch] = useState(value.location_label || "");
   const [mapError, setMapError] = useState<string | null>(null);
 
   function applyCoords(lat: number, lng: number, label?: string) {
-    onChange({ ...value, latitude: lat, longitude: lng, location_label: label || value.location_label });
+    const cur = valueRef.current;
+    onChange({ ...cur, latitude: lat, longitude: lng, location_label: label || cur.location_label });
     if (mapObj.current) {
       mapObj.current.setCenter({ lat, lng });
       if (markerRef.current) markerRef.current.position = { lat, lng };
@@ -74,19 +82,20 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ location: { lat, lng } }, (results, status) => {
       if (status !== "OK" || !results?.[0]) return;
+      const cur = valueRef.current;
       const comp = results[0].address_components || [];
       const pick = (type: string) => comp.find((c) => c.types.includes(type))?.long_name || "";
       onChange({
-        ...value,
+        ...cur,
         latitude: lat,
         longitude: lng,
-        location_label: results[0].formatted_address || value.location_label,
-        address_line1: value.address_line1 || `${pick("street_number")} ${pick("route")}`.trim(),
-        city: value.city || pick("locality") || pick("administrative_area_level_2"),
-        district: value.district || pick("administrative_area_level_2"),
-        state: value.state || pick("administrative_area_level_1"),
-        pincode: value.pincode || pick("postal_code"),
-        country: value.country || pick("country") || "India",
+        location_label: results[0].formatted_address || cur.location_label,
+        address_line1: cur.address_line1 || `${pick("street_number")} ${pick("route")}`.trim(),
+        city: cur.city || pick("locality") || pick("administrative_area_level_2"),
+        district: cur.district || pick("administrative_area_level_2"),
+        state: cur.state || pick("administrative_area_level_1"),
+        pincode: cur.pincode || pick("postal_code"),
+        country: cur.country || pick("country") || "India",
       });
       setSearch(results[0].formatted_address || "");
     });
@@ -135,15 +144,29 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
 
   function useCurrentLocation() {
     if (!navigator.geolocation) {
-      setMapError("Geolocation is not supported");
+      setMapError("Geolocation is not supported by this browser");
+      toastError("Geolocation is not supported by this browser");
       return;
     }
+    setMapError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        applyCoords(pos.coords.latitude, pos.coords.longitude);
-        void reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        applyCoords(lat, lng);
+        void reverseGeocode(lat, lng);
       },
-      () => setMapError("Could not access current location")
+      (err) => {
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied. Enable location access in your browser settings."
+            : err.code === err.POSITION_UNAVAILABLE
+              ? "Current location is unavailable. Try again or enter the address manually."
+              : "Could not access current location. Try again or enter the address manually.";
+        setMapError(msg);
+        toastError(msg);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   }
 

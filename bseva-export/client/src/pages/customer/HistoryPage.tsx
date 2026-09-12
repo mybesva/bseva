@@ -3,7 +3,7 @@ import { CustomerPortal } from "@/components/RolePortals";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, rupees } from "@/lib/api";
+import { apiBookings, rupees } from "@/lib/api";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,8 +27,8 @@ export default function CustomerHistoryPage() {
 
   useEffect(() => {
     setLoading(true);
-    api<any[]>("/bookings")
-      .then(setBookings)
+    apiBookings(1, 100)
+      .then((r) => setBookings(r.items))
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []);

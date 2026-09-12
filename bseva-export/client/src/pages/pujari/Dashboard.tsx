@@ -12,7 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api } from "@/lib/api";
+import { api, apiBookings } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Calendar as CalendarIcon,
@@ -69,14 +69,15 @@ function PujariDashboardContent() {
   const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
+  const [detailIntent, setDetailIntent] = useState<"accept" | "reject" | null>(null);
   const [listTab, setListTab] = useState("upcoming");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujariProfile, setPujariProfile] = useState<any>(null);
 
   async function loadBookings() {
-    const rows = await api<any[]>("/bookings");
-    setBookings(rows);
+    const rows = await apiBookings(1, 100);
+    setBookings(rows.items);
   }
 
   useEffect(() => {
@@ -238,9 +239,9 @@ function PujariDashboardContent() {
 
   const metricCards = [
     {
-      title: "Total Earnings",
+      title: "Total Dakshina",
       value: formatPaise(stats.totalEarnings),
-      hint: "Your share from confirmed & completed pujas",
+      hint: "Dakshina from confirmed & completed pujas",
       icon: IndianRupee,
       color: "text-orange-600",
       bg: "bg-orange-100",
@@ -286,10 +287,13 @@ function PujariDashboardContent() {
     showAcceptReject?: boolean;
   }) => {
     const hint = actionHint(row.booking.status);
-    const openDetail = () => setSelectedBooking(row);
+    const openDetail = (intent: "accept" | "reject" | null = null) => {
+      setDetailIntent(intent);
+      setSelectedBooking(row);
+    };
     return (
       <div className="w-full text-left p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary/30 transition-colors">
-        <button type="button" onClick={openDetail} className="w-full text-left">
+        <button type="button" onClick={() => openDetail(null)} className="w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="font-semibold text-foreground flex items-center gap-2">
@@ -317,7 +321,7 @@ function PujariDashboardContent() {
                 </span>
               </div>
               <div className="text-sm font-medium text-primary mt-2">
-                Your share: {formatPaise(row.booking.priestAmount || 0)}
+                Dakshina: {formatPaise(row.booking.priestAmount || 0)}
               </div>
               {hint && !showAcceptReject && (
                 <p className="text-xs text-orange-700 mt-1 font-medium">{hint}</p>
@@ -334,17 +338,17 @@ function PujariDashboardContent() {
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                openDetail();
+                openDetail("accept");
               }}
             >
               Accept
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="destructive"
               onClick={(e) => {
                 e.stopPropagation();
-                openDetail();
+                openDetail("reject");
               }}
             >
               Reject
@@ -519,7 +523,7 @@ function PujariDashboardContent() {
                     ))}
                     {past.length > 0 && (
                       <div className="pt-3 border-t border-border flex justify-between text-sm">
-                        <span className="text-muted-foreground">Completed earnings</span>
+                        <span className="text-muted-foreground">Completed Dakshina</span>
                         <span className="font-semibold text-foreground">
                           {formatPaise(stats.completedEarnings)}
                         </span>
@@ -532,7 +536,7 @@ function PujariDashboardContent() {
 
             <Card className="border-border bg-secondary/20">
               <CardContent className="p-5 space-y-2">
-                <div className="font-semibold text-foreground">Earnings & settlements</div>
+                <div className="font-semibold text-foreground">Dakshina & settlements</div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Accept pending bookings, start with customer OTP, then mark complete when finished so
                   settlements stay accurate.
@@ -543,11 +547,19 @@ function PujariDashboardContent() {
         </div>
       </div>
 
-      <Dialog open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
+      <Dialog
+        open={!!selectedBooking}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSelectedBooking(null);
+            setDetailIntent(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {selectedBooking?.pujaType.name}
+              {detailIntent === "reject" ? "Reject booking" : selectedBooking?.pujaType.name}
             </DialogTitle>
             <DialogDescription>#{selectedBooking?.booking.bookingNumber}</DialogDescription>
           </DialogHeader>
@@ -555,6 +567,7 @@ function PujariDashboardContent() {
             <BookingDetailPanel
               bookingId={selectedBooking.booking.id}
               role="pujari"
+              initialIntent={detailIntent}
               seed={{
                 status: selectedBooking.booking.status,
                 service_name: selectedBooking.booking.serviceName,
@@ -576,6 +589,7 @@ function PujariDashboardContent() {
                 await loadBookings();
                 if (info?.decision === "accepted" || info?.decision === "rejected") {
                   setSelectedBooking(null);
+                  setDetailIntent(null);
                 }
               }}
             />

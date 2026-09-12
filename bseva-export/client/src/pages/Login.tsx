@@ -59,7 +59,7 @@ export default function Login() {
     }
   }
 
-  const portalLabel = roleHint ? `${roleHint.charAt(0).toUpperCase()}${roleHint.slice(1)} sign in` : "Sign in to BSeva";
+  const portalLabel = roleHint ? `${roleHint.charAt(0).toUpperCase()}${roleHint.slice(1)} Login` : "Login to BSeva";
 
   return (
     <Layout>
@@ -95,7 +95,7 @@ export default function Login() {
               </div>
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
                 <LogIn className="w-4 h-4 mr-2" />
-                {pending ? "Signing in..." : "Sign in"}
+                {pending ? "Logging in..." : "Login"}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 New to BSeva?{" "}

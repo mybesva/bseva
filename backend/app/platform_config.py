@@ -48,6 +48,18 @@ _DEFAULTS: dict[str, Any] = {
     "pujari_cancel_fee_over_48h_percent": 10,
     "pujari_cancel_fee_24_48h_percent": 50,
     "pujari_cancel_min_hours": 24,
+    # Call forwarding (config only — provider integration pending)
+    "call_forwarding_enabled": False,
+    "call_forwarding_office_hours": "09:00-18:00",
+    "call_forwarding_timezone": "Asia/Kolkata",
+    "call_forwarding_primary_number": "",
+    "call_forwarding_forward_to": "",
+    # CAPTCHA (public registration) — keys via env, not stored as secrets in DB
+    "registration_captcha_enabled": False,
+    # Suggested puja package list prices (paise) — Admin overrides per service
+    "default_package_basic_paise": 249900,
+    "default_package_standard_paise": 349900,
+    "default_package_premium_paise": 449900,
     # Admin reassignment distance rings (km)
     "assign_distance_rings_km": [10, 15, 20, 30],
 }

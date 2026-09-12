@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, rupees } from "@/lib/api";
+import { apiBookings, rupees } from "@/lib/api";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,7 +33,8 @@ export default function CustomerBookingsPage() {
   async function load() {
     setLoading(true);
     try {
-      setBookings(await api<any[]>("/bookings"));
+      const res = await apiBookings(1, 100);
+      setBookings(res.items);
     } catch (e: any) {
       toast.error(e.message);
     } finally {

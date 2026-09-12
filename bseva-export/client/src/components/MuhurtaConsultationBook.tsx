@@ -24,7 +24,7 @@ type BookingResult = {
 type Props = {
   serviceId: string;
   serviceName: string;
-  requiresMuhurta?: boolean;
+  requiresMuhurtham?: boolean;
   feePaise: number;
 };
 
@@ -43,7 +43,7 @@ const TIME_SLOTS = [
 export default function MuhurtaConsultationBook({
   serviceId,
   serviceName,
-  requiresMuhurta,
+  requiresMuhurtham,
   feePaise,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -78,8 +78,8 @@ export default function MuhurtaConsultationBook({
       setOpen(false);
       toast.success(
         out.payment_status === "paid"
-          ? `Muhurta consultation booked. ${rupees(out.fee_paise)} debited.`
-          : "Muhurta consultation booked successfully."
+          ? `Muhurtham consultation booked. ${rupees(out.fee_paise)} debited.`
+          : "Muhurtham consultation booked successfully."
       );
     } catch (e: any) {
       toast.error(e.message || "Could not book consultation");
@@ -97,13 +97,13 @@ export default function MuhurtaConsultationBook({
           <Sparkles className="text-primary mt-0.5 shrink-0" size={20} />
           <div className="min-w-0">
             <p className="font-semibold text-foreground">
-              {requiresMuhurta
+              {requiresMuhurtham
                 ? "This puja needs an auspicious time (muhurta)"
-                : "Book a muhurta consultation"}
+                : "Book a Muhurtham consultation"}
             </p>
             <p className="text-sm text-muted-foreground mt-0.5">
               {receipt
-                ? "Your muhurta consultation appointment is confirmed. A pujari will join at the selected time and share recommended dates for this puja."
+                ? "Your Muhurtham consultation appointment is confirmed. A pujari will join at the selected time and share recommended dates for this puja."
                 : feePaise > 0
                   ? `Book an appointment with a pujari for ${rupees(feePaise)} (wallet). Choose date and time below — same flow as a normal booking.`
                   : "Book an appointment with a pujari. Choose date and time — same flow as a normal booking."}
@@ -112,7 +112,7 @@ export default function MuhurtaConsultationBook({
         </div>
         {!receipt && !open && (
           <Button variant="secondary" onClick={() => setOpen(true)}>
-            Book muhurta consultation
+            Book Muhurtham consultation
           </Button>
         )}
       </div>
@@ -128,7 +128,7 @@ export default function MuhurtaConsultationBook({
       {open && !receipt && (
         <div className="rounded-md border bg-card p-4 space-y-4">
           <div>
-            <p className="font-semibold text-foreground">Muhurta consultation booking</p>
+            <p className="font-semibold text-foreground">Muhurtham consultation booking</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Service: {serviceName} · Select your appointment date and time
             </p>
@@ -198,7 +198,7 @@ export default function MuhurtaConsultationBook({
           <div className="rounded-md border bg-orange-50/50 px-3 py-2 text-sm space-y-1">
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">Consultation</span>
-              <span className="font-medium">Muhurta guidance</span>
+              <span className="font-medium">Muhurtham guidance</span>
             </div>
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">Date & time</span>
@@ -208,7 +208,7 @@ export default function MuhurtaConsultationBook({
             </div>
             <div className="flex justify-between gap-2 border-t pt-1 font-semibold">
               <span>Total</span>
-              <span className="text-[#F7931E]">{feePaise > 0 ? rupees(feePaise) :"Free"}</span>
+              <span className="text-primary">{feePaise > 0 ? rupees(feePaise) :"Free"}</span>
             </div>
           </div>
 

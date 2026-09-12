@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -30,11 +30,15 @@ import PujariProfileGate from "@/components/PujariProfileGate";
 import { LegalInlineLink } from "@/components/LegalModal";
 import { useI18n } from "@/i18n/I18nProvider";
 import ThemeToggle from "@/components/ThemeToggle";
+import SeasonalPopup from "@/components/SeasonalPopup";
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number }> };
 
 const sidebarActionClass =
   "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-sidebar-foreground hover:bg-sidebar-accent/60";
+
+/** Persist sidebar scroll across SPA navigations (nav remounts on route change). */
+const sidebarScrollY: Record<string, number> = {};
 
 const customerNav: NavItem[] = [
   { label: "Dashboard", href: "/customer", icon: LayoutDashboard },
@@ -56,11 +60,10 @@ const pujariNav: NavItem[] = [
   { label: "Address", href: "/pujari/address", icon: MapPin },
   { label: "My Documents", href: "/pujari/documents", icon: FolderOpen },
   { label: "Angikara Patram", href: "/pujari/angikara", icon: ScrollText },
-  { label: "Upgrade role", href: "/pujari/services", icon: Briefcase },
   { label: "Experience", href: "/pujari/experience", icon: Briefcase },
   { label: "Availability", href: "/pujari/availability", icon: Clock },
   { label: "Bank / Settlement", href: "/pujari/bank", icon: Landmark },
-  { label: "Tracking Earnings", href: "/pujari/earnings", icon: Wallet },
+  { label: "Dakshina", href: "/pujari/earnings", icon: Wallet },
   { label: "Referral", href: "/pujari/referral", icon: Gift },
   { label: "Assess Pujaris", href: "/pujari/head-ratings", icon: Star },
   { label: "Support", href: "/pujari/support", icon: FileText },
@@ -84,12 +87,21 @@ function PortalShell({
 }) {
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(false);
+  const navRef = useRef<HTMLElement | null>(null);
+  const scrollKey = `${role}-sidebar`;
   const { user, logout } = useAuth();
 
   async function handleLogout() {
     await logout();
     setLocation("/");
   }
+
+  useLayoutEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    el.scrollTop = sidebarScrollY[scrollKey] || 0;
+  }, [location, scrollKey, nav]);
 
   const initials = (user?.name || "?")
     .split(" ")
@@ -113,17 +125,30 @@ function PortalShell({
           </div>
         </div>
       </div>
-      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-3 space-y-1">
+      <nav
+        ref={navRef}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-3 space-y-1"
+        onScroll={(e) => {
+          sidebarScrollY[scrollKey] = (e.target as HTMLElement).scrollTop;
+        }}
+      >
           {nav.map((item) => {
-            const active = location === item.href || (item.href !== "/customer" && item.href !== "/pujari" && location.startsWith(item.href));
+            const routeActive =
+              !legalOpen &&
+              (location === item.href ||
+                (item.href !== "/customer" && item.href !== "/pujari" && location.startsWith(item.href)));
             return (
               <Link key={item.href} href={item.href}>
                 <a
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                    active ? "bg-sidebar-accent text-primary font-medium" : "hover:bg-sidebar-accent/60"
+                    routeActive ? "bg-sidebar-accent text-primary font-medium" : "hover:bg-sidebar-accent/60"
                   )}
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    if (navRef.current) sidebarScrollY[scrollKey] = navRef.current.scrollTop;
+                    setLegalOpen(false);
+                    setOpen(false);
+                  }}
                 >
                   <item.icon size={18} />
                   {item.label}
@@ -131,7 +156,14 @@ function PortalShell({
               </Link>
             );
           })}
-          <LegalInlineLink kind="terms" className={sidebarActionClass}>
+          <LegalInlineLink
+            kind="terms"
+            className={cn(
+              sidebarActionClass,
+              legalOpen && "bg-sidebar-accent text-primary font-medium"
+            )}
+            onOpenChange={setLegalOpen}
+          >
             <FileText size={18} />
             Terms & Conditions
           </LegalInlineLink>
@@ -285,15 +317,6 @@ function PujariShell({ children }: { children: ReactNode }) {
             {t(`pujari.level.l${requested}`)}
           </p>
         ) : null}
-        <Link href="/pujari/services">
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-0.5 h-8 w-full text-[11px] border-primary/40 bg-transparent text-primary hover:bg-primary/10"
-          >
-            {t("pujari.menu.upgradeRole")}
-          </Button>
-        </Link>
       </div>
     );
   })() : null;
@@ -308,7 +331,10 @@ function PujariShell({ children }: { children: ReactNode }) {
 export function CustomerPortal({ children }: { children: ReactNode }) {
   return (
     <RolePortalGate role="customer">
-      <CustomerShell>{children}</CustomerShell>
+      <CustomerShell>
+        <SeasonalPopup />
+        {children}
+      </CustomerShell>
     </RolePortalGate>
   );
 }

@@ -6,7 +6,21 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 
 from app.config import settings
-from app.routers import admin, admin_pujari, auth, bookings, consultations, customer, lifecycle, ops, pujari, wallet
+from app.routers import (
+    admin,
+    admin_pujari,
+    auth,
+    bookings,
+    consultations,
+    customer,
+    lifecycle,
+    notifications,
+    ops,
+    promos,
+    pujari,
+    support,
+    wallet,
+)
 
 
 @asynccontextmanager
@@ -36,6 +50,9 @@ app.include_router(pujari.router, prefix="/api/v1")
 app.include_router(lifecycle.router, prefix="/api/v1")
 app.include_router(consultations.router, prefix="/api/v1")
 app.include_router(ops.router, prefix="/api/v1")
+app.include_router(promos.router, prefix="/api/v1")
+app.include_router(support.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 
 
 @app.exception_handler(OperationalError)

@@ -161,7 +161,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container flex h-20 items-center justify-between gap-4">
           <Link href="/">
             <a className="flex items-center shrink-0">
-              <img src="/bseva-logo.png" alt="B-Seva - Traditional Indian Services" className="h-16 md:h-20 w-auto" />
+              <img src="/bseva-logo-transparent.png" alt="BSeva" className="h-20 md:h-24 w-auto max-w-[11rem] md:max-w-[14rem] object-contain" />
             </a>
           </Link>
 
@@ -213,7 +213,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="flex flex-col gap-8 mt-8">
                 <Link href="/">
                   <a className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
-                    <img src="/bseva-logo.png" alt="B-Seva Logo" className="h-10 w-auto" />
+                    <img src="/bseva-logo-transparent.png" alt="BSeva" className="h-12 w-auto max-w-[9rem] object-contain" />
                     <span className="font-brand font-bold text-xl text-foreground">B-SEVA</span>
                   </a>
                 </Link>

@@ -58,6 +58,9 @@ EXISTING_ENRICH = [
         "homepage_rank": 2,
         "display_order": 20,
         "short_description": "Satyanarayana vratham for peace, prosperity, and fulfilment of sankalpas.",
+        "food_available": True,
+        "food_price_paise": 49900,
+        "alankaram_available": True,
     },
     {
         "slug": "griha-pravesham",
@@ -318,6 +321,12 @@ def _enrich_existing(conn, cat_ids: dict[str, str]) -> None:
                   display_order = :ord,
                   pricing_status = 'priced',
                   requires_muhurta = CASE WHEN :muh THEN TRUE ELSE requires_muhurta END,
+                  food_available = CASE WHEN :food THEN TRUE ELSE food_available END,
+                  food_price_paise = CASE
+                    WHEN :food AND :foodp > 0 AND COALESCE(food_price_paise, 0) = 0 THEN :foodp
+                    ELSE food_price_paise
+                  END,
+                  alankaram_available = CASE WHEN :alan THEN TRUE ELSE alankaram_available END,
                   updated_at = NOW()
                 WHERE id = CAST(:id AS uuid)
                 """
@@ -329,6 +338,9 @@ def _enrich_existing(conn, cat_ids: dict[str, str]) -> None:
                 "rank": item["homepage_rank"],
                 "ord": item["display_order"],
                 "muh": bool(item.get("requires_muhurta")),
+                "food": bool(item.get("food_available")),
+                "foodp": int(item.get("food_price_paise") or 0),
+                "alan": bool(item.get("alankaram_available")),
                 "id": sid,
             },
         )

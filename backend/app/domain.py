@@ -114,11 +114,14 @@ def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, rad
         if dist <= min(radius_km, float(r["service_radius_km"] or radius_km)):
             item = row_dict(r)
             item["distance_km"] = round(dist, 2)
-            # Strip coords from public response (keep distance only)
+            # Strip coords and internal radius from public response
             item.pop("latitude", None)
             item.pop("longitude", None)
             item.pop("phone", None)
-            out.append(item)
+            item.pop("service_radius_km", None)
+            from app.booking_visibility import public_pujari
+
+            out.append(public_pujari(item))
     out.sort(key=lambda x: x["distance_km"])
     return out
 

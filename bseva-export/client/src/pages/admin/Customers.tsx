@@ -29,6 +29,9 @@ const emptyForm = { name: "", email: "", phone: "", password: "", location: "" }
 
 export default function CustomersPage() {
   const [rows, setRows] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -48,16 +51,28 @@ export default function CustomersPage() {
     setLocation(adminPath(`/customers${qs ? `?${qs}` : ""}`));
   }
 
-  async function load() {
-    const qs = new URLSearchParams({ role: "customer" });
+  async function load(p = page) {
+    const qs = new URLSearchParams({ role: "customer", page: String(p), page_size: "50" });
     if (statusFilter === "blocked") qs.set("blocked", "true");
     if (statusFilter === "active") qs.set("blocked", "false");
-    if (q.trim()) qs.set("q", q.trim());
-    setRows(await api<any[]>(`/admin/users?${qs}`));
+    const qParam = (params.get("q") || q).trim();
+    if (qParam) qs.set("q", qParam);
+    const res = await api<{ items: any[]; total: number; page: number; pages: number } | any[]>(`/admin/users?${qs}`);
+    if (Array.isArray(res)) {
+      setRows(res);
+      setTotal(res.length);
+      setPage(1);
+      setPages(1);
+    } else {
+      setRows(res.items || []);
+      setTotal(res.total || 0);
+      setPage(res.page || p);
+      setPages(res.pages || 1);
+    }
   }
 
   useEffect(() => {
-    void load().catch((e) => toast.error(e.message));
+    void load(1).catch((e) => toast.error(e.message));
   }, [statusFilter, search]);
 
   async function handleAdd(e: React.FormEvent) {
@@ -80,10 +95,21 @@ export default function CustomersPage() {
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h1 className="text-h1">Customers</h1>
-        <Button onClick={() => setOpen(true)} className="gap-2">
-          <Plus size={16} />
-          Add customer
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Page {page}/{pages} · {total}
+          </span>
+          <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => void load(page - 1)}>
+            Prev
+          </Button>
+          <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => void load(page + 1)}>
+            Next
+          </Button>
+          <Button onClick={() => setOpen(true)} className="gap-2">
+            <Plus size={16} />
+            Add customer
+          </Button>
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -172,14 +198,23 @@ export default function CustomersPage() {
         </div>
         <div className="flex gap-2 flex-1 min-w-[200px]">
           <Input
-            placeholder="Search name, email, phone"
+            placeholder="Search name, email, phone (1+ characters)"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") updateFilters({ q });
             }}
           />
-          <Button type="button" onClick={() => updateFilters({ q })}>
+          <Button
+            type="button"
+            onClick={() => {
+              if (q.trim().length === 0) {
+                toast.error("Enter at least 1 character to search");
+                return;
+              }
+              updateFilters({ q });
+            }}
+          >
             Search
           </Button>
         </div>
@@ -250,22 +285,6 @@ export default function CustomersPage() {
                   }}
                 >
                   {u.blocked ? "Unblock" : "Block"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={async () => {
-                    if (!confirm(`Delete ${u.name}?`)) return;
-                    try {
-                      await api(`/admin/users/${u.id}`, { method: "DELETE" });
-                      toast.success("Deleted");
-                      await load();
-                    } catch (e: any) {
-                      toast.error(e.message);
-                    }
-                  }}
-                >
-                  Delete
                 </Button>
               </TableCell>
             </TableRow>

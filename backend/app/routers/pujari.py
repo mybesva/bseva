@@ -25,7 +25,7 @@ from app.storage import content_type_for, file_response, upload_bytes
 router = APIRouter(prefix="/pujari", tags=["pujari"])
 
 ALLOWED_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".webp"}
-DOC_TYPES = {"certificate", "identity", "supporting"}
+DOC_TYPES = {"certificate", "identity", "supporting", "driving_licence"}
 
 
 def _safe_name(name: str) -> str:
@@ -171,44 +171,69 @@ def get_profile(user=Depends(require_roles("pujari")), db: Session = Depends(get
 
 @router.post("/apply-level")
 def apply_level(body: PujariApplyLevelIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
-    """Pujari requests a service role (1–4). Admin must set approved_level; bookings still use approved_level only."""
-    db.execute(
-        text(
-            """
-            UPDATE pujari_profiles
-            SET requested_level = :lvl
-            WHERE user_id = CAST(:id AS uuid)
-            """
-        ),
-        {"lvl": body.requested_level, "id": user["id"]},
-    )
-    db.commit()
-    return _load_profile(db, user)
+    """Disabled: pujaris cannot self-upgrade role/level from the dashboard (req #113)."""
+    raise HTTPException(403, "Role upgrades are managed by Admin. Contact support if you need a level change.")
 
 
 @router.patch("/profile")
 def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
+    from app.validation_rules import (
+        validate_address_fields,
+        validate_bank_fields,
+        validate_mobile_optional,
+        validate_pujari_dob,
+    )
+
     year = body.qualification_year
     if year is not None and year > date.today().year:
         raise HTTPException(400, "Qualification year cannot be in the future")
-    if body.date_of_birth and body.date_of_birth > date.today():
-        raise HTTPException(400, "Date of birth cannot be in the future")
-    # District mandatory when touching address fields
-    touching_address = any(
+    dob = validate_pujari_dob(body.date_of_birth) if body.date_of_birth is not None else None
+    mobile = validate_mobile_optional(body.mobile_number) if body.mobile_number is not None else None
+    whatsapp = validate_mobile_optional(body.whatsapp_number) if body.whatsapp_number is not None else None
+
+    touching_core_address = any(
         v is not None
-        for v in (body.address_line1, body.city, body.state, body.pincode, body.district, body.location_label)
+        for v in (body.address_line1, body.city, body.state, body.pincode, body.district, body.address_line2)
     )
-    if touching_address:
-        if body.district is not None:
-            if not str(body.district).strip():
-                raise HTTPException(400, "District is required")
-        else:
-            existing = db.execute(
-                text("SELECT district FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
-                {"id": user["id"]},
-            ).scalar()
-            if not (existing and str(existing).strip()):
-                raise HTTPException(400, "District is required")
+    addr = {}
+    if touching_core_address:
+        addr = validate_address_fields(
+            address_line1=body.address_line1,
+            address_line2=body.address_line2,
+            city=body.city,
+            district=body.district,
+            state=body.state,
+            pincode=body.pincode,
+            require_all=True,
+        )
+
+    touching_bank = any(
+        v is not None for v in (body.bank_holder_name, body.bank_ifsc, body.bank_account_last4)
+    )
+    bank = {}
+    if touching_bank:
+        bank = validate_bank_fields(
+            holder=body.bank_holder_name,
+            ifsc=body.bank_ifsc,
+            last4=body.bank_account_last4,
+            require_all=True,
+        )
+
+    # Cannot advance past documents step without Aadhaar (identity)
+    if body.onboarding_step is not None and int(body.onboarding_step) >= 5:
+        has_aadhaar = db.execute(
+            text(
+                """
+                SELECT 1 FROM pujari_documents
+                WHERE pujari_id = CAST(:id AS uuid) AND document_type = 'identity'
+                LIMIT 1
+                """
+            ),
+            {"id": user["id"]},
+        ).first()
+        if not has_aadhaar:
+            raise HTTPException(400, "Aadhaar document is required before continuing")
+
     quals = json.dumps(body.qualifications) if body.qualifications is not None else None
     langs = json.dumps(body.languages) if body.languages is not None else None
     specs = json.dumps(body.specializations) if body.specializations is not None else None
@@ -250,6 +275,8 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
               bank_ifsc = COALESCE(:ifsc, bank_ifsc),
               bank_holder_name = COALESCE(:holder, bank_holder_name),
               onboarding_step = COALESCE(:step, onboarding_step),
+              licence_type = COALESCE(:licence_type, licence_type),
+              licence_number = COALESCE(:licence_number, licence_number),
               updated_at = NOW()
             WHERE user_id = CAST(:id AS uuid)
             """
@@ -259,22 +286,22 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             "father_name": body.father_name,
             "gotra": body.gotra,
             "pravara": body.pravara,
-            "dob": body.date_of_birth,
+            "dob": dob if body.date_of_birth is not None else None,
             "native_place": body.native_place,
             "permanent_address": body.permanent_address,
             "present_address": body.present_address,
-            "mobile_number": body.mobile_number,
-            "whatsapp_number": body.whatsapp_number,
+            "mobile_number": mobile if body.mobile_number is not None else None,
+            "whatsapp_number": whatsapp if body.whatsapp_number is not None else None,
             "qualifications": quals,
             "qualification_year": year,
             "sampradaya": body.sampradaya,
             "consent": body.website_publication_consent,
-            "a1": body.address_line1,
-            "a2": body.address_line2,
-            "city": body.city,
-            "district": body.district,
-            "state": body.state,
-            "pincode": body.pincode,
+            "a1": addr.get("address_line1", body.address_line1),
+            "a2": addr.get("address_line2", body.address_line2),
+            "city": addr.get("city", body.city),
+            "district": addr.get("district", body.district),
+            "state": addr.get("state", body.state),
+            "pincode": addr.get("pincode", body.pincode),
             "country": body.country,
             "loc": body.location_label,
             "lat": body.latitude,
@@ -284,17 +311,19 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             "exp": body.experience_years,
             "avail": body.available,
             "radius": body.service_radius_km,
-            "bank4": body.bank_account_last4,
-            "ifsc": body.bank_ifsc,
-            "holder": body.bank_holder_name,
+            "bank4": bank.get("bank_account_last4", body.bank_account_last4),
+            "ifsc": bank.get("bank_ifsc", body.bank_ifsc),
+            "holder": bank.get("bank_holder_name", body.bank_holder_name),
             "step": body.onboarding_step,
+            "licence_type": body.licence_type,
+            "licence_number": body.licence_number,
             "id": user["id"],
         },
     )
     if body.full_name:
         db.execute(text("UPDATE users SET name = :n WHERE id = CAST(:id AS uuid)"), {"n": body.full_name, "id": user["id"]})
-    if body.mobile_number:
-        db.execute(text("UPDATE users SET phone = :p WHERE id = CAST(:id AS uuid)"), {"p": body.mobile_number, "id": user["id"]})
+    if mobile:
+        db.execute(text("UPDATE users SET phone = :p WHERE id = CAST(:id AS uuid)"), {"p": mobile, "id": user["id"]})
     out = _load_profile(db, user)
     db.execute(
         text(
@@ -381,6 +410,9 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
     types = {d["document_type"] for d in docs}
     if "identity" not in types:
         raise HTTPException(400, "Upload Aadhaar (identity document) before submission")
+    licence_type = (profile.get("licence_type") or "none").strip().lower()
+    if licence_type in ("driving_licence", "cab_commercial") and "driving_licence" not in types:
+        raise HTTPException(400, "Upload Driving Licence document for the selected licence type")
     db.execute(
         text(
             """
@@ -396,6 +428,18 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
         ),
         {"id": user["id"]},
     )
+    try:
+        from app.routers.notifications import notify_super_admins
+
+        notify_super_admins(
+            db,
+            title="KYC awaiting review",
+            body=f"Pujari {user.get('name') or user['id']} submitted profile for verification.",
+            category="kyc",
+            link="/admin/pujaris?status=pending",
+        )
+    except Exception:
+        pass
     db.commit()
     return _load_profile(db, user)
 

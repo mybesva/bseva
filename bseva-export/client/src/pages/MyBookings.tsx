@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { api, rupees } from "@/lib/api";
+import { api, apiBookings, rupees } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Calendar, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
@@ -17,8 +17,8 @@ export default function MyBookings() {
   const [busy, setBusy] = useState<string | null>(null);
 
   async function load() {
-    const rows = await api<any[]>("/bookings");
-    setBookings(rows);
+    const rows = await apiBookings(1, 100);
+    setBookings(rows.items);
   }
 
   useEffect(() => {

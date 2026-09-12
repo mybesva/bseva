@@ -1,4 +1,8 @@
 from uuid import uuid4
+import json
+import os
+import urllib.parse
+import urllib.request
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
@@ -8,11 +12,37 @@ from app.config import settings
 from app.db import get_db
 from app.deps import ACCOUNT_BLOCKED, current_user
 from app.domain import row_dict
+from app.platform_config import get_setting
 from app.schemas import ChangePasswordIn, LoginIn, MePatchIn, OtpRequestIn, OtpVerifyIn, RegisterIn, TokenOut
 from app.security import create_access_token, hash_otp, hash_password, verify_otp, verify_password
 from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _verify_registration_captcha(db: Session, token: str | None) -> None:
+    if not bool(get_setting(db, "registration_captcha_enabled", False)):
+        return
+    secret = (os.environ.get("RECAPTCHA_SECRET_KEY") or "").strip()
+    if not secret:
+        raise HTTPException(503, "CAPTCHA is enabled but RECAPTCHA_SECRET_KEY is not configured")
+    if not token or not str(token).strip():
+        raise HTTPException(400, "CAPTCHA verification is required")
+    # Dev/test bypass when secret is explicitly set to this value
+    if secret == "dev-bypass" and token == "dev-bypass":
+        return
+    data = urllib.parse.urlencode({"secret": secret, "response": token}).encode()
+    try:
+        with urllib.request.urlopen(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data=data,
+            timeout=8,
+        ) as resp:
+            payload = json.loads(resp.read().decode())
+    except Exception as exc:
+        raise HTTPException(502, f"CAPTCHA verification failed: {exc}") from exc
+    if not payload.get("success"):
+        raise HTTPException(400, "CAPTCHA verification failed")
 
 
 def _verify_registration_otp(db: Session, body: RegisterIn) -> None:
@@ -97,6 +127,9 @@ def verify_otp_ep(body: OtpVerifyIn, db: Session = Depends(get_db)):
 def register(body: RegisterIn, db: Session = Depends(get_db)):
     if not body.registration_consent:
         raise HTTPException(400, "You must accept the Terms & Conditions and Privacy Policy")
+    if body.account_type not in ("customer", "pujari"):
+        raise HTTPException(400, "Invalid account type")
+    _verify_registration_captcha(db, body.captcha_token)
     _verify_registration_otp(db, body)
     referrer_ok = None
     if body.referral_code:

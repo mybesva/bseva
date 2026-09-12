@@ -26,6 +26,7 @@ export default function Home() {
   const [popular, setPopular] = useState<any[]>([]);
   const [loadingPopular, setLoadingPopular] = useState(true);
   const [heroQ, setHeroQ] = useState("");
+  const [heroCity, setHeroCity] = useState("");
 
   useEffect(() => {
     api<any[]>("/services?featured=1")
@@ -36,7 +37,11 @@ export default function Home() {
 
   function goSearch() {
     const q = heroQ.trim();
-    setLocation(q ? `/services?q=${encodeURIComponent(q)}` : "/services");
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (heroCity) params.set("city", heroCity);
+    const s = params.toString();
+    setLocation(s ? `/services?${s}` : "/services");
   }
 
   return (
@@ -52,7 +57,7 @@ export default function Home() {
             <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-eyebrow mb-6">
               {t("home.badge")}
             </span>
-            <h1 className="text-display text-white mb-6 drop-shadow-lg">
+            <h1 className="text-display text-primary mb-6 drop-shadow-lg">
               {t("home.heroTitle1")} <br />
               <span className="text-gradient-gold">{t("home.heroTitle2")}</span>
             </h1>
@@ -61,6 +66,21 @@ export default function Home() {
             </p>
 
             <div className="max-w-2xl mx-auto bg-card rounded-xl shadow-2xl p-2 md:p-3 flex flex-col md:flex-row gap-2 items-center">
+              <div className="w-full md:w-44">
+                <select
+                  className="h-12 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={heroCity}
+                  onChange={(e) => setHeroCity(e.target.value)}
+                  aria-label={t("home.selectLocation")}
+                >
+                  <option value="">All cities</option>
+                  <option value="Bangalore">Bangalore</option>
+                  <option value="Hyderabad">Hyderabad</option>
+                  <option value="Mumbai">Mumbai</option>
+                  <option value="Delhi">Delhi</option>
+                  <option value="Chennai">Chennai</option>
+                </select>
+              </div>
               <div className="flex-1 w-full relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                 <Input
@@ -228,7 +248,7 @@ export default function Home() {
 
             <div>
               <span className="text-sm font-bold tracking-[0.2em] uppercase text-primary mb-2 block">{t("home.missionLabel")}</span>
-              <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">{t("home.missionTitle")}</h2>
+              <h2 className="text-h2 text-3xl md:text-4xl text-primary mb-6">{t("home.missionTitle")}</h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">{t("home.missionP1")}</p>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{t("home.missionP2")}</p>
 

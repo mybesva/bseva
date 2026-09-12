@@ -25,7 +25,7 @@ from app.storage import content_type_for, file_response, upload_bytes
 router = APIRouter(prefix="/admin", tags=["admin-pujari"])
 
 ALLOWED_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".webp"}
-DOC_TYPES = {"certificate", "identity", "supporting"}
+DOC_TYPES = {"certificate", "identity", "supporting", "driving_licence"}
 
 
 def _safe_name(name: str) -> str:

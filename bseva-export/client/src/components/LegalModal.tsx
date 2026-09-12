@@ -136,18 +136,24 @@ export function LegalInlineLink({
   kind,
   children,
   className ="text-primary underline hover:text-primary/80",
+  onOpenChange,
 }: {
   kind: LegalKind;
   children: React.ReactNode;
   className?: string;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  function setBoth(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)}>
+      <button type="button" className={className} onClick={() => setBoth(true)}>
         {children}
       </button>
-      <LegalModal kind={kind} open={open} onOpenChange={setOpen} />
+      <LegalModal kind={kind} open={open} onOpenChange={setBoth} />
     </>
   );
 }

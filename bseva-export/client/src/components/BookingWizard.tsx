@@ -64,6 +64,7 @@ interface BookingWizardProps {
   serviceId: string;
   pujaName: string;
   basePrices: {
+    basic?: number;
     standard: number;
     premium: number;
   };
@@ -79,8 +80,8 @@ interface BookingWizardProps {
 }
 
 type BookingStep = 1 | 2 | 3 | 4;
-type Tier = "standard" | "premium";
-type ServiceMode = "physical" | "virtual";
+type Tier = "basic" | "standard" | "premium";
+type ServiceMode = "physical" | "temple" | "virtual";
 type CalendarType = "north" | "south" | "lunar";
 
 const DEMO_LAT = 12.9352;
@@ -102,8 +103,12 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [calendarType, setCalendarType] = useState<CalendarType>("north");
   const [bookingDate, setBookingDate] = useState<Date | undefined>();
   const [bookingTime, setBookingTime] = useState("10:00");
-  const [locationText, setLocationText] = useState("Jayanagar 4th Block, Bangalore");
-  const [city, setCity] = useState("Bangalore");
+  const [locationText, setLocationText] = useState("");
+  const [city, setCity] = useState("");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoPending, setGeoPending] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [recommendedPriestId, setRecommendedPriestId] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -111,7 +116,8 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [submitting, setSubmitting] = useState(false);
   const [includeSamagri, setIncludeSamagri] = useState(false);
   const [includeAlankaram, setIncludeAlankaram] = useState(false);
-  const [addonConfirm, setAddonConfirm] = useState<null | "samagri" | "alankaram">(null);
+  const [includeFood, setIncludeFood] = useState(false);
+  const [addonConfirm, setAddonConfirm] = useState<null | "samagri" | "alankaram" | "food">(null);
   const [wallet, setWallet] = useState<{ balance?: number; wallet?: { balance_paise: number } } | null>(null);
   const [quote, setQuote] = useState<any>(null);
   const [nearby, setNearby] = useState<any[]>([]);
@@ -154,21 +160,24 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       booking_date: format(bookingDate, "yyyy-MM-dd"),
       include_samagri: includeSamagri ? "true" : "false",
       include_alankaram: includeAlankaram ? "true" : "false",
-      include_food: "false",
+      include_food: includeFood ? "true" : "false",
     });
     api(`/quote?${qs}`)
       .then(setQuote)
       .catch(() => setQuote(null));
-  }, [bookingDate, serviceId, tier, city, includeSamagri, includeAlankaram]);
+  }, [bookingDate, serviceId, tier, city, includeSamagri, includeAlankaram, includeFood]);
 
   const samagriPrice = Number(addonPrices?.samagri || quote?.samagriListPrice || 0);
   const alankaramPrice = Number(addonPrices?.alankaram || quote?.alankaramListPrice || 0);
+  const foodPrice = Number(addonPrices?.food || quote?.foodListPrice || 0);
+  const foodAvailable = Boolean(addonPrices?.foodAvailable);
 
-  // Always offer Samagri & Alankaram on every puja (customer opt-in).
-  function requestAddon(kind: "samagri" | "alankaram", checked: boolean) {
+  // Offer Samagri, Alankaram, and Food/Prasadam (when available) as customer opt-in.
+  function requestAddon(kind: "samagri" | "alankaram" | "food", checked: boolean) {
     if (!checked) {
       if (kind === "samagri") setIncludeSamagri(false);
-      else setIncludeAlankaram(false);
+      else if (kind === "alankaram") setIncludeAlankaram(false);
+      else setIncludeFood(false);
       return;
     }
     setAddonConfirm(kind);
@@ -177,6 +186,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   function confirmAddon() {
     if (addonConfirm === "samagri") setIncludeSamagri(true);
     if (addonConfirm === "alankaram") setIncludeAlankaram(true);
+    if (addonConfirm === "food") setIncludeFood(true);
     setAddonConfirm(null);
   }
 
@@ -250,7 +260,38 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 )}
               </div>
             </label>
-            {(includeSamagri || includeAlankaram) && (
+            {foodAvailable && (
+              <label
+                className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                  includeFood ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"
+                }`}
+              >
+                <Checkbox
+                  checked={includeFood}
+                  onCheckedChange={(v) => requestAddon("food", !!v)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between gap-2">
+                    <span className="font-medium">Food / Prasadam</span>
+                    <span className="font-semibold text-primary shrink-0">
+                      {foodPrice > 0
+                        ? `₹${(foodPrice / 100).toLocaleString("en-IN")}`
+                        : "As arranged"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Prasadam / food arrangement for this puja (when offered).
+                  </p>
+                  {includeFood && (
+                    <p className="text-xs font-semibold text-primary mt-1">
+                      Selected — Food / Prasadam included.
+                    </p>
+                  )}
+                </div>
+              </label>
+            )}
+            {(includeSamagri || includeAlankaram || includeFood) && (
               <div className="text-sm border-t pt-3 space-y-1">
                 {includeSamagri && (
                   <div className="flex justify-between">
@@ -272,6 +313,16 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     </span>
                   </div>
                 )}
+                {includeFood && (
+                  <div className="flex justify-between">
+                    <span>Food / Prasadam</span>
+                    <span>
+                      {foodPrice > 0
+                        ? `₹${(foodPrice / 100).toLocaleString("en-IN")}`
+                        : "As arranged"}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between font-semibold">
                   <span>Updated total</span>
                   <span className="text-primary">
@@ -287,12 +338,20 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {addonConfirm === "alankaram" ? "Alankaram by pujari" : "Samagri by pujari"}
+                {addonConfirm === "alankaram"
+                  ? "Alankaram by pujari"
+                  : addonConfirm === "food"
+                    ? "Food / Prasadam"
+                    : "Samagri by pujari"}
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2 text-left">
                 <span className="block">
-                  If you continue, the <strong>pujari will get{" "}
-                  {addonConfirm === "alankaram" ? "Alankaram (flowers / decoration)" : "Samagri (puja materials)"}{" "}
+                  If you continue, the <strong>pujari will arrange{" "}
+                  {addonConfirm === "alankaram"
+                    ? "Alankaram (flowers / decoration)"
+                    : addonConfirm === "food"
+                      ? "Food / Prasadam"
+                      : "Samagri (puja materials)"}{" "}
                   for you</strong>.
                 </span>
                 <span className="block">
@@ -314,7 +373,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
   useEffect(() => {
     if (currentStep < 2) return;
-    api<any[]>(`/pujaris/nearby?lat=${DEMO_LAT}&lng=${DEMO_LNG}&service_id=${serviceId}`)
+    api<any[]>(`/pujaris/nearby?lat=${lat ?? DEMO_LAT}&lng=${lng ?? DEMO_LNG}&service_id=${serviceId}`)
       .then((rows) => setNearby(rows.map((p) => ({ ...p, priestId: p.id, approvedLevel: p.approved_level }))))
       .catch(() => setNearby([]));
     if (isAuthenticated) {
@@ -322,9 +381,14 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
         .then((rows) => setPrevious(rows.map((p) => ({ ...p, priestId: p.id }))))
         .catch(() => setPrevious([]));
     }
-  }, [currentStep, serviceId, isAuthenticated]);
+  }, [currentStep, serviceId, isAuthenticated, lat, lng]);
 
   const tierDetails = {
+    basic: {
+      name: t("booking.basic"),
+      description: "Essential rites for a focused home ceremony",
+      features: ["Core rites as per the chosen service", "About 1.5–2 hours", "Essential guidance"],
+    },
     standard: {
       name: t("booking.standard"),
       description: "Traditional home puja with essential samagri",
@@ -336,6 +400,11 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       features: ["Full ceremonial rites", "Deluxe samagri kit", "About 3 hours", "Video of the ceremony", "Prasad packed for family"],
     },
   };
+
+  const availableTiers = (Object.keys(tierDetails) as Tier[]).filter((key) => {
+    if (key === "basic") return Number(basePrices.basic || 0) > 0;
+    return Number(basePrices[key] || 0) > 0;
+  });
 
   const steps = [
     { number: 1, title: t("booking.package") },
@@ -353,8 +422,21 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   }, [virtualEnabled, serviceMode]);
 
   const bill = useMemo(() => {
-    if (quote) return quote;
-    const base = basePrices[tier];
+    if (quote) {
+      return {
+        ...quote,
+        basePrice: quote.basePrice ?? quote.mainPuja,
+        samagri: quote.samagri ?? 0,
+        alankaram: quote.alankaram ?? 0,
+        foodPrasadam: quote.foodPrasadam ?? quote.food ?? 0,
+        peakFee: quote.peakFee ?? 0,
+        subtotal: quote.subtotal ?? quote.totalAmount,
+        gstPercent: quote.gstPercent ?? Number(settings?.gstPercent || 18),
+        gstAmount: quote.gstAmount ?? 0,
+        totalAmount: quote.totalAmount ?? quote.total ?? 0,
+      };
+    }
+    const base = Number(basePrices[tier] || basePrices.standard || 0);
     return {
       basePrice: base,
       peakFee: 0,
@@ -394,19 +476,19 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           service_id: serviceId,
           pujari_id: pujariId,
           package_type: tier,
-          mode: serviceMode === "virtual" ? "virtual" : "in_person",
+          mode: serviceMode === "virtual" ? "virtual" : serviceMode === "temple" ? "temple" : "in_person",
           booking_date: format(bookingDate, "yyyy-MM-dd"),
           start_time: bookingTime.length === 5 ? `${bookingTime}:00` : bookingTime,
-          location_label: `${locationText}, ${city}`,
+          location_label: `${locationText}${city ? `, ${city}` : ""}`,
           address: locationText,
           city,
-          latitude: DEMO_LAT,
-          longitude: DEMO_LNG,
+          latitude: lat ?? DEMO_LAT,
+          longitude: lng ?? DEMO_LNG,
           special_instructions: specialInstructions || undefined,
           terms_accepted: true,
           include_samagri: includeSamagri,
           include_alankaram: includeAlankaram,
-          include_food: false,
+          include_food: includeFood,
           recurring,
           recurring_count: recurring === "none" || recurring === "selected_dates" ? undefined : recurringCount,
           selected_dates:
@@ -433,7 +515,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               <div
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium",
-                  currentStep >= step.number ? "bg-[#F7931E] text-white" : "bg-gray-200 text-gray-500"
+                  currentStep >= step.number ? "bg-primary text-white" : "bg-gray-200 text-gray-500"
                 )}
               >
                 {currentStep > step.number ? <Check className="w-5 h-5" /> : step.number}
@@ -441,7 +523,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               <span className="text-xs mt-1 text-gray-600">{step.title}</span>
             </div>
             {index < steps.length - 1 && (
-              <div className={cn("w-12 sm:w-20 h-1 mx-2", currentStep > step.number ? "bg-[#F7931E]" : "bg-gray-200")} />
+              <div className={cn("w-12 sm:w-20 h-1 mx-2", currentStep > step.number ? "bg-primary" : "bg-gray-200")} />
             )}
           </div>
         ))}
@@ -450,28 +532,28 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       {currentStep === 1 && (
         <div className="space-y-6">
           <h3 className="text-xl font-semibold text-foreground">{t("booking.package")}</h3>
-          <RadioGroup value={tier} onValueChange={(v) => setTier(v as Tier)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(Object.keys(tierDetails) as Tier[]).map((key) => (
+          <RadioGroup value={tier} onValueChange={(v) => setTier(v as Tier)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {availableTiers.map((key) => (
               <Label
                 key={key}
                 htmlFor={key}
                 className={cn(
-                  "flex flex-col items-stretch w-full cursor-pointer rounded-lg border-2 p-4 hover:border-[#F7931E]",
-                  tier === key ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                  "flex flex-col items-stretch w-full cursor-pointer rounded-lg border-2 p-4 hover:border-primary",
+                  tier === key ? "border-primary bg-primary/5" : "border-border"
                 )}
               >
                 <RadioGroupItem value={key} id={key} className="sr-only" />
                 <div className="flex w-full items-start justify-between gap-3 mb-2">
                   <span className="font-semibold text-foreground">{tierDetails[key].name}</span>
-                  <span className="text-lg font-bold text-[#F7931E] shrink-0 whitespace-nowrap">
-                    ₹{(basePrices[key] / 100).toLocaleString("en-IN")}
+                  <span className="text-lg font-bold text-primary shrink-0 whitespace-nowrap">
+                    ₹{(Number(basePrices[key] || 0) / 100).toLocaleString("en-IN")}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mb-3 w-full leading-relaxed">{tierDetails[key].description}</p>
-                <ul className="text-xs text-gray-500 space-y-1 w-full">
+                <p className="text-sm text-muted-foreground mb-3 w-full leading-relaxed">{tierDetails[key].description}</p>
+                <ul className="text-xs text-muted-foreground space-y-1 w-full">
                   {tierDetails[key].features.map((f) => (
                     <li key={f} className="flex items-center gap-1">
-                      <Check className="w-3 h-3 text-green-500" /> {f}
+                      <Check className="w-3 h-3 text-primary" /> {f}
                     </li>
                   ))}
                 </ul>
@@ -481,39 +563,44 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
           <div className="space-y-3">
             <Label>Puja Mode</Label>
-            {virtualEnabled ? (
-              <RadioGroup
-                value={serviceMode}
-                onValueChange={(v) => setServiceMode(v as ServiceMode)}
-                className="grid grid-cols-1 md:grid-cols-2 gap-3"
+            <RadioGroup
+              value={serviceMode}
+              onValueChange={(v) => setServiceMode(v as ServiceMode)}
+              className="grid grid-cols-1 md:grid-cols-3 gap-3"
+            >
+              <Label
+                className={cn(
+                  "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
+                  serviceMode === "physical" ? "border-primary bg-primary/5" : "border-border"
+                )}
               >
+                <RadioGroupItem value="physical" className="sr-only" />
+                <span className="font-medium">{t("booking.physical")}</span>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">At customer location</p>
+              </Label>
+              <Label
+                className={cn(
+                  "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
+                  serviceMode === "temple" ? "border-primary bg-primary/5" : "border-border"
+                )}
+              >
+                <RadioGroupItem value="temple" className="sr-only" />
+                <span className="font-medium">{t("booking.temple")}</span>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">At temple / specified venue</p>
+              </Label>
+              {virtualEnabled && (
                 <Label
                   className={cn(
                     "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
-                    serviceMode === "physical" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
-                  )}
-                >
-                  <RadioGroupItem value="physical" className="sr-only" />
-                  <span className="font-medium">{t("booking.physical")}</span>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Pujari visits your home or venue</p>
-                </Label>
-                <Label
-                  className={cn(
-                    "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
-                    serviceMode === "virtual" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                    serviceMode === "virtual" ? "border-primary bg-primary/5" : "border-border"
                   )}
                 >
                   <RadioGroupItem value="virtual" className="sr-only" />
                   <span className="font-medium">{t("booking.virtual")}</span>
-                  <p className="text-xs text-muted-foreground mt-1">Live video session with your pujari</p>
+                  <p className="text-xs text-muted-foreground mt-1">Virtual / online session</p>
                 </Label>
-              </RadioGroup>
-            ) : (
-              <div className="rounded-lg border-2 border-[#F7931E] bg-orange-50 p-4">
-                <span className="font-medium">{t("booking.physical")}</span>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Pujari visits your home or venue</p>
-              </div>
-            )}
+              )}
+            </RadioGroup>
           </div>
         </div>
       )}
@@ -562,7 +649,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               </PopoverContent>
             </Popover>
             {panchang && (
-              <Card className="border-orange-200 bg-orange-50">
+              <Card className="border-orange-200 bg-primary/5">
                 <CardContent className="p-4 text-sm space-y-1">
                   <p className="font-medium text-foreground">{t("calendar.panchangam")}</p>
                   <p>
@@ -586,15 +673,57 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           </div>
 
           <div className="space-y-2">
-            <Label>Address *</Label>
-            <Textarea value={locationText} onChange={(e) => setLocationText(e.target.value)} />
+            <div className="flex items-center justify-between gap-2">
+              <Label>Address *</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={geoPending}
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    setGeoError("Geolocation is not supported in this browser. Enter address manually.");
+                    return;
+                  }
+                  setGeoPending(true);
+                  setGeoError(null);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setLat(pos.coords.latitude);
+                      setLng(pos.coords.longitude);
+                      setGeoPending(false);
+                      if (!locationText) setLocationText("Current location (GPS)");
+                      toast.success("Location captured from device");
+                    },
+                    (err) => {
+                      setGeoPending(false);
+                      setGeoError(
+                        err.code === err.PERMISSION_DENIED
+                          ? "Location permission denied. Enter the address manually."
+                          : "Could not get location. Enter the address manually."
+                      );
+                    },
+                    { enableHighAccuracy: true, timeout: 12000 }
+                  );
+                }}
+              >
+                {geoPending ? "Locating…" : "Use my location"}
+              </Button>
+            </div>
+            <Textarea
+              value={locationText}
+              onChange={(e) => setLocationText(e.target.value)}
+              placeholder="House/flat, street, landmark"
+            />
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <MapPin size={12} /> Used for the in-person visit
+              <MapPin size={12} /> Service location for the assigned pujari
+              {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
             </p>
+            {geoError && <p className="text-xs text-destructive">{geoError}</p>}
           </div>
           <div className="space-y-2">
             <Label>City *</Label>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} />
+            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -697,7 +826,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     onClick={() => setRecommendedPriestId(p.priestId)}
                     className={cn(
                       "w-full text-left p-3 rounded-lg border",
-                      recommendedPriestId === p.priestId ? "border-[#F7931E] bg-orange-50" : "border-border"
+                      recommendedPriestId === p.priestId ? "border-primary bg-primary/5" : "border-border"
                     )}
                   >
                     <div className="flex justify-between">
@@ -745,7 +874,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 {nearby.map((p) => (
                   <TableRow
                     key={p.priestId}
-                    className={cn("cursor-pointer", recommendedPriestId === p.priestId && "bg-orange-50")}
+                    className={cn("cursor-pointer", recommendedPriestId === p.priestId && "bg-primary/5")}
                     onClick={() => setRecommendedPriestId(p.priestId)}
                   >
                     <TableCell className="font-medium">
@@ -802,8 +931,13 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               <div className="flex justify-between">
                 <div>
                   <p className="text-lg font-semibold">{pujaName}</p>
-                  <Badge className="bg-[#F7931E] mt-1">
-                    {tierDetails[tier].name} · {serviceMode === "virtual" ? t("booking.virtual") : t("booking.physical")}
+                  <Badge className="bg-primary mt-1">
+                    {tierDetails[tier].name} ·{" "}
+                    {serviceMode === "virtual"
+                      ? t("booking.virtual")
+                      : serviceMode === "temple"
+                        ? t("booking.temple")
+                        : t("booking.physical")}
                   </Badge>
                 </div>
               </div>
@@ -823,7 +957,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     : ""}
                 </p>
               )}
-              <div className="bg-orange-50 border border-orange-200 rounded-md p-3 text-xs space-y-1">
+              <div className="bg-primary/5 border border-orange-200 rounded-md p-3 text-xs space-y-1">
                 <p className="font-medium">{cancellationPolicy?.title || "Cancellation Policy"}</p>
                 {(cancellationPolicy?.points || []).map((p, i) => (
                   <p key={i}>
@@ -856,6 +990,12 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     <span>₹{(bill.alankaram / 100).toLocaleString("en-IN")}</span>
                   </div>
                 )}
+                {Number(bill.foodPrasadam || bill.food || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Food / Prasadam</span>
+                    <span>₹{(Number(bill.foodPrasadam || bill.food) / 100).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
                 {bill.peakFee > 0 && (
                   <div className="flex justify-between text-orange-700">
                     <span>{t("booking.peakFee")}</span>
@@ -874,7 +1014,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>{t("booking.total")}</span>
-                  <span className="text-[#F7931E]">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
+                  <span className="text-primary">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
                 </div>
               </div>
             </CardContent>
@@ -889,7 +1029,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           <AddonOptionsCard />
 
           {!isAuthenticated && !authLoading && (
-            <Card className="border-orange-200 bg-orange-50">
+            <Card className="border-orange-200 bg-primary/5">
               <CardContent className="p-6">
                 <p className="mb-4 text-sm">Please login as a customer to pay from wallet and confirm booking.</p>
                 <Button
@@ -901,7 +1041,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                       })
                     )
                   }
-                  className="bg-[#F7931E]"
+                  className="bg-primary"
                 >
                   <LogIn className="w-4 h-4 mr-2" /> Login
                 </Button>
@@ -919,14 +1059,14 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 </div>
                 <div className="flex justify-between font-bold text-lg">
                   <span>{t("booking.total")}</span>
-                  <span className="text-[#F7931E]">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
+                  <span className="text-primary">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Paid from the same wallet as mobile (Supabase via FastAPI)</p>
                 <div className="flex items-start gap-2 pt-2">
                   <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(v) => setTermsAccepted(!!v)} />
                   <label htmlFor="terms" className="text-sm leading-snug">
                     I agree to the{" "}
-                    <button type="button" className="underline text-[#F7931E]" onClick={() => setShowTerms(true)}>
+                    <button type="button" className="underline text-primary" onClick={() => setShowTerms(true)}>
                       Terms & Conditions and Cancellation Policy
                     </button>
                   </label>
@@ -948,7 +1088,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
         </Button>
         {currentStep < 4 ? (
           <Button
-            className="bg-[#F7931E] hover:bg-[#e8850d]"
+            className="bg-primary hover:bg-primary/90"
             disabled={!canProceed()}
             onClick={() => setCurrentStep((s) => (s + 1) as BookingStep)}
           >
@@ -957,7 +1097,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
         ) : (
           isAuthenticated && (
             <Button
-              className="bg-[#F7931E] hover:bg-[#e8850d]"
+              className="bg-primary hover:bg-primary/90"
               disabled={submitting || !termsAccepted}
               onClick={handleSubmit}
             >

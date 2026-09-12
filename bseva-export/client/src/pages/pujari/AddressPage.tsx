@@ -4,6 +4,7 @@ import AddressFields, { type AddressValue } from "@/components/AddressFields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { validateAddress } from "@/lib/fieldValidation";
 import { toast } from "sonner";
 
 const empty: AddressValue = {
@@ -46,8 +47,9 @@ export default function PujariAddressPage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!value.district.trim()) {
-      toast.error("District is required");
+    const errs = validateAddress(value);
+    if (Object.keys(errs).length) {
+      toast.error(Object.values(errs)[0]);
       return;
     }
     setSaving(true);

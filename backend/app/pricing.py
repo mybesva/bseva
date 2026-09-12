@@ -114,20 +114,39 @@ def compute_quote(
     include_alankaram: bool | None = None,
     include_food: bool | None = None,
 ) -> dict:
-    # Prefer explicit main_puja component when set; else standard/premium package price.
+    # Prefer explicit main_puja component when set; else basic/standard/premium package price.
+    from app.platform_config import get_setting as _gs
+
+    def _pkg(key: str, setting_key: str) -> int:
+        raw = service.get(key)
+        if raw is not None:
+            try:
+                return int(raw)
+            except (TypeError, ValueError):
+                pass
+        return int(_gs(db, setting_key, 0) or 0)
+
     main = service.get("main_puja_price_paise")
     if main is not None:
         base = int(main)
+        std = _pkg("standard_price_paise", "default_package_standard_paise")
         if package_type == "premium":
-            # Premium uplift: difference between premium and standard package, if configured
-            std = int(service.get("standard_price_paise") or 0)
-            prem = int(service.get("premium_price_paise") or 0)
+            prem = _pkg("premium_price_paise", "default_package_premium_paise")
             if prem > std:
                 base = base + (prem - std)
+        elif package_type == "basic":
+            basic = _pkg("basic_price_paise", "default_package_basic_paise")
+            if basic > 0 and std > basic:
+                base = max(0, base - (std - basic))
     else:
-        base = int(
-            service["premium_price_paise"] if package_type == "premium" else service["standard_price_paise"]
-        )
+        if package_type == "premium":
+            base = _pkg("premium_price_paise", "default_package_premium_paise")
+        elif package_type == "basic":
+            base = _pkg("basic_price_paise", "default_package_basic_paise") or _pkg(
+                "standard_price_paise", "default_package_standard_paise"
+            )
+        else:
+            base = _pkg("standard_price_paise", "default_package_standard_paise")
 
     def _comp(key: str, default: int = 0) -> int:
         try:

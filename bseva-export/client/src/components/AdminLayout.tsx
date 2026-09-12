@@ -92,6 +92,7 @@ const navigation: NavItem[] = [
   { nameKey: "admin.permissions", suffix: "/permissions", icon: UserCog, permissions: ["manage_admins"] },
   { nameKey: "admin.reviews", suffix: "/reviews", icon: Star, permissions: ["view_bookings"] },
   { nameKey: "admin.notifications", suffix: "/notifications", icon: Bell, permissions: ["manage_config"] },
+  { nameKey: "admin.promos", suffix: "/promos", icon: Sparkles, permissions: ["manage_config"] },
   { nameKey: "admin.reports", suffix: "/reports", icon: BarChart3, permissions: ["view_reports"] },
   { nameKey: "admin.settings", suffix: "/settings", icon: Settings, permissions: ["manage_config"] },
 ];
@@ -180,7 +181,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                         navActive(item.suffix)
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          ? "bg-primary/15 text-primary font-semibold"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       )}
                       onClick={() => setSidebarOpen(false)}
@@ -196,7 +197,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                   <a
                     className={cn(
                       adminSidebarActionClass,
-                      navActive("/support") && "bg-sidebar-accent text-sidebar-accent-foreground"
+                      navActive("/support") && "bg-primary/15 text-primary font-semibold"
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -209,7 +210,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                 <a
                   className={cn(
                     adminSidebarActionClass,
-                    navActive("/head-ratings") && "bg-sidebar-accent text-sidebar-accent-foreground"
+                    navActive("/head-ratings") && "bg-primary/15 text-primary font-semibold"
                   )}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -222,7 +223,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                   <a
                     className={cn(
                       adminSidebarActionClass,
-                      navActive("/legal") && "bg-sidebar-accent text-sidebar-accent-foreground"
+                      navActive("/legal") && "bg-primary/15 text-primary font-semibold"
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -246,17 +247,19 @@ function AdminShell({ children }: AdminLayoutProps) {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-3 px-3 py-2">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                {(user?.name || "A").charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name ||"Admin User"}</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">
-                  {user?.role === "super_admin" ? "Super admin" : user?.email || "admin@bseva.com"}
-                </p>
-              </div>
-            </div>
+            <Link href={adminPath("/settings")}>
+              <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent/50 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+                  {(user?.name || "A").charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || "Admin User"}</p>
+                  <p className="text-xs text-sidebar-foreground/60 truncate">
+                    {user?.role === "super_admin" ? "Super admin" : user?.email || "admin@bseva.com"}
+                  </p>
+                </div>
+              </a>
+            </Link>
           </div>
         </div>
       </aside>

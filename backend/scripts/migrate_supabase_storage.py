@@ -59,7 +59,10 @@ def storage_paths(conn) -> list[str]:
 
 def dl(cfg: dict, path: str) -> bytes:
     url = f"{cfg['url'].rstrip('/')}/storage/v1/object/{cfg['bucket']}/{path}"
-    headers = {"Authorization": f"Bearer {cfg['key']}", "apikey": cfg["key"]}
+    key = cfg["key"]
+    headers = {"apikey": key}
+    if str(key).startswith("eyJ"):
+        headers["Authorization"] = f"Bearer {key}"
     res = httpx.get(url, headers=headers, timeout=60)
     res.raise_for_status()
     return res.content
@@ -67,12 +70,14 @@ def dl(cfg: dict, path: str) -> bytes:
 
 def ul(cfg: dict, path: str, data: bytes) -> None:
     url = f"{cfg['url'].rstrip('/')}/storage/v1/object/{cfg['bucket']}/{path}"
+    key = cfg["key"]
     headers = {
-        "Authorization": f"Bearer {cfg['key']}",
-        "apikey": cfg["key"],
+        "apikey": key,
         "Content-Type": "application/octet-stream",
         "x-upsert": "true",
     }
+    if str(key).startswith("eyJ"):
+        headers["Authorization"] = f"Bearer {key}"
     res = httpx.post(url, content=data, headers=headers, timeout=60)
     if res.status_code not in (200, 201):
         res = httpx.put(url, content=data, headers=headers, timeout=60)

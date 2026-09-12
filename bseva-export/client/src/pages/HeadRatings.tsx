@@ -6,12 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 
+type PujariOption = { id: string; name: string; email?: string };
+
 function RatingsForm() {
+  const [pujaris, setPujaris] = useState<PujariOption[]>([]);
   const [pujariId, setPujariId] = useState("");
+  const [manualId, setManualId] = useState("");
   const [stars, setStars] = useState(5);
   const [comments, setComments] = useState("");
   const [rows, setRows] = useState<any[]>([]);
@@ -27,6 +38,9 @@ function RatingsForm() {
 
   useEffect(() => {
     void load();
+    api<PujariOption[]>("/head/pujaris")
+      .then((items) => setPujaris(items.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))))
+      .catch(() => undefined);
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -35,17 +49,22 @@ function RatingsForm() {
       toast.error("Comments are mandatory (min 5 characters)");
       return;
     }
+    const target = (pujariId || manualId).trim();
+    if (!target) {
+      toast.error("Select a pujari or enter their UUID / email / phone");
+      return;
+    }
     setSaving(true);
     try {
       await api("/head/ratings", {
         method: "POST",
-        body: JSON.stringify({ pujari_id: pujariId.trim(), stars, comments: comments.trim() }),
+        body: JSON.stringify({ pujari_id: target, stars, comments: comments.trim() }),
       });
       toast.success("Assessment saved");
       setComments("");
       await load();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || "Request failed");
     } finally {
       setSaving(false);
     }
@@ -59,9 +78,43 @@ function RatingsForm() {
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={submit}>
+            {pujaris.length > 0 && (
+              <div className="space-y-1">
+                <Label>Select pujari</Label>
+                <Select
+                  value={pujariId || undefined}
+                  onValueChange={(v) => {
+                    setPujariId(v);
+                    setManualId("");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a pujari" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pujaris.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                        {p.email ? ` (${p.email})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
-              <Label>Pujari user ID</Label>
-              <Input value={pujariId} onChange={(e) => setPujariId(e.target.value)} required />
+              <Label>Or enter UUID / email / phone</Label>
+              <Input
+                value={manualId}
+                onChange={(e) => {
+                  setManualId(e.target.value);
+                  setPujariId("");
+                }}
+                placeholder="Do not use numeric IDs like 2"
+              />
+              <p className="text-xs text-muted-foreground">
+                Assessments require the pujari account UUID, email, or phone — not a display number.
+              </p>
             </div>
             <div className="space-y-1">
               <Label>Stars (1–5)</Label>
