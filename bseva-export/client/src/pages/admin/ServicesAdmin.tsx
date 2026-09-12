@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -62,6 +63,21 @@ const emptyForm = {
   full_description: "",
   benefits: "",
   local_name: "",
+  spiritual_meaning: "",
+  common_occasions: "",
+  deity: "",
+  tradition_notes: "",
+  location_notes: "",
+  whats_included: "",
+  admin_notes: "",
+  process_steps_text: "",
+  priests_min: 1,
+  priests_max: 1,
+  homa_included: false,
+  prasadam_included: true,
+  sankalpa_required: true,
+  languages_text: "en, hi, te",
+  online_nri_price_paise: null as number | null,
   category: "puja",
   category_slugs: [] as string[],
   search_aliases_text: "",
@@ -216,6 +232,23 @@ export default function ServicesAdmin() {
       full_description: s.full_description || "",
       benefits: s.benefits || "",
       local_name: s.local_name || "",
+      spiritual_meaning: s.spiritual_meaning || "",
+      common_occasions: s.common_occasions || "",
+      deity: s.deity || "",
+      tradition_notes: s.tradition_notes || "",
+      location_notes: s.location_notes || "",
+      whats_included: s.whats_included || "",
+      admin_notes: s.admin_notes || "",
+      process_steps_text: Array.isArray(s.process_steps)
+        ? s.process_steps.map((st: { text?: string }) => st.text || "").filter(Boolean).join("\n")
+        : "",
+      priests_min: s.priests_min || s.pujaris_required || 1,
+      priests_max: s.priests_max || s.pujaris_required || 1,
+      homa_included: Boolean(s.homa_included),
+      prasadam_included: s.prasadam_included !== false,
+      sankalpa_required: s.sankalpa_required !== false,
+      languages_text: Array.isArray(s.languages) ? s.languages.join(", ") : "en, hi, te",
+      online_nri_price_paise: s.online_nri_price_paise != null ? Number(s.online_nri_price_paise) : null,
       category: s.category || "puja",
       category_slugs: categorySlugs,
       search_aliases_text: Array.isArray(s.search_aliases) ? s.search_aliases.join(", ") : "",
@@ -348,6 +381,15 @@ export default function ServicesAdmin() {
         slug,
         search_aliases: parseAliases(form.search_aliases_text),
         category_slugs: form.category_slugs,
+        languages: parseAliases(form.languages_text),
+        process_steps: (form.process_steps_text || "")
+          .split("\n")
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .map((text, i) => ({ order: i + 1, text })),
+        priests_min: Math.min(20, Math.max(1, Math.round(Number(form.priests_min) || 1))),
+        priests_max: Math.min(20, Math.max(1, Math.round(Number(form.priests_max) || 1))),
+        online_nri_price_paise: form.online_nri_price_paise,
         standard_price_paise: form.standard_price_paise,
         premium_price_paise: form.premium_price_paise,
         basic_price_paise: form.basic_price_paise,
@@ -530,11 +572,25 @@ export default function ServicesAdmin() {
       </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="">{editId ?"Edit puja service" :"Add puja service"}</DialogTitle>
           </DialogHeader>
           <form id="add-service-form" onSubmit={handleSave} className="space-y-4">
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="flex flex-wrap h-auto gap-1 justify-start">
+                <TabsTrigger value="basic">Basic</TabsTrigger>
+                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="process">Process</TabsTrigger>
+                <TabsTrigger value="images">Images</TabsTrigger>
+                <TabsTrigger value="pricing">Pricing</TabsTrigger>
+                <TabsTrigger value="featured">Featured</TabsTrigger>
+                <TabsTrigger value="samagri">Samagri</TabsTrigger>
+                <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="basic" className="space-y-4 mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Basic Information</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="service-name">Puja / service name</Label>
@@ -555,6 +611,19 @@ export default function ServicesAdmin() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Deity</Label>
+                <Input value={form.deity} onChange={(e) => setForm({ ...form, deity: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Languages (comma-separated)</Label>
+                <Input
+                  value={form.languages_text}
+                  onChange={(e) => setForm({ ...form, languages_text: e.target.value })}
+                />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="service-slug">Slug (URL)</Label>
               <Input
@@ -564,7 +633,177 @@ export default function ServicesAdmin() {
                 onChange={(e) => setForm({ ...form, slug: e.target.value })}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Catalog categories</Label>
+              <div className="rounded-lg border p-3 max-h-36 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {catalogCategories.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={form.category_slugs.includes(c.slug)}
+                      onCheckedChange={(v) => toggleCategorySlug(c.slug, !!v)}
+                      disabled={!c.active && !form.category_slugs.includes(c.slug)}
+                    />
+                    {c.name}
+                  </label>
+                ))}
+                {catalogCategories.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2">
+                    No categories yet. Use the Categories button to add some.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="service-aliases">Search aliases</Label>
+              <Input
+                id="service-aliases"
+                placeholder="Comma-separated, e.g. Satyanarayana, Satya Narayan"
+                value={form.search_aliases_text}
+                onChange={(e) => setForm({ ...form, search_aliases_text: e.target.value })}
+              />
+            </div>
+              </TabsContent>
 
+              <TabsContent value="content" className="space-y-4 mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Content</p>
+            <div className="space-y-2">
+              <Label htmlFor="service-short">Short description</Label>
+              <Textarea
+                id="service-short"
+                placeholder="One-line summary for listings"
+                value={form.short_description}
+                onChange={(e) => setForm({ ...form, short_description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="service-full">Full description</Label>
+              <Textarea
+                id="service-full"
+                placeholder="Detailed description for the service page"
+                value={form.full_description}
+                onChange={(e) => setForm({ ...form, full_description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Spiritual meaning / purpose</Label>
+              <textarea
+                className="w-full min-h-[70px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.spiritual_meaning}
+                onChange={(e) => setForm({ ...form, spiritual_meaning: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Common occasions</Label>
+              <textarea
+                className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.common_occasions}
+                onChange={(e) => setForm({ ...form, common_occasions: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="service-benefits">Benefits / purpose</Label>
+              <Textarea
+                id="service-benefits"
+                value={form.benefits}
+                onChange={(e) => setForm({ ...form, benefits: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>What&apos;s included</Label>
+              <Textarea
+                value={form.whats_included}
+                onChange={(e) => setForm({ ...form, whats_included: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Location notes</Label>
+              <Input
+                value={form.location_notes}
+                onChange={(e) => setForm({ ...form, location_notes: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tradition / regional notes</Label>
+              <Textarea
+                value={form.tradition_notes}
+                onChange={(e) => setForm({ ...form, tradition_notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="service-description">Legacy description (optional)</Label>
+              <Textarea
+                id="service-description"
+                placeholder="Fallback if short description is empty"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+              </TabsContent>
+
+              <TabsContent value="process" className="space-y-4 mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Process</p>
+            <div className="space-y-2">
+              <Label>Process steps (one per line)</Label>
+              <textarea
+                className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.process_steps_text}
+                onChange={(e) => setForm({ ...form, process_steps_text: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Priests min</Label>
+                <Input
+                  type="number"
+                  value={form.priests_min}
+                  onChange={(e) => setForm({ ...form, priests_min: Number(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Priests max</Label>
+                <Input
+                  type="number"
+                  value={form.priests_max}
+                  onChange={(e) => setForm({ ...form, priests_max: Number(e.target.value) || 1 })}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.homa_included}
+                  onChange={(e) => setForm({ ...form, homa_included: e.target.checked })}
+                />
+                Homa included
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.prasadam_included}
+                  onChange={(e) => setForm({ ...form, prasadam_included: e.target.checked })}
+                />
+                Prasadam
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.sankalpa_required}
+                  onChange={(e) => setForm({ ...form, sankalpa_required: e.target.checked })}
+                />
+                Sankalpa required
+              </label>
+            </div>
+              </TabsContent>
+
+              <TabsContent value="images" className="space-y-4 mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Images</p>
             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
               <div className="flex items-center justify-between gap-2">
                 <Label className="text-base">Service image</Label>
@@ -720,78 +959,9 @@ export default function ServicesAdmin() {
                 </div>
               </details>
             </div>
+              </TabsContent>
 
-            <div className="space-y-2">
-              <Label htmlFor="service-short">Short description</Label>
-              <Textarea
-                id="service-short"
-                placeholder="One-line summary for listings"
-                value={form.short_description}
-                onChange={(e) => setForm({ ...form, short_description: e.target.value })}
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="service-full">Full description</Label>
-              <Textarea
-                id="service-full"
-                placeholder="Detailed description for the service page"
-                value={form.full_description}
-                onChange={(e) => setForm({ ...form, full_description: e.target.value })}
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="service-benefits">Benefits / purpose</Label>
-              <Textarea
-                id="service-benefits"
-                value={form.benefits}
-                onChange={(e) => setForm({ ...form, benefits: e.target.value })}
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="service-description">Legacy description (optional)</Label>
-              <Textarea
-                id="service-description"
-                placeholder="Fallback if short description is empty"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={2}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Catalog categories</Label>
-              <div className="rounded-lg border p-3 max-h-36 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {catalogCategories.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={form.category_slugs.includes(c.slug)}
-                      onCheckedChange={(v) => toggleCategorySlug(c.slug, !!v)}
-                      disabled={!c.active && !form.category_slugs.includes(c.slug)}
-                    />
-                    {c.name}
-                  </label>
-                ))}
-                {catalogCategories.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2">
-                    No categories yet. Use the Categories button to add some.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="service-aliases">Search aliases</Label>
-              <Input
-                id="service-aliases"
-                placeholder="Comma-separated, e.g. Satyanarayana, Satya Narayan"
-                value={form.search_aliases_text}
-                onChange={(e) => setForm({ ...form, search_aliases_text: e.target.value })}
-              />
-            </div>
-
+              <TabsContent value="featured" className="space-y-4 mt-4">
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <p className="text-sm font-medium">Catalog visibility & ordering</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -861,7 +1031,9 @@ export default function ServicesAdmin() {
                 </div>
               </div>
             </div>
+              </TabsContent>
 
+              <TabsContent value="pricing" className="space-y-4 mt-4">
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <p className="text-sm font-medium">Cost & pricing</p>
               <p className="text-xs text-muted-foreground">
@@ -1194,8 +1366,27 @@ export default function ServicesAdmin() {
                 Active (shown to customers)
               </label>
             </div>
-            {editId && (
-              <div className="space-y-2 border-t pt-3">
+            <div className="space-y-2 max-w-xs">
+              <Label>Online / NRI price (₹)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={form.online_nri_price_paise != null ? form.online_nri_price_paise / 100 : ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    online_nri_price_paise:
+                      e.target.value === "" ? null : Math.round(Number(e.target.value) * 100),
+                  })
+                }
+              />
+            </div>
+              </TabsContent>
+
+              <TabsContent value="samagri" className="space-y-4 mt-4">
+            {editId ? (
+              <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Label>Preparation / Samagri for this service</Label>
                   <Select
@@ -1218,13 +1409,18 @@ export default function ServicesAdmin() {
                   </Select>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Only VERIFIED lists are shown to customers after booking.
+                  Only VERIFIED lists are shown to customers after booking. Scale qty fields (S/M/L/G) are Admin-overridable.
                 </p>
                 <ul className="text-sm space-y-1 max-h-36 overflow-y-auto">
                   {linked.map((it) => (
                     <li key={it.samagri_item_id || it.id}>
                       {it.name}
-                      {it.quantity != null ? ` — ${it.quantity}${it.unit ? ` ${it.unit}` : ""}` : ""}
+                      {it.qty_small || it.quantity != null
+                        ? ` — S:${it.qty_small || it.quantity}${it.unit ? ` ${it.unit}` : ""}`
+                        : ""}
+                      {it.qty_medium ? ` · M:${it.qty_medium}` : ""}
+                      {it.qty_large ? ` · L:${it.qty_large}` : ""}
+                      {it.qty_grand ? ` · G:${it.qty_grand}` : ""}
                       {it.provided_by ? ` · ${it.provided_by}` : ""}
                       {it.optional ? " (optional)" : it.required ? " (required)" : ""}
                     </li>
@@ -1301,6 +1497,11 @@ export default function ServicesAdmin() {
                           unit: linkUnit || null,
                           category: linkCategory,
                           provided_by: linkProvidedBy,
+                          qty_small: linkQty || null,
+                          qty_medium: linkQty || null,
+                          qty_large: linkQty || null,
+                          qty_grand: linkQty || null,
+                          scale_override: true,
                         }),
                       });
                       toast.success("Item linked");
@@ -1313,7 +1514,23 @@ export default function ServicesAdmin() {
                   Link item
                 </Button>
               </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Save the service first to manage samagri items.</p>
             )}
+              </TabsContent>
+
+              <TabsContent value="advanced" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Admin internal notes</Label>
+              <Textarea
+                value={form.admin_notes}
+                onChange={(e) => setForm({ ...form, admin_notes: e.target.value })}
+                rows={4}
+                placeholder="Internal only — not shown to customers"
+              />
+            </div>
+              </TabsContent>
+            </Tabs>
           </form>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
@@ -1391,10 +1608,10 @@ export default function ServicesAdmin() {
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs"
-                          disabled={Boolean(s.is_featured_home) && avail}
+                          disabled={false}
                           title={
                             s.is_featured_home && avail
-                              ? "Top 10 / featured pujas must stay Available"
+                              ? "Featured pujas can also be Coming Soon on Home"
                               : undefined
                           }
                           onClick={() => void toggleAvailability(s, !avail)}

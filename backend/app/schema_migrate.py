@@ -685,6 +685,13 @@ def ensure_schema() -> None:
                 _exec_safe(conn, stmt)
         except Exception:
             pass
+        try:
+            from app.phase6_puja_master_migrate import _PHASE6_STMTS
+
+            for stmt in _PHASE6_STMTS:
+                _exec_safe(conn, stmt)
+        except Exception:
+            pass
         # Backfill main_puja_price from standard when null
         _exec_safe(
             conn,
@@ -714,6 +721,17 @@ def ensure_schema() -> None:
                 conn.execute(text("RELEASE SAVEPOINT bseva_samagri"))
             except Exception:
                 conn.execute(text("ROLLBACK TO SAVEPOINT bseva_samagri"))
+        except Exception:
+            pass
+        try:
+            from app.puja_catalog_import import ensure_puja_catalog_import
+
+            conn.execute(text("SAVEPOINT bseva_puja_docs"))
+            try:
+                ensure_puja_catalog_import(conn)
+                conn.execute(text("RELEASE SAVEPOINT bseva_puja_docs"))
+            except Exception:
+                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_puja_docs"))
         except Exception:
             pass
         _seed_pujari_roles(conn)

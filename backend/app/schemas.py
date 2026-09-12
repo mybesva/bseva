@@ -167,6 +167,21 @@ class ServiceIn(BaseModel):
     full_description: Optional[str] = None
     benefits: Optional[str] = None
     local_name: Optional[str] = None
+    spiritual_meaning: Optional[str] = None
+    common_occasions: Optional[str] = None
+    deity: Optional[str] = None
+    tradition_notes: Optional[str] = None
+    location_notes: Optional[str] = None
+    whats_included: Optional[str] = None
+    admin_notes: Optional[str] = None
+    process_steps: Optional[list[dict]] = None
+    priests_min: Optional[int] = Field(default=None, ge=1, le=20)
+    priests_max: Optional[int] = Field(default=None, ge=1, le=20)
+    homa_included: Optional[bool] = False
+    prasadam_included: Optional[bool] = True
+    sankalpa_required: Optional[bool] = True
+    languages: Optional[list[str]] = None
+    online_nri_price_paise: Optional[int] = None
     category: Optional[str] = "puja"  # legacy coarse tag
     category_slugs: Optional[list[str]] = None  # multi-category assignment
     required_level: int = Field(ge=1, le=4)
@@ -201,6 +216,8 @@ class ServiceIn(BaseModel):
     homepage_rank: Optional[int] = None
     pricing_status: Optional[Literal["priced", "awaiting_pricing"]] = None
     samagri_review_status: Optional[Literal["UNVERIFIED", "VERIFIED", "NEEDS_REVIEW"]] = None
+    # Optional EN translation payload (also stored on services columns for defaults)
+    translation_en: Optional[dict] = None
 
 
 class ServiceCategoryIn(BaseModel):

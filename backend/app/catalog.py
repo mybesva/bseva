@@ -59,7 +59,13 @@ def service_categories(db: Session, service_id: str) -> list[dict]:
     return [row_dict(r) for r in rows]
 
 
-def enrich_service(db: Session, row: Any, *, include_inactive_meta: bool = False) -> dict:
+def enrich_service(
+    db: Session,
+    row: Any,
+    *,
+    include_inactive_meta: bool = False,
+    lang: str | None = None,
+) -> dict:
     data = row_dict(row)
     sid = str(data["id"])
     try:
@@ -73,6 +79,42 @@ def enrich_service(db: Session, row: Any, *, include_inactive_meta: bool = False
         except Exception:
             aliases = []
     data["search_aliases"] = aliases
+    for key in ("process_steps", "languages"):
+        val = data.get(key)
+        if isinstance(val, str):
+            try:
+                data[key] = json.loads(val)
+            except Exception:
+                data[key] = [] if key == "process_steps" else ["en"]
+    # Overlay translated marketing fields without duplicating the service row
+    code = (lang or "en").lower()[:2]
+    if code and code != "en":
+        try:
+            tr = db.execute(
+                text(
+                    """
+                    SELECT short_description, full_description, spiritual_meaning,
+                           common_occasions, benefits, whats_included
+                    FROM service_translations
+                    WHERE service_id = CAST(:id AS uuid) AND language_code = :lang
+                    LIMIT 1
+                    """
+                ),
+                {"id": sid, "lang": code},
+            ).mappings().first()
+            if tr:
+                for k in (
+                    "short_description",
+                    "full_description",
+                    "spiritual_meaning",
+                    "common_occasions",
+                    "benefits",
+                    "whats_included",
+                ):
+                    if tr.get(k):
+                        data[k] = tr[k]
+        except Exception:
+            pass
     # Bookable only when active and priced
     priced = data.get("standard_price_paise") is not None and int(data.get("standard_price_paise") or 0) >= 0
     if data.get("pricing_status") == "awaiting_pricing" or data.get("standard_price_paise") is None:

@@ -21,7 +21,7 @@ function StarIcon(props: { size?: number }) {
 
 export default function Home() {
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [, setLocation] = useLocation();
   const [popular, setPopular] = useState<any[]>([]);
   const [loadingPopular, setLoadingPopular] = useState(true);
@@ -29,11 +29,11 @@ export default function Home() {
   const [heroCity, setHeroCity] = useState("");
 
   useEffect(() => {
-    api<any[]>("/services?featured=1")
+    api<any[]>(`/services?featured=1&lang=${encodeURIComponent(lang)}`)
       .then((rows) => setPopular((rows || []).slice(0, 10)))
       .catch(() => setPopular([]))
       .finally(() => setLoadingPopular(false));
-  }, []);
+  }, [lang]);
 
   function goSearch() {
     const q = heroQ.trim();

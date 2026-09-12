@@ -37,6 +37,7 @@ def list_services(
     popular: bool | None = None,
     featured: bool | None = None,
     include_inactive: bool = False,
+    lang: str | None = None,
     db: Session = Depends(get_db),
 ):
     """Catalog discovery. By default only active+priced (bookable) services.
@@ -117,18 +118,18 @@ def list_services(
     except Exception:
         # Fallback for pre-migration DBs
         rows = db.execute(text("SELECT * FROM services WHERE active = TRUE ORDER BY name")).mappings().all()
-    return [enrich_service(db, r) for r in rows]
+    return [enrich_service(db, r, lang=lang) for r in rows]
 
 
 @router.get("/services/{slug}")
-def get_service(slug: str, db: Session = Depends(get_db)):
+def get_service(slug: str, lang: str | None = None, db: Session = Depends(get_db)):
     from app.catalog import enrich_service, resolve_service_by_slug
 
     # Resolve alias; allow inactive for admin-style preview via active_only=False then gate bookable
     row = resolve_service_by_slug(db, slug, active_only=False)
     if not row:
         raise HTTPException(404, "Service not found")
-    data = enrich_service(db, row)
+    data = enrich_service(db, row, lang=lang)
     # Public detail: active services always; inactive featured allowed for "coming soon"
     if not row["active"] and not row.get("is_featured_home"):
         raise HTTPException(404, "Service not found")

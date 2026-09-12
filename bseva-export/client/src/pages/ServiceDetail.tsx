@@ -10,6 +10,7 @@ import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
 import PreparationChecklist, { type PreparationView } from "@/components/PreparationChecklist";
 import { serviceImageUrl } from "@/lib/serviceImage";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type Svc = {
   id: string;
@@ -22,9 +23,22 @@ type Svc = {
   full_description?: string;
   description?: string;
   benefits?: string;
+  spiritual_meaning?: string;
+  common_occasions?: string;
+  deity?: string;
+  tradition_notes?: string;
+  location_notes?: string;
+  whats_included?: string;
   duration_minutes?: number;
   pujaris_required?: number;
+  priests_min?: number;
+  priests_max?: number;
   requires_muhurta?: boolean;
+  homa_included?: boolean;
+  prasadam_included?: boolean;
+  sankalpa_required?: boolean;
+  languages?: string[];
+  process_steps?: { order?: number; text?: string }[];
   samagri_available?: boolean;
   alankaram_available?: boolean;
   food_available?: boolean;
@@ -44,6 +58,7 @@ export default function ServiceDetail() {
   const slug = params.slug || "";
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { lang } = useI18n();
   const [svc, setSvc] = useState<Svc | null>(null);
   const [loading, setLoading] = useState(true);
   const [prep, setPrep] = useState<PreparationView | null>(null);
@@ -53,7 +68,7 @@ export default function ServiceDetail() {
     if (!slug) return;
     setLoading(true);
     setPrep(null);
-    api<Svc>(`/services/${slug}`)
+    api<Svc>(`/services/${slug}?lang=${encodeURIComponent(lang)}`)
       .then((data) => {
         if (data.canonical_slug && data.canonical_slug !== slug) {
           window.history.replaceState(null, "", `/services/${data.canonical_slug}`);
@@ -61,7 +76,7 @@ export default function ServiceDetail() {
         }
         setSvc(data);
         if (data.id) {
-          api<PreparationView>(`/services/${data.id}/preparation?lang=en`)
+          api<PreparationView>(`/services/${data.id}/preparation?lang=${encodeURIComponent(lang)}`)
             .then(setPrep)
             .catch(() => setPrep(null));
         }
@@ -71,7 +86,7 @@ export default function ServiceDetail() {
         setSvc(null);
       })
       .finally(() => setLoading(false));
-  }, [slug, setLocation]);
+  }, [slug, setLocation, lang]);
 
   function book() {
     if (!svc?.bookable) return;
@@ -131,7 +146,7 @@ export default function ServiceDetail() {
                 </p>
               </div>
 
-              {(svc.full_description || svc.benefits) && (
+              {(svc.full_description || svc.benefits || svc.spiritual_meaning || svc.common_occasions) && (
                 <div className="space-y-4 bg-secondary/20 rounded-xl p-6">
                   {svc.full_description && (
                     <div>
@@ -139,9 +154,33 @@ export default function ServiceDetail() {
                       <p className="text-muted-foreground whitespace-pre-line">{svc.full_description}</p>
                     </div>
                   )}
+                  {svc.spiritual_meaning && (
+                    <div>
+                      <h2 className="font-bold text-xl mb-2">What this puja represents</h2>
+                      <p className="text-muted-foreground whitespace-pre-line">{svc.spiritual_meaning}</p>
+                    </div>
+                  )}
+                  {svc.common_occasions && (
+                    <div>
+                      <h2 className="font-bold text-xl mb-2">Common occasions</h2>
+                      <p className="text-muted-foreground whitespace-pre-line">{svc.common_occasions}</p>
+                    </div>
+                  )}
+                  {svc.whats_included && (
+                    <div>
+                      <h2 className="font-bold text-xl mb-2">What&apos;s included</h2>
+                      <p className="text-muted-foreground whitespace-pre-line">{svc.whats_included}</p>
+                    </div>
+                  )}
+                  {svc.tradition_notes && (
+                    <div>
+                      <h2 className="font-bold text-xl mb-2">Tradition notes</h2>
+                      <p className="text-muted-foreground whitespace-pre-line">{svc.tradition_notes}</p>
+                    </div>
+                  )}
                   {svc.benefits && (
                     <div>
-                      <h2 className="font-bold text-xl mb-2">Benefits / purpose</h2>
+                      <h2 className="font-bold text-xl mb-2">Intention / purpose</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.benefits}</p>
                     </div>
                   )}
@@ -150,8 +189,19 @@ export default function ServiceDetail() {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <Meta label="Duration" value={svc.duration_minutes ? `${svc.duration_minutes} min` : "—"} />
-                <Meta label="Pujaris" value={String(svc.pujaris_required || 1)} />
+                <Meta
+                  label="Priests"
+                  value={
+                    svc.priests_min && svc.priests_max && svc.priests_min !== svc.priests_max
+                      ? `${svc.priests_min}–${svc.priests_max}`
+                      : String(svc.priests_min || svc.pujaris_required || 1)
+                  }
+                />
+                <Meta label="Deity" value={svc.deity || "—"} />
+                <Meta label="Location" value={svc.location_notes || "Home / Temple"} />
                 <Meta label="Muhurtham" value={svc.requires_muhurta ? "Required" : "Optional"} />
+                <Meta label="Homa / Havan" value={svc.homa_included ? "Included option" : "As configured"} />
+                <Meta label="Languages" value={(svc.languages || ["en"]).join(", ").toUpperCase()} />
                 <Meta
                   label="Main price"
                   value={
@@ -162,10 +212,28 @@ export default function ServiceDetail() {
                 />
               </div>
 
+              {!!(svc.process_steps && svc.process_steps.length) && (
+                <div className="rounded-xl border bg-card p-6">
+                  <h2 className="font-bold text-xl mb-3">Puja process</h2>
+                  <ol className="space-y-2 list-decimal list-inside text-muted-foreground">
+                    {[...svc.process_steps]
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map((step, i) => (
+                        <li key={i}>{step.text}</li>
+                      ))}
+                  </ol>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Exact sequence may vary by tradition and the performing priest. This is a respectful guide, not a guaranteed outcome.
+                  </p>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                 {svc.samagri_available && <span>Samagri available</span>}
                 {svc.alankaram_available && <span>· Alankaram available</span>}
                 {svc.food_available && <span>· Food / Prasadam available</span>}
+                {svc.prasadam_included && <span>· Prasadam</span>}
+                {svc.sankalpa_required && <span>· Sankalpa details required</span>}
               </div>
 
               {prep?.verified && (

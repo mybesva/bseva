@@ -62,6 +62,11 @@ class ServiceSamagriIn(BaseModel):
     provided_by: str = "CUSTOMER"
     notes: str | None = None
     active: bool = True
+    qty_small: str | None = None
+    qty_medium: str | None = None
+    qty_large: str | None = None
+    qty_grand: str | None = None
+    scale_override: bool = False
 
 
 class ServicePrepContentIn(BaseModel):
@@ -270,17 +275,22 @@ def link_samagri(service_id: str, body: ServiceSamagriIn, user=Depends(require_p
             """
             INSERT INTO service_samagri (
               service_id, samagri_item_id, required, optional, customer_provided, instructions, sort_order,
-              quantity, unit, category, provided_by, notes, active
+              quantity, unit, category, provided_by, notes, active,
+              qty_small, qty_medium, qty_large, qty_grand, scale_override
             ) VALUES (
               CAST(:s AS uuid), CAST(:i AS uuid), :req, :opt, :cp, :ins, :ord,
-              :qty, :unit, :cat, :prov, :notes, :act
+              :qty, :unit, :cat, :prov, :notes, :act,
+              :qs, :qm, :ql, :qg, :so
             )
             ON CONFLICT (service_id, samagri_item_id) DO UPDATE SET
               required = EXCLUDED.required, optional = EXCLUDED.optional,
               customer_provided = EXCLUDED.customer_provided, instructions = EXCLUDED.instructions,
               sort_order = EXCLUDED.sort_order, quantity = EXCLUDED.quantity, unit = EXCLUDED.unit,
               category = EXCLUDED.category, provided_by = EXCLUDED.provided_by,
-              notes = EXCLUDED.notes, active = EXCLUDED.active
+              notes = EXCLUDED.notes, active = EXCLUDED.active,
+              qty_small = EXCLUDED.qty_small, qty_medium = EXCLUDED.qty_medium,
+              qty_large = EXCLUDED.qty_large, qty_grand = EXCLUDED.qty_grand,
+              scale_override = EXCLUDED.scale_override
             """
         ),
         {
@@ -297,6 +307,11 @@ def link_samagri(service_id: str, body: ServiceSamagriIn, user=Depends(require_p
             "prov": provided_by,
             "notes": body.notes,
             "act": body.active,
+            "qs": body.qty_small,
+            "qm": body.qty_medium,
+            "ql": body.qty_large,
+            "qg": body.qty_grand,
+            "so": bool(body.scale_override),
         },
     )
     db.commit()

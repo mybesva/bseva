@@ -460,7 +460,7 @@ def set_service_availability(
     user=Depends(require_permission("manage_services")),
     db: Session = Depends(get_db),
 ):
-    """Toggle Available ↔ Coming Soon. Featured Top-10 services must stay Available."""
+    """Toggle Available ↔ Coming Soon. Featured pujas may remain Coming Soon on Home."""
     available = bool(body.get("available"))
     row = db.execute(
         text(
@@ -474,13 +474,6 @@ def set_service_availability(
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Service not found")
-
-    featured = bool(row.get("is_featured_home"))
-    if not available and featured:
-        raise HTTPException(
-            400,
-            "Homepage Top 10 / featured pujas must stay Available. Unfeature first if you need Coming Soon.",
-        )
 
     if available:
         if row.get("standard_price_paise") is None:
@@ -560,6 +553,9 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             """
             INSERT INTO services (
               id, name, slug, description, short_description, full_description, benefits, local_name,
+              spiritual_meaning, common_occasions, deity, tradition_notes, location_notes,
+              whats_included, admin_notes, process_steps, priests_min, priests_max,
+              homa_included, prasadam_included, sankalpa_required, languages, online_nri_price_paise,
               category, required_level,
               standard_price_paise, premium_price_paise, basic_price_paise, main_puja_price_paise,
               samagri_price_paise, alankaram_price_paise, food_price_paise,
@@ -571,6 +567,9 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
               is_popular, is_featured_home, is_seasonal, display_order, homepage_rank, pricing_status
             ) VALUES (
               CAST(:id AS uuid), :name, :slug, :desc, :short, :full, :ben, :local,
+              :spirit, :occasions, :deity, :trad, :locn,
+              :wincl, :anotes, CAST(:steps AS jsonb), :pmin, :pmax,
+              :homa, :pras, :sank, CAST(:langs AS jsonb), :nri,
               :cat, :lvl,
               :std, :prm, :basic, :main,
               :sam, :alan, :food,
@@ -592,6 +591,21 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             "full": body.full_description,
             "ben": body.benefits,
             "local": body.local_name,
+            "spirit": body.spiritual_meaning,
+            "occasions": body.common_occasions,
+            "deity": body.deity,
+            "trad": body.tradition_notes,
+            "locn": body.location_notes,
+            "wincl": body.whats_included,
+            "anotes": body.admin_notes,
+            "steps": json.dumps(body.process_steps or []),
+            "pmin": body.priests_min,
+            "pmax": body.priests_max,
+            "homa": bool(body.homa_included),
+            "pras": bool(body.prasadam_included) if body.prasadam_included is not None else True,
+            "sank": bool(body.sankalpa_required) if body.sankalpa_required is not None else True,
+            "langs": json.dumps(body.languages or ["en"]),
+            "nri": body.online_nri_price_paise,
             "cat": body.category or "puja",
             "lvl": body.required_level,
             "std": body.standard_price_paise,
@@ -625,6 +639,37 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             "pst": pst,
         },
     )
+    # Seed EN translation row for customer preferred-language lookups
+    db.execute(
+        text(
+            """
+            INSERT INTO service_translations (
+              service_id, language_code, short_description, full_description,
+              spiritual_meaning, common_occasions, benefits, whats_included
+            ) VALUES (
+              CAST(:sid AS uuid), 'en', :short, :full,
+              :spirit, :occasions, :ben, :wincl
+            )
+            ON CONFLICT (service_id, language_code) DO UPDATE SET
+              short_description = EXCLUDED.short_description,
+              full_description = EXCLUDED.full_description,
+              spiritual_meaning = EXCLUDED.spiritual_meaning,
+              common_occasions = EXCLUDED.common_occasions,
+              benefits = EXCLUDED.benefits,
+              whats_included = EXCLUDED.whats_included,
+              updated_at = NOW()
+            """
+        ),
+        {
+            "sid": sid,
+            "short": body.short_description,
+            "full": body.full_description,
+            "spirit": body.spiritual_meaning,
+            "occasions": body.common_occasions,
+            "ben": body.benefits,
+            "wincl": body.whats_included,
+        },
+    )
     _sync_service_categories(db, sid, body.category_slugs)
     db.commit()
     return {"ok": True, "id": sid}
@@ -642,16 +687,21 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
     active = bool(body.active)
     if active and (body.standard_price_paise is None or pst == "awaiting_pricing"):
         raise HTTPException(400, "Set pricing before activating this service")
-    # Featured / Top 10 must remain Available
-    if bool(body.is_featured_home) and (
-        not active or body.standard_price_paise is None or pst == "awaiting_pricing"
-    ):
-        raise HTTPException(400, "Featured (Top 10) pujas must be Available with pricing set")
+    # Featured / Top pujas may be Coming Soon (awaiting pricing) — still shown on Home
+    if bool(body.is_featured_home) and body.homepage_rank is None:
+        # optional: keep rank if already set
+        pass
     result = db.execute(
         text(
             """
             UPDATE services SET name=:name, slug=:slug, description=:desc,
               short_description=:short, full_description=:full, benefits=:ben, local_name=:local,
+              spiritual_meaning=:spirit, common_occasions=:occasions, deity=:deity,
+              tradition_notes=:trad, location_notes=:locn, whats_included=:wincl, admin_notes=:anotes,
+              process_steps=CAST(:steps AS jsonb),
+              priests_min=:pmin, priests_max=:pmax,
+              homa_included=:homa, prasadam_included=:pras, sankalpa_required=:sank,
+              languages=CAST(:langs AS jsonb), online_nri_price_paise=:nri,
               category=:cat, required_level=:lvl,
               standard_price_paise=:std, premium_price_paise=:prm, basic_price_paise=:basic, main_puja_price_paise=:main,
               samagri_price_paise=:sam, alankaram_price_paise=:alan, food_price_paise=:food,
@@ -675,6 +725,21 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
             "full": body.full_description,
             "ben": body.benefits,
             "local": body.local_name,
+            "spirit": body.spiritual_meaning,
+            "occasions": body.common_occasions,
+            "deity": body.deity,
+            "trad": body.tradition_notes,
+            "locn": body.location_notes,
+            "wincl": body.whats_included,
+            "anotes": body.admin_notes,
+            "steps": json.dumps(body.process_steps or []),
+            "pmin": body.priests_min,
+            "pmax": body.priests_max,
+            "homa": bool(body.homa_included),
+            "pras": True if body.prasadam_included is None else bool(body.prasadam_included),
+            "sank": True if body.sankalpa_required is None else bool(body.sankalpa_required),
+            "langs": json.dumps(body.languages or ["en", "hi", "te"]),
+            "nri": body.online_nri_price_paise,
             "cat": body.category or "puja",
             "lvl": body.required_level,
             "std": body.standard_price_paise,
@@ -713,6 +778,39 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
     if result.rowcount == 0:
         raise HTTPException(404, "Service not found")
     _sync_service_categories(db, service_id, body.category_slugs)
+    # Upsert EN translation defaults from primary fields
+    try:
+        db.execute(
+            text(
+                """
+                INSERT INTO service_translations (
+                  service_id, language_code, short_description, full_description,
+                  spiritual_meaning, common_occasions, benefits, whats_included
+                ) VALUES (
+                  CAST(:id AS uuid), 'en', :short, :full, :spirit, :occasions, :ben, :wincl
+                )
+                ON CONFLICT (service_id, language_code) DO UPDATE SET
+                  short_description = EXCLUDED.short_description,
+                  full_description = EXCLUDED.full_description,
+                  spiritual_meaning = EXCLUDED.spiritual_meaning,
+                  common_occasions = EXCLUDED.common_occasions,
+                  benefits = EXCLUDED.benefits,
+                  whats_included = EXCLUDED.whats_included,
+                  updated_at = NOW()
+                """
+            ),
+            {
+                "id": service_id,
+                "short": body.short_description,
+                "full": body.full_description,
+                "spirit": body.spiritual_meaning,
+                "occasions": body.common_occasions,
+                "ben": body.benefits,
+                "wincl": body.whats_included,
+            },
+        )
+    except Exception:
+        pass
     db.commit()
     return {"ok": True}
 
