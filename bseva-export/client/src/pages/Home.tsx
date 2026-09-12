@@ -209,7 +209,7 @@ export default function Home() {
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
               {popular.map((s, i) => {
                 const Icon = ICONS[i % ICONS.length];
                 const img = serviceImageUrl(s);
@@ -223,7 +223,7 @@ export default function Home() {
                   <div
                     key={s.id}
                     onClick={() => setLocation(`/services/${s.slug}`)}
-                    className="cursor-pointer"
+                    className="cursor-pointer min-w-0"
                   >
                     <ServiceCard
                       title={s.name}
