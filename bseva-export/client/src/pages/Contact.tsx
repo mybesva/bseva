@@ -287,42 +287,38 @@ export default function Contact() {
                             {t("auth.phone")}
                             <RequiredMark />
                           </Label>
-                          <div className="flex gap-2">
-                            <div className="w-[7.5rem] shrink-0 space-y-1">
-                              <select
-                                id="country_code"
-                                name="country_code"
-                                aria-label={t("contact.countryCode")}
-                                value={form.country_code}
-                                onChange={(e) => setForm({ ...form, country_code: e.target.value })}
-                                className="h-12 w-full rounded-md border border-input bg-background px-2 text-sm font-semibold"
-                              >
-                                {COUNTRY_CODES.map((c) => (
-                                  <option key={c.code} value={c.code}>
-                                    {c.code}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex-1 min-w-0 space-y-1">
-                              <Input
-                                id="phone"
-                                name="phone"
-                                type="tel"
-                                inputMode="numeric"
-                                autoComplete="tel-national"
-                                required
-                                value={form.phone}
-                                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                placeholder={
-                                  form.country_code === "+91"
-                                    ? t("contact.phonePhIndia")
-                                    : t("contact.phonePh")
-                                }
-                                className="h-12"
-                                aria-invalid={!!errors.phone}
-                              />
-                            </div>
+                          <div className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-2 w-full">
+                            <select
+                              id="country_code"
+                              name="country_code"
+                              aria-label={t("contact.countryCode")}
+                              value={form.country_code}
+                              onChange={(e) => setForm({ ...form, country_code: e.target.value })}
+                              className="h-12 w-full max-w-[4.75rem] rounded-md border border-input bg-background px-1.5 text-sm font-bold text-center"
+                            >
+                              {COUNTRY_CODES.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code}
+                                </option>
+                              ))}
+                            </select>
+                            <Input
+                              id="phone"
+                              name="phone"
+                              type="tel"
+                              inputMode="numeric"
+                              autoComplete="tel-national"
+                              required
+                              value={form.phone}
+                              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                              placeholder={
+                                form.country_code === "+91"
+                                  ? t("contact.phonePhIndia")
+                                  : t("contact.phonePh")
+                              }
+                              className="h-12 w-full min-w-0"
+                              aria-invalid={!!errors.phone}
+                            />
                           </div>
                           {(errors.country_code || errors.phone) && (
                             <p className="text-xs text-destructive">

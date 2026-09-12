@@ -200,7 +200,7 @@ const en: Dict = {
   "contact.errPhoneIntl": "Please enter a valid phone number for the selected country.",
   "contact.errCountryCode": "Please select a valid country code.",
   "contact.countryCode": "Country code",
-  "contact.phonePhIndia": "10-digit mobile number",
+  "contact.phonePhIndia": "10-digit mobile",
   "contact.errSubject": "Please enter a subject.",
   "contact.errMessage": "Please enter a message (at least 10 characters).",
   "contact.errSend": "Could not send your message. Please try again or email us directly.",
