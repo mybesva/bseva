@@ -580,6 +580,55 @@ def assign_pujari_to_booking(
         booking_id,
     )
     db.commit()
+    try:
+        from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
+        from app.mail.senders import send_pujari_assigned_email
+        from app.routers.notifications import create_notification
+
+        pujari_user = db.execute(
+            text("SELECT id, email, name FROM users WHERE id = CAST(:id AS uuid)"),
+            {"id": body.pujari_id},
+        ).mappings().first()
+        svc_name = load_service_name(db, str(b["service_id"]))
+        ctx = load_customer_email_context(db, str(b["customer_id"]))
+        data = booking_email_data_from_row(
+            dict(b),
+            customer_name=ctx.get("name") or "",
+            service_name=svc_name,
+            language=ctx.get("language") or "en",
+            extra={"status": "pending_acceptance"},
+        )
+        if ctx.get("email"):
+            send_pujari_assigned_email(
+                to=ctx["email"],
+                data=data,
+                pujari_name=str(pujari_user.get("name") if pujari_user else ""),
+                recipient="customer",
+            )
+        if pujari_user and pujari_user.get("email"):
+            pdata = booking_email_data_from_row(
+                dict(b),
+                customer_name=str(pujari_user.get("name") or ""),
+                service_name=svc_name,
+                language="en",
+            )
+            send_pujari_assigned_email(
+                to=str(pujari_user["email"]),
+                data=pdata,
+                pujari_name=str(pujari_user.get("name") or ""),
+                recipient="pujari",
+            )
+            create_notification(
+                db,
+                user_id=str(pujari_user["id"]),
+                title="New booking assignment",
+                body=f"Booking {b.get('booking_number') or booking_id[:8]} was assigned to you.",
+                category="booking",
+                link="/pujari",
+            )
+            db.commit()
+    except Exception:
+        pass
     return {
         "ok": True,
         "booking_id": booking_id,

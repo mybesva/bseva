@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin } from "lucide-react";
+import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin, MapPin } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -104,14 +104,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [user, t]);
 
   const socialLinks = [
-    { icon: Facebook, href: "https://facebook.com/bseva", label: "Facebook", color: SOCIAL_BRAND.facebook },
-    { icon: InstagramIcon, href: "https://instagram.com/bseva", label: "Instagram", color: null },
-    { icon: Twitter, href: "https://twitter.com/bseva", label: "Twitter", color: SOCIAL_BRAND.twitter },
-    { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube", color: SOCIAL_BRAND.youtube },
-    { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn", color: SOCIAL_BRAND.linkedin },
-    { icon: PinterestIcon, href: "https://pinterest.com/bseva", label: "Pinterest", color: SOCIAL_BRAND.pinterest },
-    { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp", color: SOCIAL_BRAND.whatsapp },
-    { icon: TelegramIcon, href: "https://t.me/bseva", label: "Telegram", color: SOCIAL_BRAND.telegram },
+    { icon: Facebook, href: "https://facebook.com/bseva", label: "Facebook", color: SOCIAL_BRAND.facebook, filled: false },
+    { icon: InstagramIcon, href: "https://instagram.com/bseva", label: "Instagram", color: null, filled: true },
+    { icon: Twitter, href: "https://twitter.com/bseva", label: "Twitter", color: SOCIAL_BRAND.twitter, filled: false },
+    { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube", color: SOCIAL_BRAND.youtube, filled: false },
+    { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn", color: SOCIAL_BRAND.linkedin, filled: false },
+    { icon: PinterestIcon, href: "https://pinterest.com/bseva", label: "Pinterest", color: SOCIAL_BRAND.pinterest, filled: true },
+    { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp", color: SOCIAL_BRAND.whatsapp, filled: true },
+    { icon: TelegramIcon, href: "https://t.me/bseva", label: "Telegram", color: SOCIAL_BRAND.telegram, filled: true },
   ];
 
   const LanguageSelect = ({ className }: { className?: string }) => (
@@ -139,16 +139,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex gap-3 items-center">
             <ThemeToggle className="h-7 w-7 text-sidebar-foreground hover:text-primary hover:bg-sidebar-accent/50" />
-            <LanguageSelect className="w-[110px] h-7 text-xs bg-sidebar border-sidebar-border text-sidebar-foreground" />
             {socialLinks.map((social) => (
               <a
                 key={social.label}
                 href={social.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn("transition-opacity hover:opacity-80", social.color && "hover:brightness-110")}
+                className={cn(
+                  "inline-flex items-center justify-center transition-opacity hover:opacity-90",
+                  social.filled && social.color && "[&_svg]:fill-current"
+                )}
                 style={social.color ? { color: social.color } : undefined}
                 title={social.label}
+                aria-label={social.label}
               >
                 <social.icon size={16} />
               </a>
@@ -298,6 +301,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h4 className="text-h4 mb-4 text-primary">{t("footer.contact")}</h4>
             <ul className="space-y-3 text-sm text-sidebar-foreground/80">
+              <li className="flex items-start gap-2">
+                <MapPin size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  123 Spiritual Avenue, Temple Road,
+                  <br />
+                  Bangalore, Karnataka 560001
+                </span>
+              </li>
               <li className="flex items-center gap-2"><Phone size={14} /> {phoneDisplay}</li>
               <li className="flex items-center gap-2"><Mail size={14} /> {supportEmail}</li>
             </ul>

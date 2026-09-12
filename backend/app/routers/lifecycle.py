@@ -175,24 +175,23 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
         pass
     db.commit()
     try:
-        from app.email_service import send_booking_event_email
-        from app.platform_config import get_setting as _gs
+        from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
+        from app.mail.senders import send_booking_confirmation_email
 
         cust = db.execute(
-            text("SELECT email, name FROM users WHERE id = CAST(:id AS uuid)"),
+            text("SELECT email, name, preferred_language FROM users WHERE id = CAST(:id AS uuid)"),
             {"id": str(b["customer_id"])},
         ).mappings().first()
+        svc_name = load_service_name(db, str(b["service_id"]))
         if cust and cust.get("email"):
-            send_booking_event_email(
-                to=str(cust["email"]),
-                subject=f"BSeva — Booking accepted ({b.get('booking_number') or booking_id[:8]})",
-                text_body=(
-                    f"Namaste {cust.get('name') or ''},\n\n"
-                    f"Your pujari has accepted booking {b.get('booking_number') or booking_id}.\n"
-                    f"Scheduled: {b.get('booking_date')} {b.get('start_time')}\n\nOm Shanti,\nBSeva\n"
-                ),
-                from_addr=str(_gs(db, "email_from_support", "support@b-seva.com")),
+            data = booking_email_data_from_row(
+                dict(b),
+                customer_name=str(cust.get("name") or ""),
+                service_name=svc_name,
+                language=str(cust.get("preferred_language") or "en"),
+                extra={"status": "confirmed"},
             )
+            send_booking_confirmation_email(to=str(cust["email"]), data=data)
     except Exception:
         pass
     return {"ok": True, "status": "confirmed"}
@@ -477,6 +476,42 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
         pass
     write_audit(db, str(user["id"]), "puja_completed", "booking", booking_id)
     db.commit()
+    try:
+        from app.mail.booking_payload import (
+            booking_email_data_from_row,
+            invoice_email_data_from_snapshot,
+            load_customer_email_context,
+            load_service_name,
+        )
+        from app.mail.senders import send_invoice_receipt_email
+
+        ctx = load_customer_email_context(db, str(b["customer_id"]))
+        if ctx.get("email"):
+            svc_name = load_service_name(db, str(b["service_id"]))
+            inv = db.execute(
+                text(
+                    """
+                    SELECT invoice_number, created_at FROM invoices
+                    WHERE booking_id = CAST(:id AS uuid) AND invoice_type = 'customer'
+                    ORDER BY created_at DESC LIMIT 1
+                    """
+                ),
+                {"id": booking_id},
+            ).mappings().first()
+            if inv:
+                send_invoice_receipt_email(
+                    to=ctx["email"],
+                    data=invoice_email_data_from_snapshot(
+                        customer_name=ctx["name"],
+                        invoice_number=str(inv["invoice_number"]),
+                        booking={**dict(b), "service_name": svc_name},
+                        payment_method="Wallet",
+                        payment_date=str(inv.get("created_at") or ""),
+                        language=ctx["language"],
+                    ),
+                )
+    except Exception:
+        pass
     return {"ok": True, "status": "completed"}
 
 

@@ -183,7 +183,7 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
       {mapError && <p className="text-sm text-destructive">{mapError}</p>}
       {!MAPS_KEY && (
         <p className="text-sm text-muted-foreground flex items-center gap-1">
-          <MapPin size={14} /> Set VITE_GOOGLE_MAPS_API_KEY for interactive maps. Enter coordinates manually below.
+          <MapPin size={14} /> Set GOOGLE_MAPS_API_KEY / VITE_GOOGLE_MAPS_API_KEY in the repo root `.env`, then restart the frontend. Enter coordinates manually below.
         </p>
       )}
       <div ref={mapRef} className={cn("w-full h-64 rounded-md border bg-muted", !MAPS_KEY && "hidden")} />

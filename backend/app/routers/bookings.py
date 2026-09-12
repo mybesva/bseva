@@ -480,7 +480,16 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                 start_time=str(body.start_time),
                 preparation=prep_view if (opted_samagri or opted_alan) else {**prep_view, "verified": False, "skip_samagri_cta": True},
                 language=lang,
-                from_addr=str(_gs(db, "email_from_accounts", "accounts@b-seva.com")),
+                from_addr=str(_gs(db, "email_from_accounts", "admin@b-seva.com")),
+                package=str(body.package_type or ""),
+                location=str(body.location_label or body.address or body.city or ""),
+                main_puja_paise=int(bill.get("mainPuja") or bill.get("basePrice") or 0),
+                samagri_paise=int(bill.get("samagri") or 0),
+                alankaram_paise=int(bill.get("alankaram") or 0),
+                food_prasadam_paise=int(bill.get("foodPrasadam") or 0),
+                total_paise=int(bill.get("total") or bill.get("totalPaise") or total or 0),
+                payment_status="paid",
+                booking_status="pending_acceptance",
             )
     except Exception as e:
         email_result = {"status": "failed", "error": str(e)}
@@ -918,6 +927,31 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             db.rollback()
             raise HTTPException(400, f"Pujari cancel fee could not be deducted: {e}") from e
     db.commit()
+    # Emails after commit — never roll back booking/payment on mail failure
+    try:
+        from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
+        from app.mail.senders import send_booking_cancellation_email, send_refund_confirmation_email
+
+        ctx = load_customer_email_context(db, str(b["customer_id"]))
+        if ctx.get("email"):
+            svc_name = load_service_name(db, str(b["service_id"]))
+            data = booking_email_data_from_row(
+                dict(b),
+                customer_name=ctx["name"],
+                service_name=svc_name,
+                language=ctx["language"],
+                extra={"status": "cancelled"},
+            )
+            send_booking_cancellation_email(to=ctx["email"], data=data, reason=reason_full or "")
+            if refund:
+                send_refund_confirmation_email(
+                    to=ctx["email"],
+                    data=data,
+                    refund_paise=refund,
+                    refund_method="Wallet credit",
+                )
+    except Exception:
+        pass
     return {
         "ok": True,
         "actor": actor,
@@ -996,6 +1030,28 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
         {"id": booking_id},
     )
     db.commit()
+    try:
+        from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
+        from app.mail.senders import send_payment_confirmation_email
+
+        ctx = load_customer_email_context(db, str(user["id"]))
+        if ctx.get("email"):
+            svc_name = load_service_name(db, str(b["service_id"]))
+            data = booking_email_data_from_row(
+                dict(b),
+                customer_name=ctx["name"],
+                service_name=svc_name,
+                language=ctx["language"],
+                extra={"payment_status": "paid"},
+            )
+            send_payment_confirmation_email(
+                to=ctx["email"],
+                data=data,
+                method="Wallet",
+                transaction_id=str(b.get("booking_number") or booking_id),
+            )
+    except Exception:
+        pass
     return {"ok": True, "payment_status": "paid", "total_paise": total}
 
 

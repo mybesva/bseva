@@ -95,6 +95,31 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                     },
                 )
             created += 1
+            # Customer email reminder (best-effort; does not affect in-app notifications)
+            try:
+                from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context
+                from app.mail.senders import send_booking_reminder_email
+
+                cust_id = session.execute(
+                    text("SELECT customer_id FROM bookings WHERE id = CAST(:id AS uuid)"),
+                    {"id": str(b["id"])},
+                ).scalar()
+                if cust_id:
+                    ctx = load_customer_email_context(session, str(cust_id))
+                    brow = session.execute(
+                        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
+                        {"id": str(b["id"])},
+                    ).mappings().first()
+                    if ctx.get("email") and brow:
+                        data = booking_email_data_from_row(
+                            dict(brow),
+                            customer_name=ctx["name"],
+                            service_name=str(b.get("service_name") or "Puja"),
+                            language=ctx["language"],
+                        )
+                        send_booking_reminder_email(to=ctx["email"], data=data, hours_ahead=hours_ahead)
+            except Exception:
+                pass
         session.commit()
         return {"created": created, "skipped": skipped}
     finally:

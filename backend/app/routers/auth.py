@@ -8,13 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db import get_db
 from app.deps import ACCOUNT_BLOCKED, current_user
 from app.domain import row_dict
 from app.platform_config import get_setting
 from app.schemas import ChangePasswordIn, LoginIn, MePatchIn, OtpRequestIn, OtpVerifyIn, RegisterIn, TokenOut
-from app.security import create_access_token, hash_otp, hash_password, verify_otp, verify_password
+from app.security import create_access_token, hash_password, verify_password
 from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -46,22 +45,17 @@ def _verify_registration_captcha(db: Session, token: str | None) -> None:
 
 
 def _verify_registration_otp(db: Session, body: RegisterIn) -> None:
-    rows = db.execute(
-        text(
-            """
-            SELECT * FROM otp_codes
-            WHERE consumed = FALSE AND expires_at > NOW() AND purpose = 'register'
-              AND (phone = :phone OR email = :email)
-            ORDER BY created_at DESC LIMIT 5
-            """
-        ),
-        {"phone": body.phone, "email": str(body.email)},
-    ).mappings().all()
-    for row in rows:
-        if verify_otp(body.otp, row["code_hash"]):
-            db.execute(text("UPDATE otp_codes SET consumed = TRUE WHERE id = :id"), {"id": row["id"]})
-            return
-    raise HTTPException(400, "Invalid or expired OTP")
+    from app.otp_service import verify_email_otp
+
+    result = verify_email_otp(
+        db,
+        email=str(body.email),
+        code=body.otp,
+        purpose="register",
+        consume=True,
+    )
+    if not result.get("ok"):
+        raise HTTPException(400, "Invalid or expired OTP")
 
 
 def _public(row: dict) -> dict:
@@ -79,48 +73,109 @@ def _public(row: dict) -> dict:
 
 @router.post("/otp/request")
 def request_otp(body: OtpRequestIn, db: Session = Depends(get_db)):
-    if not body.phone and not body.email:
-        raise HTTPException(400, "Phone or email required")
-    # SMS/email not wired yet — same test OTP locally and on Vercel.
-    code = (settings.otp_dev_code or "123456").strip()
-    db.execute(
-        text(
-            """
-            INSERT INTO otp_codes (phone, email, code_hash, purpose, expires_at)
-            VALUES (:phone, :email, :hash, :purpose, NOW() + INTERVAL '10 minutes')
-            """
-        ),
-        {
-            "phone": body.phone,
-            "email": str(body.email) if body.email else None,
-            "hash": hash_otp(code),
-            "purpose": "register" if body.purpose == "register" else "login",
-        },
+    """Issue email OTP (10 minutes). Delivery via email provider; SMS reserved for later."""
+    from app.otp_service import issue_email_otp
+
+    email = str(body.email).strip().lower() if body.email else None
+    if not email:
+        # Prefer email OTP; do not fall back to SMS for now
+        raise HTTPException(400, "Email is required for OTP")
+
+    purpose = body.purpose if body.purpose in ("register", "login", "verify") else "login"
+    # Generic response — do not reveal whether the account exists for login
+    user_row = db.execute(
+        text("SELECT name, preferred_language, blocked FROM users WHERE lower(email) = :e LIMIT 1"),
+        {"e": email},
+    ).mappings().first()
+
+    if purpose == "login":
+        # Always return the same message; only send if a non-blocked user exists
+        generic = {
+            "ok": True,
+            "message": "If an account exists for this email, an OTP has been sent.",
+            "expires_in_minutes": 10,
+        }
+        if not user_row or user_row.get("blocked"):
+            return generic
+        result = issue_email_otp(
+            db,
+            email=email,
+            purpose="login",
+            customer_name=str(user_row.get("name") or ""),
+            language=str(user_row.get("preferred_language") or "en"),
+            phone=body.phone,
+            deliver=True,
+        )
+        if not result.get("ok"):
+            if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
+                raise HTTPException(
+                    429,
+                    f"Please wait before requesting another OTP"
+                    + (f" ({result.get('retry_after_seconds')}s)" if result.get("retry_after_seconds") else ""),
+                )
+            return generic
+        return generic
+
+    # register / verify — send to provided email (existence checked later on register)
+    name = str(user_row.get("name") or "") if user_row else ""
+    lang = str(user_row.get("preferred_language") or "en") if user_row else "en"
+    result = issue_email_otp(
+        db,
+        email=email,
+        purpose=purpose,
+        customer_name=name,
+        language=lang,
+        phone=body.phone,
+        deliver=True,
     )
-    db.commit()
-    out = {"ok": True, "message": f"OTP sent. Use {code}"}
+    if not result.get("ok"):
+        if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
+            raise HTTPException(429, "Please wait before requesting another OTP")
+        raise HTTPException(400, "Could not send OTP")
+    out = {
+        "ok": True,
+        "message": "OTP sent to your email. Valid for 10 minutes.",
+        "expires_in_minutes": 10,
+    }
+    if result.get("dev_hint"):
+        out["dev_hint"] = result["dev_hint"]
     return out
 
 
 @router.post("/otp/verify")
 def verify_otp_ep(body: OtpVerifyIn, db: Session = Depends(get_db)):
-    rows = db.execute(
-        text(
-            """
-            SELECT * FROM otp_codes
-            WHERE consumed = FALSE AND expires_at > NOW()
-              AND (phone = :phone OR email = :email)
-            ORDER BY created_at DESC LIMIT 5
-            """
-        ),
-        {"phone": body.phone, "email": str(body.email) if body.email else None},
-    ).mappings().all()
-    for row in rows:
-        if verify_otp(body.code, row["code_hash"]):
-            db.execute(text("UPDATE otp_codes SET consumed = TRUE WHERE id = :id"), {"id": row["id"]})
-            db.commit()
-            return {"ok": True}
-    raise HTTPException(400, "Invalid or expired OTP")
+    from app.otp_service import verify_email_otp
+
+    email = str(body.email).strip().lower() if body.email else None
+    if not email:
+        raise HTTPException(400, "Email is required")
+    purpose = body.purpose if body.purpose in ("register", "login", "verify") else None
+    result = verify_email_otp(db, email=email, code=body.code, purpose=purpose, consume=True)
+    if not result.get("ok"):
+        raise HTTPException(400, "Invalid or expired OTP")
+    return {"ok": True}
+
+
+@router.post("/login/otp", response_model=TokenOut)
+def login_with_otp(body: OtpVerifyIn, db: Session = Depends(get_db)):
+    """Email OTP login — replaces SMS OTP login delivery for now."""
+    from app.otp_service import verify_email_otp
+
+    email = str(body.email).strip().lower() if body.email else None
+    if not email:
+        raise HTTPException(400, "Email is required")
+    verified = verify_email_otp(db, email=email, code=body.code, purpose="login", consume=True)
+    if not verified.get("ok"):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired OTP")
+    row = db.execute(
+        text("SELECT * FROM users WHERE lower(email) = :e LIMIT 1"),
+        {"e": email},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired OTP")
+    if row["blocked"]:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, ACCOUNT_BLOCKED)
+    return TokenOut(access_token=create_access_token(str(row["id"]), row["role"]), user=_public(dict(row)))
 
 
 @router.post("/register", response_model=TokenOut)
@@ -245,6 +300,17 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
         apply_referral_code(db, user_id, body.referral_code)
     db.commit()
     row = db.execute(text("SELECT * FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}).mappings().one()
+    try:
+        from app.mail.senders import send_welcome_email
+
+        if row.get("email"):
+            send_welcome_email(
+                to=str(row["email"]),
+                customer_name=str(row.get("name") or ""),
+                language=str(row.get("preferred_language") or body.language or "en"),
+            )
+    except Exception:
+        pass
     return TokenOut(access_token=create_access_token(user_id, body.account_type), user=_public(dict(row)))
 
 

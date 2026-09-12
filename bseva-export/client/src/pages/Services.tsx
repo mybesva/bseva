@@ -41,6 +41,8 @@ export default function Services() {
   const params = useMemo(() => new URLSearchParams(searchStr), [searchStr]);
   const [q, setQ] = useState(params.get("q") || "");
   const [category, setCategory] = useState(params.get("category") || "all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   useEffect(() => {
     api<Cat[]>("/service-categories")
@@ -53,6 +55,7 @@ export default function Services() {
     if (q.trim()) qs.set("q", q.trim());
     if (category && category !== "all") qs.set("category", category);
     setLoading(true);
+    setPage(1);
     api<Svc[]>(`/services?${qs}`)
       .then(setServices)
       .catch((e) => toast.error(e.message))
@@ -87,22 +90,34 @@ export default function Services() {
     [categories]
   );
 
+  const available = useMemo(() => services.filter((s) => s.bookable), [services]);
+  const upcoming = useMemo(() => services.filter((s) => !s.bookable), [services]);
+  const combined = useMemo(() => [...available, ...upcoming], [available, upcoming]);
+  const totalPages = Math.max(1, Math.ceil(combined.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pageSlice = useMemo(() => {
+    const start = (pageSafe - 1) * pageSize;
+    return combined.slice(start, start + pageSize);
+  }, [combined, pageSafe, pageSize]);
+  const pageAvailable = pageSlice.filter((s) => s.bookable);
+  const pageUpcoming = pageSlice.filter((s) => !s.bookable);
+
   return (
     <Layout>
-      <section className="relative py-16 md:py-20 bg-sidebar text-white overflow-hidden">
+      <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10 text-center">
-          <h1 className="text-display text-primary mb-4">{t("services.title")}</h1>
-          <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">{t("services.subtitle")}</p>
+          <h1 className="text-h1 md:text-display text-primary mb-3">{t("services.title")}</h1>
+          <p className="text-base text-white/80 max-w-2xl mx-auto mb-6">{t("services.subtitle")}</p>
           <div className="max-w-xl mx-auto relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search Pujas, Homams, Vrathams..."
-              className="h-12 pl-11 bg-card text-foreground border-none shadow-lg"
+              className="h-12 pl-11 bg-card text-foreground border-none shadow-lg selection:bg-transparent focus:ring-0 focus-visible:ring-1 focus-visible:ring-primary/30"
             />
           </div>
         </div>
@@ -136,8 +151,6 @@ export default function Services() {
           ) : (
             <div className="space-y-10">
               {(() => {
-                const available = services.filter((s) => s.bookable);
-                const upcoming = services.filter((s) => !s.bookable);
                 const renderGrid = (list: Svc[]) => (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {list.map((s, i) => {
@@ -165,21 +178,65 @@ export default function Services() {
                 );
                 return (
                   <>
-                    {available.length > 0 && (
+                    {pageAvailable.length > 0 && (
                       <div>
                         <h2 className="text-h3 text-foreground mb-4">Available pujas</h2>
-                        {renderGrid(available)}
+                        {renderGrid(pageAvailable)}
                       </div>
                     )}
-                    {upcoming.length > 0 && (
+                    {pageUpcoming.length > 0 && (
                       <div>
                         <h2 className="text-h3 text-foreground mb-2">Upcoming services</h2>
                         <p className="text-sm text-muted-foreground mb-4">
                           These pujas are listed as <span className="font-semibold text-amber-600">Coming Soon</span> and will open for booking when Admin marks them Available.
                         </p>
-                        {renderGrid(upcoming)}
+                        {renderGrid(pageUpcoming)}
                       </div>
                     )}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Show</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setPage(1);
+                          }}
+                          className="h-9 rounded-md border border-border bg-card px-2 text-foreground"
+                          aria-label="Items per page"
+                        >
+                          {[6, 9, 12, 24].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                        <span>per page · {combined.length} total</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={pageSafe <= 1}
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground tabular-nums px-2">
+                          Page {pageSafe} of {totalPages}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={pageSafe >= totalPages}
+                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
                   </>
                 );
               })()}
@@ -194,7 +251,10 @@ export default function Services() {
           <Button
             size="lg"
             className="bg-primary text-white hover:bg-primary/90 px-8 h-12 text-lg font-bold shadow-lg"
-            onClick={() => setLocation("/contact")}
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+              setLocation("/contact");
+            }}
           >
             {t("services.requestCustom")}
           </Button>

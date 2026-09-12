@@ -1035,6 +1035,33 @@ def update_legal_policy(slug: str, body: LegalPolicyUpdateIn, user=Depends(requi
     return _serialize_legal_policy(row)
 
 
+@router.post("/email/test-templates")
+def admin_test_email_templates(
+    to: str = Query("mybseva@gmail.com", max_length=200),
+    user=Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+):
+    """Admin-only: send all branded TEST templates with dummy data. Never uses live bookings."""
+    import os
+
+    from app.config import settings
+
+    if settings.environment == "production" and os.getenv("ALLOW_EMAIL_TEST", "").strip() != "1":
+        raise HTTPException(403, "Email test endpoint disabled in production (set ALLOW_EMAIL_TEST=1 to enable)")
+    _ = db  # reserved for future audit logging
+    from app.mail.test_send import send_all_test_templates
+
+    report = send_all_test_templates(to=to.strip() or "mybseva@gmail.com")
+    return report
+
+
+@router.get("/email/smtp-status")
+def admin_smtp_status(user=Depends(require_roles("admin"))):
+    from app.mail.smtp_client import smtp_status
+
+    return smtp_status()
+
+
 @router.get("/documents/{pujari_id}")
 def list_docs(pujari_id: str, user=Depends(require_any_permission("view_pujaris", "verify_pujaris", "edit_pujaris")), db: Session = Depends(get_db)):
     rows = db.execute(

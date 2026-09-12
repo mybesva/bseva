@@ -17,17 +17,17 @@ export default function About() {
 
   return (
     <Layout>
-      <section className="relative py-24 bg-sidebar text-white overflow-hidden">
+      <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <img src="/images/mandala-pattern.png" alt="Pattern" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10">
           <div className="max-w-3xl">
-            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-6">
+            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
               {t("about.badge")}
             </span>
-            <h1 className="text-display text-primary mb-6">{t("about.title")}</h1>
-            <p className="text-lg text-white/80 mb-8 leading-relaxed">{t("about.heroDesc")}</p>
+            <h1 className="text-h1 md:text-display text-primary mb-3">{t("about.title")}</h1>
+            <p className="text-base text-white/80 leading-relaxed">{t("about.heroDesc")}</p>
           </div>
         </div>
       </section>

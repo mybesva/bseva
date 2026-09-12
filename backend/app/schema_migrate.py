@@ -259,20 +259,6 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'system'",
     "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)",
     "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link TEXT",
-    "ALTER TABLE promo_banners ADD COLUMN IF NOT EXISTS subtitle TEXT",
-    "ALTER TABLE promo_banners ADD COLUMN IF NOT EXISTS advertiser TEXT",
-    "ALTER TABLE seasonal_popups ADD COLUMN IF NOT EXISTS audience TEXT NOT NULL DEFAULT 'customer'",
-    "ALTER TABLE seasonal_popups ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 100",
-    "ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open'",
-    """
-    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS consultation_type TEXT DEFAULT 'voice'
-    """,
-    """
-    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS provider_session_id TEXT
-    """,
-    """
-    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS join_status TEXT DEFAULT 'pending'
-    """,
     """
     CREATE TABLE IF NOT EXISTS promo_banners (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -286,6 +272,8 @@ _FOUNDATION_STMTS = [
       active BOOLEAN NOT NULL DEFAULT TRUE,
       display_order INTEGER NOT NULL DEFAULT 100,
       is_third_party BOOLEAN NOT NULL DEFAULT FALSE,
+      subtitle TEXT,
+      advertiser TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
@@ -300,11 +288,27 @@ _FOUNDATION_STMTS = [
       cta_label TEXT,
       cta_url TEXT,
       languages TEXT DEFAULT 'en,hi,te',
+      audience TEXT NOT NULL DEFAULT 'customer',
+      display_order INTEGER NOT NULL DEFAULT 100,
       start_at TIMESTAMPTZ,
       end_at TIMESTAMPTZ,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+    """,
+    "ALTER TABLE promo_banners ADD COLUMN IF NOT EXISTS subtitle TEXT",
+    "ALTER TABLE promo_banners ADD COLUMN IF NOT EXISTS advertiser TEXT",
+    "ALTER TABLE seasonal_popups ADD COLUMN IF NOT EXISTS audience TEXT NOT NULL DEFAULT 'customer'",
+    "ALTER TABLE seasonal_popups ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 100",
+    "ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open'",
+    """
+    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS consultation_type TEXT DEFAULT 'voice'
+    """,
+    """
+    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS provider_session_id TEXT
+    """,
+    """
+    ALTER TABLE muhurta_consultations ADD COLUMN IF NOT EXISTS join_status TEXT DEFAULT 'pending'
     """,
     """
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check
@@ -647,8 +651,10 @@ def _exec_safe(conn, stmt: str) -> None:
 
 def ensure_schema() -> None:
     with engine.begin() as conn:
+        conn.execute(text("SET LOCAL statement_timeout = '120s'"))
+        conn.execute(text("SET LOCAL lock_timeout = '30s'"))
         for stmt in _STMTS:
-            conn.execute(text(stmt))
+            _exec_safe(conn, stmt)
         for stmt in _FOUNDATION_STMTS:
             _exec_safe(conn, stmt)
         try:

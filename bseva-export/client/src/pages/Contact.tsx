@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
+import { useEffect } from "react";
 
 export default function Contact() {
   const { t } = useI18n();
@@ -15,15 +16,21 @@ export default function Contact() {
   const supportEmail = config.email_from_support || "support@b-seva.com";
   const contactEmail = config.email_from_contact || supportEmail;
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
   return (
     <Layout>
-      <section className="relative py-20 bg-sidebar text-white overflow-hidden">
+      <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <img src="/images/mandala-pattern.png" alt="Pattern" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10 text-center">
-          <h1 className="text-display text-primary mb-6">{t("contact.title")}</h1>
-          <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">{t("contact.subtitle")}</p>
+          <h1 className="text-h1 md:text-display text-primary mb-3">{t("contact.title")}</h1>
+          <p className="text-base text-white/80 max-w-2xl mx-auto">{t("contact.subtitle")}</p>
         </div>
       </section>
 
@@ -144,12 +151,25 @@ export default function Contact() {
         </div>
       </section>
 
-      <section className="h-[400px] bg-secondary/10 relative flex items-center justify-center">
-        <div className="text-center">
-          <MapPin size={48} className="text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground font-medium">{t("contact.mapPlaceholder")}</p>
-          <p className="text-sm text-muted-foreground/70">123 Spiritual Avenue, Bangalore</p>
-        </div>
+      <section className="h-[400px] bg-secondary/10 relative overflow-hidden">
+        {import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
+          <iframe
+            title="BSeva office location"
+            className="absolute inset-0 w-full h-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+            src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent("123 Spiritual Avenue, Temple Road, Bangalore, Karnataka 560001")}&zoom=14`}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-center p-6">
+            <div>
+              <MapPin size={48} className="text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground font-medium">{t("contact.mapPlaceholder")}</p>
+              <p className="text-sm text-muted-foreground/70">123 Spiritual Avenue, Bangalore</p>
+            </div>
+          </div>
+        )}
       </section>
     </Layout>
   );

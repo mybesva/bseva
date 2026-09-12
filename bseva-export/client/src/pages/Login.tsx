@@ -72,7 +72,7 @@ export default function Login() {
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit} autoComplete="off">
               <div className="space-y-2">
-                <Label htmlFor="identifier">Email or phone</Label>
+                <Label htmlFor="identifier">Email or Phone</Label>
                 <Input
                   id="identifier"
                   value={identifier}
