@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin } from "lucide-react";
@@ -50,8 +50,34 @@ const WhatsAppIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
+function portalRoleFromSearch(search: string): "customer" | "pujari" | null {
+  const role = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("role");
+  if (role === "customer" || role === "pujari") return role;
+  return null;
+}
+
+/** Highlight Customer/Pujari nav on portal, login, and register flows. */
+function isNavItemActive(path: string, location: string, search: string): boolean {
+  const pathname = location.split("?")[0];
+  if (path === "/") return pathname === "/" || pathname === "";
+  if (pathname === path || pathname.startsWith(`${path}/`)) return true;
+
+  const onAuthPath = pathname === "/login" || pathname === "/register";
+  if (!onAuthPath) return false;
+
+  const role = portalRoleFromSearch(search);
+  if (path === "/customer") {
+    return role === "customer" || (pathname === "/register" && role !== "pujari");
+  }
+  if (path === "/pujari") {
+    return role === "pujari";
+  }
+  return false;
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
+  const search = useSearch();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const { t, lang, setLang, labels } = useI18n();
@@ -167,7 +193,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link key={item.path} href={item.path}>
                 <a
                   className={`text-sm font-bold transition-colors hover:text-primary ${
-                    location === item.path ? "text-primary" : "text-foreground"
+                    isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground"
                   }`}
                 >
                   {item.label}
@@ -219,7 +245,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <Link key={item.path} href={item.path}>
                       <a
                         className={`text-lg font-bold transition-colors hover:text-primary ${
-                          location === item.path ? "text-primary" : "text-foreground"
+                          isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground"
                         }`}
                         onClick={() => setIsMobileMenuOpen(false)}
                       >

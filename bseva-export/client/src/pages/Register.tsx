@@ -52,12 +52,28 @@ export default function Register() {
   const captchaEnabled = Boolean(publicConfig.registration_captcha_enabled);
   const captchaSiteKey = String(publicConfig.recaptcha_site_key || "");
   const [, setLocation] = useLocation();
-  const roleHint = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("role");
+  const search = typeof window !== "undefined" ? window.location.search : "";
+  const params = new URLSearchParams(search);
+  const roleHint = params.get("role");
   const isPujariFlow = roleHint === "pujari";
-  const returnUrl = safeReturnUrl(
-    new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("returnUrl")
+  const returnUrl = safeReturnUrl(params.get("returnUrl"));
+  const [accountType, setAccountType] = useState<"customer" | "pujari">(
+    roleHint === "pujari" ? "pujari" : "customer"
   );
-  const [accountType, setAccountType] = useState<"customer" | "pujari">(isPujariFlow ? "pujari" : "customer");
+
+  useEffect(() => {
+    if (roleHint === "pujari" || roleHint === "customer") {
+      setAccountType(roleHint);
+    }
+  }, [roleHint]);
+
+  function selectAccountType(next: "customer" | "pujari") {
+    setAccountType(next);
+    const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    p.set("role", next);
+    const q = p.toString();
+    setLocation(`/register${q ? `?${q}` : ""}`);
+  }
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
@@ -248,37 +264,35 @@ export default function Register() {
         <Card className="w-full max-w-lg mx-auto border-border shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl">
-              {isPujariFlow ? "Create your Pujari account" : "Create your BSeva account"}
+              {accountType === "pujari" ? "Create your Pujari account" : "Create your BSeva account"}
             </CardTitle>
             <CardDescription>
-              {isPujariFlow
+              {accountType === "pujari"
                 ? "Register as a Pujari. Complete your profile after Login."
-                : accountType === "pujari"
-                  ? "Register as a Pujari. Complete your profile after Login."
-                  : "Register as a Customer. Address and location can be added after Login."}
+                : "Register as a Customer. Address and location can be added after Login."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={onSubmit} autoComplete="off" noValidate>
-              {!isPujariFlow && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={accountType === "customer" ? "default" : "outline"}
-                    onClick={() => setAccountType("customer")}
-                  >
-                    Customer
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={accountType === "pujari" ? "default" : "outline"}
-                    onClick={() => setAccountType("pujari")}
-                  >
-                    Pujari
-                  </Button>
-                </div>
-              )}
-              {isPujariFlow && (
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={accountType === "customer" ? "default" : "outline"}
+                  className={accountType === "customer" ? "font-bold" : ""}
+                  onClick={() => selectAccountType("customer")}
+                >
+                  Customer
+                </Button>
+                <Button
+                  type="button"
+                  variant={accountType === "pujari" ? "default" : "outline"}
+                  className={accountType === "pujari" ? "font-bold" : ""}
+                  onClick={() => selectAccountType("pujari")}
+                >
+                  Pujari
+                </Button>
+              </div>
+              {accountType === "pujari" && (
                 <p className="text-sm rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-foreground">
                   Registering as <strong>Pujari</strong>. Role is assigned securely by BSeva.
                 </p>
