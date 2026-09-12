@@ -105,7 +105,7 @@ export default function Home() {
                 </Select>
               </div>
               <div className="flex-1 w-full relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground stroke-[2.5]" size={20} />
                 <Input
                   value={heroQ}
                   onChange={(e) => setHeroQ(e.target.value)}
