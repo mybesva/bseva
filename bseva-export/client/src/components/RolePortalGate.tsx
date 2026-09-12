@@ -10,11 +10,43 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Users, Sparkles } from "lucide-react";
 
 type PortalRole = "customer" | "priest" | "admin";
 
 function apiRole(role: PortalRole) {
   return role === "priest" ? "pujari" : role;
+}
+
+function portalCopy(role: PortalRole) {
+  if (role === "priest") {
+    return {
+      title: "Pujari Login",
+      description: "Sign in with your pujari account to manage bookings, profile, and dakshina.",
+      hint: "For priests and head pujaris only.",
+      otherLabel: "Looking for Customer login?",
+      otherHref: "/customer",
+      Icon: Sparkles,
+    };
+  }
+  if (role === "admin") {
+    return {
+      title: "Admin Login",
+      description: "Sign in with your admin credentials to manage the platform.",
+      hint: "For BSeva operations staff only.",
+      otherLabel: null as string | null,
+      otherHref: null as string | null,
+      Icon: Users,
+    };
+  }
+  return {
+    title: "Customer Login",
+    description: "Sign in with your customer account to book pujas and manage bookings.",
+    hint: "For devotees and customers only.",
+    otherLabel: "Are you a Pujari?",
+    otherHref: "/pujari",
+    Icon: Users,
+  };
 }
 
 /** Login gate for portals. Registration is only via /register (req #110). */
@@ -33,6 +65,7 @@ export default function RolePortalGate({
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const expected = apiRole(role);
+  const copy = portalCopy(role);
   const isAdminLike = (r: string) => r === "admin" || r === "super_admin";
   const matchesPortal =
     user &&
@@ -70,6 +103,13 @@ export default function RolePortalGate({
               <Button variant="outline" onClick={() => logout()}>
                 Logout
               </Button>
+              {copy.otherHref && (
+                <p className="text-sm text-muted-foreground">
+                  <Link href={copy.otherHref} className="text-primary underline">
+                    {copy.otherLabel}
+                  </Link>
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -87,7 +127,7 @@ export default function RolePortalGate({
         (expected === "pujari" && out.user.role === "head_pujari") ||
         (allowAdminBypass && isAdminLike(out.user.role) && role === "admin");
       if (!roleOk) {
-        toast.error(`This portal is for ${expected}s.`);
+        toast.error(`This portal is for ${expected}s. Your account is ${out.user.role}.`);
         await logout();
         return;
       }
@@ -107,13 +147,23 @@ export default function RolePortalGate({
         ? `/register?role=customer&returnUrl=${encodeURIComponent("/customer")}`
         : null;
 
+  const Icon = copy.Icon;
+
   return (
     <Layout>
       <div className="container py-12 max-w-md">
         <Card>
-          <CardHeader>
-            <CardTitle>Login</CardTitle>
-            <CardDescription>Use your registered credentials to continue.</CardDescription>
+          <CardHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Icon size={20} />
+              </div>
+              <div>
+                <CardTitle>{copy.title}</CardTitle>
+                <p className="text-xs font-medium text-primary mt-0.5">{copy.hint}</p>
+              </div>
+            </div>
+            <CardDescription>{copy.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-3" onSubmit={onLogin} autoComplete="off">
@@ -126,20 +176,33 @@ export default function RolePortalGate({
                 <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
               </div>
               <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
-                {pending ? "Logging in…" : "Login"}
+                {pending
+                  ? "Logging in…"
+                  : `Login as ${expected === "pujari" ? "Pujari" : expected === "admin" ? "Admin" : "Customer"}`}
               </Button>
             </form>
             {registerHref && (
               <p className="text-sm text-muted-foreground mt-4 text-center">
                 New here?{" "}
                 <Link href={registerHref} className="text-primary underline">
-                  Create an account
+                  Create a {expected === "pujari" ? "pujari" : "customer"} account
                 </Link>
               </p>
             )}
-            <p className="text-xs text-muted-foreground mt-2 text-center">
+            {copy.otherHref && copy.otherLabel && (
+              <p className="text-sm text-center mt-3">
+                <Link href={copy.otherHref} className="text-primary font-semibold underline">
+                  {copy.otherLabel}
+                </Link>
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-3 text-center">
               Or use the shared{" "}
-              <button type="button" className="underline text-primary" onClick={() => setLocation("/login")}>
+              <button
+                type="button"
+                className="underline text-primary"
+                onClick={() => setLocation(`/login?role=${expected}`)}
+              >
                 Login page
               </button>
             </p>
