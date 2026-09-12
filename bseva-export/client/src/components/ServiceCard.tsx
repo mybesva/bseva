@@ -12,7 +12,7 @@ interface ServiceCardProps {
 
 export default function ServiceCard({ title, description, image, icon, comingSoon }: ServiceCardProps) {
   return (
-    <Card className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 bg-card h-full flex flex-col relative">
+    <Card className="group border-none shadow-md hover:shadow-xl transition-all duration-300 bg-card h-full flex flex-col relative overflow-visible">
       {comingSoon && (
         <div className="absolute top-0 right-0 z-30">
           <div className="bg-amber-500 text-white font-extrabold text-[11px] sm:text-xs uppercase tracking-wider shadow-lg px-3 py-1.5 rounded-bl-lg">
@@ -20,22 +20,31 @@ export default function ServiceCard({ title, description, image, icon, comingSoo
           </div>
         </div>
       )}
-      <div className="relative h-48 overflow-hidden">
-        <div className={`absolute inset-0 transition-colors z-10 ${comingSoon ? "bg-amber-950/35" : "bg-sidebar/20 group-hover:bg-sidebar/0"}`} />
-        <img
-          src={image}
-          alt={title}
-          className={`w-full h-full object-cover transform transition-transform duration-700 ${comingSoon ? "grayscale-[40%] opacity-90" : "group-hover:scale-110"}`}
-        />
+      {/* Image crops separately; icon sits outside overflow so it is not clipped */}
+      <div className="relative">
+        <div className="relative h-48 overflow-hidden rounded-t-xl">
+          <div
+            className={`absolute inset-0 transition-colors z-10 ${
+              comingSoon ? "bg-amber-950/35" : "bg-sidebar/20 group-hover:bg-sidebar/0"
+            }`}
+          />
+          <img
+            src={image}
+            alt={title}
+            className={`w-full h-full object-cover transform transition-transform duration-700 ${
+              comingSoon ? "grayscale-[40%] opacity-90" : "group-hover:scale-110"
+            }`}
+          />
+        </div>
         {icon && (
-          <div className="absolute -bottom-6 right-6 w-12 h-12 bg-card rounded-full shadow-lg flex items-center justify-center text-primary z-20 group-hover:scale-110 transition-transform">
+          <div className="absolute -bottom-6 right-6 z-20 w-12 h-12 bg-card rounded-full shadow-lg border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
             {icon}
           </div>
         )}
       </div>
 
       <CardHeader className="pt-10 pb-2">
-        <h3 className="text-h3 text-foreground group-hover:text-primary transition-colors">
+        <h3 className="text-h3 text-[#1A2B4A] dark:text-primary font-bold group-hover:text-primary transition-colors">
           {title}
         </h3>
       </CardHeader>

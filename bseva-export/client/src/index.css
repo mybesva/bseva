@@ -212,22 +212,38 @@
   .text-display {
     @apply text-4xl md:text-5xl font-bold tracking-tight text-primary;
     line-height: 1.1;
+    color: #FF9933;
   }
   .text-h1 {
-    @apply text-2xl md:text-3xl font-bold tracking-tight text-primary;
+    @apply text-2xl md:text-3xl font-bold tracking-tight;
     line-height: 1.2;
+    color: #FF9933; /* theme orange */
   }
   .text-h2 {
-    @apply text-xl md:text-2xl font-semibold tracking-tight text-primary;
+    @apply text-xl md:text-2xl font-bold tracking-tight;
     line-height: 1.25;
+    color: #FF9933; /* theme orange */
   }
   .text-h3 {
-    @apply text-lg md:text-xl font-semibold;
+    @apply text-lg md:text-xl font-bold tracking-tight;
     line-height: 1.3;
+    color: #1A2B4A; /* theme blue / navy */
   }
   .text-h4 {
-    @apply text-base font-semibold;
+    @apply text-base font-bold tracking-tight;
     line-height: 1.35;
+    color: #0A0A0A; /* full black */
+  }
+  .dark .text-display,
+  .dark .text-h1,
+  .dark .text-h2 {
+    color: #FF7A00;
+  }
+  .dark .text-h3 {
+    color: #FF7A00;
+  }
+  .dark .text-h4 {
+    color: #F7F1E4;
   }
   .text-body-lg {
     @apply text-base md:text-lg font-normal;

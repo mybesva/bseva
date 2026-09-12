@@ -26,14 +26,14 @@ export default function SectionHeader({
     )}>
       {subtitle && (
         <span className={cn(
-          "text-eyebrow",
-          light ? "text-primary/90" : "text-primary"
+          "text-eyebrow font-bold",
+          light ? "text-primary" : "text-primary"
         )}>
           {subtitle}
         </span>
       )}
       
-      <h2 className="text-h2 text-3xl md:text-4xl leading-tight text-primary">
+      <h2 className="text-h2 text-3xl md:text-4xl leading-tight font-bold text-primary">
         {title}
       </h2>
       
