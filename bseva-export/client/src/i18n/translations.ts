@@ -196,7 +196,7 @@ const en: Dict = {
   "contact.errRequired": "Please fill all required fields correctly.",
   "contact.errName": "Please enter your full name.",
   "contact.errEmail": "Please enter a valid email address.",
-  "contact.errPhone": "Please enter a valid 10-digit Indian mobile number.",
+  "contact.errPhone": "Please enter a 10-digit mobile number.",
   "contact.errPhoneIntl": "Please enter a valid phone number for the selected country.",
   "contact.errCountryCode": "Please select a valid country code.",
   "contact.countryCode": "Country code",

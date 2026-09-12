@@ -197,7 +197,7 @@ def _normalize_country_code(raw: str) -> str:
 
 
 def _normalize_contact_phone(country_code: str, phone: str) -> tuple[str, str]:
-    """Return (display phone, e164-ish). Indian +91 uses existing mobile rules."""
+    """Return (display phone, e164-ish). For +91 require any 10 digits only."""
     import re
 
     code = _normalize_country_code(country_code)
@@ -207,10 +207,9 @@ def _normalize_contact_phone(country_code: str, phone: str) -> tuple[str, str]:
             digits = digits[2:]
         if len(digits) == 11 and digits.startswith("0"):
             digits = digits[1:]
-        from app.validation_rules import normalize_mobile
-
-        local = normalize_mobile(digits)
-        return f"+91 {local}", f"+91{local}"
+        if len(digits) != 10 or not digits.isdigit():
+            raise HTTPException(400, "Enter a 10-digit mobile number")
+        return f"+91 {digits}", f"+91{digits}"
     if len(digits) < 6 or len(digits) > 15:
         raise HTTPException(400, "Enter a valid phone number for the selected country code")
     return f"{code} {digits}", f"{code}{digits}"

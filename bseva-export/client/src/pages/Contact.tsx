@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const INDIA_MOBILE_RE = /^[6-9]\d{9}$/;
+const TEN_DIGIT_RE = /^\d{10}$/;
 
 const COUNTRY_CODES = [
   { code: "+91", label: "India (+91)" },
@@ -83,7 +83,7 @@ export default function Contact() {
     }
     const phoneDigits = values.phone.replace(/\D/g, "");
     if (code.replace(/\s/g, "") === "+91" || code.replace(/\s/g, "") === "91") {
-      if (!INDIA_MOBILE_RE.test(phoneDigits)) {
+      if (!TEN_DIGIT_RE.test(phoneDigits)) {
         next.phone = t("contact.errPhone");
       }
     } else if (phoneDigits.length < 6 || phoneDigits.length > 15) {
