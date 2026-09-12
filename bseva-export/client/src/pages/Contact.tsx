@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Loader2 } from "lucide-react";
+import { Phone, Mail, Clock, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
 import { useEffect, useState, type FormEvent } from "react";
@@ -152,21 +152,6 @@ export default function Contact() {
               </div>
 
               <div className="space-y-6">
-                <Card className="border-none shadow-sm bg-secondary/20">
-                  <CardContent className="flex items-start gap-4 p-6">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      <MapPin size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">{t("contact.office")}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        123 Spiritual Avenue, Temple Road,<br />
-                        Bangalore, Karnataka 560001
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
                 <Card className="border-none shadow-sm bg-secondary/20">
                   <CardContent className="flex items-start gap-4 p-6">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -385,27 +370,6 @@ export default function Contact() {
             </div>
           </div>
         </div>
-      </section>
-
-      <section className="h-[400px] bg-secondary/10 relative overflow-hidden">
-        {import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
-          <iframe
-            title="BSeva office location"
-            className="absolute inset-0 w-full h-full border-0"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
-            src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent("123 Spiritual Avenue, Temple Road, Bangalore, Karnataka 560001")}&zoom=14`}
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-center p-6">
-            <div>
-              <MapPin size={48} className="text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground font-medium">{t("contact.mapPlaceholder")}</p>
-              <p className="text-sm text-muted-foreground/70">123 Spiritual Avenue, Bangalore</p>
-            </div>
-          </div>
-        )}
       </section>
     </Layout>
   );

@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin, MapPin } from "lucide-react";
+import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -294,14 +294,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h4 className="text-h4 mb-4 text-primary">{t("footer.contact")}</h4>
             <ul className="space-y-3 text-sm text-sidebar-foreground/80">
-              <li className="flex items-start gap-2">
-                <MapPin size={14} className="mt-0.5 shrink-0" />
-                <span>
-                  123 Spiritual Avenue, Temple Road,
-                  <br />
-                  Bangalore, Karnataka 560001
-                </span>
-              </li>
               <li className="flex items-center gap-2">
                 <Phone size={14} className="shrink-0" />
                 <a href={telHref(config.bseva_whatsapp_number)} className="hover:text-primary transition-colors">
