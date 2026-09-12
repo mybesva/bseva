@@ -12,6 +12,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { api, dashboardPath } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { serviceImageUrl } from "@/lib/serviceImage";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ICONS = [Flower, Flame, HomeIcon, Sparkles, Heart, Calendar, Users, UserCheck, Search, StarIcon];
 
@@ -67,19 +74,35 @@ export default function Home() {
 
             <div className="max-w-2xl mx-auto bg-card rounded-xl shadow-2xl p-2 md:p-3 flex flex-col md:flex-row gap-2 items-center">
               <div className="w-full md:w-44">
-                <select
-                  className="h-12 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={heroCity}
-                  onChange={(e) => setHeroCity(e.target.value)}
-                  aria-label={t("home.selectLocation")}
+                <Select
+                  value={heroCity || "all"}
+                  onValueChange={(v) => setHeroCity(v === "all" ? "" : v)}
                 >
-                  <option value="">All cities</option>
-                  <option value="Bangalore">Bangalore</option>
-                  <option value="Hyderabad">Hyderabad</option>
-                  <option value="Mumbai">Mumbai</option>
-                  <option value="Delhi">Delhi</option>
-                  <option value="Chennai">Chennai</option>
-                </select>
+                  <SelectTrigger
+                    aria-label={t("home.selectLocation")}
+                    className="h-12 w-full rounded-md border border-input bg-secondary/40 px-3 text-sm font-semibold text-foreground"
+                  >
+                    <SelectValue placeholder={t("home.selectLocation")} />
+                  </SelectTrigger>
+                  <SelectContent className="border-primary/30 bg-card shadow-lg">
+                    {[
+                      { value: "all", label: "All cities" },
+                      { value: "Bangalore", label: "Bangalore" },
+                      { value: "Hyderabad", label: "Hyderabad" },
+                      { value: "Mumbai", label: "Mumbai" },
+                      { value: "Delhi", label: "Delhi" },
+                      { value: "Chennai", label: "Chennai" },
+                    ].map((city) => (
+                      <SelectItem
+                        key={city.value}
+                        value={city.value}
+                        className="font-medium text-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                      >
+                        {city.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex-1 w-full relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
