@@ -55,7 +55,6 @@ export default function Register() {
   const search = typeof window !== "undefined" ? window.location.search : "";
   const params = new URLSearchParams(search);
   const roleHint = params.get("role");
-  const isPujariFlow = roleHint === "pujari";
   const returnUrl = safeReturnUrl(params.get("returnUrl"));
   const [accountType, setAccountType] = useState<"customer" | "pujari">(
     roleHint === "pujari" ? "pujari" : "customer"
