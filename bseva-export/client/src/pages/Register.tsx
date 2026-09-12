@@ -432,7 +432,10 @@ export default function Register() {
                 {pending ? "Creating account…" : "Create account"}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
-                Already registered? <Link href={loginHref}>{t("auth.login")}</Link>
+                Already registered?{" "}
+                <Link href={loginHref} className="text-primary font-semibold hover:underline">
+                  {t("auth.login")}
+                </Link>
               </p>
             </form>
           </CardContent>
