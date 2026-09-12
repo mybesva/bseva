@@ -80,7 +80,7 @@ export default function Home() {
                 >
                   <SelectTrigger
                     aria-label={t("home.selectLocation")}
-                    className="h-12 w-full rounded-md border border-input bg-secondary/40 px-3 text-sm font-semibold text-foreground"
+                    className="h-12 w-full rounded-md border border-input bg-secondary/40 px-3 text-sm font-bold text-foreground"
                   >
                     <SelectValue placeholder={t("home.selectLocation")} />
                   </SelectTrigger>
@@ -96,7 +96,7 @@ export default function Home() {
                       <SelectItem
                         key={city.value}
                         value={city.value}
-                        className="font-medium text-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                        className="font-bold text-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
                       >
                         {city.label}
                       </SelectItem>
@@ -105,13 +105,13 @@ export default function Home() {
                 </Select>
               </div>
               <div className="flex-1 w-full relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/70" size={18} />
                 <Input
                   value={heroQ}
                   onChange={(e) => setHeroQ(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && goSearch()}
                   placeholder="Search Pujas, Homams, Vrathams..."
-                  className="h-12 pl-10 border-none bg-secondary/30 focus-visible:ring-0"
+                  className="h-12 pl-10 border-none bg-secondary/30 focus-visible:ring-0 font-bold text-foreground placeholder:font-semibold placeholder:text-foreground/55"
                 />
               </div>
               <Button className="h-12 px-8 w-full md:w-auto bg-primary text-white font-bold" onClick={goSearch}>
