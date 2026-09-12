@@ -12,11 +12,25 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MOBILE_RE = /^(?:\+?91[\-\s]?|0)?([6-9]\d{9})$/;
+const INDIA_MOBILE_RE = /^[6-9]\d{9}$/;
+
+const COUNTRY_CODES = [
+  { code: "+91", label: "India (+91)" },
+  { code: "+1", label: "USA/Canada (+1)" },
+  { code: "+44", label: "UK (+44)" },
+  { code: "+971", label: "UAE (+971)" },
+  { code: "+65", label: "Singapore (+65)" },
+  { code: "+61", label: "Australia (+61)" },
+  { code: "+49", label: "Germany (+49)" },
+  { code: "+33", label: "France (+33)" },
+  { code: "+81", label: "Japan (+81)" },
+  { code: "+86", label: "China (+86)" },
+] as const;
 
 type FormState = {
   name: string;
   email: string;
+  country_code: string;
   phone: string;
   subject: string;
   message: string;
@@ -27,6 +41,7 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 const emptyForm: FormState = {
   name: "",
   email: "",
+  country_code: "+91",
   phone: "",
   subject: "",
   message: "",
@@ -62,9 +77,17 @@ export default function Contact() {
     if (!values.email.trim() || !EMAIL_RE.test(values.email.trim())) {
       next.email = t("contact.errEmail");
     }
-    const phoneDigits = values.phone.replace(/\s/g, "");
-    if (!phoneDigits || !MOBILE_RE.test(phoneDigits)) {
-      next.phone = t("contact.errPhone");
+    const code = (values.country_code || "+91").trim() || "+91";
+    if (!/^\+?\d{1,4}$/.test(code.replace(/\s/g, ""))) {
+      next.country_code = t("contact.errCountryCode");
+    }
+    const phoneDigits = values.phone.replace(/\D/g, "");
+    if (code.replace(/\s/g, "") === "+91" || code.replace(/\s/g, "") === "91") {
+      if (!INDIA_MOBILE_RE.test(phoneDigits)) {
+        next.phone = t("contact.errPhone");
+      }
+    } else if (phoneDigits.length < 6 || phoneDigits.length > 15) {
+      next.phone = t("contact.errPhoneIntl");
     }
     if (!values.subject.trim() || values.subject.trim().length < 3) {
       next.subject = t("contact.errSubject");
@@ -90,6 +113,7 @@ export default function Contact() {
         body: JSON.stringify({
           name: form.name.trim(),
           email: form.email.trim(),
+          country_code: form.country_code.trim() || "+91",
           phone: form.phone.trim(),
           subject: form.subject.trim(),
           message: form.message.trim(),
@@ -259,24 +283,52 @@ export default function Contact() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="phone">
+                          <Label>
                             {t("auth.phone")}
                             <RequiredMark />
                           </Label>
-                          <Input
-                            id="phone"
-                            name="phone"
-                            type="tel"
-                            inputMode="tel"
-                            autoComplete="tel"
-                            required
-                            value={form.phone}
-                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                            placeholder={t("contact.phonePh")}
-                            className="h-12"
-                            aria-invalid={!!errors.phone}
-                          />
-                          {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                          <div className="flex gap-2">
+                            <div className="w-[7.5rem] shrink-0 space-y-1">
+                              <select
+                                id="country_code"
+                                name="country_code"
+                                aria-label={t("contact.countryCode")}
+                                value={form.country_code}
+                                onChange={(e) => setForm({ ...form, country_code: e.target.value })}
+                                className="h-12 w-full rounded-md border border-input bg-background px-2 text-sm font-semibold"
+                              >
+                                {COUNTRY_CODES.map((c) => (
+                                  <option key={c.code} value={c.code}>
+                                    {c.code}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <Input
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                inputMode="numeric"
+                                autoComplete="tel-national"
+                                required
+                                value={form.phone}
+                                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                                placeholder={
+                                  form.country_code === "+91"
+                                    ? t("contact.phonePhIndia")
+                                    : t("contact.phonePh")
+                                }
+                                className="h-12"
+                                aria-invalid={!!errors.phone}
+                              />
+                            </div>
+                          </div>
+                          {(errors.country_code || errors.phone) && (
+                            <p className="text-xs text-destructive">
+                              {errors.country_code || errors.phone}
+                            </p>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="subject">

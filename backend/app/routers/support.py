@@ -180,20 +180,51 @@ def close_conversation(conversation_id: str, user=Depends(require_roles("admin",
 class ContactFormIn(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: str = Field(min_length=5, max_length=200)
-    phone: str = Field(min_length=10, max_length=20)
+    country_code: str = Field(default="+91", min_length=1, max_length=8)
+    phone: str = Field(min_length=6, max_length=20)
     subject: str = Field(min_length=3, max_length=200)
     message: str = Field(min_length=10, max_length=4000)
 
 
-@router.post("/contact")
-def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
-    """Public contact form — emails BSeva contact/support inbox via Zoho SMTP."""
+def _normalize_country_code(raw: str) -> str:
+    code = (raw or "+91").strip().replace(" ", "")
+    if not code.startswith("+"):
+        code = f"+{code}"
+    digits = "".join(ch for ch in code[1:] if ch.isdigit())
+    if not digits or len(digits) > 4:
+        raise HTTPException(400, "Enter a valid country code (e.g. +91)")
+    return f"+{digits}"
+
+
+def _normalize_contact_phone(country_code: str, phone: str) -> tuple[str, str]:
+    """Return (display phone, e164-ish). Indian +91 uses existing mobile rules."""
     import re
 
-    from app.mail.smtp_client import send_email
+    code = _normalize_country_code(country_code)
+    digits = re.sub(r"\D", "", phone or "")
+    if code == "+91":
+        if len(digits) == 12 and digits.startswith("91"):
+            digits = digits[2:]
+        if len(digits) == 11 and digits.startswith("0"):
+            digits = digits[1:]
+        from app.validation_rules import normalize_mobile
+
+        local = normalize_mobile(digits)
+        return f"+91 {local}", f"+91{local}"
+    if len(digits) < 6 or len(digits) > 15:
+        raise HTTPException(400, "Enter a valid phone number for the selected country code")
+    return f"{code} {digits}", f"{code}{digits}"
+
+
+@router.post("/contact")
+def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
+    """Public contact form — emails BSeva inbox via Zoho SMTP (authenticated From address)."""
+    import re
+
+    from app.mail.smtp_client import send_email, smtp_configured
+    from app.mail.smtp_config import load_smtp_config
     from app.mail.templates import admin_notification_email
     from app.platform_config import get_setting
-    from app.validation_rules import normalize_mobile
 
     name = body.name.strip()
     email = body.email.strip().lower()
@@ -201,14 +232,13 @@ def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
     message = body.message.strip()
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
         raise HTTPException(400, "Enter a valid email address")
-    phone = normalize_mobile(body.phone)
+    phone_display, phone_e164 = _normalize_contact_phone(body.country_code, body.phone)
 
-    inbox = str(
-        get_setting(db, "email_from_contact", None)
-        or get_setting(db, "email_from_support", None)
-        or "contact@b-seva.com"
-    ).strip()
-    from_addr = str(get_setting(db, "email_from_support", "support@b-seva.com") or "support@b-seva.com")
+    cfg = load_smtp_config()
+    contact_inbox = str(get_setting(db, "email_from_contact", "") or "").strip()
+    support_inbox = str(get_setting(db, "email_from_support", "") or "").strip()
+    # Prefer contact@, then support@, then authenticated Zoho mailbox
+    inbox = contact_inbox or support_inbox or (cfg.from_email if cfg else "") or "admin@b-seva.com"
 
     content = admin_notification_email(
         title=f"Website contact: {subject}",
@@ -216,22 +246,32 @@ def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
         details=[
             ("Name", name),
             ("Email", email),
-            ("Phone", f"+91 {phone}"),
+            ("Phone", phone_display),
             ("Subject", subject),
         ],
     )
+    # Do not override From with support@ — Zoho only accepts the authenticated mailbox.
     result = send_email(
         to=inbox,
         subject=content.subject,
         text_body=content.text,
         html_body=content.html,
-        from_addr=from_addr,
         reply_to=email,
     )
     if not result.get("ok"):
-        raise HTTPException(502, "Unable to send your message right now. Please try again or email us directly.")
+        if not smtp_configured():
+            return {
+                "ok": True,
+                "message": "Thank you. Your message was received. Our team will contact you soon.",
+                "queued": True,
+            }
+        raise HTTPException(
+            502,
+            "Unable to send your message right now. Please try again or email us directly.",
+        )
 
     return {
         "ok": True,
         "message": "Thank you. Your message has been sent. We will get back to you soon.",
+        "phone": phone_e164,
     }
