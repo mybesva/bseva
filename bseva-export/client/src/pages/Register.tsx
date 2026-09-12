@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import PasswordInput, { passwordStrengthOk } from "@/components/PasswordInput";
 import { LegalInlineLink } from "@/components/LegalModal";
-import { usePujariLevels } from "@/hooks/usePujariLevels";
 import { api, registerApi } from "@/lib/api";
 import { REGISTRATION_CONSENT_LABEL, TERMS_VERSION, PRIVACY_VERSION } from "@/lib/legal";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -56,23 +55,8 @@ export default function Register() {
   const params = new URLSearchParams(search);
   const roleHint = params.get("role");
   const returnUrl = safeReturnUrl(params.get("returnUrl"));
-  const [accountType, setAccountType] = useState<"customer" | "pujari">(
-    roleHint === "pujari" ? "pujari" : "customer"
-  );
-
-  useEffect(() => {
-    if (roleHint === "pujari" || roleHint === "customer") {
-      setAccountType(roleHint);
-    }
-  }, [roleHint]);
-
-  function selectAccountType(next: "customer" | "pujari") {
-    setAccountType(next);
-    const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-    p.set("role", next);
-    const q = p.toString();
-    setLocation(`/register${q ? `?${q}` : ""}`);
-  }
+  // Role comes from URL / header navigation — no in-form Customer↔Pujari switcher
+  const accountType: "customer" | "pujari" = roleHint === "pujari" ? "pujari" : "customer";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
@@ -85,14 +69,12 @@ export default function Register() {
   const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
   const [otpSending, setOtpSending] = useState(false);
-  const [requestedLevel, setRequestedLevel] = useState(2);
   const [consent, setConsent] = useState(false);
   const [humanCheck, setHumanCheck] = useState(false);
   const [pending, setPending] = useState(false);
   const [referralCode, setReferralCode] = useState("");
   const [language, setLanguage] = useState<Lang>(lang);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string; otp?: string }>({});
-  const { levels: pujariLevels } = usePujariLevels();
 
   const otpExpired = otpSent && otpSecondsLeft <= 0;
   const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= OTP_VALIDITY_SEC - 30);
@@ -151,13 +133,16 @@ export default function Register() {
     setOtpSending(true);
     try {
       const phoneE164 = toE164(countryCode, phoneDigits);
-      const out = await api<{ ok: boolean; message?: string; expires_in_minutes?: number; email?: string; dev_hint?: string }>(
-        "/auth/otp/request",
-        {
-          method: "POST",
-          body: JSON.stringify({ phone: phoneE164, email: emailNorm, purpose: "register" }),
-        }
-      );
+      const out = await api<{
+        ok: boolean;
+        message?: string;
+        expires_in_minutes?: number;
+        email?: string;
+        dev_hint?: string;
+      }>("/auth/otp/request", {
+        method: "POST",
+        body: JSON.stringify({ phone: phoneE164, email: emailNorm, purpose: "register" }),
+      });
       const mins = out.expires_in_minutes ?? 10;
       const sentTo = out.email || emailNorm;
       setOtpSent(true);
@@ -238,7 +223,7 @@ export default function Register() {
         otp: otp.trim(),
         language,
         calendar_preference: "north",
-        requested_level: accountType === "pujari" ? requestedLevel : undefined,
+        // Service level is assigned by Admin only — not chosen at registration
         registration_consent: true,
         terms_version: TERMS_VERSION,
         privacy_version: PRIVACY_VERSION,
@@ -259,45 +244,28 @@ export default function Register() {
     }
   }
 
+  const loginHref = accountType === "pujari" ? "/login?role=pujari" : "/login?role=customer";
+
   return (
     <Layout>
       <div className="min-h-[70vh] py-12 px-4">
         <Card className="w-full max-w-lg mx-auto border-border shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl">
-              {accountType === "pujari" ? "Create your Pujari account" : "Create your BSeva account"}
+              {accountType === "pujari" ? "Create your Pujari account" : "Create your Customer account"}
             </CardTitle>
             <CardDescription>
               {accountType === "pujari"
-                ? "Register as a Pujari. Complete your profile after Login."
+                ? "Register as a Pujari. Your service level is assigned by BSeva Admin after review."
                 : "Register as a Customer. Address and location can be added after Login."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={onSubmit} autoComplete="off" noValidate>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={accountType === "customer" ? "default" : "outline"}
-                  className={accountType === "customer" ? "font-bold" : ""}
-                  onClick={() => selectAccountType("customer")}
-                >
-                  Customer
-                </Button>
-                <Button
-                  type="button"
-                  variant={accountType === "pujari" ? "default" : "outline"}
-                  className={accountType === "pujari" ? "font-bold" : ""}
-                  onClick={() => selectAccountType("pujari")}
-                >
-                  Pujari
-                </Button>
-              </div>
-              {accountType === "pujari" && (
-                <p className="text-sm rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-foreground">
-                  Registering as <strong>Pujari</strong>. Role is assigned securely by BSeva.
-                </p>
-              )}
+              <p className="text-sm rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-foreground">
+                Registering as <strong>{accountType === "pujari" ? "Pujari" : "Customer"}</strong>. Use{" "}
+                <strong>Customer</strong> / <strong>Pujaris</strong> in the header to switch.
+              </p>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2 space-y-2">
                   <Label>Full name</Label>
@@ -397,22 +365,6 @@ export default function Register() {
                   </p>
                 </div>
               </div>
-              {accountType === "pujari" && (
-                <div className="space-y-2">
-                  <Label>{t("pujari.level.title")}</Label>
-                  <select
-                    className="w-full h-10 rounded-md border px-2 text-sm"
-                    value={requestedLevel}
-                    onChange={(e) => setRequestedLevel(Number(e.target.value))}
-                  >
-                    {pujariLevels.map((lvl) => (
-                      <option key={lvl.level} value={lvl.level}>
-                        Level {lvl.level} — {lvl.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div className="space-y-2">
                 <Label>Verification code</Label>
                 <div className="flex gap-2">
@@ -426,12 +378,7 @@ export default function Register() {
                     required
                     aria-invalid={!!fieldErrors.otp}
                   />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={!canResendOtp}
-                    onClick={() => void sendOtp()}
-                  >
+                  <Button type="button" variant="secondary" disabled={!canResendOtp} onClick={() => void sendOtp()}>
                     {otpSending ? "Sending…" : otpSent ? "Resend" : "Send OTP"}
                   </Button>
                 </div>
@@ -446,9 +393,7 @@ export default function Register() {
                   >
                     <p>{otpExpired ? "OTP expired. Click Resend to get a new code." : otpMessage}</p>
                     {!otpExpired && (
-                      <p className="mt-1 font-semibold tabular-nums">
-                        Time remaining: {formatMmSs(otpSecondsLeft)}
-                      </p>
+                      <p className="mt-1 font-semibold tabular-nums">Time remaining: {formatMmSs(otpSecondsLeft)}</p>
                     )}
                   </div>
                 )}
@@ -487,7 +432,7 @@ export default function Register() {
                 {pending ? "Creating account…" : "Create account"}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
-                Already registered? <Link href="/login">{t("auth.login")}</Link>
+                Already registered? <Link href={loginHref}>{t("auth.login")}</Link>
               </p>
             </form>
           </CardContent>

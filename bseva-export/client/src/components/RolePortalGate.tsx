@@ -23,9 +23,7 @@ function portalCopy(role: PortalRole) {
     return {
       title: "Pujari Login",
       description: "Sign in with your pujari account to manage bookings, profile, and dakshina.",
-      hint: "For priests and head pujaris only.",
-      otherLabel: "Looking for Customer login?",
-      otherHref: "/customer",
+      hint: "For priests and head pujaris only. Use the header to switch portals.",
       Icon: Sparkles,
     };
   }
@@ -34,17 +32,13 @@ function portalCopy(role: PortalRole) {
       title: "Admin Login",
       description: "Sign in with your admin credentials to manage the platform.",
       hint: "For BSeva operations staff only.",
-      otherLabel: null as string | null,
-      otherHref: null as string | null,
       Icon: Users,
     };
   }
   return {
     title: "Customer Login",
     description: "Sign in with your customer account to book pujas and manage bookings.",
-    hint: "For devotees and customers only.",
-    otherLabel: "Are you a Pujari?",
-    otherHref: "/pujari",
+    hint: "For devotees and customers only. Use the header to switch portals.",
     Icon: Users,
   };
 }
@@ -103,13 +97,6 @@ export default function RolePortalGate({
               <Button variant="outline" onClick={() => logout()}>
                 Logout
               </Button>
-              {copy.otherHref && (
-                <p className="text-sm text-muted-foreground">
-                  <Link href={copy.otherHref} className="text-primary underline">
-                    {copy.otherLabel}
-                  </Link>
-                </p>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -186,13 +173,6 @@ export default function RolePortalGate({
                 New here?{" "}
                 <Link href={registerHref} className="text-primary underline">
                   Create a {expected === "pujari" ? "pujari" : "customer"} account
-                </Link>
-              </p>
-            )}
-            {copy.otherHref && copy.otherLabel && (
-              <p className="text-sm text-center mt-3">
-                <Link href={copy.otherHref} className="text-primary font-semibold underline">
-                  {copy.otherLabel}
                 </Link>
               </p>
             )}

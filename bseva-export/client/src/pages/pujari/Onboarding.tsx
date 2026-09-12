@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { PujariPortal } from "@/components/RolePortals";
 import AddressFields, { type AddressValue } from "@/components/AddressFields";
-import PujariLevelApply from "@/components/PujariLevelApply";
 import PriestOnboardingPanel from "@/components/PriestOnboardingPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -622,11 +621,6 @@ export default function PujariOnboardingPage() {
                   onChange={(e) => setSpecCustom(e.target.value)}
                 />
               </div>
-              <PujariLevelApply
-                approvedLevel={profile.approved_level}
-                requestedLevel={profile.requested_level}
-                onUpdated={setProfile}
-              />
             </section>
           )}
 

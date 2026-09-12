@@ -233,7 +233,6 @@ function CustomerShell({ children }: { children: ReactNode }) {
 
 function PujariShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { t } = useI18n();
   const { user } = useAuth();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [nav, setNav] = useState(pujariNav);
@@ -265,9 +264,6 @@ function PujariShell({ children }: { children: ReactNode }) {
   }, [location, user?.role]);
 
   const headerBelow = profile ? (() => {
-    const approved = Number(profile.approved_level || 0);
-    const requested = Number(profile.requested_level || 0);
-    const pendingUpgrade = requested > approved;
     const status = String(profile.profile_status || "");
     const pct = Number(profile.profile_completion_percentage || 0);
     const verified =
@@ -305,18 +301,6 @@ function PujariShell({ children }: { children: ReactNode }) {
           />
           {badgeLabel}
         </div>
-        <p className="text-[11px] text-sidebar-foreground/80 text-center leading-snug px-1">
-          <span className="text-sidebar-foreground/55">{t("pujari.level.current")}: </span>
-          <span className="font-semibold text-primary">
-            {approved ? t(`pujari.level.l${approved}`) : t("pujari.level.pending")}
-          </span>
-        </p>
-        {pendingUpgrade ? (
-          <p className="text-[11px] leading-snug text-sidebar-foreground/75 text-center px-0.5">
-            <span className="text-sidebar-foreground/55">{t("pujari.level.requested")}: </span>
-            {t(`pujari.level.l${requested}`)}
-          </p>
-        ) : null}
       </div>
     );
   })() : null;

@@ -11,7 +11,6 @@ import { api, pujariMediaUrl, uploadPujariAsset } from "@/lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 import { Link } from "wouter";
-import PujariLevelApply from "@/components/PujariLevelApply";
 
 const QUALS = [
   { id: "panchadasha", key: "pujari.q1" },
@@ -116,14 +115,6 @@ function ProfileForm() {
           </p>
         )}
       </div>
-
-      <PujariLevelApply
-        approvedLevel={profile.approved_level}
-        requestedLevel={profile.requested_level}
-        onUpdated={setProfile}
-        compact
-        upgradeOnly
-      />
 
       <section className="space-y-4">
         <h2 className="text-xl">{t("pujari.personal")}</h2>
