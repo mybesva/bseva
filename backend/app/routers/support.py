@@ -217,7 +217,7 @@ def _normalize_contact_phone(country_code: str, phone: str) -> tuple[str, str]:
 
 @router.post("/contact")
 def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
-    """Public contact form — emails BSeva inbox via Zoho SMTP (authenticated From address)."""
+    """Public contact form — emails BSeva inboxes via Zoho SMTP + visitor confirmation."""
     import re
 
     from app.mail.smtp_client import send_email, smtp_configured
@@ -236,8 +236,19 @@ def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
     cfg = load_smtp_config()
     contact_inbox = str(get_setting(db, "email_from_contact", "") or "").strip()
     support_inbox = str(get_setting(db, "email_from_support", "") or "").strip()
-    # Prefer contact@, then support@, then authenticated Zoho mailbox
-    inbox = contact_inbox or support_inbox or (cfg.from_email if cfg else "") or "admin@b-seva.com"
+    # Always include authenticated Zoho mailbox so mail is visible even if aliases lag
+    recipients: list[str] = []
+    for addr in (
+        contact_inbox,
+        support_inbox,
+        (cfg.from_email if cfg else "") or "",
+        "admin@b-seva.com",
+    ):
+        a = (addr or "").strip().lower()
+        if a and "@" in a and a not in recipients:
+            recipients.append(a)
+    if not recipients:
+        recipients = ["admin@b-seva.com"]
 
     content = admin_notification_email(
         title=f"Website contact: {subject}",
@@ -249,15 +260,23 @@ def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
             ("Subject", subject),
         ],
     )
-    # Do not override From with support@ — Zoho only accepts the authenticated mailbox.
-    result = send_email(
-        to=inbox,
-        subject=content.subject,
-        text_body=content.text,
-        html_body=content.html,
-        reply_to=email,
-    )
-    if not result.get("ok"):
+    # Do not override From — Zoho only accepts the authenticated mailbox.
+    # Send per recipient so one bad alias does not block the others.
+    delivered: list[str] = []
+    last_fail: dict | None = None
+    for inbox in recipients:
+        team_result = send_email(
+            to=inbox,
+            subject=content.subject,
+            text_body=content.text,
+            html_body=content.html,
+            reply_to=email,
+        )
+        if team_result.get("ok"):
+            delivered.append(inbox)
+        else:
+            last_fail = team_result
+    if not delivered:
         if not smtp_configured():
             return {
                 "ok": True,
@@ -269,8 +288,35 @@ def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
             "Unable to send your message right now. Please try again or email us directly.",
         )
 
+    # Confirmation to the visitor (best-effort; team mail already succeeded)
+    confirm_subject = f"We received your message — {subject}"
+    confirm_text = (
+        f"Namaste {name},\n\n"
+        f"Thank you for contacting BSeva. We have received your message and typically respond within 24 hours.\n\n"
+        f"Subject: {subject}\n"
+        f"Phone: {phone_display}\n\n"
+        f"Your message:\n{message}\n\n"
+        f"With devotion,\nBSeva Team\n"
+    )
+    confirm_html = (
+        f"<p>Namaste <strong>{name}</strong>,</p>"
+        f"<p>Thank you for contacting BSeva. We have received your message and typically respond within 24 hours.</p>"
+        f"<p><strong>Subject:</strong> {subject}<br/>"
+        f"<strong>Phone:</strong> {phone_display}</p>"
+        f"<p><strong>Your message:</strong><br/>{message.replace(chr(10), '<br/>')}</p>"
+        f"<p>With devotion,<br/>BSeva Team</p>"
+    )
+    visitor_result = send_email(
+        to=email,
+        subject=confirm_subject,
+        text_body=confirm_text,
+        html_body=confirm_html,
+    )
+
     return {
         "ok": True,
         "message": "Thank you. Your message has been sent. We will get back to you soon.",
         "phone": phone_e164,
+        "team_to": delivered,
+        "visitor_confirmation": bool(visitor_result.get("ok")),
     }

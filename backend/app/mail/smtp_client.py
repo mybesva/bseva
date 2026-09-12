@@ -85,21 +85,21 @@ def send_email(
                 "attempt": attempt,
             }
         except Exception as e:
-            last_error = type(e).__name__
+            last_error = f"{type(e).__name__}: {e}"
             logger.warning(
-                "EMAIL_ATTEMPT_FAILED to=%s subject=%s attempt=%s error_type=%s",
+                "EMAIL_ATTEMPT_FAILED to=%s subject=%s attempt=%s error=%s",
                 to_addr,
                 subject,
                 attempt,
                 last_error,
             )
             # Auth / permanent failures won't recover on retry
-            if last_error in ("SMTPAuthenticationError", "SMTPRecipientsRefused", "SMTPSenderRefused"):
+            if type(e).__name__ in ("SMTPAuthenticationError", "SMTPRecipientsRefused", "SMTPSenderRefused"):
                 break
             if attempt < MAX_ATTEMPTS:
                 time.sleep(RETRY_BACKOFF_SEC[min(attempt - 1, len(RETRY_BACKOFF_SEC) - 1)])
 
-    logger.error("EMAIL_FAILED to=%s subject=%s error_type=%s", to_addr, subject, last_error)
+    logger.error("EMAIL_FAILED to=%s subject=%s error=%s", to_addr, subject, last_error)
     return {
         "ok": False,
         "status": "failed",
