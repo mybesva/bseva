@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -874,3 +874,49 @@ def create_surge_rule(body: SurgeRuleIn, user=Depends(require_permission("manage
         )
     db.commit()
     return {"id": iid}
+
+
+@router.get("/ops/cron/booking-reminders")
+def cron_booking_reminders(request: Request, db: Session = Depends(get_db)):
+    """Automated every 10 minutes: notify for pujas within the next 24 hours."""
+    _require_cron_auth(request)
+    from app.jobs.booking_reminders import send_upcoming_booking_reminders
+
+    return {"ok": True, "job": "booking_reminders", **send_upcoming_booking_reminders(db, hours_ahead=24)}
+
+
+@router.get("/ops/cron/start-otp")
+def cron_start_otp(request: Request, db: Session = Depends(get_db)):
+    """Automated every 1 minute: issue start OTP ~15 minutes before puja."""
+    _require_cron_auth(request)
+    from app.jobs.booking_reminders import issue_start_otps_nearing_start
+
+    return {"ok": True, "job": "start_otp", **issue_start_otps_nearing_start(db)}
+
+
+@router.get("/ops/cron/booking-windows")
+def cron_booking_windows(request: Request, db: Session = Depends(get_db)):
+    """Runs both jobs (reminders + OTP). Prefer the split cron paths above."""
+    _require_cron_auth(request)
+    from app.jobs.booking_reminders import run_booking_window_jobs
+
+    return {"ok": True, **run_booking_window_jobs()}
+
+
+def _require_cron_auth(request: Request) -> None:
+    """Vercel Cron sends Authorization: Bearer $CRON_SECRET automatically when CRON_SECRET is set."""
+    import os
+
+    secret = (os.environ.get("CRON_SECRET") or os.environ.get("VERCEL_CRON_SECRET") or "").strip()
+    auth = (request.headers.get("authorization") or "").strip()
+    token = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+    if secret:
+        if token == secret:
+            return
+        raise HTTPException(401, "Unauthorized cron call")
+    env = (os.environ.get("ENVIRONMENT") or os.environ.get("VERCEL_ENV") or "").lower()
+    if env in ("production", "preview"):
+        raise HTTPException(
+            503,
+            "Set CRON_SECRET in Vercel env — Vercel Cron sends it as Bearer automatically (no manual calls)",
+        )

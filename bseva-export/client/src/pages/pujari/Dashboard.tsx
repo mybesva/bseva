@@ -369,6 +369,56 @@ function PujariDashboardContent() {
       </section>
 
       <div className="space-y-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="border-none shadow-sm">
+                  <CardContent className="p-5 space-y-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-8 w-28" />
+                  </CardContent>
+                </Card>
+              ))
+            : metricCards.map((m) => (
+                <Card key={m.title} className="border-none shadow-sm">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`p-2.5 rounded-lg ${m.bg}`}>
+                        <m.icon className={`w-5 h-5 ${m.color}`} />
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">{m.title}</p>
+                    <p className="text-2xl font-bold text-foreground">{m.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{m.hint}</p>
+                  </CardContent>
+                </Card>
+              ))}
+        </div>
+
+        <Card className="border-2 border-blue-200 bg-blue-50/40 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <PlayCircle className="text-blue-600" size={20} />
+              {t("priest.ongoingPuja")}
+              {!isLoading && ongoing.length > 0 ? (
+                <Badge className="bg-blue-100 text-blue-800 ml-1">{ongoing.length}</Badge>
+              ) : null}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {isLoading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : ongoing.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No puja in progress right now. Confirmed bookings appear under Ready to start when it is time to begin.
+              </p>
+            ) : (
+              ongoing.map((row) => <BookingListItem key={row.booking.id} row={row} />)
+            )}
+          </CardContent>
+        </Card>
+
         {(profileStatus === "profile_incomplete" || profileStatus === "ready_for_submission") &&
           !pujariProfile?.profile_submitted_at && (
           <Card className="border-primary/30 bg-orange-50">
@@ -395,22 +445,6 @@ function PujariDashboardContent() {
           </Card>
         )}
 
-        {!isLoading && ongoing.length > 0 && (
-          <Card className="border-2 border-blue-200 bg-blue-50/40 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-foreground flex items-center gap-2">
-                <PlayCircle className="text-blue-600" size={20} />
-                {t("priest.ongoingPuja")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {ongoing.map((row) => (
-                <BookingListItem key={row.booking.id} row={row} />
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
         {!isLoading && needsAction.filter((r) => r.booking.status === "confirmed").length > 0 && (
           <Card className="border border-blue-200 bg-blue-50/20">
             <CardHeader className="pb-2">
@@ -425,23 +459,6 @@ function PujariDashboardContent() {
             </CardContent>
           </Card>
         )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {metricCards.map((m) => (
-              <Card key={m.title} className="border-none shadow-sm">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`p-2.5 rounded-lg ${m.bg}`}>
-                      <m.icon className={`w-5 h-5 ${m.color}`} />
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-1">{m.title}</p>
-                  <p className="text-2xl font-bold text-foreground">{m.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{m.hint}</p>
-                </CardContent>
-              </Card>
-            ))}
-        </div>
 
         <WalletPanel variant="priest" />
 

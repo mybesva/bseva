@@ -104,7 +104,19 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
-  const [lastPing, setLastPing] = useState<{ latitude?: number; longitude?: number; recorded_at?: string } | null>(null);
+  const [lastPing, setLastPing] = useState<{
+    latitude?: number;
+    longitude?: number;
+    recorded_at?: string;
+    available?: boolean;
+    message?: string;
+  } | null>(null);
+  const [customerOtp, setCustomerOtp] = useState<{
+    available?: boolean;
+    code?: string | null;
+    message?: string | null;
+    window_minutes?: number;
+  } | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -122,6 +134,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         setLastPing(ping);
       } catch {
         setLastPing(null);
+      }
+      try {
+        const otp = await api<any>(`/bookings/${bookingId}/start-otp`);
+        setCustomerOtp(otp);
+      } catch {
+        setCustomerOtp(null);
       }
     } catch (e: any) {
       toast.error(e.message || "Could not load booking");
@@ -393,8 +411,28 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       </div>
 
       {viewerRole === "customer" && status === "confirmed" && (
+        <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+          <p className="text-sm font-medium text-foreground">Puja start OTP</p>
+          {customerOtp?.available && customerOtp.code ? (
+            <>
+              <p className="text-2xl font-bold tracking-widest text-primary">{customerOtp.code}</p>
+              <p className="text-xs text-muted-foreground">
+                Share this OTP with your pujari only when they are ready to start the puja.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {customerOtp?.message ||
+                `OTP appears here from ${customerOtp?.window_minutes ?? 15} minutes before the scheduled start.`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {viewerRole === "customer" && status === "confirmed" && (
         <p className="text-sm text-muted-foreground">
-          When the pujari starts the puja, you will receive an OTP. Share it with your pujari to begin.
+          When the pujari starts the puja, share the OTP shown above. Tracking of the pujari opens{" "}
+          {customerOtp?.window_minutes ?? 15} minutes before start.
         </p>
       )}
 
@@ -666,7 +704,13 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         </div>
       )}
 
-      {viewerRole === "customer" && lastPing && (
+      {viewerRole === "customer" && lastPing?.available === false && (
+        <p className="text-xs text-muted-foreground">
+          {lastPing.message || "Pujari tracking opens 15 minutes before start."}
+        </p>
+      )}
+
+      {viewerRole === "customer" && lastPing?.latitude != null && (
         <p className="text-xs text-muted-foreground">
           Pujari location: {lastPing.latitude}, {lastPing.longitude} (updated {lastPing.recorded_at})
         </p>

@@ -10,6 +10,16 @@
       "includeFiles": "backend/**"
     }
   },
+  "crons": [
+    {
+      "path": "/api/v1/ops/cron/booking-reminders",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/v1/ops/cron/start-otp",
+      "schedule": "* * * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }

@@ -18,7 +18,7 @@ _DEFAULTS: dict[str, Any] = {
     "referral_pujari_reward_paise": 10000,
     "referral_customer_active": True,
     "referral_pujari_active": True,
-    "puja_start_otp_before_minutes": 10,
+    "puja_start_otp_before_minutes": 15,
     "pujari_location_tracking_before_minutes": 15,
     "pujari_full_booking_details_before_hours": 24,
     "bseva_whatsapp_number": "919014654994",

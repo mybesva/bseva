@@ -80,10 +80,43 @@ function CustomerDashboardContent() {
     }
   };
 
-  const ongoingBookings = useMemo(
-    () => (bookings || []).filter((b) => b.status === "in_progress"),
-    [bookings]
-  );
+  const ongoingBookings = useMemo(() => {
+    const now = Date.now();
+    return (bookings || []).filter((b) => {
+      if (b.status === "in_progress") return true;
+      if (b.status !== "confirmed") return false;
+      if (!b.booking_date) return true;
+      const start = new Date(`${String(b.booking_date).slice(0, 10)}T${String(b.start_time || "00:00").slice(0, 5)}:00`);
+      const ms = start.getTime() - now;
+      // Show from 24h before through a bit after start
+      return ms <= 24 * 60 * 60 * 1000 && ms >= -2 * 60 * 60 * 1000;
+    });
+  }, [bookings]);
+  const [otpByBooking, setOtpByBooking] = useState<Record<string, { code?: string | null; available?: boolean; message?: string | null }>>({});
+
+  useEffect(() => {
+    const targets = (bookings || []).filter((b) => b.status === "confirmed" || b.status === "in_progress");
+    if (!targets.length) return;
+    let cancelled = false;
+    void Promise.all(
+      targets.map(async (b) => {
+        try {
+          const otp = await api<any>(`/bookings/${b.id}/start-otp`);
+          return [String(b.id), otp] as const;
+        } catch {
+          return [String(b.id), null] as const;
+        }
+      })
+    ).then((pairs) => {
+      if (cancelled) return;
+      const next: Record<string, any> = {};
+      for (const [id, otp] of pairs) if (otp) next[id] = otp;
+      setOtpByBooking(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookings]);
 
   return (
     <>
@@ -93,8 +126,7 @@ function CustomerDashboardContent() {
       </section>
       <PromoBannerCarousel />
       <div className="space-y-12">
-        {!isLoading && ongoingBookings.length > 0 && (
-          <div>
+        <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-h2 text-foreground flex items-center gap-2">
                 <PlayCircle className="text-blue-600" size={22} />
@@ -105,14 +137,23 @@ function CustomerDashboardContent() {
               </Link>
             </div>
             <div className="space-y-4">
-              {ongoingBookings.map((booking) => (
+              {!isLoading && ongoingBookings.length === 0 ? (
+                <Card className="border border-dashed">
+                  <CardContent className="p-6 text-sm text-muted-foreground">
+                    No ongoing or upcoming confirmed pujas right now.
+                  </CardContent>
+                </Card>
+              ) : null}
+              {ongoingBookings.map((booking) => {
+                const otp = otpByBooking[String(booking.id)];
+                return (
                 <Card key={booking.id} className="border-2 border-blue-200 bg-blue-50/40 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
-                          <Badge className={getStatusColor(booking.status)}>{booking.status.replace("_","")}</Badge>
+                          <Badge className={getStatusColor(booking.status)}>{booking.status.replace(/_/g, " ")}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -129,6 +170,18 @@ function CustomerDashboardContent() {
                             {booking.location_label || booking.mode}
                           </span>
                         </div>
+                        {booking.status === "confirmed" && (
+                          <div className="mt-3 rounded-md border border-blue-200 bg-white/70 px-3 py-2">
+                            <p className="text-xs font-medium text-foreground mb-1">Puja start OTP</p>
+                            {otp?.available && otp.code ? (
+                              <p className="text-xl font-bold tracking-widest text-primary">{otp.code}</p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                {otp?.message || "OTP appears 15 minutes before start. Share it with your pujari to begin."}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <Badge
                         variant="outline"
@@ -140,10 +193,10 @@ function CustomerDashboardContent() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <WalletPanel variant="customer" />

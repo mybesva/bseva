@@ -18,7 +18,7 @@ from app.domain import apply_wallet, hours_until, row_dict
 from app.platform_config import get_setting
 from app.rbac import require_admin, require_permission
 from app.schemas import BookingRejectIn, NoShowPenaltyIn
-from app.security import hash_password, verify_password
+from app.security import verify_password
 
 router = APIRouter(tags=["lifecycle"])
 
@@ -329,6 +329,8 @@ def mark_no_show_penalty(
 
 @router.post("/bookings/{booking_id}/start-otp/request")
 def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    from app.puja_start_otp import issue_start_puja_otp, otp_window_minutes, within_start_window
+
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
@@ -336,42 +338,63 @@ def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "adm
         raise HTTPException(403, "Not allowed")
     if b["status"] != "confirmed":
         raise HTTPException(400, "Booking must be confirmed to start")
-    mins = int(get_setting(db, "puja_start_otp_before_minutes", 10))
-    hrs = hours_until(b["booking_date"], b["start_time"])
-    if hrs * 60 > mins and get_setting(db, "environment", "development") == "x":
-        pass  # allow early in all envs for temp deploy; window check soft
-    # Soft window: allow if within 2 hours before or already past start
-    if hrs > 2:
-        raise HTTPException(400, f"OTP available from {mins} minutes before scheduled start (soft window: 2h)")
+    mins = otp_window_minutes(db)
+    if not within_start_window(db, b["booking_date"], b["start_time"]):
+        raise HTTPException(400, f"OTP is available only from {mins} minutes before the scheduled start")
+    svc = db.execute(
+        text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"),
+        {"id": str(b["service_id"])},
+    ).scalar()
+    booking = dict(b)
+    booking["service_name"] = svc or "Puja"
+    code = issue_start_puja_otp(db, booking, notify=True)
+    db.commit()
+    out = {"ok": True, "sent_to": "customer", "window_minutes": mins}
     from app.config import settings as app_settings
 
-    code = (app_settings.otp_dev_code or "123456").strip()
-    code_hash = hash_password(code)
-    expires = datetime.now(timezone.utc) + timedelta(minutes=30)
-    db.execute(
-        text(
-            """
-            INSERT INTO otp_codes (phone, email, purpose, code_hash, expires_at)
-            VALUES (:phone, :email, 'start_puja', :h, :exp)
-            """
-        ),
-        {
-            "phone": f"booking:{booking_id}",
-            "email": str(b["customer_id"]),
-            "h": code_hash,
-            "exp": expires,
-        },
-    )
-    db.execute(
-        text("UPDATE bookings SET otp_sent_at = NOW() WHERE id = CAST(:id AS uuid)"),
-        {"id": booking_id},
-    )
-    db.commit()
-    # Dev/temp: return code when not production
-    out = {"ok": True, "expires_at": expires.isoformat(), "sent_to": "customer"}
     if app_settings.environment != "production":
         out["dev_code"] = code
     return out
+
+
+@router.get("/bookings/{booking_id}/start-otp")
+def get_start_otp(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    """Customer (and pujari) can view start OTP only inside the pre-start window."""
+    from app.puja_start_otp import otp_window_minutes, within_start_window
+
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    is_customer = str(b["customer_id"]) == str(user["id"])
+    is_pujari = str(b.get("pujari_id") or "") == str(user["id"])
+    is_admin = user["role"] in ("admin", "super_admin")
+    if not (is_customer or is_pujari or is_admin):
+        raise HTTPException(403, "Not allowed")
+    mins = otp_window_minutes(db)
+    in_window = b["status"] == "confirmed" and within_start_window(db, b["booking_date"], b["start_time"])
+    code = None
+    try:
+        code = b.get("start_otp_code")
+    except Exception:
+        code = None
+    # Customers see the code; pujari enters what customer shares (don't reveal to pujari via this endpoint)
+    reveal = bool(code) and in_window and (is_customer or is_admin)
+    return {
+        "available": in_window and bool(code),
+        "window_minutes": mins,
+        "status": b["status"],
+        "otp_sent_at": b.get("otp_sent_at"),
+        "code": code if reveal else None,
+        "message": (
+            None
+            if reveal
+            else (
+                f"OTP appears here from {mins} minutes before start"
+                if b["status"] == "confirmed"
+                else "OTP not available for this booking status"
+            )
+        ),
+    }
 
 
 @router.post("/bookings/{booking_id}/start-otp/verify")
@@ -383,7 +406,6 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
         raise HTTPException(403, "Not allowed")
     if b["status"] != "confirmed":
         raise HTTPException(400, "Booking must be confirmed")
-    # Rate limit: max 10 attempts via recent OTPs
     row = db.execute(
         text(
             """
@@ -398,6 +420,13 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
     if not row or not verify_password(body.code, row["code_hash"]):
         raise HTTPException(400, "Invalid or expired OTP")
     db.execute(text("UPDATE otp_codes SET consumed = TRUE WHERE id = :id"), {"id": row["id"]})
+    try:
+        db.execute(
+            text("UPDATE bookings SET start_otp_code = NULL WHERE id = CAST(:id AS uuid)"),
+            {"id": booking_id},
+        )
+    except Exception:
+        pass
     set_booking_status(db, booking_id, "in_progress", actor_id=str(user["id"]))
     write_audit(db, str(user["id"]), "puja_started", "booking", booking_id)
     db.commit()
@@ -689,16 +718,15 @@ def submit_rating(booking_id: str, body: RatingIn, user=Depends(current_user), d
 
 @router.post("/bookings/{booking_id}/location")
 def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
+    from app.puja_start_otp import within_location_window
+
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
     if str(b["pujari_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
-    mins = int(get_setting(db, "pujari_location_tracking_before_minutes", 15))
-    hrs = hours_until(b["booking_date"], b["start_time"])
-    if b["status"] not in ("confirmed", "in_progress") or hrs > (mins / 60.0 + 0.01):
-        if b["status"] != "in_progress":
-            raise HTTPException(400, "Location tracking not active for this booking yet")
+    if not within_location_window(db, b["booking_date"], b["start_time"], str(b["status"])):
+        raise HTTPException(400, "Location tracking opens 15 minutes before the scheduled start")
     db.execute(
         text(
             """
@@ -714,13 +742,22 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
 
 @router.get("/bookings/{booking_id}/location")
 def get_location(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    from app.puja_start_otp import location_window_minutes, within_location_window
+
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
     allowed = user["role"] in ("admin", "super_admin") or str(user["id"]) in (str(b["customer_id"]), str(b["pujari_id"]))
     if not allowed:
         raise HTTPException(403, "Not allowed")
-    # 24h rule for customer viewing before window? Customer can see during active tracking
+    # Customers only see live tracking inside the 15-minute window (or while in progress)
+    if str(user["id"]) == str(b["customer_id"]) and user["role"] == "customer":
+        if not within_location_window(db, b["booking_date"], b["start_time"], str(b["status"])):
+            return {
+                "available": False,
+                "window_minutes": location_window_minutes(db),
+                "message": f"Pujari tracking appears from {location_window_minutes(db)} minutes before start",
+            }
     row = db.execute(
         text(
             """
@@ -730,7 +767,11 @@ def get_location(booking_id: str, user=Depends(current_user), db: Session = Depe
         ),
         {"b": booking_id},
     ).mappings().first()
-    return row_dict(row) if row else None
+    if not row:
+        return None
+    out = row_dict(row)
+    out["available"] = True
+    return out
 
 
 @router.get("/settlements")
@@ -858,7 +899,10 @@ def public_config(db: Session = Depends(get_db)):
         "virtual_puja_enabled": bool(get_setting(db, "virtual_puja_enabled", False)),
         "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919014654994")),
         "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 24)),
-        "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 10)),
+        "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 15)),
+        "pujari_location_tracking_before_minutes": int(
+            get_setting(db, "pujari_location_tracking_before_minutes", 15)
+        ),
         "muhurta_consultation_fee_paise": int(get_setting(db, "muhurta_consultation_fee_paise", 30000)),
         "registration_captcha_enabled": bool(get_setting(db, "registration_captcha_enabled", False)),
         "recaptcha_site_key": __import__("os").environ.get("VITE_RECAPTCHA_SITE_KEY")

@@ -20,7 +20,7 @@ const DEFAULTS: PublicConfig = {
   virtual_puja_enabled: false,
   bseva_whatsapp_number: "919014654994",
   pujari_full_booking_details_before_hours: 24,
-  puja_start_otp_before_minutes: 10,
+  puja_start_otp_before_minutes: 15,
   muhurta_consultation_fee_paise: 30000,
   email_from_contact: "contact@b-seva.com",
   email_from_support: "support@b-seva.com",

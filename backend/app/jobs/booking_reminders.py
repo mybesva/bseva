@@ -1,7 +1,7 @@
-"""24-hour booking reminder notifications for pujaris (req #99).
+"""Automated booking window jobs (Vercel Cron — no manual runs needed).
 
-Run periodically (cron / worker):
-  python -c "from app.jobs.booking_reminders import send_upcoming_booking_reminders; print(send_upcoming_booking_reminders())"
+- Every 10 minutes: 24h-ahead reminders (customer + pujari in-app)
+- Every 1 minute: issue start OTP inside the 15-minute pre-start window
 """
 from __future__ import annotations
 
@@ -22,7 +22,8 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
         rows = session.execute(
             text(
                 """
-                SELECT b.id, b.booking_number, b.pujari_id, b.booking_date, b.start_time, s.name AS service_name
+                SELECT b.id, b.booking_number, b.pujari_id, b.customer_id, b.booking_date, b.start_time,
+                       s.name AS service_name
                 FROM bookings b
                 JOIN services s ON s.id = b.service_id
                 WHERE b.status IN ('confirmed', 'pending_acceptance')
@@ -34,76 +35,88 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
             {"hrs": hours_ahead},
         ).mappings().all()
         for b in rows:
-            exists = session.execute(
-                text(
-                    """
-                    SELECT id FROM notifications
-                    WHERE user_id = CAST(:uid AS uuid)
-                      AND category = 'booking_reminder'
-                      AND body ILIKE :needle
-                      AND created_at > NOW() - INTERVAL '36 hours'
-                    LIMIT 1
-                    """
-                ),
-                {"uid": str(b["pujari_id"]), "needle": f"%{b['booking_number']}%"},
-            ).first()
-            if exists:
-                skipped += 1
-                continue
-            session.execute(
-                text(
-                    """
-                    INSERT INTO notifications (id, user_id, channel, title, body, category, is_read)
-                    VALUES (
-                      CAST(:id AS uuid), CAST(:uid AS uuid), 'in_app',
-                      :title, :body, 'booking_reminder', FALSE
-                    )
-                    """
-                ),
-                {
-                    "id": str(uuid4()),
-                    "uid": str(b["pujari_id"]),
-                    "title": "Upcoming booking reminder",
-                    "body": f"Reminder: {b['service_name']} ({b['booking_number']}) is within {hours_ahead} hours.",
-                },
-            )
-            admins = session.execute(
-                text(
-                    """
-                    SELECT id FROM users
-                    WHERE role = 'super_admin' AND COALESCE(blocked, FALSE) = FALSE
-                    LIMIT 10
-                    """
-                )
-            ).mappings().all()
-            for admin in admins:
-                session.execute(
+            # Pujari in-app reminder
+            if b.get("pujari_id"):
+                exists = session.execute(
                     text(
                         """
-                        INSERT INTO notifications (id, user_id, channel, title, body, category, is_read)
-                        VALUES (
-                          CAST(:id AS uuid), CAST(:uid AS uuid), 'in_app',
-                          :title, :body, 'ops', FALSE
-                        )
+                        SELECT id FROM notifications
+                        WHERE user_id = CAST(:uid AS uuid)
+                          AND category = 'booking_reminder'
+                          AND body ILIKE :needle
+                          AND created_at > NOW() - INTERVAL '36 hours'
+                        LIMIT 1
                         """
                     ),
-                    {
-                        "id": str(uuid4()),
-                        "uid": str(admin["id"]),
-                        "title": "Pujari booking reminder sent",
-                        "body": f"24h reminder queued for {b['booking_number']}.",
-                    },
-                )
-            created += 1
-            # Customer email reminder (best-effort; does not affect in-app notifications)
+                    {"uid": str(b["pujari_id"]), "needle": f"%{b['booking_number']}%"},
+                ).first()
+                if exists:
+                    skipped += 1
+                else:
+                    session.execute(
+                        text(
+                            """
+                            INSERT INTO notifications (id, user_id, channel, title, body, category, is_read)
+                            VALUES (
+                              CAST(:id AS uuid), CAST(:uid AS uuid), 'in_app',
+                              :title, :body, 'booking_reminder', FALSE
+                            )
+                            """
+                        ),
+                        {
+                            "id": str(uuid4()),
+                            "uid": str(b["pujari_id"]),
+                            "title": "Upcoming booking reminder",
+                            "body": f"Reminder: {b['service_name']} ({b['booking_number']}) is within {hours_ahead} hours.",
+                        },
+                    )
+                    created += 1
+
+            # Customer in-app reminder (24h)
+            if b.get("customer_id"):
+                c_exists = session.execute(
+                    text(
+                        """
+                        SELECT id FROM notifications
+                        WHERE user_id = CAST(:uid AS uuid)
+                          AND category = 'booking_reminder'
+                          AND body ILIKE :needle
+                          AND created_at > NOW() - INTERVAL '36 hours'
+                        LIMIT 1
+                        """
+                    ),
+                    {"uid": str(b["customer_id"]), "needle": f"%{b['booking_number']}%"},
+                ).first()
+                if not c_exists:
+                    session.execute(
+                        text(
+                            """
+                            INSERT INTO notifications (id, user_id, channel, title, body, category, is_read, link)
+                            VALUES (
+                              CAST(:id AS uuid), CAST(:uid AS uuid), 'in_app',
+                              :title, :body, 'booking_reminder', FALSE, '/customer/bookings'
+                            )
+                            """
+                        ),
+                        {
+                            "id": str(uuid4()),
+                            "uid": str(b["customer_id"]),
+                            "title": "Puja tomorrow / coming soon",
+                            "body": (
+                                f"Reminder: {b['service_name']} ({b['booking_number']}) starts within "
+                                f"{hours_ahead} hours. Your start OTP will appear in the app "
+                                f"15 minutes before the puja."
+                            ),
+                        },
+                    )
+                    created += 1
+
+            # Customer email reminder (best-effort)
             try:
                 from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context
                 from app.mail.senders import send_booking_reminder_email
 
-                cust_id = session.execute(
-                    text("SELECT customer_id FROM bookings WHERE id = CAST(:id AS uuid)"),
-                    {"id": str(b["id"])},
-                ).scalar()
+                cust_id = b.get("customer_id")
                 if cust_id:
                     ctx = load_customer_email_context(session, str(cust_id))
                     brow = session.execute(
@@ -127,5 +140,56 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
             session.close()
 
 
+def issue_start_otps_nearing_start(db: Session | None = None) -> dict:
+    """Auto-issue start OTP for confirmed bookings inside the configured pre-start window."""
+    from app.puja_start_otp import issue_start_puja_otp, otp_window_minutes, within_start_window
+
+    own = db is None
+    session = db or SessionLocal()
+    issued = 0
+    skipped = 0
+    try:
+        mins = otp_window_minutes(session)
+        # Look slightly beyond window so cron cadence doesn't miss
+        look_hours = max(mins / 60.0, 0.25) + (10 / 60.0)
+        rows = session.execute(
+            text(
+                """
+                SELECT b.*, s.name AS service_name
+                FROM bookings b
+                JOIN services s ON s.id = b.service_id
+                WHERE b.status = 'confirmed'
+                  AND b.customer_id IS NOT NULL
+                  AND (b.booking_date + COALESCE(b.start_time, TIME '00:00'))
+                      BETWEEN NOW() - INTERVAL '30 minutes'
+                          AND NOW() + make_interval(secs => :secs)
+                """
+            ),
+            {"secs": int(look_hours * 3600)},
+        ).mappings().all()
+        for b in rows:
+            if not within_start_window(session, b["booking_date"], b["start_time"]):
+                skipped += 1
+                continue
+            # Already issued and still active
+            if b.get("start_otp_code") and b.get("otp_sent_at"):
+                skipped += 1
+                continue
+            issue_start_puja_otp(session, dict(b), notify=True)
+            issued += 1
+        session.commit()
+        return {"issued": issued, "skipped": skipped, "window_minutes": mins}
+    finally:
+        if own:
+            session.close()
+
+
+def run_booking_window_jobs() -> dict:
+    return {
+        "reminders_24h": send_upcoming_booking_reminders(hours_ahead=24),
+        "start_otp": issue_start_otps_nearing_start(),
+    }
+
+
 if __name__ == "__main__":
-    print(send_upcoming_booking_reminders())
+    print(run_booking_window_jobs())
