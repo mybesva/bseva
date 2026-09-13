@@ -131,9 +131,16 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
         return object_path
 
     # Local fallback for uvicorn/dev without Supabase Storage
-    dest = DOC_ROOT / object_path
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(data)
+    try:
+        dest = DOC_ROOT / object_path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+    except OSError as exc:
+        raise HTTPException(
+            503,
+            "Object storage is not writable. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY "
+            f"(eyJ… JWT), and STORAGE_BUCKET. ({exc})",
+        ) from exc
     return object_path
 
 

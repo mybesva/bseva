@@ -26,6 +26,27 @@ export function setToken(token: string | null) {
   else localStorage.setItem(TOKEN_KEY, token);
 }
 
+function formatFetchError(data: unknown, res: Response, fallback: string): string {
+  const detail = (data as { detail?: unknown; message?: unknown } | null)?.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d: { msg?: string; message?: string }) => d?.msg || d?.message)
+      .filter(Boolean);
+    if (msgs.length) return msgs.join(", ");
+  }
+  if (detail && typeof detail === "object") {
+    const nested = (detail as { message?: string; msg?: string }).message
+      || (detail as { message?: string; msg?: string }).msg;
+    if (nested) return nested;
+  }
+  const top = (data as { message?: unknown } | null)?.message;
+  if (typeof top === "string" && top.trim()) return top;
+  const statusBit = res.status ? ` (${res.status})` : "";
+  if (res.statusText?.trim()) return `${res.statusText}${statusBit}`;
+  return `${fallback}${statusBit}`;
+}
+
 export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers = new Headers(opts.headers);
   if (!headers.has("Content-Type") && opts.body) headers.set("Content-Type", "application/json");
@@ -34,14 +55,7 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(`${apiBase()}/api/v1${path}`, { ...opts, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = (data as { detail?: unknown }).detail;
-    const message =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d: { msg?: string }) => d.msg).join(", ")
-          : res.statusText;
-    throw new Error(message || "Request failed");
+    throw new Error(formatFetchError(data, res, "Request failed"));
   }
   return data as T;
 }
@@ -104,14 +118,7 @@ export async function uploadPujariAsset(kind: "photo" | "signature", file: File)
   const res = await fetch(`${apiBase()}/api/v1/pujari/profile/${kind}`, { method: "POST", headers, body });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = (data as { detail?: unknown }).detail;
-    const message =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join(", ")
-          : "Upload failed";
-    throw new Error(message);
+    throw new Error(formatFetchError(data, res, "Upload failed"));
   }
   return data;
 }

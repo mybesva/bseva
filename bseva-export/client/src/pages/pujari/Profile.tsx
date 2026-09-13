@@ -359,8 +359,8 @@ function ProfileForm() {
 
       <section>
         <h2 className="text-xl mb-2">{t("pujari.signature")}</h2>
-        {signUrl && <img src={signUrl} alt="" className="h-20 border rounded mb-2 bg-white" />}
         <SignaturePad
+          existingUrl={signUrl}
           onSave={async (file) => {
             try {
               await uploadPujariAsset("signature", file);
