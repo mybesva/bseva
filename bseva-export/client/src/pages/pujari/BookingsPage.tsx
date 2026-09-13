@@ -27,7 +27,6 @@ import {
   displayStatus,
   formatPaise,
   isExpiredBooking,
-  isPastBooking,
   isUpcomingBooking,
   mapApiBooking,
   statusBadgeClass,
@@ -37,7 +36,7 @@ import { Calendar as CalendarIcon, Clock, MapPin, Sparkles, User } from "lucide-
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-type Segment = "all" | "upcoming" | "completed";
+type Segment = "all" | "upcoming" | "completed" | "cancelled" | "expired";
 type StatusFilter =
   | "all"
   | "pending"
@@ -52,7 +51,9 @@ function parseQuery(search: string) {
   const q = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   const segment = (q.get("tab") || q.get("segment") || "all") as Segment;
   return {
-    segment: (["all", "upcoming", "completed"].includes(segment) ? segment : "all") as Segment,
+    segment: (
+      ["all", "upcoming", "completed", "cancelled", "expired"].includes(segment) ? segment : "all"
+    ) as Segment,
     status: (q.get("status") || "all") as StatusFilter,
     q: q.get("q") || "",
     from: q.get("from") || "",
@@ -76,9 +77,11 @@ export default function PujariBookingsPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await apiBookings(1, 200);
+      // API allows limit 1–100 only; higher values return 422 and empty the list
+      const res = await apiBookings(1, 100);
       setBookings(res.items || []);
     } catch (e: any) {
+      setBookings([]);
       toast.error(e.message || "Could not load bookings");
     } finally {
       setLoading(false);
@@ -106,7 +109,9 @@ export default function PujariBookingsPage() {
     return rows
       .filter((r) => {
         if (segment === "upcoming") return isUpcomingBooking(r, now);
-        if (segment === "completed") return isPastBooking(r, now);
+        if (segment === "completed") return r.booking.status === "completed";
+        if (segment === "cancelled") return ["cancelled", "refunded"].includes(r.booking.status);
+        if (segment === "expired") return isExpiredBooking(r, now);
         return true;
       })
       .filter((r) => {
@@ -143,7 +148,7 @@ export default function PujariBookingsPage() {
       .sort((a, b) => {
         const ta = new Date(a.booking.bookingDate || 0).getTime();
         const tb = new Date(b.booking.bookingDate || 0).getTime();
-        return segment === "completed" ? tb - ta : ta - tb;
+        return segment === "upcoming" ? ta - tb : tb - ta;
       });
   }, [rows, segment, status, q, from, to]);
 
@@ -166,7 +171,7 @@ export default function PujariBookingsPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">Bookings</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Filter by status, date, or search. Expired confirmed pujas appear under Completed.
+            Filter by status, date, or search. Cancelled and expired are separate from Completed.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -188,7 +193,9 @@ export default function PujariBookingsPage() {
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="completed">Completed / past</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -228,8 +235,15 @@ export default function PujariBookingsPage() {
           </div>
 
           {loading && <Skeleton className="h-24 w-full" />}
-          {!loading && filtered.length === 0 && (
-            <p className="text-sm text-muted-foreground py-8 text-center">No bookings match your filters.</p>
+          {!loading && rows.length === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No bookings assigned to you yet.
+            </p>
+          )}
+          {!loading && rows.length > 0 && filtered.length === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No bookings match your filters. Try Clear filters.
+            </p>
           )}
           <div className="space-y-3">
             {filtered.map((row) => {
@@ -332,7 +346,11 @@ export default function PujariBookingsPage() {
               }}
               onUpdated={async (info) => {
                 await load();
-                if (info?.decision === "accepted" || info?.decision === "rejected") {
+                if (
+                  info?.decision === "accepted" ||
+                  info?.decision === "rejected" ||
+                  info?.decision === "cancelled"
+                ) {
                   setSelected(null);
                   setDetailIntent(null);
                 }

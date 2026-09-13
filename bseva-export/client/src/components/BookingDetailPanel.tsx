@@ -129,10 +129,14 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     try {
       const row = await api<BookingDetail>(`/bookings/${bookingId}`);
       setBooking(row);
-      try {
-        const ping = await api<any>(`/bookings/${bookingId}/location`);
-        setLastPing(ping);
-      } catch {
+      if (viewerRole === "customer") {
+        try {
+          const ping = await api<any>(`/bookings/${bookingId}/location`);
+          setLastPing(ping);
+        } catch {
+          setLastPing(null);
+        }
+      } else {
         setLastPing(null);
       }
       try {
@@ -544,17 +548,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 {cancelPreview.policy})
               </p>
               {viewerRole === "pujari" ? (
-                <>
-                  <p>
-                    Cancellation charge for you:{" "}
-                    <strong>
-                      {rupees(Number(cancelPreview.fee_paise || 0))} ({cancelPreview.fee_percent}%)
-                    </strong>
-                  </p>
-                  <p className="text-muted-foreground">
-                    Customer refund: {rupees(Number(cancelPreview.refund_paise || 0))} (full paid amount)
-                  </p>
-                </>
+                <p>
+                  Cancellation charge for you:{" "}
+                  <strong>
+                    {rupees(Number(cancelPreview.fee_paise || 0))} ({cancelPreview.fee_percent}%)
+                  </strong>
+                </p>
               ) : (
                 <>
                   <p>
@@ -594,20 +593,27 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 busy ||
                 cancelReason.trim().length < 5
               }
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 if (cancelReason.trim().length < 5) {
                   toast.error("Cancellation reason must be at least 5 characters");
                   return;
                 }
                 void run(
-                  () =>
-                    api(
+                  async () => {
+                    await api(
                       `/bookings/${bookingId}/cancel${
                         cancelReason.trim() ? `?reason=${encodeURIComponent(cancelReason.trim())}` : ""
                       }`,
                       { method: "POST" }
-                    ).then(() => undefined),
-                  "Booking cancelled",
+                    );
+                    setCancelOpen(false);
+                    setCancelReason("");
+                    setCancelPreview(null);
+                  },
+                  viewerRole === "pujari"
+                    ? "Booking cancelled. Charges may apply per policy."
+                    : "Booking cancelled",
                   "cancelled"
                 );
               }}
@@ -666,41 +672,6 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               Start puja
             </Button>
           </div>
-        </div>
-      )}
-
-      {viewerRole === "pujari" && (status === "confirmed" || status === "in_progress") && (
-        <div className="space-y-2 rounded-lg border border-border p-3">
-          <p className="text-sm font-medium">Live location (pre-puja window)</p>
-          {lastPing ? (
-            <p className="text-xs text-muted-foreground">
-              Last ping: {lastPing.latitude}, {lastPing.longitude} · {lastPing.recorded_at}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">No location shared yet.</p>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy || !navigator.geolocation}
-            onClick={() =>
-              run(async () => {
-                const coords = await new Promise<GeolocationCoordinates>((resolve, reject) => {
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => resolve(pos.coords),
-                    (err) => reject(err),
-                    { enableHighAccuracy: true, timeout: 15000 }
-                  );
-                });
-                await api(`/bookings/${bookingId}/location`, {
-                  method: "POST",
-                  body: JSON.stringify({ latitude: coords.latitude, longitude: coords.longitude }),
-                });
-              }, "Location shared")
-            }
-          >
-            Share my location
-          </Button>
         </div>
       )}
 

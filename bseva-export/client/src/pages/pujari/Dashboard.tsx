@@ -18,7 +18,6 @@ import {
   displayStatus,
   formatPaise,
   isExpiredBooking,
-  isPastBooking,
   isUpcomingBooking,
   mapApiBooking,
   statusBadgeClass,
@@ -34,7 +33,6 @@ import {
   CheckCircle2,
   Hourglass,
   TrendingUp,
-  History,
   PlayCircle,
   AlertCircle,
 } from "lucide-react";
@@ -57,7 +55,7 @@ function PujariDashboardContent() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [detailIntent, setDetailIntent] = useState<"accept" | "reject" | null>(null);
-  const [listTab, setListTab] = useState("upcoming");
+  const [listTab, setListTab] = useState("completed");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujariProfile, setPujariProfile] = useState<any>(null);
@@ -86,7 +84,6 @@ function PujariDashboardContent() {
 
   const stats = useMemo(() => {
     const completed = rows.filter((r) => r.booking.status === "completed");
-    const past = rows.filter((r) => isPastBooking(r, now));
     const upcoming = rows.filter((r) => isUpcomingBooking(r, now));
     const pending = rows.filter(
       (r) =>
@@ -116,7 +113,7 @@ function PujariDashboardContent() {
       monthEarnings,
       completedEarnings,
       upcomingCount: upcoming.length,
-      completedCount: past.length,
+      completedCount: completed.length,
       pendingCount: pending.length,
       totalBookings: rows.length,
     };
@@ -161,9 +158,29 @@ function PujariDashboardContent() {
       );
   }, [rows]);
 
-  const past = useMemo(() => {
+  const completedOnly = useMemo(() => {
     return rows
-      .filter((b) => isPastBooking(b, now))
+      .filter((b) => b.booking.status === "completed")
+      .sort(
+        (a, b) =>
+          new Date(b.booking.bookingDate || 0).getTime() -
+          new Date(a.booking.bookingDate || 0).getTime()
+      );
+  }, [rows]);
+
+  const cancelledOnly = useMemo(() => {
+    return rows
+      .filter((b) => ["cancelled", "refunded"].includes(b.booking.status))
+      .sort(
+        (a, b) =>
+          new Date(b.booking.bookingDate || 0).getTime() -
+          new Date(a.booking.bookingDate || 0).getTime()
+      );
+  }, [rows]);
+
+  const expiredOnly = useMemo(() => {
+    return rows
+      .filter((b) => isExpiredBooking(b, now))
       .sort(
         (a, b) =>
           new Date(b.booking.bookingDate || 0).getTime() -
@@ -301,8 +318,9 @@ function PujariDashboardContent() {
     );
   };
 
-  const upcomingPreview = upcoming.slice(0, DASHBOARD_LIST_LIMIT);
-  const pastPreview = past.slice(0, DASHBOARD_LIST_LIMIT);
+  const completedPreview = completedOnly.slice(0, DASHBOARD_LIST_LIMIT);
+  const cancelledPreview = cancelledOnly.slice(0, DASHBOARD_LIST_LIMIT);
+  const expiredPreview = expiredOnly.slice(0, DASHBOARD_LIST_LIMIT);
   const profileStatus = pujariProfile?.profile_status || "profile_incomplete";
 
   return (
@@ -464,62 +482,86 @@ function PujariDashboardContent() {
               </CardHeader>
               <CardContent>
                 <Tabs value={listTab} onValueChange={setListTab}>
-                  <TabsList className="bg-secondary/30 mb-4">
-                    <TabsTrigger value="upcoming" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
-                      <Hourglass size={14} /> Upcoming ({upcoming.length})
+                  <TabsList className="bg-secondary/30 mb-4 h-auto flex flex-wrap justify-start gap-1">
+                    <TabsTrigger value="completed" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                      <CheckCircle2 size={14} /> Completed ({completedOnly.length})
                     </TabsTrigger>
-                    <TabsTrigger value="past" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
-                      <History size={14} /> Completed ({past.length})
+                    <TabsTrigger value="cancelled" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                      Cancelled ({cancelledOnly.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="expired" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                      Expired ({expiredOnly.length})
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="upcoming" className="space-y-3 mt-0">
+                  <TabsContent value="completed" className="space-y-3 mt-0">
                     {isLoading && <Skeleton className="h-24 w-full" />}
-                    {!isLoading && upcoming.length === 0 && (
+                    {!isLoading && completedOnly.length === 0 && (
                       <p className="text-sm text-muted-foreground py-6 text-center">
-                        No upcoming bookings. New customer bookings will appear here.
+                        No completed bookings yet.
                       </p>
                     )}
-                    {upcomingPreview.map((row) => (
+                    {completedPreview.map((row) => (
                       <BookingListItem key={row.booking.id} row={row} />
                     ))}
-                    {upcoming.length > DASHBOARD_LIST_LIMIT && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setLocation("/pujari/bookings?tab=upcoming")}
-                      >
-                        More ({upcoming.length - DASHBOARD_LIST_LIMIT})
-                      </Button>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="past" className="space-y-3 mt-0">
-                    {isLoading && <Skeleton className="h-24 w-full" />}
-                    {!isLoading && past.length === 0 && (
-                      <p className="text-sm text-muted-foreground py-6 text-center">
-                        No completed or expired bookings yet.
-                      </p>
-                    )}
-                    {pastPreview.map((row) => (
-                      <BookingListItem key={row.booking.id} row={row} />
-                    ))}
-                    {past.length > DASHBOARD_LIST_LIMIT && (
+                    {completedOnly.length > DASHBOARD_LIST_LIMIT && (
                       <Button
                         variant="outline"
                         className="w-full"
                         onClick={() => setLocation("/pujari/bookings?tab=completed")}
                       >
-                        More ({past.length - DASHBOARD_LIST_LIMIT})
+                        More ({completedOnly.length - DASHBOARD_LIST_LIMIT})
                       </Button>
                     )}
-                    {past.length > 0 && (
+                    {completedOnly.length > 0 && (
                       <div className="pt-3 border-t border-border flex justify-between text-sm">
                         <span className="text-muted-foreground">Completed Dakshina</span>
                         <span className="font-semibold text-foreground">
                           {formatPaise(stats.completedEarnings)}
                         </span>
                       </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="cancelled" className="space-y-3 mt-0">
+                    {isLoading && <Skeleton className="h-24 w-full" />}
+                    {!isLoading && cancelledOnly.length === 0 && (
+                      <p className="text-sm text-muted-foreground py-6 text-center">
+                        No cancelled bookings.
+                      </p>
+                    )}
+                    {cancelledPreview.map((row) => (
+                      <BookingListItem key={row.booking.id} row={row} />
+                    ))}
+                    {cancelledOnly.length > DASHBOARD_LIST_LIMIT && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setLocation("/pujari/bookings?tab=cancelled")}
+                      >
+                        More ({cancelledOnly.length - DASHBOARD_LIST_LIMIT})
+                      </Button>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="expired" className="space-y-3 mt-0">
+                    {isLoading && <Skeleton className="h-24 w-full" />}
+                    {!isLoading && expiredOnly.length === 0 && (
+                      <p className="text-sm text-muted-foreground py-6 text-center">
+                        No expired bookings.
+                      </p>
+                    )}
+                    {expiredPreview.map((row) => (
+                      <BookingListItem key={row.booking.id} row={row} />
+                    ))}
+                    {expiredOnly.length > DASHBOARD_LIST_LIMIT && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setLocation("/pujari/bookings?tab=expired")}
+                      >
+                        More ({expiredOnly.length - DASHBOARD_LIST_LIMIT})
+                      </Button>
                     )}
                   </TabsContent>
                 </Tabs>
@@ -531,7 +573,8 @@ function PujariDashboardContent() {
                 <div className="font-semibold text-foreground">Dakshina & settlements</div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Accept pending bookings, start with customer OTP, then mark complete when finished so
-                  settlements stay accurate. Past-dated unfinished bookings move to Completed as expired.
+                  settlements stay accurate. Past-dated unfinished bookings appear under Expired; cancelled
+                  bookings have their own tab.
                 </p>
               </CardContent>
             </Card>
@@ -579,7 +622,11 @@ function PujariDashboardContent() {
               }}
               onUpdated={async (info) => {
                 await loadBookings();
-                if (info?.decision === "accepted" || info?.decision === "rejected") {
+                if (
+                  info?.decision === "accepted" ||
+                  info?.decision === "rejected" ||
+                  info?.decision === "cancelled"
+                ) {
                   setSelectedBooking(null);
                   setDetailIntent(null);
                 }
