@@ -46,15 +46,27 @@ export default function PujariServicesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function load() {
-    const out = await api<OffersPayload>("/pujari/service-offers");
-    setData(out);
-    setSelected(new Set(out.services.filter((s) => s.selected).map((s) => s.id)));
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const out = await api<OffersPayload>("/pujari/service-offers");
+      setData(out);
+      setSelected(new Set(out.services.filter((s) => s.selected).map((s) => s.id)));
+    } catch (e: any) {
+      const msg = e?.message || "Could not load services";
+      setLoadError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    void load().catch((e) => toast.error(e.message || "Could not load services"));
+    void load();
   }, []);
 
   const filtered = useMemo(() => {
@@ -97,6 +109,32 @@ export default function PujariServicesPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (loading && !data) {
+    return (
+      <PujariPortal>
+        <p className="text-muted-foreground">Loading services…</p>
+      </PujariPortal>
+    );
+  }
+
+  if (loadError && !data) {
+    return (
+      <PujariPortal>
+        <Card className="max-w-lg border-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-xl">Could not load services</CardTitle>
+            <CardDescription>{loadError}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" onClick={() => void load()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </PujariPortal>
+    );
   }
 
   if (!data) {

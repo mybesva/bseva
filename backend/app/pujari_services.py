@@ -2,12 +2,55 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.platform_config import get_setting
+
+logger = logging.getLogger(__name__)
+
+_OFFERS_TABLE_DDL = """
+CREATE TABLE IF NOT EXISTS pujari_service_offers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pujari_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected', 'pending_removal')),
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by UUID REFERENCES users(id),
+  UNIQUE (pujari_id, service_id)
+)
+"""
+
+
+def ensure_offers_table(db: Session) -> None:
+    """Create pujari_service_offers if missing (prod does not auto-migrate on cold start)."""
+    try:
+        db.execute(text("SELECT 1 FROM pujari_service_offers LIMIT 1"))
+        return
+    except Exception:
+        db.rollback()
+    try:
+        db.execute(text(_OFFERS_TABLE_DDL))
+        db.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS idx_pujari_service_offers_pujari ON pujari_service_offers (pujari_id)"
+            )
+        )
+        db.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS idx_pujari_service_offers_status ON pujari_service_offers (status)"
+            )
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to ensure pujari_service_offers table")
+        raise HTTPException(503, "Services catalog is not ready. Please try again in a moment.")
 
 
 def dakshina_paise_for_service(db: Session, row: dict) -> int:
@@ -78,6 +121,7 @@ def sync_specializations_from_approved(db: Session, pujari_id: str) -> None:
 
 
 def get_offers_payload(db: Session, pujari_id: str) -> dict:
+    ensure_offers_table(db)
     services = list_catalog_services_for_offers(db)
     offer_rows = db.execute(
         text(
@@ -131,6 +175,7 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
 
 
 def submit_service_selection(db: Session, pujari_id: str, service_ids: list[str]) -> dict:
+    ensure_offers_table(db)
     catalog = {str(s["id"]) for s in list_catalog_services_for_offers(db)}
     desired = []
     for raw in service_ids or []:
@@ -212,6 +257,7 @@ def submit_service_selection(db: Session, pujari_id: str, service_ids: list[str]
 
 def apply_pending_offers(db: Session, pujari_id: str, admin_id: str) -> dict:
     """Admin: approve pending adds and removals."""
+    ensure_offers_table(db)
     db.execute(
         text(
             """
@@ -238,6 +284,7 @@ def apply_pending_offers(db: Session, pujari_id: str, admin_id: str) -> dict:
 
 def reject_pending_offers(db: Session, pujari_id: str, admin_id: str) -> dict:
     """Admin: reject pending adds; cancel pending removals (keep approved)."""
+    ensure_offers_table(db)
     db.execute(
         text(
             """
