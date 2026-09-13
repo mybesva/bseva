@@ -49,10 +49,10 @@ def _supabase_auth_headers(extra: dict | None = None) -> dict[str, str]:
     """
     Build Supabase Storage auth headers.
 
-    Legacy service_role keys are JWTs (`eyJ…`) and must be sent as Bearer.
-    Newer `sb_secret_*` / `sb_publishable_*` keys are NOT JWTs — sending them as
-    `Authorization: Bearer …` makes GoTrue/Storage return 403 Invalid Compact JWS.
-    For those keys, send `apikey` only (and omit Bearer).
+    Storage always requires both `apikey` and `Authorization`.
+    supabase-js copies the project key into Authorization as Bearer when there is
+    no user JWT. Matching apikey === Bearer value is required for opaque
+    `sb_secret_*` / `sb_publishable_*` keys (they are not JWTs).
     """
     key = (settings.supabase_service_role_key or "").strip()
     if not key or key.lower() in _PLACEHOLDER_KEYS:
@@ -60,15 +60,17 @@ def _supabase_auth_headers(extra: dict | None = None) -> dict[str, str]:
             503,
             "Object storage is not configured. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and STORAGE_BUCKET.",
         )
-    headers: dict[str, str] = {"apikey": key}
-    if key.startswith("eyJ"):
-        headers["Authorization"] = f"Bearer {key}"
-    elif key.startswith("sb_secret_") or key.startswith("sb_publishable_"):
-        # New Supabase API keys — apikey header only; Bearer would be Invalid Compact JWS
-        pass
-    else:
-        # Unknown format: try Bearer for backward compatibility with custom gateways
-        headers["Authorization"] = f"Bearer {key}"
+    if key.startswith("sb_publishable_"):
+        raise HTTPException(
+            503,
+            "SUPABASE_SERVICE_ROLE_KEY is a publishable key. Use the service_role JWT (eyJ…) or sb_secret_… key for uploads.",
+        )
+    # Always send Authorization — Storage rejects requests without it
+    # ("headers must have required property 'authorization'").
+    headers: dict[str, str] = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+    }
     if extra:
         headers.update(extra)
     return headers
@@ -94,7 +96,21 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
                 # retry as PUT for some Storage API versions
                 res = client.put(url, content=data, headers=headers)
             if res.status_code not in (200, 201):
-                raise HTTPException(502, f"Storage upload failed: {res.text[:200]}")
+                detail = (res.text or "").strip()
+                # Surface Storage JSON errors cleanly for the UI
+                try:
+                    import json as _json
+
+                    payload = _json.loads(detail)
+                    detail = (
+                        payload.get("message")
+                        or payload.get("error")
+                        or payload.get("msg")
+                        or detail
+                    )
+                except Exception:
+                    pass
+                raise HTTPException(502, f"Storage upload failed: {str(detail)[:240]}")
         return object_path
 
     # Local fallback for uvicorn/dev without Supabase Storage
