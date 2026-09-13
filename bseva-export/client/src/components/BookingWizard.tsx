@@ -153,6 +153,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [serviceMode, setServiceMode] = useState<ServiceMode>("physical");
   const [calendarType, setCalendarType] = useState<CalendarType>("north");
   const [bookingDate, setBookingDate] = useState<Date | undefined>();
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [bookingTime, setBookingTime] = useState("10:00");
   const [locationText, setLocationText] = useState("");
   const [city, setCity] = useState("");
@@ -175,6 +176,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [recurringCount, setRecurringCount] = useState(4);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [extraDate, setExtraDate] = useState<Date | undefined>();
+  const [extraDatePickerOpen, setExtraDatePickerOpen] = useState(false);
   const { config: publicConfig } = usePublicConfig();
   const settings = {
     virtualPujaEnabled: publicConfig.virtual_puja_enabled ? "true" : "false",
@@ -674,7 +676,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
           <div className="space-y-2">
             <Label>Select Date *</Label>
-            <Popover>
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-start", !bookingDate && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -685,7 +687,10 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 <Calendar
                   mode="single"
                   selected={bookingDate}
-                  onSelect={setBookingDate}
+                  onSelect={(date) => {
+                    setBookingDate(date);
+                    if (date) setDatePickerOpen(false);
+                  }}
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   initialFocus
                 />
@@ -815,7 +820,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             <div className="space-y-2">
               <Label>{t("booking.recurring.addDates")}</Label>
               <div className="flex flex-wrap gap-2 items-end">
-                <Popover>
+                <Popover open={extraDatePickerOpen} onOpenChange={setExtraDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="outline">
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -826,7 +831,10 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     <Calendar
                       mode="single"
                       selected={extraDate}
-                      onSelect={setExtraDate}
+                      onSelect={(date) => {
+                        setExtraDate(date);
+                        if (date) setExtraDatePickerOpen(false);
+                      }}
                       disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                       initialFocus
                     />
@@ -965,7 +973,58 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-foreground">{t("booking.payment")}</h3>
 
-          <AddonOptionsCard />
+          <Card>
+            <CardContent className="p-6 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Service ({tierDetails[tier].name})</span>
+                <span>₹{(bill.basePrice / 100).toLocaleString("en-IN")}</span>
+              </div>
+              {(includeSamagri || Number(bill.samagri || 0) > 0) && (
+                <div className="flex justify-between">
+                  <span>Samagri</span>
+                  <span>
+                    {Number(bill.samagri || samagriPrice || 0) > 0
+                      ? `₹${(Number(bill.samagri || samagriPrice) / 100).toLocaleString("en-IN")}`
+                      : "As priced"}
+                  </span>
+                </div>
+              )}
+              {(includeAlankaram || Number(bill.alankaram || 0) > 0) && (
+                <div className="flex justify-between">
+                  <span>Alankaram</span>
+                  <span>
+                    {Number(bill.alankaram || alankaramPrice || 0) > 0
+                      ? `₹${(Number(bill.alankaram || alankaramPrice) / 100).toLocaleString("en-IN")}`
+                      : "As priced"}
+                  </span>
+                </div>
+              )}
+              {(includeFood || Number(bill.foodPrasadam || bill.food || 0) > 0) && (
+                <div className="flex justify-between">
+                  <span>Food / Prasadam</span>
+                  <span>
+                    {Number(bill.foodPrasadam || bill.food || foodPrice || 0) > 0
+                      ? `₹${(Number(bill.foodPrasadam || bill.food || foodPrice) / 100).toLocaleString("en-IN")}`
+                      : "As priced"}
+                  </span>
+                </div>
+              )}
+              {bill.peakFee > 0 && (
+                <div className="flex justify-between text-orange-700">
+                  <span>{t("booking.peakFee")}</span>
+                  <span>₹{(bill.peakFee / 100).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>{t("booking.gst")} ({bill.gstPercent}%)</span>
+                <span>₹{(bill.gstAmount / 100).toLocaleString("en-IN")}</span>
+              </div>
+              <div className="flex justify-between font-bold text-lg border-t pt-2">
+                <span>{t("booking.total")}</span>
+                <span className="text-primary">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
+              </div>
+            </CardContent>
+          </Card>
 
           {!isAuthenticated && !authLoading && (
             <Card className="border-orange-200 bg-primary/5">
