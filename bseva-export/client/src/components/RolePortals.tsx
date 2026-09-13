@@ -117,8 +117,13 @@ function PortalShell({
             {photoUrl ? <AvatarImage src={photoUrl} alt="" /> : null}
             <AvatarFallback className="bg-sidebar-accent text-lg">{initials}</AvatarFallback>
           </Avatar>
-          <div className="w-full text-center">
-            <p className="font-bold">{user?.name}</p>
+          <div className="w-full text-center px-1">
+            <p className="font-bold text-sm leading-snug truncate" title={user?.name || undefined}>
+              {user?.name}
+            </p>
+            {user?.public_id ? (
+              <p className="text-xs text-sidebar-foreground/60 font-mono mt-0.5 truncate">{user.public_id}</p>
+            ) : null}
             <p className="text-xs text-sidebar-foreground/70 capitalize">{role}</p>
             {headerBelow}
           </div>
