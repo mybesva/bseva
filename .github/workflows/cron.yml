@@ -1,0 +1,29 @@
+# Hobby Vercel only allows daily crons — frequent jobs run here instead.
+# Add repo secret CRON_SECRET (same value as Vercel / .env).
+name: Booking cron
+
+on:
+  schedule:
+    # GitHub minimum practical cadence; covers 15‑min OTP window
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  hit-endpoints:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reminders + start OTP
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: https://bseva.vercel.app
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "Missing GitHub secret CRON_SECRET" >&2
+            exit 1
+          fi
+          auth="Authorization: Bearer ${CRON_SECRET}"
+          curl -fsS -H "$auth" "${BASE_URL}/api/v1/ops/cron/booking-reminders"
+          echo
+          curl -fsS -H "$auth" "${BASE_URL}/api/v1/ops/cron/start-otp"
+          echo

@@ -53,5 +53,6 @@ add_env production
 add_env preview
 add_env development
 
-echo "Done. Redeploy Production so cron jobs use the new secret."
-echo "No manual cron calls needed — Vercel hits the endpoints on schedule."
+echo "Done. Redeploy Production so the app sees CRON_SECRET."
+echo "Hobby: frequent crons use GitHub Actions (.github/workflows/cron.yml)."
+echo "Add the same CRON_SECRET as a GitHub Actions secret on the repo."
