@@ -63,34 +63,61 @@ def dakshina_paise_for_service(db: Session, row: dict) -> int:
 
 
 def list_catalog_services_for_offers(db: Session) -> list[dict]:
-    """All active catalog pujas (new ones appear automatically for selection)."""
+    """Full catalog pull (all sections): active + draft awaiting pricing."""
     try:
         rows = db.execute(
             text(
                 """
-                SELECT id, name, slug, short_description, description,
+                SELECT id, name, slug, short_description, description, category,
                        basic_price_paise, standard_price_paise, premium_price_paise,
-                       main_puja_price_paise, duration_minutes, active, pricing_status
+                       main_puja_price_paise, duration_minutes, active, pricing_status,
+                       display_order
                 FROM services
                 WHERE active = TRUE
+                   OR COALESCE(pricing_status, 'priced') = 'awaiting_pricing'
                 ORDER BY display_order NULLS LAST, name
                 """
             )
         ).mappings().all()
     except Exception:
         db.rollback()
-        rows = db.execute(
-            text(
-                """
-                SELECT id, name, slug, description, standard_price_paise, premium_price_paise,
-                       duration_minutes, active
-                FROM services
-                WHERE active = TRUE
-                ORDER BY name
-                """
-            )
-        ).mappings().all()
+        try:
+            rows = db.execute(
+                text(
+                    """
+                    SELECT id, name, slug, description, category,
+                           standard_price_paise, premium_price_paise,
+                           duration_minutes, active
+                    FROM services
+                    ORDER BY name
+                    """
+                )
+            ).mappings().all()
+        except Exception:
+            db.rollback()
+            rows = db.execute(
+                text(
+                    """
+                    SELECT id, name, slug, description, standard_price_paise, premium_price_paise,
+                           duration_minutes, active
+                    FROM services
+                    WHERE active = TRUE
+                    ORDER BY name
+                    """
+                )
+            ).mappings().all()
     return [dict(r) for r in rows]
+
+
+def _offer_sections(db: Session) -> list[dict]:
+    try:
+        from app.catalog import list_categories_public
+
+        cats = list_categories_public(db)
+        return [{"slug": c["slug"], "name": c["name"], "sort_order": c.get("sort_order", 0)} for c in cats]
+    except Exception:
+        db.rollback()
+        return []
 
 
 def sync_specializations_from_approved(db: Session, pujari_id: str) -> None:
@@ -121,7 +148,10 @@ def sync_specializations_from_approved(db: Session, pujari_id: str) -> None:
 
 def get_offers_payload(db: Session, pujari_id: str) -> dict:
     ensure_offers_table(db)
+    from app.catalog import service_categories
+
     services = list_catalog_services_for_offers(db)
+    sections = _offer_sections(db)
     offer_rows = db.execute(
         text(
             """
@@ -147,6 +177,13 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
             approved_count += 1
         base = int(s.get("main_puja_price_paise") or s.get("standard_price_paise") or 0)
         dakshina = dakshina_paise_for_service(db, s)
+        try:
+            cats = service_categories(db, sid)
+        except Exception:
+            db.rollback()
+            cats = []
+        if not cats and s.get("category"):
+            cats = [{"slug": str(s["category"]), "name": str(s["category"]).replace("_", " ").title()}]
         out.append(
             {
                 "id": sid,
@@ -163,10 +200,13 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
                 "status": status,
                 "selected": status in ("approved", "pending"),
                 "locked": locked,
+                "categories": cats,
+                "section_slugs": [c.get("slug") for c in cats if c.get("slug")],
             }
         )
     return {
         "share_percent": share,
+        "sections": [{"slug": "all", "name": "All"}] + sections,
         "services": out,
         "pending_count": pending_count,
         "approved_count": approved_count,
