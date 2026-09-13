@@ -9,12 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, pujariMediaUrl, rupees, uploadPujariAsset } from "@/lib/api";
-import { isValidPujariDob, normalizeMobile, validateAddress, validateBank } from "@/lib/fieldValidation";
+import { isValidPujariDob, validateAddress, validateBank } from "@/lib/fieldValidation";
+import { parsePhoneParts, toE164, validatePhoneNational } from "@/lib/phone";
+import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
-
-import { PUJARI_SPECIALIZATIONS } from "@/lib/pujariSpecializations";
 
 const QUALS = [
   { id: "panchadasha", key: "pujari.q1" },
@@ -23,7 +23,6 @@ const QUALS = [
 ];
 
 const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
-const SPEC_OPTS = [...PUJARI_SPECIALIZATIONS];
 
 function csvToList(s: string) {
   return s
@@ -42,10 +41,11 @@ export default function PujariOnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [consent, setConsent] = useState(false);
   const [langCustom, setLangCustom] = useState("");
-  const [specCustom, setSpecCustom] = useState("");
   const [payingFee, setPayingFee] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNational, setPhoneNational] = useState("");
 
   async function load() {
     const p = await api<any>("/pujari/profile");
@@ -53,10 +53,11 @@ export default function PujariOnboardingPage() {
       setLocation("/pujari");
       return;
     }
-    // Prefer account name; normalize long/dirty mobiles from older seed data
-    const mobile = normalizeMobile(p.mobile_number || user?.phone || "") || String(p.mobile_number || user?.phone || "").replace(/\D/g, "").slice(-10);
+    const parsed = parsePhoneParts(p.mobile_number || user?.phone || "");
+    setCountryCode(parsed.countryCode);
+    setPhoneNational(parsed.national);
     const fullName = String(p.full_name || user?.name || "").replace(/\s+Reddy\s*$/i, "").trim() || user?.name || "";
-    setProfile({ ...p, full_name: fullName, mobile_number: mobile });
+    setProfile({ ...p, full_name: fullName, mobile_number: parsed.national || p.mobile_number });
     const s = Number(p.onboarding_step || 1);
     setStep(Math.min(6, Math.max(1, s)));
     setConsent(!!p.final_submission_consent);
@@ -115,12 +116,10 @@ export default function PujariOnboardingPage() {
       if (dob && !isValidPujariDob(dob)) {
         errors.date_of_birth = "Pujari must be at least 18 years old (date cannot be in the future)";
       }
-      const mobileRaw = String(profile.mobile_number || user?.phone || "").trim();
-      const mobile = normalizeMobile(mobileRaw);
-      req("mobile_number", "Mobile number", !!mobileRaw);
-      if (mobileRaw && !mobile) {
-        errors.mobile_number = "Enter a valid 10-digit Indian mobile number";
-      }
+      const phoneErr = validatePhoneNational(countryCode, phoneNational);
+      if (phoneErr) errors.mobile_number = phoneErr;
+      req("gotra", "Gotra", !!String(profile.gotra || "").trim());
+      req("pravara", "Pravara", !!String(profile.pravara || "").trim());
     }
     if (current === 2) {
       const addrErrs = validateAddress({
@@ -147,6 +146,18 @@ export default function PujariOnboardingPage() {
         const docs = await api<any[]>("/pujari/documents");
         const hasAadhaar = docs.some((d) => d.document_type === "identity");
         req("identity", "Aadhaar upload", hasAadhaar);
+        // Re-read flag from server (checkbox saves licence_type on the profile)
+        let licenceType = String(profile.licence_type || "").toLowerCase();
+        try {
+          const fresh = await api<any>("/pujari/profile");
+          licenceType = String(fresh.licence_type || "").toLowerCase();
+        } catch {
+          /* keep local */
+        }
+        if (licenceType === "driving_licence" || licenceType === "cab_commercial") {
+          const hasDl = docs.some((d) => d.document_type === "driving_licence");
+          req("driving_licence", "Driving Licence upload", hasDl);
+        }
       } catch {
         errors.identity = "Could not verify documents — upload Aadhaar and try again";
       }
@@ -174,7 +185,7 @@ export default function PujariOnboardingPage() {
     return true;
   }
 
-  function toggleList(key: "languages" | "specializations", item: string, on: boolean) {
+  function toggleList(key: "languages", item: string, on: boolean) {
     const cur: string[] = profile?.[key] || [];
     setField(key, on ? Array.from(new Set([...cur, item])) : cur.filter((x) => x !== item));
   }
@@ -204,13 +215,13 @@ export default function PujariOnboardingPage() {
     if (!profile) return;
     if (!(await validateStep(step))) return;
     if (step === 1) {
-      const mobile = normalizeMobile(String(profile.mobile_number || user?.phone || "")) || profile.mobile_number;
+      const mobile = toE164(countryCode, phoneNational);
       await saveStep(2, {
         full_name: String(profile.full_name || "").trim(),
         date_of_birth: profile.date_of_birth || null,
         mobile_number: mobile,
-        gotra: profile.gotra || null,
-        pravara: profile.pravara || null,
+        gotra: String(profile.gotra || "").trim(),
+        pravara: String(profile.pravara || "").trim(),
       });
       return;
     }
@@ -241,14 +252,12 @@ export default function PujariOnboardingPage() {
     }
     if (step === 3) {
       const langs = [...(profile.languages || []), ...csvToList(langCustom)];
-      const specs = [...(profile.specializations || []), ...csvToList(specCustom)];
       await saveStep(4, {
         experience_years: profile.experience_years ? Number(profile.experience_years) : null,
         qualifications: profile.qualifications || [],
         qualification_year: profile.qualification_year ? Number(profile.qualification_year) : null,
         sampradaya: profile.sampradaya || null,
         languages: Array.from(new Set(langs)),
-        specializations: Array.from(new Set(specs)),
       });
       return;
     }
@@ -318,7 +327,6 @@ export default function PujariOnboardingPage() {
 
   const quals: string[] = profile.qualifications || [];
   const langs: string[] = profile.languages || [];
-  const specs: string[] = profile.specializations || [];
   const yearNow = new Date().getFullYear();
   const addressValue: AddressValue = {
     address_line1: profile.address_line1 || "",
@@ -474,19 +482,28 @@ export default function PujariOnboardingPage() {
                   />
                   <Err name="date_of_birth" />
                 </div>
-                <div>
-                  <Label className={fieldErrors.mobile_number ? "text-red-600" : undefined}>{t("pujari.mobile")} *</Label>
-                  <Input
-                    className={errClass("mobile_number")}
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={10}
-                    placeholder="10-digit mobile"
-                    value={profile.mobile_number || ""}
-                    onChange={(e) => setField("mobile_number", e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  />
-                  <Err name="mobile_number" />
-                </div>
+                <PhoneWithCountryCode
+                  id="onboarding-mobile"
+                  label={t("pujari.mobile")}
+                  required
+                  countryCode={countryCode}
+                  national={phoneNational}
+                  error={fieldErrors.mobile_number}
+                  onCountryCodeChange={(code) => {
+                    setCountryCode(code);
+                    setPhoneNational((prev) => prev.slice(0, code === "+91" ? 10 : 12));
+                    setFieldErrors((prev) => {
+                      if (!prev.mobile_number) return prev;
+                      const next = { ...prev };
+                      delete next.mobile_number;
+                      return next;
+                    });
+                  }}
+                  onNationalChange={(digits) => {
+                    setPhoneNational(digits);
+                    setField("mobile_number", digits);
+                  }}
+                />
                 <div className="md:col-span-2">
                   <Label>Email</Label>
                   <Input value={user?.email || ""} readOnly disabled />
@@ -495,29 +512,45 @@ export default function PujariOnboardingPage() {
 
               <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
                 <div>
-                  <h3 className="font-semibold text-foreground">Gotra &amp; Pravara</h3>
+                  <h3 className="font-semibold text-foreground">Gotra &amp; Pravara *</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Enter your family Gotra and Pravara (rishi lineage).
+                    Enter your family Gotra and Pravara (rishi lineage). Both are required.
                   </p>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="onboarding-gotra">{t("pujari.gotra")}</Label>
+                    <Label
+                      htmlFor="onboarding-gotra"
+                      className={fieldErrors.gotra ? "text-red-600" : undefined}
+                    >
+                      {t("pujari.gotra")} *
+                    </Label>
                     <Input
                       id="onboarding-gotra"
+                      className={errClass("gotra")}
                       value={profile.gotra || ""}
                       onChange={(e) => setField("gotra", e.target.value)}
                       placeholder="e.g. Bharadwaja"
+                      required
                     />
+                    <Err name="gotra" />
                   </div>
                   <div>
-                    <Label htmlFor="onboarding-pravara">{t("pujari.pravara")}</Label>
+                    <Label
+                      htmlFor="onboarding-pravara"
+                      className={fieldErrors.pravara ? "text-red-600" : undefined}
+                    >
+                      {t("pujari.pravara")} *
+                    </Label>
                     <Input
                       id="onboarding-pravara"
+                      className={errClass("pravara")}
                       value={profile.pravara ?? ""}
                       onChange={(e) => setField("pravara", e.target.value)}
                       placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
+                      required
                     />
+                    <Err name="pravara" />
                   </div>
                 </div>
               </div>
@@ -635,24 +668,13 @@ export default function PujariOnboardingPage() {
                 />
                 <Err name="languages" />
               </div>
-              <div className="space-y-2">
-                <Label>Specializations</Label>
-                <div className="flex flex-wrap gap-3">
-                  {SPEC_OPTS.map((s) => (
-                    <label key={s} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={specs.includes(s)}
-                        onCheckedChange={(v) => toggleList("specializations", s, !!v)}
-                      />
-                      {s}
-                    </label>
-                  ))}
-                </div>
-                <Input
-                  placeholder="Other specializations (comma-separated)"
-                  value={specCustom}
-                  onChange={(e) => setSpecCustom(e.target.value)}
-                />
+              <div className="rounded-lg border border-primary/20 bg-orange-50/40 p-4 text-sm space-y-2">
+                <p className="font-medium text-foreground">Services &amp; Dakshina</p>
+                <p className="text-muted-foreground">
+                  After onboarding, open the <Link href="/pujari/services" className="text-primary underline">Services</Link>{" "}
+                  tab to choose from all BSeva catalog pujas. Selections need Admin approval before they go live — you
+                  cannot add custom pujas.
+                </p>
               </div>
             </section>
           )}
@@ -740,7 +762,8 @@ export default function PujariOnboardingPage() {
                   <span className="text-muted-foreground">Name:</span> {profile.full_name ||"—"}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Phone:</span> {profile.mobile_number ||"—"}
+                  <span className="text-muted-foreground">Phone:</span>{" "}
+                  {phoneNational ? toE164(countryCode, phoneNational) : "—"}
                 </p>
                 <p>
                   <span className="text-muted-foreground">City:</span> {profile.city ||"—"}

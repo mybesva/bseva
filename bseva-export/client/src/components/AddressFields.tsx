@@ -29,24 +29,50 @@ type Props = {
   className?: string;
 };
 
+type PlaceSuggestion = {
+  placeId: string;
+  description: string;
+};
+
 const MAPS_KEY =
   (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ||
   (import.meta.env.VITE_FRONTEND_FORGE_API_KEY as string | undefined);
-const FORGE_BASE = (import.meta.env.VITE_FRONTEND_FORGE_API_URL as string | undefined) || "https://forge.butterfly-effect.dev";
+const FORGE_BASE =
+  (import.meta.env.VITE_FRONTEND_FORGE_API_URL as string | undefined) ||
+  "https://forge.butterfly-effect.dev";
+// Include places for autocomplete suggestions. Do not require a custom Cloud Map ID.
 const MAPS_SCRIPT = MAPS_KEY?.startsWith("AIza")
-  ? `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=marker,geocoding&v=weekly`
-  : `${FORGE_BASE}/v1/maps/proxy/maps/api/js?key=${MAPS_KEY}&libraries=marker,geocoding&v=weekly`;
+  ? `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,geocoding&v=weekly`
+  : `${FORGE_BASE}/v1/maps/proxy/maps/api/js?key=${MAPS_KEY}&libraries=places,geocoding&v=weekly`;
+
+let mapsLoadPromise: Promise<void> | null = null;
 
 function loadMaps() {
-  if (window.google?.maps) return Promise.resolve();
-  return new Promise<void>((resolve, reject) => {
+  if (typeof window !== "undefined" && window.google?.maps) {
+    return Promise.resolve();
+  }
+  if (mapsLoadPromise) return mapsLoadPromise;
+  mapsLoadPromise = new Promise<void>((resolve, reject) => {
     if (!MAPS_KEY) {
+      mapsLoadPromise = null;
       reject(new Error("Maps API key not configured"));
       return;
     }
-    const existing = document.querySelector('script[data-bseva-maps="1"]');
+    const existing = document.querySelector('script[data-bseva-maps="1"]') as HTMLScriptElement | null;
     if (existing) {
-      existing.addEventListener("load", () => resolve());
+      if (window.google?.maps) {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener(
+        "error",
+        () => {
+          mapsLoadPromise = null;
+          reject(new Error("Failed to load maps"));
+        },
+        { once: true }
+      );
       return;
     }
     const script = document.createElement("script");
@@ -54,26 +80,36 @@ function loadMaps() {
     script.async = true;
     script.dataset.bsevaMaps = "1";
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load maps"));
+    script.onerror = () => {
+      mapsLoadPromise = null;
+      reject(new Error("Failed to load Google Maps — check API key / billing / Maps JavaScript API"));
+    };
     document.head.appendChild(script);
   });
+  return mapsLoadPromise;
 }
 
 function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v: AddressValue) => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapObj = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  const suggestTimer = useRef<number | null>(null);
   const valueRef = useRef(value);
   valueRef.current = value;
   const [search, setSearch] = useState(value.location_label || "");
   const [mapError, setMapError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
 
   function applyCoords(lat: number, lng: number, label?: string) {
     const cur = valueRef.current;
     onChange({ ...cur, latitude: lat, longitude: lng, location_label: label || cur.location_label });
     if (mapObj.current) {
       mapObj.current.setCenter({ lat, lng });
-      if (markerRef.current) markerRef.current.position = { lat, lng };
+      mapObj.current.setZoom(15);
+      if (markerRef.current) markerRef.current.setPosition({ lat, lng });
     }
   }
 
@@ -98,6 +134,8 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
         country: cur.country || pick("country") || "India",
       });
       setSearch(results[0].formatted_address || "");
+      setSuggestions([]);
+      setSuggestOpen(false);
     });
   }
 
@@ -105,13 +143,24 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
     let cancelled = false;
     loadMaps()
       .then(() => {
-        if (cancelled || !mapRef.current) return;
+        if (cancelled || !mapRef.current || !window.google?.maps) return;
+        // Classic Map + Marker — no Cloud Console Map ID required (AdvancedMarker needs a real mapId).
         const center = { lat: value.latitude ?? 12.9716, lng: value.longitude ?? 77.5946 };
-        mapObj.current = new google.maps.Map(mapRef.current, { center, zoom: value.latitude ? 15 : 11, mapId: "BSEVA_MAP" });
-        markerRef.current = new google.maps.marker.AdvancedMarkerElement({ map: mapObj.current, position: center, gmpDraggable: true });
+        mapObj.current = new google.maps.Map(mapRef.current, {
+          center,
+          zoom: value.latitude ? 15 : 11,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+        markerRef.current = new google.maps.Marker({
+          map: mapObj.current,
+          position: center,
+          draggable: true,
+        });
         markerRef.current.addListener("dragend", () => {
-          const pos = markerRef.current?.position as google.maps.LatLngLiteral | undefined;
-          if (pos) void reverseGeocode(Number(pos.lat), Number(pos.lng));
+          const pos = markerRef.current?.getPosition();
+          if (pos) void reverseGeocode(pos.lat(), pos.lng());
         });
         mapObj.current.addListener("click", (e: google.maps.MapMouseEvent) => {
           const lat = e.latLng?.lat();
@@ -120,21 +169,85 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
           applyCoords(lat, lng);
           void reverseGeocode(lat, lng);
         });
+        autocompleteService.current = new google.maps.places.AutocompleteService();
+        placesService.current = new google.maps.places.PlacesService(mapObj.current);
+        setMapError(null);
       })
-      .catch((e) => setMapError(e.message));
+      .catch((e) => setMapError(e.message || "Could not load map"));
     return () => {
       cancelled = true;
+      if (suggestTimer.current) window.clearTimeout(suggestTimer.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- init map once on mount
   }, []);
 
-  function geocodeSearch() {
-    if (!window.google?.maps || !search.trim()) return;
+  function fetchSuggestions(query: string) {
+    if (suggestTimer.current) window.clearTimeout(suggestTimer.current);
+    const q = query.trim();
+    if (!q || q.length < 2 || !autocompleteService.current) {
+      setSuggestions([]);
+      setSuggestOpen(false);
+      return;
+    }
+    suggestTimer.current = window.setTimeout(() => {
+      autocompleteService.current?.getPlacePredictions(
+        {
+          input: q,
+          componentRestrictions: { country: ["in"] },
+        },
+        (preds, status) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !preds?.length) {
+            setSuggestions([]);
+            setSuggestOpen(false);
+            return;
+          }
+          setSuggestions(
+            preds.slice(0, 6).map((p) => ({
+              placeId: p.place_id,
+              description: p.description,
+            }))
+          );
+          setSuggestOpen(true);
+        }
+      );
+    }, 250);
+  }
+
+  function selectSuggestion(item: PlaceSuggestion) {
+    setSearch(item.description);
+    setSuggestions([]);
+    setSuggestOpen(false);
+    if (!placesService.current) {
+      geocodeSearch(item.description);
+      return;
+    }
+    placesService.current.getDetails(
+      { placeId: item.placeId, fields: ["geometry", "formatted_address", "address_components", "name"] },
+      (place, status) => {
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !place?.geometry?.location) {
+          geocodeSearch(item.description);
+          return;
+        }
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const label = place.formatted_address || item.description;
+        applyCoords(lat, lng, label);
+        void reverseGeocode(lat, lng);
+      }
+    );
+  }
+
+  function geocodeSearch(override?: string) {
+    const q = (override ?? search).trim();
+    if (!window.google?.maps || !q) return;
+    setSuggestOpen(false);
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: search }, (results, status) => {
+    geocoder.geocode({ address: q, componentRestrictions: { country: "IN" } }, (results, status) => {
       if (status !== "OK" || !results?.[0]?.geometry?.location) {
-        setMapError("Location not found");
+        setMapError("Location not found — try a fuller address or pick a suggestion");
         return;
       }
+      setMapError(null);
       const lat = results[0].geometry.location.lat();
       const lng = results[0].geometry.location.lng();
       applyCoords(lat, lng, results[0].formatted_address);
@@ -174,8 +287,51 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
     <div className="space-y-3">
       <Label>Location on map</Label>
       <div className="flex flex-col sm:flex-row gap-2">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search address or place" />
-        <Button type="button" variant="secondary" onClick={geocodeSearch}>Search</Button>
+        <div className="relative flex-1 min-w-0">
+          <Input
+            value={search}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSearch(v);
+              fetchSuggestions(v);
+            }}
+            onFocus={() => {
+              if (suggestions.length) setSuggestOpen(true);
+            }}
+            onBlur={() => {
+              // Delay so suggestion click can register
+              window.setTimeout(() => setSuggestOpen(false), 180);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (suggestions[0]) selectSuggestion(suggestions[0]);
+                else geocodeSearch();
+              }
+            }}
+            placeholder="Start typing address (suggestions appear)"
+            autoComplete="off"
+          />
+          {suggestOpen && suggestions.length > 0 && (
+            <ul className="absolute z-30 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-background shadow-md">
+              {suggestions.map((s) => (
+                <li key={s.placeId}>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectSuggestion(s)}
+                  >
+                    {s.description}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <Button type="button" variant="secondary" onClick={() => geocodeSearch()}>
+          Search
+        </Button>
         <Button type="button" variant="outline" onClick={useCurrentLocation} className="gap-1">
           <Navigation size={16} /> Current location
         </Button>
@@ -183,18 +339,29 @@ function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v
       {mapError && <p className="text-sm text-destructive">{mapError}</p>}
       {!MAPS_KEY && (
         <p className="text-sm text-muted-foreground flex items-center gap-1">
-          <MapPin size={14} /> Set GOOGLE_MAPS_API_KEY / VITE_GOOGLE_MAPS_API_KEY in the repo root `.env`, then restart the frontend. Enter coordinates manually below.
+          <MapPin size={14} /> Set GOOGLE_MAPS_API_KEY / VITE_GOOGLE_MAPS_API_KEY in the repo root `.env`, then
+          restart the frontend. Enter coordinates manually below.
         </p>
       )}
       <div ref={mapRef} className={cn("w-full h-64 rounded-md border bg-muted", !MAPS_KEY && "hidden")} />
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Latitude</Label>
-          <Input type="number" step="any" value={value.latitude ?? ""} onChange={(e) => onChange({ ...value, latitude: e.target.value ? Number(e.target.value) : null })} />
+          <Input
+            type="number"
+            step="any"
+            value={value.latitude ?? ""}
+            onChange={(e) => onChange({ ...value, latitude: e.target.value ? Number(e.target.value) : null })}
+          />
         </div>
         <div>
           <Label>Longitude</Label>
-          <Input type="number" step="any" value={value.longitude ?? ""} onChange={(e) => onChange({ ...value, longitude: e.target.value ? Number(e.target.value) : null })} />
+          <Input
+            type="number"
+            step="any"
+            value={value.longitude ?? ""}
+            onChange={(e) => onChange({ ...value, longitude: e.target.value ? Number(e.target.value) : null })}
+          />
         </div>
       </div>
     </div>
@@ -239,7 +406,11 @@ export default function AddressFields({ value, onChange, className }: Props) {
         </div>
         <div>
           <Label>Location label</Label>
-          <Input value={value.location_label} onChange={(e) => set("location_label", e.target.value)} placeholder="e.g. Koramangala, Bengaluru" />
+          <Input
+            value={value.location_label}
+            onChange={(e) => set("location_label", e.target.value)}
+            placeholder="e.g. Koramangala, Bengaluru"
+          />
         </div>
       </div>
       <LocationPicker value={value} onChange={onChange} />

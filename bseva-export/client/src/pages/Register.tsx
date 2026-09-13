@@ -16,33 +16,16 @@ import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const TEN_DIGIT_RE = /^\d{10}$/;
-const OTP_VALIDITY_SEC = 10 * 60;
+import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
+import { toE164, validatePhoneNational } from "@/lib/phone";
 
-const COUNTRY_CODES = [
-  { code: "+91", label: "India (+91)" },
-  { code: "+1", label: "USA/Canada (+1)" },
-  { code: "+44", label: "UK (+44)" },
-  { code: "+971", label: "UAE (+971)" },
-  { code: "+65", label: "Singapore (+65)" },
-  { code: "+61", label: "Australia (+61)" },
-  { code: "+49", label: "Germany (+49)" },
-  { code: "+33", label: "France (+33)" },
-  { code: "+81", label: "Japan (+81)" },
-  { code: "+86", label: "China (+86)" },
-] as const;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_VALIDITY_SEC = 10 * 60;
 
 function formatMmSs(totalSec: number) {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-function toE164(countryCode: string, national: string) {
-  const digits = national.replace(/\D/g, "");
-  const cc = (countryCode || "+91").trim() || "+91";
-  return `${cc}${digits}`;
 }
 
 export default function Register() {
@@ -113,13 +96,8 @@ export default function Register() {
     if (!EMAIL_RE.test(emailNorm)) {
       next.email = "Enter a valid email address";
     }
-    if (countryCode === "+91") {
-      if (!TEN_DIGIT_RE.test(phoneDigits)) {
-        next.phone = "Enter a valid 10-digit Indian mobile number";
-      }
-    } else if (phoneDigits.length < 8 || phoneDigits.length > 12) {
-      next.phone = "Enter a valid phone number (8–12 digits)";
-    }
+    const phoneErr = validatePhoneNational(countryCode, phoneDigits);
+    if (phoneErr) next.phone = phoneErr;
     setFieldErrors((prev) => ({ ...prev, ...next, otp: prev.otp }));
     return { ok: Object.keys(next).length === 0, emailNorm, errors: next };
   }
@@ -293,40 +271,22 @@ export default function Register() {
                   />
                   {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <div className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-2 w-full">
-                    <select
-                      aria-label="Country code"
-                      value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
-                      className="h-10 w-full max-w-[4.75rem] rounded-md border border-input bg-background px-1.5 text-sm font-bold text-center"
-                    >
-                      {COUNTRY_CODES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.code}
-                        </option>
-                      ))}
-                    </select>
-                    <Input
-                      type="tel"
-                      inputMode="numeric"
-                      value={phone}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/\D/g, "").slice(0, countryCode === "+91" ? 10 : 12);
-                        setPhone(raw);
-                        setFieldErrors((prev) => ({ ...prev, phone: undefined }));
-                      }}
-                      required
-                      autoComplete="off"
-                      name="bseva-reg-phone"
-                      placeholder={countryCode === "+91" ? "10-digit mobile" : "Phone number"}
-                      className="min-w-0"
-                      aria-invalid={!!fieldErrors.phone}
-                    />
-                  </div>
-                  {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
-                </div>
+                <PhoneWithCountryCode
+                  label="Phone"
+                  required
+                  countryCode={countryCode}
+                  national={phone}
+                  error={fieldErrors.phone}
+                  onCountryCodeChange={(code) => {
+                    setCountryCode(code);
+                    setPhone((prev) => prev.slice(0, code === "+91" ? 10 : 12));
+                    setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                  onNationalChange={(digits) => {
+                    setPhone(digits);
+                    setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                />
                 <div className="space-y-2">
                   <Label>Password</Label>
                   <PasswordInput

@@ -8,6 +8,8 @@ PUJARI_REQUIRED = (
     "full_name",
     "mobile_number",
     "date_of_birth",
+    "gotra",
+    "pravara",
     "profile_photo_path",
     "address_line1",
     "city",

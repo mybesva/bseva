@@ -32,7 +32,7 @@ const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?
     superOnly: true,
     hint: "When off, customers only see in-person booking. Super Admin only.",
   },
-  { key: "pujari_share_percent", label: "Pujari share %", type: "number" },
+  { key: "pujari_share_percent", label: "Dakshina % (pujari portion of main puja)", type: "number" },
   { key: "pujari_settlement_days", label: "Settlement hold days (auto every N days ≈ 2 weeks)", type: "number" },
   { key: "puja_start_otp_before_minutes", label: "OTP available minutes before start", type: "number" },
   { key: "pujari_full_booking_details_before_hours", label: "Full booking details before (hours)", type: "number" },

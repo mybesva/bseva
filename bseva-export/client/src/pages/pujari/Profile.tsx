@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { api, pujariMediaUrl, uploadPujariAsset } from "@/lib/api";
+import { parsePhoneParts, toE164, validatePhoneNational } from "@/lib/phone";
+import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -26,10 +28,16 @@ function ProfileForm() {
   const [sameAddr, setSameAddr] = useState(false);
   const [sameWa, setSameWa] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNational, setPhoneNational] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function load() {
     const p = await api<any>("/pujari/profile");
-    setProfile(p);
+    const parsed = parsePhoneParts(p.mobile_number || "");
+    setCountryCode(parsed.countryCode);
+    setPhoneNational(parsed.national);
+    setProfile({ ...p, mobile_number: parsed.national || p.mobile_number });
     setSameAddr(!!p.permanent_address && p.permanent_address === p.present_address);
     setSameWa(!!p.mobile_number && p.mobile_number === p.whatsapp_number);
     if (p.profile_photo_path) setPhotoUrl(await pujariMediaUrl("photo"));
@@ -49,22 +57,33 @@ function ProfileForm() {
   async function save(e?: React.FormEvent) {
     e?.preventDefault();
     if (!profile) return;
+    const errors: Record<string, string> = {};
+    const phoneErr = validatePhoneNational(countryCode, phoneNational);
+    if (phoneErr) errors.mobile_number = phoneErr;
+    if (!String(profile.gotra || "").trim()) errors.gotra = "Gotra is required";
+    if (!String(profile.pravara || "").trim()) errors.pravara = "Pravara is required";
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      toast.error(Object.values(errors)[0]);
+      return;
+    }
     setSaving(true);
     try {
+      const mobile = toE164(countryCode, phoneNational);
       const present = sameAddr ? profile.permanent_address : profile.present_address;
-      const wa = sameWa ? profile.mobile_number : profile.whatsapp_number;
+      const wa = sameWa ? mobile : profile.whatsapp_number;
       await api("/pujari/profile", {
         method: "PATCH",
         body: JSON.stringify({
           full_name: profile.full_name,
           father_name: profile.father_name,
-          gotra: profile.gotra ?? "",
-          pravara: profile.pravara ?? "",
+          gotra: String(profile.gotra || "").trim(),
+          pravara: String(profile.pravara || "").trim(),
           date_of_birth: profile.date_of_birth || null,
           native_place: profile.native_place,
           permanent_address: profile.permanent_address,
           present_address: present,
-          mobile_number: profile.mobile_number,
+          mobile_number: mobile,
           whatsapp_number: wa,
           qualifications: profile.qualifications || [],
           qualification_year: profile.qualification_year ? Number(profile.qualification_year) : null,
@@ -172,37 +191,83 @@ function ProfileForm() {
             <Label>{t("pujari.dob")} *</Label>
             <Input type="date" value={(profile.date_of_birth || "").slice(0, 10)} onChange={(e) => setField("date_of_birth", e.target.value)} />
           </div>
-          <div>
-            <Label>{t("pujari.mobile")} *</Label>
-            <Input value={profile.mobile_number || ""} onChange={(e) => setField("mobile_number", e.target.value)} />
-          </div>
+          <PhoneWithCountryCode
+            id="pujari-mobile"
+            label={t("pujari.mobile")}
+            required
+            countryCode={countryCode}
+            national={phoneNational}
+            error={fieldErrors.mobile_number}
+            onCountryCodeChange={(code) => {
+              setCountryCode(code);
+              setPhoneNational((prev) => prev.slice(0, code === "+91" ? 10 : 12));
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.mobile_number;
+                return next;
+              });
+            }}
+            onNationalChange={(digits) => {
+              setPhoneNational(digits);
+              setField("mobile_number", digits);
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.mobile_number;
+                return next;
+              });
+            }}
+          />
         </div>
 
         <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
           <div>
-            <h3 className="font-semibold text-foreground">Gotra &amp; Pravara</h3>
+            <h3 className="font-semibold text-foreground">Gotra &amp; Pravara *</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Enter your family Gotra and Pravara (rishi lineage). Both appear on Angikara Patram.
+              Enter your family Gotra and Pravara (rishi lineage). Both are required and appear on Angikara Patram.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="pujari-gotra">{t("pujari.gotra")}</Label>
+              <Label htmlFor="pujari-gotra" className={fieldErrors.gotra ? "text-red-600" : undefined}>
+                {t("pujari.gotra")} *
+              </Label>
               <Input
                 id="pujari-gotra"
+                className={fieldErrors.gotra ? "border-red-500" : ""}
                 value={profile.gotra || ""}
-                onChange={(e) => setField("gotra", e.target.value)}
+                onChange={(e) => {
+                  setField("gotra", e.target.value);
+                  setFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.gotra;
+                    return next;
+                  });
+                }}
                 placeholder="e.g. Bharadwaja"
+                required
               />
+              {fieldErrors.gotra ? <p className="text-xs text-red-600 mt-1">{fieldErrors.gotra}</p> : null}
             </div>
             <div>
-              <Label htmlFor="pujari-pravara">{t("pujari.pravara")}</Label>
+              <Label htmlFor="pujari-pravara" className={fieldErrors.pravara ? "text-red-600" : undefined}>
+                {t("pujari.pravara")} *
+              </Label>
               <Input
                 id="pujari-pravara"
+                className={fieldErrors.pravara ? "border-red-500" : ""}
                 value={profile.pravara ?? ""}
-                onChange={(e) => setField("pravara", e.target.value)}
+                onChange={(e) => {
+                  setField("pravara", e.target.value);
+                  setFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.pravara;
+                    return next;
+                  });
+                }}
                 placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
+                required
               />
+              {fieldErrors.pravara ? <p className="text-xs text-red-600 mt-1">{fieldErrors.pravara}</p> : null}
             </div>
           </div>
         </div>
@@ -235,7 +300,7 @@ function ProfileForm() {
             </label>
             <Label>{t("pujari.whatsapp")}</Label>
             <Input
-              value={sameWa ? profile.mobile_number || "" : profile.whatsapp_number || ""}
+              value={sameWa ? phoneNational || "" : profile.whatsapp_number || ""}
               onChange={(e) => setField("whatsapp_number", e.target.value)}
               disabled={sameWa}
             />

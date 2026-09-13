@@ -11,7 +11,14 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import require_roles
 from app.domain import row_dict
-from app.schemas import DocumentMetaIn, PujariApplyLevelIn, PujariBlockDateIn, PujariProfileIn, PujariProfileSubmitIn
+from app.schemas import (
+    DocumentMetaIn,
+    PujariApplyLevelIn,
+    PujariBlockDateIn,
+    PujariProfileIn,
+    PujariProfileSubmitIn,
+    PujariServiceOffersIn,
+)
 from app.profile_utils import (
     CURRENT_PRIVACY_VERSION,
     CURRENT_TERMS_VERSION,
@@ -182,6 +189,7 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
         validate_bank_fields,
         validate_mobile_optional,
         validate_pujari_dob,
+        phone_for_user_account,
     )
 
     year = body.qualification_year
@@ -233,6 +241,27 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
         ).first()
         if not has_aadhaar:
             raise HTTPException(400, "Aadhaar document is required before continuing")
+        licence_type = (body.licence_type or None)
+        if licence_type is None:
+            row_lt = db.execute(
+                text("SELECT licence_type FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+                {"id": user["id"]},
+            ).first()
+            licence_type = (row_lt[0] if row_lt else None) or "none"
+        licence_type = str(licence_type).strip().lower()
+        if licence_type in ("driving_licence", "cab_commercial"):
+            has_dl = db.execute(
+                text(
+                    """
+                    SELECT 1 FROM pujari_documents
+                    WHERE pujari_id = CAST(:id AS uuid) AND document_type = 'driving_licence'
+                    LIMIT 1
+                    """
+                ),
+                {"id": user["id"]},
+            ).first()
+            if not has_dl:
+                raise HTTPException(400, "Upload your Driving Licence document before continuing")
 
     quals = json.dumps(body.qualifications) if body.qualifications is not None else None
     langs = json.dumps(body.languages) if body.languages is not None else None
@@ -323,7 +352,10 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
     if body.full_name:
         db.execute(text("UPDATE users SET name = :n WHERE id = CAST(:id AS uuid)"), {"n": body.full_name, "id": user["id"]})
     if mobile:
-        db.execute(text("UPDATE users SET phone = :p WHERE id = CAST(:id AS uuid)"), {"p": mobile, "id": user["id"]})
+        db.execute(
+            text("UPDATE users SET phone = :p WHERE id = CAST(:id AS uuid)"),
+            {"p": phone_for_user_account(mobile), "id": user["id"]},
+        )
     out = _load_profile(db, user)
     db.execute(
         text(
@@ -412,7 +444,7 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
         raise HTTPException(400, "Upload Aadhaar (identity document) before submission")
     licence_type = (profile.get("licence_type") or "none").strip().lower()
     if licence_type in ("driving_licence", "cab_commercial") and "driving_licence" not in types:
-        raise HTTPException(400, "Upload Driving Licence document for the selected licence type")
+        raise HTTPException(400, "Upload your Driving Licence document (required when you indicate you have one)")
     db.execute(
         text(
             """
@@ -639,3 +671,21 @@ def official_documents(user=Depends(require_roles("pujari")), db: Session = Depe
             "updated_at": ang.get("updated_at"),
         }
     ]
+
+
+@router.get("/service-offers")
+def get_service_offers(user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
+    from app.pujari_services import get_offers_payload
+
+    return get_offers_payload(db, str(user["id"]))
+
+
+@router.put("/service-offers")
+def put_service_offers(
+    body: PujariServiceOffersIn,
+    user=Depends(require_roles("pujari", "head_pujari")),
+    db: Session = Depends(get_db),
+):
+    from app.pujari_services import submit_service_selection
+
+    return submit_service_selection(db, str(user["id"]), body.service_ids)

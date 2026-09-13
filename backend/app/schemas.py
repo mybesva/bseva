@@ -38,6 +38,7 @@ class MePatchIn(BaseModel):
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
     preferred_language: Optional[Literal["en", "hi", "te"]] = None
     calendar_preference: Optional[Literal["north", "south", "lunar"]] = None
+    phone: Optional[str] = Field(default=None, min_length=8, max_length=20)
 
 
 class ChangePasswordIn(BaseModel):
@@ -342,3 +343,9 @@ class AdminCustomerUpdateIn(BaseModel):
 
 class BookingAssignIn(BaseModel):
     pujari_id: str
+
+
+class PujariServiceOffersIn(BaseModel):
+    """Desired catalog services the pujari wants to offer (admin must approve)."""
+    service_ids: list[str] = Field(default_factory=list)
+

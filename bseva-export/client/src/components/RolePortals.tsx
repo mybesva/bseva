@@ -17,6 +17,7 @@ import {
   Clock,
   Landmark,
   Sparkles,
+  ListChecks,
   Star,
   Gift,
 } from "lucide-react";
@@ -60,6 +61,7 @@ const pujariNav: NavItem[] = [
   { label: "My Documents", href: "/pujari/documents", icon: FolderOpen },
   { label: "Angikara Patram", href: "/pujari/angikara", icon: ScrollText },
   { label: "Experience", href: "/pujari/experience", icon: Briefcase },
+  { label: "Services", href: "/pujari/services", icon: ListChecks },
   { label: "Availability", href: "/pujari/availability", icon: Clock },
   { label: "Bank / Settlement", href: "/pujari/bank", icon: Landmark },
   { label: "Dakshina", href: "/pujari/earnings", icon: Wallet },

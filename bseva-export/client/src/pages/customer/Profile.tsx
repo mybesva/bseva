@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CustomerPortal } from "@/components/RolePortals";
+import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, apiBase, getToken } from "@/lib/api";
+import { parsePhoneParts, toE164, validatePhoneNational } from "@/lib/phone";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang } from "@/i18n/translations";
@@ -24,6 +26,9 @@ export default function CustomerProfilePage() {
   const { setLang, labels } = useI18n();
   const [name, setName] = useState("");
   const [language, setLanguage] = useState<Lang>("en");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNational, setPhoneNational] = useState("");
+  const [phoneError, setPhoneError] = useState<string | undefined>();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -58,6 +63,12 @@ export default function CustomerProfilePage() {
   }, [user?.preferred_language]);
 
   useEffect(() => {
+    const parsed = parsePhoneParts(user?.phone || "");
+    setCountryCode(parsed.countryCode);
+    setPhoneNational(parsed.national);
+  }, [user?.phone]);
+
+  useEffect(() => {
     void loadPhoto().catch(() => setPhotoUrl(null));
     return () => {
       setPhotoUrl((prev) => {
@@ -69,11 +80,19 @@ export default function CustomerProfilePage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    const phoneErr = validatePhoneNational(countryCode, phoneNational);
+    if (phoneErr) {
+      setPhoneError(phoneErr);
+      toast.error(phoneErr);
+      return;
+    }
+    setPhoneError(undefined);
     setSaving(true);
     try {
+      const phone = toE164(countryCode, phoneNational);
       await api("/auth/me", {
         method: "PATCH",
-        body: JSON.stringify({ name, preferred_language: language }),
+        body: JSON.stringify({ name, preferred_language: language, phone }),
       });
       // Mirror onto the customer profile record; not fatal if it is not set up yet.
       try {
@@ -153,6 +172,23 @@ export default function CustomerProfilePage() {
               <Label>Full name</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} minLength={2} required />
             </div>
+            <PhoneWithCountryCode
+              id="customer-phone"
+              label="Mobile number"
+              required
+              countryCode={countryCode}
+              national={phoneNational}
+              error={phoneError}
+              onCountryCodeChange={(code) => {
+                setCountryCode(code);
+                setPhoneNational((prev) => prev.slice(0, code === "+91" ? 10 : 12));
+                setPhoneError(undefined);
+              }}
+              onNationalChange={(digits) => {
+                setPhoneNational(digits);
+                setPhoneError(undefined);
+              }}
+            />
             <div className="space-y-2">
               <Label>Preferred language</Label>
               <Select value={language} onValueChange={(v) => setLanguage(v as Lang)}>
@@ -173,7 +209,6 @@ export default function CustomerProfilePage() {
             </div>
             <div className="space-y-1 text-sm text-muted-foreground">
               <p>Email: {user?.email || "—"}</p>
-              <p>Phone: {user?.phone || "—"}</p>
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save"}

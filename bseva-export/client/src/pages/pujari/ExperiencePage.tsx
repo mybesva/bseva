@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { PujariPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,6 @@ const QUALS = [
 ];
 
 const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
-const SPEC_OPTS = ["Satyanarayan Puja", "Griha Pravesh", "Wedding", "Havan", "Vastu Shanti", "Namkaran"];
 
 export default function PujariExperiencePage() {
   const { t } = useI18n();
@@ -34,7 +34,7 @@ export default function PujariExperiencePage() {
     setProfile((prev: any) => ({ ...prev, [key]: value }));
   }
 
-  function toggle(key: "languages" | "specializations", item: string, on: boolean) {
+  function toggle(key: "languages", item: string, on: boolean) {
     const cur: string[] = profile?.[key] || [];
     setField(key, on ? Array.from(new Set([...cur, item])) : cur.filter((x) => x !== item));
   }
@@ -52,7 +52,6 @@ export default function PujariExperiencePage() {
           qualification_year: profile.qualification_year ? Number(profile.qualification_year) : null,
           sampradaya: profile.sampradaya || null,
           languages: profile.languages || [],
-          specializations: profile.specializations || [],
         }),
       });
       setProfile(updated);
@@ -74,7 +73,6 @@ export default function PujariExperiencePage() {
 
   const quals: string[] = profile.qualifications || [];
   const langs: string[] = profile.languages || [];
-  const specs: string[] = profile.specializations || [];
 
   return (
     <PujariPortal>
@@ -143,16 +141,15 @@ export default function PujariExperiencePage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Specializations</Label>
-              <div className="flex flex-wrap gap-3">
-                {SPEC_OPTS.map((s) => (
-                  <label key={s} className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={specs.includes(s)} onCheckedChange={(v) => toggle("specializations", s, !!v)} />
-                    {s}
-                  </label>
-                ))}
-              </div>
+            <div className="rounded-lg border border-primary/20 bg-orange-50/40 p-4 text-sm space-y-2">
+              <p className="font-medium text-foreground">Services &amp; Dakshina</p>
+              <p className="text-muted-foreground">
+                Select from all BSeva catalog pujas (with Dakshina) in the Services tab. Changes need Admin approval
+                before they go live.
+              </p>
+              <Button type="button" variant="outline" size="sm" asChild>
+                <Link href="/pujari/services">Open Services</Link>
+              </Button>
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save"}

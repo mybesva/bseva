@@ -362,6 +362,27 @@ def patch_me(body: MePatchIn, user=Depends(current_user), db: Session = Depends(
                 text("UPDATE customer_profiles SET calendar_preference = :v WHERE user_id = CAST(:id AS uuid)"),
                 {"v": body.calendar_preference, "id": user["id"]},
             )
+    if body.phone is not None:
+        from app.validation_rules import normalize_mobile, phone_for_user_account
+
+        mobile = phone_for_user_account(normalize_mobile(body.phone))
+        taken = db.execute(
+            text("SELECT id FROM users WHERE phone = :p AND id <> CAST(:id AS uuid)"),
+            {"p": mobile, "id": user["id"]},
+        ).first()
+        if taken:
+            raise HTTPException(409, "This phone number is already registered")
+        db.execute(
+            text("UPDATE users SET phone = :p, updated_at = NOW() WHERE id = CAST(:id AS uuid)"),
+            {"p": mobile, "id": user["id"]},
+        )
+        if user["role"] in ("pujari", "head_pujari"):
+            # Keep profile mobile in sync (national 10-digit for India, E.164 otherwise)
+            profile_mobile = normalize_mobile(body.phone)
+            db.execute(
+                text("UPDATE pujari_profiles SET mobile_number = :p WHERE user_id = CAST(:id AS uuid)"),
+                {"p": profile_mobile, "id": user["id"]},
+            )
     db.commit()
     return {"ok": True}
 

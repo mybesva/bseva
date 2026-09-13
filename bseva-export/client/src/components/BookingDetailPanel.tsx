@@ -322,50 +322,73 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       )}
 
       <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1.5 text-sm">
-        <div className="font-medium text-foreground mb-1">Pricing</div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Base</span>
-          <span>{rupees(base)}</span>
+        <div className="font-medium text-foreground mb-1">
+          {viewerRole === "pujari" ? "Dakshina" : "Pricing"}
         </div>
-        {Number(booking.samagri_charge_paise || 0) > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              Samagri{viewerRole === "pujari" ? " (buy & reimbursed)" : ""}
-            </span>
-            <span>{rupees(Number(booking.samagri_charge_paise))}</span>
-          </div>
-        )}
-        {Number(booking.alankaram_charge_paise || 0) > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              Alankaram{viewerRole === "pujari" ? " (buy & reimbursed)" : ""}
-            </span>
-            <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
-          </div>
-        )}
-        {Number(booking.peak_fee_paise || 0) > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Surge / peak</span>
-            <span>{rupees(Number(booking.peak_fee_paise))}</span>
-          </div>
-        )}
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Platform fee</span>
-          <span>{rupees(platform)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">GST</span>
-          <span>{rupees(gst)}</span>
-        </div>
-        <div className="flex justify-between font-semibold border-t border-border pt-1.5">
-          <span>Total</span>
-          <span>{rupees(total)}</span>
-        </div>
-        {viewerRole === "pujari" && booking.pujari_payable_paise != null && (
-          <div className="flex justify-between text-primary">
-            <span>Dakshina</span>
-            <span>{rupees(Number(booking.pujari_payable_paise))}</span>
-          </div>
+        {viewerRole === "pujari" ? (
+          <>
+            {Number(booking.samagri_charge_paise || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Samagri (buy & reimbursed)</span>
+                <span>{rupees(Number(booking.samagri_charge_paise))}</span>
+              </div>
+            )}
+            {Number(booking.alankaram_charge_paise || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Alankaram (buy & reimbursed)</span>
+                <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold text-primary border-t border-border pt-1.5">
+              <span>Dakshina</span>
+              <span>
+                {rupees(
+                  Number(
+                    booking.pujari_payable_paise != null
+                      ? booking.pujari_payable_paise
+                      : Math.max(0, base - platform)
+                  )
+                )}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Base</span>
+              <span>{rupees(base)}</span>
+            </div>
+            {Number(booking.samagri_charge_paise || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Samagri</span>
+                <span>{rupees(Number(booking.samagri_charge_paise))}</span>
+              </div>
+            )}
+            {Number(booking.alankaram_charge_paise || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Alankaram</span>
+                <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
+              </div>
+            )}
+            {Number(booking.peak_fee_paise || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Surge / peak</span>
+                <span>{rupees(Number(booking.peak_fee_paise))}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Platform fee</span>
+              <span>{rupees(platform)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">GST</span>
+              <span>{rupees(gst)}</span>
+            </div>
+            <div className="flex justify-between font-semibold border-t border-border pt-1.5">
+              <span>Total</span>
+              <span>{rupees(total)}</span>
+            </div>
+          </>
         )}
       </div>
 

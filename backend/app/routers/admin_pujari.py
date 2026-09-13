@@ -668,3 +668,43 @@ def waive_joining_fee(
     write_audit(db, str(admin["id"]), f"joining_fee_waived:{reason}", "pujari", pujari_id)
     db.commit()
     return {"ok": True, "joining_fee_status": "waived"}
+
+
+@router.get("/pujaris/{pujari_id}/service-offers")
+def admin_get_service_offers(
+    pujari_id: str,
+    admin=Depends(require_any_permission("view_pujaris", "edit_pujaris")),
+    db: Session = Depends(get_db),
+):
+    from app.pujari_services import get_offers_payload
+
+    _load_admin_pujari(db, pujari_id)
+    return get_offers_payload(db, pujari_id)
+
+
+@router.post("/pujaris/{pujari_id}/service-offers/approve")
+def admin_approve_service_offers(
+    pujari_id: str,
+    admin=Depends(require_permission("edit_pujaris")),
+    db: Session = Depends(get_db),
+):
+    from app.pujari_services import apply_pending_offers
+
+    _load_admin_pujari(db, pujari_id)
+    out = apply_pending_offers(db, pujari_id, str(admin["id"]))
+    write_audit(db, str(admin["id"]), "pujari_service_offers_approved", "pujari", pujari_id)
+    return out
+
+
+@router.post("/pujaris/{pujari_id}/service-offers/reject")
+def admin_reject_service_offers(
+    pujari_id: str,
+    admin=Depends(require_permission("edit_pujaris")),
+    db: Session = Depends(get_db),
+):
+    from app.pujari_services import reject_pending_offers
+
+    _load_admin_pujari(db, pujari_id)
+    out = reject_pending_offers(db, pujari_id, str(admin["id"]))
+    write_audit(db, str(admin["id"]), "pujari_service_offers_rejected", "pujari", pujari_id)
+    return out

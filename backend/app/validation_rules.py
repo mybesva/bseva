@@ -19,7 +19,24 @@ _UUID_RE = re.compile(
 
 
 def normalize_mobile(raw: str | None) -> str:
-    digits = re.sub(r"\D", "", (raw or "").strip())
+    """Normalize phone to 10-digit India national or +E.164 for other countries."""
+    s = (raw or "").strip()
+    if not s:
+        raise HTTPException(400, "Enter a valid phone number")
+
+    if s.startswith("+"):
+        digits = re.sub(r"\D", "", s)
+        if digits.startswith("91") and len(digits) >= 12:
+            national = digits[-10:]
+            m = _MOBILE_RE.match(national)
+            if not m:
+                raise HTTPException(400, "Enter a valid 10-digit Indian mobile number")
+            return m.group(1)
+        if 8 <= len(digits) <= 15:
+            return f"+{digits}"
+        raise HTTPException(400, "Enter a valid phone number for the selected country code")
+
+    digits = re.sub(r"\D", "", s)
     if len(digits) > 10:
         # Prefer last 10 when prefixed with country code (91…) or legacy bad concatenations
         if digits.startswith("91") and len(digits) >= 12:
@@ -30,6 +47,13 @@ def normalize_mobile(raw: str | None) -> str:
     if not m:
         raise HTTPException(400, "Enter a valid 10-digit Indian mobile number")
     return m.group(1)
+
+
+def phone_for_user_account(normalized: str) -> str:
+    """Store India numbers as +91XXXXXXXXXX to match registration; keep other E.164 as-is."""
+    if normalized.startswith("+"):
+        return normalized
+    return f"+91{normalized}"
 
 
 def validate_mobile_optional(raw: str | None) -> Optional[str]:

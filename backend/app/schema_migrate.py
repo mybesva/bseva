@@ -76,6 +76,21 @@ _STMTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS pujari_service_offers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      pujari_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'approved', 'rejected', 'pending_removal')),
+      requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      reviewed_at TIMESTAMPTZ,
+      reviewed_by UUID REFERENCES users(id),
+      UNIQUE (pujari_id, service_id)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_pujari_service_offers_pujari ON pujari_service_offers (pujari_id)",
+    "CREATE INDEX IF NOT EXISTS idx_pujari_service_offers_status ON pujari_service_offers (status)",
+    """
     CREATE TABLE IF NOT EXISTS pujari_roles (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       level INTEGER NOT NULL UNIQUE,

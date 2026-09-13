@@ -88,6 +88,8 @@ export default function PujariDetailPage() {
   const [verifyLevel, setVerifyLevel] = useState(2);
   const [rejectionReason, setRejectionReason] = useState("");
   const [uploading, setUploading] = useState<string | null>(null);
+  const [serviceOffers, setServiceOffers] = useState<any>(null);
+  const [offersBusy, setOffersBusy] = useState(false);
 
   async function load() {
     if (!id) return;
@@ -106,6 +108,12 @@ export default function PujariDetailPage() {
       setReferralCode(data.referral_code);
       setVerifyLevel(Number(data.profile?.approved_level || data.profile?.requested_level || 2));
       setRejectionReason(data.profile?.rejection_reason || "");
+      try {
+        const offers = await api<any>(`/admin/pujaris/${id}/service-offers`);
+        setServiceOffers(offers);
+      } catch {
+        setServiceOffers(null);
+      }
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -564,7 +572,7 @@ export default function PujariDetailPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Specializations</Label>
+                  <Label>Specializations (legacy labels)</Label>
                   <div className="flex flex-wrap gap-3">
                     {SPEC_OPTS.map((s) => (
                       <label key={s} className="flex items-center gap-2 text-sm">
@@ -576,6 +584,9 @@ export default function PujariDetailPage() {
                       </label>
                     ))}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Prefer Services &amp; Dakshina below — approvals sync specializations automatically.
+                  </p>
                 </div>
               </>
             ) : (
@@ -586,6 +597,78 @@ export default function PujariDetailPage() {
                 <Field label="Languages">{listDisplay(p.languages)}</Field>
                 <Field label="Specializations">{listDisplay(p.specializations)}</Field>
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Services &amp; Dakshina requests</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!serviceOffers ? (
+              <p className="text-sm text-muted-foreground">No service offer data yet.</p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Approved: {serviceOffers.approved_count ?? 0} · Pending: {serviceOffers.pending_count ?? 0}
+                </p>
+                <div className="max-h-64 overflow-y-auto divide-y rounded-md border">
+                  {(serviceOffers.services || [])
+                    .filter((s: any) => s.status && s.status !== "none")
+                    .map((s: any) => (
+                      <div key={s.id} className="flex justify-between gap-3 px-3 py-2 text-sm">
+                        <div>
+                          <p className="font-medium">{s.name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{String(s.status).replace(/_/g, " ")}</p>
+                        </div>
+                        <p className="text-primary font-medium whitespace-nowrap">
+                          Dakshina ₹{((s.dakshina_paise || 0) / 100).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    disabled={offersBusy || !(serviceOffers.pending_count > 0)}
+                    onClick={async () => {
+                      setOffersBusy(true);
+                      try {
+                        const out = await api(`/admin/pujaris/${id}/service-offers/approve`, { method: "POST" });
+                        setServiceOffers(out);
+                        toast.success("Service changes approved");
+                        await load();
+                      } catch (e: any) {
+                        toast.error(e.message);
+                      } finally {
+                        setOffersBusy(false);
+                      }
+                    }}
+                  >
+                    Approve pending
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={offersBusy || !(serviceOffers.pending_count > 0)}
+                    onClick={async () => {
+                      setOffersBusy(true);
+                      try {
+                        const out = await api(`/admin/pujaris/${id}/service-offers/reject`, { method: "POST" });
+                        setServiceOffers(out);
+                        toast.success("Pending changes rejected");
+                      } catch (e: any) {
+                        toast.error(e.message);
+                      } finally {
+                        setOffersBusy(false);
+                      }
+                    }}
+                  >
+                    Reject pending
+                  </Button>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
