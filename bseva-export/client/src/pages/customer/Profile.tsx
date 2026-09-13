@@ -145,6 +145,12 @@ export default function CustomerProfilePage() {
         </CardHeader>
         <CardContent>
           <form className="space-y-6" onSubmit={save}>
+            {user?.public_id ? (
+              <div className="space-y-1">
+                <Label>Customer ID</Label>
+                <p className="font-mono text-sm">{user.public_id}</p>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>Profile photo</Label>
               {photoUrl ? (

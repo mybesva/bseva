@@ -61,6 +61,7 @@ def _verify_registration_otp(db: Session, body: RegisterIn) -> None:
 def _public(row: dict) -> dict:
     return {
         "id": str(row["id"]),
+        "public_id": row.get("public_id"),
         "name": row["name"],
         "email": row["email"],
         "phone": row["phone"],
@@ -299,6 +300,9 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
         from app.referrals import ensure_customer_referral_code
 
         ensure_customer_referral_code(db, user_id)
+    from app.public_ids import ensure_public_id
+
+    ensure_public_id(db, user_id)
     if body.referral_code:
         from app.referrals import apply_referral_code
 
@@ -329,11 +333,24 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email/phone or password")
     if row["blocked"]:
         raise HTTPException(status.HTTP_403_FORBIDDEN, ACCOUNT_BLOCKED)
+    if row["role"] in ("customer", "pujari", "head_pujari") and not (row.get("public_id") or "").strip():
+        from app.public_ids import ensure_public_id
+
+        ensure_public_id(db, str(row["id"]))
+        db.commit()
+        row = db.execute(text("SELECT * FROM users WHERE id = CAST(:id AS uuid)"), {"id": str(row["id"])}).mappings().one()
     return TokenOut(access_token=create_access_token(str(row["id"]), row["role"]), user=_public(dict(row)))
 
 
 @router.get("/me")
 def me(user=Depends(current_user), db: Session = Depends(get_db)):
+    if user["role"] in ("customer", "pujari", "head_pujari") and not (user.get("public_id") or "").strip():
+        from app.public_ids import ensure_public_id
+
+        ensure_public_id(db, str(user["id"]))
+        db.commit()
+        refreshed = db.execute(text("SELECT * FROM users WHERE id = CAST(:id AS uuid)"), {"id": user["id"]}).mappings().one()
+        user = dict(refreshed)
     extra: dict = {}
     if user["role"] == "customer":
         p = db.execute(text("SELECT * FROM customer_profiles WHERE user_id = :id"), {"id": user["id"]}).mappings().first()

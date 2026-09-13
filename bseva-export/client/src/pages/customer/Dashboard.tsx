@@ -116,6 +116,9 @@ function CustomerDashboardContent() {
       <section className="bg-sidebar text-sidebar-foreground py-10 px-6 rounded-xl mb-8">
         <h1 className="text-h1 mb-2">{t("customer.welcome")}, {user?.name || "Customer"}</h1>
         <p className="text-sidebar-foreground/80">{t("customer.subtitle")}</p>
+        {user?.public_id ? (
+          <p className="mt-2 text-sm text-sidebar-foreground/70 font-mono">ID: {user.public_id}</p>
+        ) : null}
       </section>
       <PromoBannerCarousel />
       <div className="space-y-12">

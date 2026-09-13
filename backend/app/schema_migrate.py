@@ -24,6 +24,8 @@ _STMTS = [
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_consent_at TIMESTAMPTZ",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version TEXT",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_version TEXT",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS public_id TEXT",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_id ON users (public_id) WHERE public_id IS NOT NULL",
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS address_line1 TEXT",
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS address_line2 TEXT",
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS district TEXT",
@@ -866,6 +868,26 @@ def ensure_schema(*, quiet: bool = False) -> None:
                 {"t": table, "c": col},
             ).first()
             log(f"     {table}.{col}: {'OK' if present else 'MISSING'}")
+
+    # Assign CUST-/PUJ- public IDs for existing users (outside the DDL transaction)
+    try:
+        from app.db import SessionLocal
+        from app.public_ids import backfill_missing_public_ids
+
+        log("  → backfill users.public_id")
+        db = SessionLocal()
+        try:
+            n = backfill_missing_public_ids(db)
+            db.commit()
+            log(f"     assigned {n} public_id(s)")
+            ok += 1
+        except Exception as e:
+            db.rollback()
+            failed.append(("backfill public_id", str(e).split("\n")[0][:180]))
+        finally:
+            db.close()
+    except Exception as e:
+        log(f"  ! public_id backfill skipped: {e}")
 
     log(f"Schema migrate finished. Applied/ok steps: {ok}. Failed statements: {len(failed)}.")
     if failed:

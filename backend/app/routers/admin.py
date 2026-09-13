@@ -77,7 +77,7 @@ def list_users(
     user=Depends(require_any_permission("view_customers", "view_pujaris", "manage_admins")),
     db: Session = Depends(get_db),
 ):
-    sql = "SELECT id, name, email, phone, role, blocked, blocked_at, block_reason, created_at, preferred_language FROM users WHERE 1=1"
+    sql = "SELECT id, public_id, name, email, phone, role, blocked, blocked_at, block_reason, created_at, preferred_language FROM users WHERE 1=1"
     count_sql = "SELECT COUNT(*) FROM users WHERE 1=1"
     params: dict = {}
     if role:
@@ -89,8 +89,8 @@ def list_users(
         count_sql += " AND blocked = :blocked"
         params["blocked"] = blocked
     if q:
-        sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q)"
-        count_sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q)"
+        sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q OR public_id ILIKE :q)"
+        count_sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q OR public_id ILIKE :q)"
         params["q"] = f"%{q}%"
     total = int(db.execute(text(count_sql), params).scalar() or 0)
     params["lim"] = page_size
@@ -208,6 +208,9 @@ def create_user(body: AdminUserIn, admin=Depends(require_any_permission("create_
                 "phone": body.phone,
             },
         )
+    from app.public_ids import ensure_public_id
+
+    ensure_public_id(db, user_id)
     db.commit()
     return {
         "ok": True,
@@ -333,7 +336,7 @@ def list_pujaris(
         base_where += " AND u.blocked = :blocked"
         params["blocked"] = blocked
     if q:
-        base_where += " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q)"
+        base_where += " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q OR u.public_id ILIKE :q)"
         params["q"] = f"%{q}%"
     total = int(
         db.execute(
@@ -345,7 +348,7 @@ def list_pujaris(
     params["lim"] = page_size
     params["off"] = (page - 1) * page_size
     sql = f"""
-            SELECT u.id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
+            SELECT u.id, u.public_id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
                    p.requested_level, p.approved_level, p.verification_status, p.available, p.location_label,
                    p.experience_years, p.specializations, p.pravara, p.joining_fee_status,
                    COALESCE(p.is_head_pujari, FALSE) AS is_head_pujari,

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { CustomerPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, rupees } from "@/lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
@@ -11,14 +10,13 @@ import { toast } from "sonner";
 export default function CustomerRewardsPage() {
   const { t } = useI18n();
   const [code, setCode] = useState<string | null>(null);
-  const [applied, setApplied] = useState<any>(null);
-  const [applyCode, setApplyCode] = useState("");
+  const [myReferrals, setMyReferrals] = useState<{ name: string }[]>([]);
   const [rewards, setRewards] = useState<any[]>([]);
 
   async function load() {
-    const ref = await api<{ referral_code: string; applied: any }>("/customer/referral-code");
+    const ref = await api<{ referral_code: string; my_referrals?: { name: string }[] }>("/customer/referral-code");
     setCode(ref.referral_code);
-    setApplied(ref.applied);
+    setMyReferrals(ref.my_referrals || []);
     setRewards(await api<any[]>("/wallet/rewards"));
   }
 
@@ -35,7 +33,7 @@ export default function CustomerRewardsPage() {
             <CardTitle className="text-base">{t("rewards.yourCode")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-2xl font-semibold tracking-wide">{code ||"…"}</p>
+            <p className="text-2xl font-semibold tracking-wide">{code || "…"}</p>
             <Button
               variant="outline"
               disabled={!code}
@@ -50,54 +48,33 @@ export default function CustomerRewardsPage() {
             <p className="text-sm text-muted-foreground">{t("rewards.shareHint")}</p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("rewards.applyTitle")}</CardTitle>
+            <CardTitle className="text-base">My referrals</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {applied ? (
-              <p className="text-sm">
-                {t("rewards.alreadyApplied")}: <strong>{applied.code}</strong> ({applied.status})
-              </p>
+          <CardContent>
+            {myReferrals.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No one has joined with your code yet.</p>
             ) : (
-              <>
-                <div className="space-y-1">
-                  <Label>{t("rewards.codeLabel")}</Label>
-                  <Input
-                    value={applyCode}
-                    onChange={(e) => setApplyCode(e.target.value)}
-                    placeholder="e.g. CUST9876-RC"
-                  />
-                </div>
-                <Button
-                  onClick={async () => {
-                    const code = applyCode.trim();
-                    if (!code) {
-                      toast.error("Enter a referral code");
-                      return;
-                    }
-                    if (code.length < 3) {
-                      toast.error("Referral code must be at least 3 characters");
-                      return;
-                    }
-                    try {
-                      await api("/referrals/apply", {
-                        method: "POST",
-                        body: JSON.stringify({ code }),
-                      });
-                      toast.success(t("rewards.applyOk"));
-                      await load();
-                    } catch (e: any) {
-                      toast.error(e.message);
-                    }
-                  }}
-                >
-                  {t("rewards.apply")}
-                </Button>
-              </>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {myReferrals.map((r, i) => (
+                    <TableRow key={`${r.name}-${i}`}>
+                      <TableCell>{r.name}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
+
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">{t("rewards.history")}</CardTitle>

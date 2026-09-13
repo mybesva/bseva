@@ -551,7 +551,7 @@ class ReferralApplyIn(BaseModel):
 
 @router.get("/customer/referral-code")
 def customer_referral_code(user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
-    from app.referrals import ensure_customer_referral_code
+    from app.referrals import ensure_customer_referral_code, list_my_referrals
 
     code = ensure_customer_referral_code(db, str(user["id"]))
     db.commit()
@@ -562,6 +562,7 @@ def customer_referral_code(user=Depends(require_roles("customer")), db: Session 
     return {
         "referral_code": code,
         "applied": row_dict(linked) if linked else None,
+        "my_referrals": list_my_referrals(db, str(user["id"])),
     }
 
 
@@ -766,11 +767,14 @@ def list_head_ratings(user=Depends(require_roles("head_pujari", "admin", "super_
 
 @router.get("/pujari/referral-code")
 def my_referral_code(user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
-    from app.referrals import ensure_pujari_referral_code
+    from app.referrals import ensure_pujari_referral_code, list_my_referrals
 
     code = ensure_pujari_referral_code(db, str(user["id"]))
     db.commit()
-    return {"referral_code": code}
+    return {
+        "referral_code": code,
+        "my_referrals": list_my_referrals(db, str(user["id"])),
+    }
 
 
 class LocationPriceIn(BaseModel):

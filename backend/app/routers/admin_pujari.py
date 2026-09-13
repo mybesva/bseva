@@ -37,7 +37,7 @@ def _load_admin_pujari(db: Session, pujari_id: str) -> dict:
     row = db.execute(
         text(
             """
-            SELECT u.id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason, u.created_at,
+            SELECT u.id, u.public_id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason, u.created_at,
                    p.*
             FROM users u
             JOIN pujari_profiles p ON p.user_id = u.id
@@ -119,7 +119,7 @@ def get_pujari_detail(
         {"id": pujari_id},
     ).mappings().all()
     referral = db.execute(
-        text("SELECT referral_code FROM users WHERE id = CAST(:id AS uuid)"),
+        text("SELECT referral_code, public_id FROM users WHERE id = CAST(:id AS uuid)"),
         {"id": pujari_id},
     ).first()
     return {
@@ -127,6 +127,7 @@ def get_pujari_detail(
         "documents": [row_dict(d) for d in docs],
         "verification_history": [row_dict(h) for h in history],
         "referral_code": referral[0] if referral else None,
+        "public_id": referral[1] if referral else None,
     }
 
 

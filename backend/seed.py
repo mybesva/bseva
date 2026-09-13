@@ -220,6 +220,20 @@ def run() -> None:
         except Exception:
             pass
 
+        # Human-readable CUST-/PUJ- public IDs
+        try:
+            from app.public_ids import backfill_missing_public_ids
+            from app.db import SessionLocal
+
+            s = SessionLocal()
+            try:
+                backfill_missing_public_ids(s)
+                s.commit()
+            finally:
+                s.close()
+        except Exception:
+            pass
+
         # Services (only if empty)
         cur.execute("SELECT COUNT(*) AS n FROM services")
         if int(cur.fetchone()["n"] or 0) == 0:

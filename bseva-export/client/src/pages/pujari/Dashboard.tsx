@@ -353,6 +353,9 @@ function PujariDashboardContent() {
           Namaste, {user?.name}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("priest.subtitle")}</p>
+        {user?.public_id ? (
+          <p className="mt-1 text-sm text-muted-foreground font-mono">ID: {user.public_id}</p>
+        ) : null}
       </section>
 
       <div className="space-y-8">

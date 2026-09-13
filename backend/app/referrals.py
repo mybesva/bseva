@@ -85,6 +85,23 @@ def find_referrer_by_code(db: Session, code: str):
     ).mappings().first()
 
 
+def list_my_referrals(db: Session, referrer_id: str) -> list[dict]:
+    """People who joined using this user's referral code — name only for tracking."""
+    rows = db.execute(
+        text(
+            """
+            SELECT u.name
+            FROM referrals r
+            JOIN users u ON u.id = r.referee_id
+            WHERE r.referrer_id = CAST(:id AS uuid)
+            ORDER BY r.created_at DESC
+            """
+        ),
+        {"id": referrer_id},
+    ).mappings().all()
+    return [{"name": (r["name"] or "").strip() or "—"} for r in rows]
+
+
 def apply_referral_code(db: Session, referee_id: str, code: str) -> dict:
     """Link referee to referrer. Prevents self-referral and duplicate rewards rows."""
     code = (code or "").strip()

@@ -174,6 +174,7 @@ export async function uploadAdminPujariDocument(pujariId: string, file: File, do
 
 export type AuthUser = {
   id: string;
+  public_id?: string | null;
   name: string;
   email: string;
   phone: string;

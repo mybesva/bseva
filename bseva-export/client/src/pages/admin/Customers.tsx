@@ -198,7 +198,7 @@ export default function CustomersPage() {
         </div>
         <div className="flex gap-2 flex-1 min-w-[200px]">
           <Input
-            placeholder="Search name, email, phone (1+ characters)"
+            placeholder="Search ID, name, email, phone"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -227,6 +227,7 @@ export default function CustomersPage() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>ID</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
@@ -238,6 +239,7 @@ export default function CustomersPage() {
         <TableBody>
           {rows.map((u) => (
             <TableRow key={u.id}>
+              <TableCell className="font-mono text-xs">{u.public_id || "—"}</TableCell>
               <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>{u.phone}</TableCell>

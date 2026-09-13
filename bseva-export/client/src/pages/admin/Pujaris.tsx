@@ -69,6 +69,7 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
 
   return (
     <TableRow>
+      <TableCell className="font-mono text-xs whitespace-nowrap">{u.public_id || "—"}</TableCell>
       <TableCell>
         <button
           type="button"
@@ -453,6 +454,7 @@ export default function PujarisPage() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>ID</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Level</TableHead>

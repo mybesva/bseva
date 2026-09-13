@@ -263,6 +263,9 @@ export default function PujariDetailPage() {
           </Link>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-h1">{profile.full_name || profile.name}</h1>
+            {profile.public_id ? (
+              <Badge variant="outline" className="font-mono">{profile.public_id}</Badge>
+            ) : null}
             {incomplete && <Badge variant="destructive">Profile Incomplete</Badge>}
             <Badge>{profile.verification_status}</Badge>
             <Badge variant={profile.blocked ? "destructive" : "secondary"}>

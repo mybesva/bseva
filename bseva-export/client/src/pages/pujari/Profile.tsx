@@ -11,6 +11,7 @@ import { api, pujariMediaUrl, uploadPujariAsset } from "@/lib/api";
 import { parsePhoneParts, toE164, validatePhoneNational } from "@/lib/phone";
 import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
@@ -389,11 +390,15 @@ function ProfileForm() {
 
 export default function PujariProfilePage() {
   const { t } = useI18n();
+  const { user } = useAuth();
   return (
     <PujariPortal>
       <Card className="max-w-3xl">
         <CardHeader>
           <CardTitle className="">{t("pujari.profile.title")}</CardTitle>
+          {user?.public_id ? (
+            <p className="text-sm text-muted-foreground font-mono">ID: {user.public_id}</p>
+          ) : null}
         </CardHeader>
         <CardContent>
           <ProfileForm />
