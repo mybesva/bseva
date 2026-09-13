@@ -1,0 +1,16 @@
+# Prevent oversized Vercel CLI uploads (Git deploys ignore this; CLI does not)
+docs/
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+**/node_modules/
+**/.pytest_cache/
+**/coverage/
+docs/testing_points_media/
+docs/puja_sources/
+*.docx
+apps/mobile/
+packages/
+client/
+server/
