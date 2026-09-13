@@ -617,14 +617,42 @@ export default function PujariDetailPage() {
                   {(serviceOffers.services || [])
                     .filter((s: any) => s.status && s.status !== "none")
                     .map((s: any) => (
-                      <div key={s.id} className="flex justify-between gap-3 px-3 py-2 text-sm">
-                        <div>
-                          <p className="font-medium">{s.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{String(s.status).replace(/_/g, " ")}</p>
+                      <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{s.name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {String(s.status).replace(/_/g, " ")}
+                          </p>
                         </div>
-                        <p className="text-primary font-medium whitespace-nowrap">
-                          Dakshina ₹{((s.dakshina_paise || 0) / 100).toLocaleString("en-IN")}
-                        </p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <p className="text-primary font-medium whitespace-nowrap">
+                            Dakshina ₹{((s.dakshina_paise || 0) / 100).toLocaleString("en-IN")}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive/40"
+                            disabled={offersBusy}
+                            onClick={async () => {
+                              if (!confirm(`Remove access to ${s.name}? The pujari will lose this service.`)) return;
+                              setOffersBusy(true);
+                              try {
+                                const out = await api(`/admin/pujaris/${id}/service-offers/${s.id}`, {
+                                  method: "DELETE",
+                                });
+                                setServiceOffers(out);
+                                toast.success("Service access removed");
+                                await load();
+                              } catch (e: any) {
+                                toast.error(e.message);
+                              } finally {
+                                setOffersBusy(false);
+                              }
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
                       </div>
                     ))}
                 </div>

@@ -710,3 +710,25 @@ def admin_reject_service_offers(
     out = reject_pending_offers(db, pujari_id, str(admin["id"]))
     write_audit(db, str(admin["id"]), "pujari_service_offers_rejected", "pujari", pujari_id)
     return out
+
+
+@router.delete("/pujaris/{pujari_id}/service-offers/{service_id}")
+def admin_revoke_service_offer(
+    pujari_id: str,
+    service_id: str,
+    admin=Depends(require_permission("edit_pujaris")),
+    db: Session = Depends(get_db),
+):
+    """Remove a pujari's access to one catalog service immediately."""
+    from app.pujari_services import revoke_service_offer
+
+    _load_admin_pujari(db, pujari_id)
+    out = revoke_service_offer(db, pujari_id, service_id)
+    write_audit(
+        db,
+        str(admin["id"]),
+        f"pujari_service_offer_revoked:{service_id}",
+        "pujari",
+        pujari_id,
+    )
+    return out

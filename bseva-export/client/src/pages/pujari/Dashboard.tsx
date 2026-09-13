@@ -27,7 +27,6 @@ import {
   Calendar as CalendarIcon,
   MapPin,
   Clock,
-  User,
   Sparkles,
   IndianRupee,
   CheckCircle2,
@@ -269,10 +268,6 @@ function PujariDashboardContent() {
                 <span className="flex items-center gap-1">
                   <Clock size={14} />
                   {row.booking.bookingTime || "—"}
-                </span>
-                <span className="flex items-center gap-1">
-                  <User size={14} />
-                  {row.customer.name}
                 </span>
                 <span className="flex items-center gap-1">
                   <MapPin size={14} />

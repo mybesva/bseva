@@ -63,7 +63,7 @@ def dakshina_paise_for_service(db: Session, row: dict) -> int:
 
 
 def list_catalog_services_for_offers(db: Session) -> list[dict]:
-    """Active priced services pujaris can opt into (not drafts awaiting pricing)."""
+    """All active catalog pujas (new ones appear automatically for selection)."""
     try:
         rows = db.execute(
             text(
@@ -73,13 +73,12 @@ def list_catalog_services_for_offers(db: Session) -> list[dict]:
                        main_puja_price_paise, duration_minutes, active, pricing_status
                 FROM services
                 WHERE active = TRUE
-                  AND standard_price_paise IS NOT NULL
-                  AND COALESCE(pricing_status, 'priced') <> 'awaiting_pricing'
                 ORDER BY display_order NULLS LAST, name
                 """
             )
         ).mappings().all()
     except Exception:
+        db.rollback()
         rows = db.execute(
             text(
                 """
@@ -141,6 +140,7 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
     for s in services:
         sid = str(s["id"])
         status = by_id.get(sid) or "none"
+        locked = status in ("approved", "pending", "pending_removal")
         if status in ("pending", "pending_removal"):
             pending_count += 1
         if status == "approved":
@@ -161,8 +161,8 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
                 "catalog_price_paise": base,
                 "dakshina_paise": dakshina,
                 "status": status,
-                # Checked in UI if currently offered or requested (not pending_removal)
                 "selected": status in ("approved", "pending"),
+                "locked": locked,
             }
         )
     return {
@@ -170,23 +170,27 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
         "services": out,
         "pending_count": pending_count,
         "approved_count": approved_count,
-        "note": "Selecting or changing services requires Admin approval before they go live. You cannot create new pujas — choose from the BSeva catalog.",
+        "note": (
+            "Select pujas you can perform and submit for admin approval. "
+            "Once selected or approved, you cannot remove them — only Admin can revoke access. "
+            "New catalog pujas appear here automatically."
+        ),
     }
 
 
 def submit_service_selection(db: Session, pujari_id: str, service_ids: list[str]) -> dict:
+    """Pujari may only add new selections. Locked (pending/approved) offers cannot be removed by pujari."""
     ensure_offers_table(db)
     catalog = {str(s["id"]) for s in list_catalog_services_for_offers(db)}
-    desired = []
+    requested: list[str] = []
     for raw in service_ids or []:
         sid = str(raw).strip()
         if not sid:
             continue
         if sid not in catalog:
             raise HTTPException(400, f"Unknown or inactive service: {sid}")
-        if sid not in desired:
-            desired.append(sid)
-    desired_set = set(desired)
+        if sid not in requested:
+            requested.append(sid)
 
     existing = {
         str(r["service_id"]): r["status"]
@@ -202,55 +206,57 @@ def submit_service_selection(db: Session, pujari_id: str, service_ids: list[str]
         ).mappings().all()
     }
 
-    # Upsert desired services without auto-approving
-    for sid in desired_set:
-        cur = existing.get(sid)
-        if cur == "approved":
-            continue  # already live — no change
-        if cur == "pending":
-            continue
-        # pending_removal / rejected / none → request again as pending
-        db.execute(
-            text(
-                """
-                INSERT INTO pujari_service_offers (pujari_id, service_id, status, requested_at)
-                VALUES (CAST(:pid AS uuid), CAST(:sid AS uuid), 'pending', NOW())
-                ON CONFLICT (pujari_id, service_id) DO UPDATE
-                  SET status = 'pending',
-                      requested_at = NOW(),
-                      reviewed_at = NULL,
-                      reviewed_by = NULL
-                """
-            ),
-            {"pid": pujari_id, "sid": sid},
-        )
+    locked = {sid for sid, st in existing.items() if st in ("approved", "pending", "pending_removal")}
 
-    # Approved but unchecked → pending_removal (stays live until admin approves removal)
-    for sid, status in existing.items():
-        if sid in desired_set:
+    # Only process new additions — never remove locked offers from pujari side
+    for sid in requested:
+        if sid in locked:
             continue
-        if status == "approved":
+        cur = existing.get(sid)
+        if cur == "rejected":
             db.execute(
                 text(
                     """
                     UPDATE pujari_service_offers
-                    SET status = 'pending_removal', requested_at = NOW(), reviewed_at = NULL, reviewed_by = NULL
+                    SET status = 'pending', requested_at = NOW(), reviewed_at = NULL, reviewed_by = NULL
                     WHERE pujari_id = CAST(:pid AS uuid) AND service_id = CAST(:sid AS uuid)
                     """
                 ),
                 {"pid": pujari_id, "sid": sid},
             )
-        elif status in ("pending", "rejected"):
+        else:
             db.execute(
                 text(
                     """
-                    DELETE FROM pujari_service_offers
-                    WHERE pujari_id = CAST(:pid AS uuid) AND service_id = CAST(:sid AS uuid)
+                    INSERT INTO pujari_service_offers (pujari_id, service_id, status, requested_at)
+                    VALUES (CAST(:pid AS uuid), CAST(:sid AS uuid), 'pending', NOW())
+                    ON CONFLICT (pujari_id, service_id) DO UPDATE
+                      SET status = 'pending',
+                          requested_at = NOW(),
+                          reviewed_at = NULL,
+                          reviewed_by = NULL
                     """
                 ),
                 {"pid": pujari_id, "sid": sid},
             )
 
+    db.commit()
+    return get_offers_payload(db, pujari_id)
+
+
+def revoke_service_offer(db: Session, pujari_id: str, service_id: str) -> dict:
+    """Admin: immediately remove a pujari's access to a catalog service."""
+    ensure_offers_table(db)
+    db.execute(
+        text(
+            """
+            DELETE FROM pujari_service_offers
+            WHERE pujari_id = CAST(:pid AS uuid) AND service_id = CAST(:sid AS uuid)
+            """
+        ),
+        {"pid": pujari_id, "sid": service_id},
+    )
+    sync_specializations_from_approved(db, pujari_id)
     db.commit()
     return get_offers_payload(db, pujari_id)
 

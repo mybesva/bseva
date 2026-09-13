@@ -32,7 +32,7 @@ import {
   statusBadgeClass,
   type PujariBookingRow,
 } from "@/lib/pujariBookings";
-import { Calendar as CalendarIcon, Clock, MapPin, Sparkles, User } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -135,7 +135,6 @@ export default function PujariBookingsPage() {
         if (!needle) return true;
         const hay = [
           r.pujaType.name,
-          r.customer.name,
           r.booking.bookingNumber,
           r.booking.city,
           r.booking.status,
@@ -181,7 +180,7 @@ export default function PujariBookingsPage() {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Service, customer, booking #"
+                placeholder="Service, booking #, location"
               />
             </div>
             <div className="space-y-1">
@@ -272,10 +271,6 @@ export default function PujariBookingsPage() {
                           <span className="flex items-center gap-1">
                             <Clock size={14} />
                             {row.booking.bookingTime || "—"}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <User size={14} />
-                            {row.customer.name || "—"}
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin size={14} />
