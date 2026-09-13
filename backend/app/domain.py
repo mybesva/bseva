@@ -21,7 +21,21 @@ def row_dict(row) -> dict:
 
 
 def hours_until(booking_date: date, start: time) -> float:
-    return (datetime.combine(booking_date, start) - datetime.now()).total_seconds() / 3600.0
+    """Hours until booking start, treating booking_date/start_time as Asia/Kolkata wall clock.
+
+    Bookings store naive local India times; production hosts often run in UTC, so comparing
+    with datetime.now() alone would open OTP/tracking windows at the wrong time.
+    """
+    try:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo("Asia/Kolkata")
+        start_dt = datetime.combine(booking_date, start, tzinfo=tz)
+        now = datetime.now(tz)
+    except Exception:
+        start_dt = datetime.combine(booking_date, start)
+        now = datetime.now()
+    return (start_dt - now).total_seconds() / 3600.0
 
 
 def cancel_policy(hours: float, db: Session | None = None, actor: str = "customer") -> dict:

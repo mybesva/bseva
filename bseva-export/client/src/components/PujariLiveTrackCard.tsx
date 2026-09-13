@@ -156,7 +156,7 @@ export default function PujariLiveTrackCard({
         </>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Tracking is open. Ask your pujari to tap <strong>Share live location</strong> from their booking screen.
+          Tracking is open. Waiting for the pujari&apos;s live location…
         </p>
       )}
     </div>
