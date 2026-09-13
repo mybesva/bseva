@@ -203,6 +203,8 @@ class ServiceIn(BaseModel):
     duration_minutes: int = 90
     pujaris_required: Optional[int] = Field(default=1, ge=1, le=20)
     virtual_available: bool = False
+    # Minimum notice before booking start (hours). Common presets: 2=instant, 24=1 day, 48=2 days.
+    booking_lead_hours: int = Field(default=48, ge=1, le=720)
     active: bool = True
     samagri_available: Optional[bool] = True
     alankaram_available: Optional[bool] = False

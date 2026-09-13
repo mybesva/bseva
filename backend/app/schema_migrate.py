@@ -248,6 +248,7 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_account_number TEXT",
 
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS basic_price_paise INTEGER",
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS booking_lead_hours INTEGER NOT NULL DEFAULT 48",
     """
     CREATE TABLE IF NOT EXISTS support_conversations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -161,6 +161,14 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [lng, setLng] = useState<number | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoPending, setGeoPending] = useState(false);
+  const [addressMode, setAddressMode] = useState<"saved" | "new">("new");
+  const [savedAddress, setSavedAddress] = useState<{
+    label: string;
+    city: string;
+    lat: number | null;
+    lng: number | null;
+  } | null>(null);
+  const [savedAddressLoading, setSavedAddressLoading] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -200,6 +208,74 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       .then((w) => setWallet({ balance: w.wallet.balance_paise, wallet: w.wallet }))
       .catch(() => setWallet(null));
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "customer") {
+      setSavedAddress(null);
+      setAddressMode("new");
+      return;
+    }
+    setSavedAddressLoading(true);
+    api<any>("/customer/profile")
+      .then((p) => {
+        const parts = [
+          p.address_line1,
+          p.address_line2,
+          p.city,
+          p.district,
+          p.state,
+          p.pincode,
+        ]
+          .map((x: unknown) => String(x || "").trim())
+          .filter(Boolean);
+        const label =
+          String(p.location_label || "").trim() ||
+          String(p.address || "").trim() ||
+          parts.join(", ");
+        const profileCity = String(p.city || "").trim();
+        if (!label && !profileCity) {
+          setSavedAddress(null);
+          setAddressMode("new");
+          return;
+        }
+        const saved = {
+          label: label || profileCity,
+          city: profileCity,
+          lat: p.latitude != null ? Number(p.latitude) : null,
+          lng: p.longitude != null ? Number(p.longitude) : null,
+        };
+        setSavedAddress(saved);
+        setAddressMode("saved");
+        setLocationText(saved.label);
+        setCity(saved.city);
+        setLat(saved.lat);
+        setLng(saved.lng);
+      })
+      .catch(() => {
+        setSavedAddress(null);
+        setAddressMode("new");
+      })
+      .finally(() => setSavedAddressLoading(false));
+  }, [isAuthenticated, user?.role]);
+
+  function applySavedAddress() {
+    if (!savedAddress) return;
+    setAddressMode("saved");
+    setLocationText(savedAddress.label);
+    setCity(savedAddress.city);
+    setLat(savedAddress.lat);
+    setLng(savedAddress.lng);
+    setGeoError(null);
+  }
+
+  function startNewAddress() {
+    setAddressMode("new");
+    setLocationText("");
+    setCity("");
+    setLat(null);
+    setLng(null);
+    setGeoError(null);
+  }
 
   useEffect(() => {
     if (!bookingDate) return;
@@ -720,71 +796,144 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             )}
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label>Address *</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={geoPending}
-                onClick={() => {
-                  if (!navigator.geolocation) {
-                    setGeoError("Geolocation is not supported in this browser. Enter address manually.");
-                    return;
-                  }
-                  setGeoPending(true);
-                  setGeoError(null);
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      const latitude = pos.coords.latitude;
-                      const longitude = pos.coords.longitude;
-                      setLat(latitude);
-                      setLng(longitude);
-                      void (async () => {
-                        try {
-                          const resolved = await reverseGeocodeCoords(latitude, longitude);
-                          setLocationText(resolved.address);
-                          if (resolved.city) setCity(resolved.city);
-                          toast.success("Address and city updated from your location");
-                        } catch {
-                          setLocationText(`Current location (GPS ${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
-                          toast.message("GPS saved — enter address and city manually if needed");
-                        } finally {
-                          setGeoPending(false);
-                        }
-                      })();
-                    },
-                    (err) => {
-                      setGeoPending(false);
-                      setGeoError(
-                        err.code === err.PERMISSION_DENIED
-                          ? "Location permission denied. Enter the address manually."
-                          : "Could not get location. Enter the address manually."
-                      );
-                    },
-                    { enableHighAccuracy: true, timeout: 12000 }
-                  );
+          <div className="space-y-3">
+            <Label>Address *</Label>
+            {savedAddressLoading ? (
+              <p className="text-sm text-muted-foreground">Loading saved address…</p>
+            ) : (
+              <RadioGroup
+                value={addressMode}
+                onValueChange={(v) => {
+                  if (v === "saved") applySavedAddress();
+                  else startNewAddress();
                 }}
+                className="grid grid-cols-1 gap-2"
               >
-                {geoPending ? "Locating…" : "Use my location"}
-              </Button>
+                {savedAddress && (
+                  <Label
+                    className={cn(
+                      "flex flex-col items-start w-full cursor-pointer rounded-lg p-3 transition-colors",
+                      addressMode === "saved"
+                        ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                        : "border border-border bg-background hover:border-muted-foreground/40"
+                    )}
+                  >
+                    <RadioGroupItem value="saved" className="sr-only" />
+                    <span className="font-medium">Use saved address</span>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{savedAddress.label}</p>
+                    {savedAddress.city ? (
+                      <p className="text-xs text-muted-foreground">City: {savedAddress.city}</p>
+                    ) : null}
+                  </Label>
+                )}
+                <Label
+                  className={cn(
+                    "flex flex-col items-start w-full cursor-pointer rounded-lg p-3 transition-colors",
+                    addressMode === "new"
+                      ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                      : "border border-border bg-background hover:border-muted-foreground/40"
+                  )}
+                >
+                  <RadioGroupItem value="new" className="sr-only" />
+                  <span className="font-medium">
+                    {savedAddress ? "Use a different address" : "Enter address"}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {savedAddress
+                      ? "Add a new location for this booking only"
+                      : "No saved address in your profile yet — enter one below"}
+                  </p>
+                </Label>
+              </RadioGroup>
+            )}
+
+            {addressMode === "saved" && savedAddress ? (
+              <div className="rounded-md border border-border bg-muted/20 p-3 text-sm space-y-1">
+                <p className="font-medium text-foreground">{savedAddress.label}</p>
+                {savedAddress.city ? (
+                  <p className="text-muted-foreground">City: {savedAddress.city}</p>
+                ) : null}
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin size={12} /> Service location for the assigned pujari
+                  {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm font-normal text-muted-foreground">New address</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={geoPending}
+                    onClick={() => {
+                      if (!navigator.geolocation) {
+                        setGeoError("Geolocation is not supported in this browser. Enter address manually.");
+                        return;
+                      }
+                      setGeoPending(true);
+                      setGeoError(null);
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          const latitude = pos.coords.latitude;
+                          const longitude = pos.coords.longitude;
+                          setLat(latitude);
+                          setLng(longitude);
+                          void (async () => {
+                            try {
+                              const resolved = await reverseGeocodeCoords(latitude, longitude);
+                              setLocationText(resolved.address);
+                              if (resolved.city) setCity(resolved.city);
+                              toast.success("Address and city updated from your location");
+                            } catch {
+                              setLocationText(
+                                `Current location (GPS ${latitude.toFixed(5)}, ${longitude.toFixed(5)})`,
+                              );
+                              toast.message("GPS saved — enter address and city manually if needed");
+                            } finally {
+                              setGeoPending(false);
+                            }
+                          })();
+                        },
+                        (err) => {
+                          setGeoPending(false);
+                          setGeoError(
+                            err.code === err.PERMISSION_DENIED
+                              ? "Location permission denied. Enter the address manually."
+                              : "Could not get location. Enter the address manually.",
+                          );
+                        },
+                        { enableHighAccuracy: true, timeout: 12000 },
+                      );
+                    }}
+                  >
+                    {geoPending ? "Locating…" : "Use my location"}
+                  </Button>
+                </div>
+                <Textarea
+                  value={locationText}
+                  onChange={(e) => setLocationText(e.target.value)}
+                  placeholder="House/flat, street, landmark"
+                />
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin size={12} /> Service location for the assigned pujari
+                  {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
+                </p>
+                {geoError && <p className="text-xs text-destructive">{geoError}</p>}
+                <div className="space-y-2 pt-1">
+                  <Label>City *</Label>
+                  <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
+                </div>
+              </div>
+            )}
+          </div>
+          {addressMode === "saved" && (
+            <div className="space-y-2">
+              <Label>City *</Label>
+              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
             </div>
-            <Textarea
-              value={locationText}
-              onChange={(e) => setLocationText(e.target.value)}
-              placeholder="House/flat, street, landmark"
-            />
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <MapPin size={12} /> Service location for the assigned pujari
-              {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
-            </p>
-            {geoError && <p className="text-xs text-destructive">{geoError}</p>}
-          </div>
-          <div className="space-y-2">
-            <Label>City *</Label>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
-          </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("booking.recurring")}</Label>

@@ -309,6 +309,24 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         raise HTTPException(400, "This service is not yet available for booking")
     if body.mode == "virtual" and not bool(get_setting(db, "virtual_puja_enabled", False)):
         raise HTTPException(400, "Virtual Puja is currently disabled by Admin")
+
+    # Per-puja minimum booking notice (default 48h / 2 days)
+    lead_hours = int(svc.get("booking_lead_hours") if svc.get("booking_lead_hours") is not None else 48)
+    if lead_hours < 1:
+        lead_hours = 48
+    booking_start = datetime.combine(body.booking_date, body.start_time)
+    earliest_allowed = datetime.now() + timedelta(hours=lead_hours)
+    if booking_start < earliest_allowed:
+        if lead_hours <= 2:
+            msg = "This puja can only be booked for a time at least 2 hours from now"
+        elif lead_hours <= 24:
+            msg = "This puja must be booked at least 24 hours in advance"
+        elif lead_hours <= 48:
+            msg = "This puja must be booked at least 2 days in advance"
+        else:
+            msg = f"This puja must be booked at least {lead_hours} hours in advance"
+        raise HTTPException(400, msg)
+
     pujari = db.execute(
         text(
             """
