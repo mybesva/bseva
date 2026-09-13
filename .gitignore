@@ -65,6 +65,12 @@ tmp/
 # Vercel local link
 .vercel/
 
+# Local QA / testing artifacts (keep tracked docs/*.md)
+docs/B-Seva_findings.docx
+docs/Testing_Points.docx
+docs/Testing_Points_extracted.txt
+docs/testing_points_media/
+
 # Local demo / DB files
 data/
 *.db
