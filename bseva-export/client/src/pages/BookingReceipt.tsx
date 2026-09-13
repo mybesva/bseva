@@ -257,7 +257,7 @@ export default function BookingReceipt() {
             </div>
 
             {booking.preparation ? (
-              <PreparationChecklist preparation={booking.preparation} />
+              <PreparationChecklist preparation={booking.preparation} interactive={false} />
             ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
               <div className="rounded-lg border p-4 space-y-2">
                 <h3 className="font-semibold">Recommended List</h3>

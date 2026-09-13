@@ -45,11 +45,12 @@ function itemLabel(it: PrepItem): string {
 export default function PreparationChecklist({
   preparation,
   title = "Puja preparation & Samagri",
-  interactive = true,
+  interactive = false,
   compact = false,
 }: {
   preparation?: PreparationView | null;
   title?: string;
+  /** Customer booking recap is read-only by default (no checkboxes). */
   interactive?: boolean;
   compact?: boolean;
 }) {

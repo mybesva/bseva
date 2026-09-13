@@ -51,14 +51,6 @@ import { getLoginUrl } from "@/const";
 import { useI18n } from "@/i18n/I18nProvider";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 interface BookingWizardProps {
   serviceId: string;
@@ -81,11 +73,70 @@ interface BookingWizardProps {
 
 type BookingStep = 1 | 2 | 3 | 4;
 type Tier = "basic" | "standard" | "premium";
-type ServiceMode = "physical" | "temple" | "virtual";
+type ServiceMode = "physical" | "virtual";
 type CalendarType = "north" | "south" | "lunar";
 
 const DEMO_LAT = 12.9352;
 const DEMO_LNG = 77.6245;
+
+function pickAddressComponent(
+  components: { long_name: string; types: string[] }[] | undefined,
+  type: string,
+) {
+  return components?.find((c) => c.types.includes(type))?.long_name || "";
+}
+
+async function reverseGeocodeCoords(
+  latitude: number,
+  longitude: number,
+): Promise<{ address: string; city: string }> {
+  // Prefer Google Geocoder when Maps is already loaded (e.g. address page)
+  const g = typeof window !== "undefined" ? (window as any).google : null;
+  if (g?.maps?.Geocoder) {
+    const result = await new Promise<any | null>((resolve) => {
+      const geocoder = new g.maps.Geocoder();
+      geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results: any[], status: string) => {
+        resolve(status === "OK" && results?.[0] ? results[0] : null);
+      });
+    });
+    if (result) {
+      const city =
+        pickAddressComponent(result.address_components, "locality") ||
+        pickAddressComponent(result.address_components, "administrative_area_level_2") ||
+        pickAddressComponent(result.address_components, "administrative_area_level_3");
+      return {
+        address: result.formatted_address || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+        city,
+      };
+    }
+  }
+
+  // Fallback: OpenStreetMap Nominatim (works without Maps API key)
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(
+    String(latitude),
+  )}&lon=${encodeURIComponent(String(longitude))}&addressdetails=1`;
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error("Could not resolve address for this location");
+  const data = (await res.json()) as {
+    display_name?: string;
+    address?: {
+      city?: string;
+      town?: string;
+      village?: string;
+      suburb?: string;
+      county?: string;
+      state_district?: string;
+      road?: string;
+      neighbourhood?: string;
+      house_number?: string;
+    };
+  };
+  const a = data.address || {};
+  const city = a.city || a.town || a.village || a.suburb || a.county || a.state_district || "";
+  const street = [a.house_number, a.road, a.neighbourhood].filter(Boolean).join(" ");
+  const address = data.display_name || street || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  return { address, city };
+}
 
 export default function BookingWizard({ serviceId, pujaName, basePrices, addonPrices }: BookingWizardProps) {
   const { t } = useI18n();
@@ -110,7 +161,6 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoPending, setGeoPending] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [recommendedPriestId, setRecommendedPriestId] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -120,8 +170,6 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [addonConfirm, setAddonConfirm] = useState<null | "samagri" | "alankaram" | "food">(null);
   const [wallet, setWallet] = useState<{ balance?: number; wallet?: { balance_paise: number } } | null>(null);
   const [quote, setQuote] = useState<any>(null);
-  const [nearby, setNearby] = useState<any[]>([]);
-  const [previous, setPrevious] = useState<any[]>([]);
   const [panchang, setPanchang] = useState<any>(null);
   const [recurring, setRecurring] = useState<"none" | "weekly" | "monthly" | "selected_dates">("none");
   const [recurringCount, setRecurringCount] = useState(4);
@@ -198,14 +246,17 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             <div>
               <p className="font-semibold text-foreground">Samagri &amp; Alankaram (optional)</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Tick if you want the pujari to arrange these for you. You will reimburse the pujari.
-                Leave unchecked if you will arrange yourself.
+                Tick if you want these arranged for your puja. The charge is added to your booking payment now;
+                BSeva pays the pujari later. Leave unchecked if you will arrange yourself.
               </p>
             </div>
             <label
-              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
-                includeSamagri ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"
-              }`}
+              className={cn(
+                "flex items-start gap-3 rounded-md p-3 cursor-pointer transition-colors",
+                includeSamagri
+                  ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                  : "border border-border bg-card hover:border-muted-foreground/40"
+              )}
             >
               <Checkbox
                 checked={includeSamagri}
@@ -218,23 +269,26 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   <span className="font-semibold text-primary shrink-0">
                     {samagriPrice > 0
                       ? `₹${(samagriPrice / 100).toLocaleString("en-IN")}`
-                      : "Reimbursable"}
+                      : "Charge on booking"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Puja materials — pujari will get them for you; you reimburse the pujari.
+                  Puja materials arranged for you — charged in your booking total.
                 </p>
                 {includeSamagri && (
                   <p className="text-xs font-semibold text-primary mt-1">
-                    Selected — pujari will arrange Samagri (reimbursement to pujari).
+                    Selected — added to your payment (paid to pujari later by BSeva).
                   </p>
                 )}
               </div>
             </label>
             <label
-              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
-                includeAlankaram ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"
-              }`}
+              className={cn(
+                "flex items-start gap-3 rounded-md p-3 cursor-pointer transition-colors",
+                includeAlankaram
+                  ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                  : "border border-border bg-card hover:border-muted-foreground/40"
+              )}
             >
               <Checkbox
                 checked={includeAlankaram}
@@ -247,24 +301,27 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   <span className="font-semibold text-primary shrink-0">
                     {alankaramPrice > 0
                       ? `₹${(alankaramPrice / 100).toLocaleString("en-IN")}`
-                      : "Reimbursable"}
+                      : "Charge on booking"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Flowers / decoration — pujari will get them for you; you reimburse the pujari.
+                  Flowers / decoration arranged for you — charged in your booking total.
                 </p>
                 {includeAlankaram && (
                   <p className="text-xs font-semibold text-primary mt-1">
-                    Selected — pujari will arrange Alankaram (reimbursement to pujari).
+                    Selected — added to your payment (paid to pujari later by BSeva).
                   </p>
                 )}
               </div>
             </label>
             {foodAvailable && (
               <label
-                className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
-                  includeFood ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"
-                }`}
+                className={cn(
+                  "flex items-start gap-3 rounded-md p-3 cursor-pointer transition-colors",
+                  includeFood
+                    ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                    : "border border-border bg-card hover:border-muted-foreground/40"
+                )}
               >
                 <Checkbox
                   checked={includeFood}
@@ -277,15 +334,15 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     <span className="font-semibold text-primary shrink-0">
                       {foodPrice > 0
                         ? `₹${(foodPrice / 100).toLocaleString("en-IN")}`
-                        : "As arranged"}
+                        : "Charge on booking"}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Prasadam / food arrangement for this puja (when offered).
+                    Prasadam / food arrangement for this puja (when offered) — charged in your booking total.
                   </p>
                   {includeFood && (
                     <p className="text-xs font-semibold text-primary mt-1">
-                      Selected — Food / Prasadam included.
+                      Selected — added to your payment (paid to pujari later by BSeva).
                     </p>
                   )}
                 </div>
@@ -295,31 +352,31 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               <div className="text-sm border-t pt-3 space-y-1">
                 {includeSamagri && (
                   <div className="flex justify-between">
-                    <span>Samagri (reimbursement to pujari)</span>
+                    <span>Samagri charge</span>
                     <span>
                       {samagriPrice > 0
                         ? `₹${(samagriPrice / 100).toLocaleString("en-IN")}`
-                        : "As arranged"}
+                        : "As priced"}
                     </span>
                   </div>
                 )}
                 {includeAlankaram && (
                   <div className="flex justify-between">
-                    <span>Alankaram (reimbursement to pujari)</span>
+                    <span>Alankaram charge</span>
                     <span>
                       {alankaramPrice > 0
                         ? `₹${(alankaramPrice / 100).toLocaleString("en-IN")}`
-                        : "As arranged"}
+                        : "As priced"}
                     </span>
                   </div>
                 )}
                 {includeFood && (
                   <div className="flex justify-between">
-                    <span>Food / Prasadam</span>
+                    <span>Food / Prasadam charge</span>
                     <span>
                       {foodPrice > 0
                         ? `₹${(foodPrice / 100).toLocaleString("en-IN")}`
-                        : "As arranged"}
+                        : "As priced"}
                     </span>
                   </div>
                 )}
@@ -339,24 +396,25 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             <AlertDialogHeader>
               <AlertDialogTitle>
                 {addonConfirm === "alankaram"
-                  ? "Alankaram by pujari"
+                  ? "Add Alankaram charge"
                   : addonConfirm === "food"
-                    ? "Food / Prasadam"
-                    : "Samagri by pujari"}
+                    ? "Add Food / Prasadam charge"
+                    : "Add Samagri charge"}
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2 text-left">
                 <span className="block">
-                  If you continue, the <strong>pujari will arrange{" "}
-                  {addonConfirm === "alankaram"
-                    ? "Alankaram (flowers / decoration)"
-                    : addonConfirm === "food"
-                      ? "Food / Prasadam"
-                      : "Samagri (puja materials)"}{" "}
-                  for you</strong>.
+                  If you continue,{" "}
+                  <strong>
+                    {addonConfirm === "alankaram"
+                      ? "Alankaram (flowers / decoration)"
+                      : addonConfirm === "food"
+                        ? "Food / Prasadam"
+                        : "Samagri (puja materials)"}
+                  </strong>{" "}
+                  will be arranged and the charge will be added to your booking payment.
                 </span>
                 <span className="block">
-                  You need to <strong>reimburse the pujari</strong> for this cost (included in booking when priced,
-                  or settled with the pujari as arranged).
+                  You pay BSeva now. We settle this amount with the pujari later from our backend.
                 </span>
                 <span className="block">Click OK to confirm, or Cancel to arrange it yourself.</span>
               </AlertDialogDescription>
@@ -370,18 +428,6 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       </>
     );
   }
-
-  useEffect(() => {
-    if (currentStep < 2) return;
-    api<any[]>(`/pujaris/nearby?lat=${lat ?? DEMO_LAT}&lng=${lng ?? DEMO_LNG}&service_id=${serviceId}`)
-      .then((rows) => setNearby(rows.map((p) => ({ ...p, priestId: p.id, approvedLevel: p.approved_level }))))
-      .catch(() => setNearby([]));
-    if (isAuthenticated) {
-      api<any[]>("/pujaris/previous")
-        .then((rows) => setPrevious(rows.map((p) => ({ ...p, priestId: p.id }))))
-        .catch(() => setPrevious([]));
-    }
-  }, [currentStep, serviceId, isAuthenticated, lat, lng]);
 
   const tierDetails = {
     basic: {
@@ -461,11 +507,12 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
     }
     try {
       setSubmitting(true);
-      let pujariId = recommendedPriestId;
-      if (!pujariId) {
-        const list = nearby.length ? nearby : await api<any[]>("/pujaris");
-        pujariId = list[0]?.priestId || list[0]?.id;
-      }
+      // Resolve a pujari id only (no details shown to customer during booking).
+      const nearby = await api<any[]>(
+        `/pujaris/nearby?lat=${lat ?? DEMO_LAT}&lng=${lng ?? DEMO_LNG}&service_id=${serviceId}`,
+      ).catch(() => [] as any[]);
+      const list = nearby.length ? nearby : await api<any[]>("/pujaris").catch(() => [] as any[]);
+      const pujariId = list[0]?.id || list[0]?.priestId;
       if (!pujariId) {
         toast.error("No available pujari for this service");
         return;
@@ -476,7 +523,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           service_id: serviceId,
           pujari_id: pujariId,
           package_type: tier,
-          mode: serviceMode === "virtual" ? "virtual" : serviceMode === "temple" ? "temple" : "in_person",
+          mode: serviceMode === "virtual" ? "virtual" : "in_person",
           booking_date: format(bookingDate, "yyyy-MM-dd"),
           start_time: bookingTime.length === 5 ? `${bookingTime}:00` : bookingTime,
           location_label: `${locationText}${city ? `, ${city}` : ""}`,
@@ -538,8 +585,10 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 key={key}
                 htmlFor={key}
                 className={cn(
-                  "flex flex-col items-stretch w-full cursor-pointer rounded-lg border-2 p-4 hover:border-primary",
-                  tier === key ? "border-primary bg-primary/5" : "border-border"
+                  "flex flex-col items-stretch w-full cursor-pointer rounded-lg p-4 transition-colors",
+                  tier === key
+                    ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                    : "border border-border bg-background hover:border-muted-foreground/40"
                 )}
               >
                 <RadioGroupItem value={key} id={key} className="sr-only" />
@@ -566,33 +615,27 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             <RadioGroup
               value={serviceMode}
               onValueChange={(v) => setServiceMode(v as ServiceMode)}
-              className="grid grid-cols-1 md:grid-cols-3 gap-3"
+              className="grid grid-cols-1 md:grid-cols-2 gap-3"
             >
               <Label
                 className={cn(
-                  "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
-                  serviceMode === "physical" ? "border-primary bg-primary/5" : "border-border"
+                  "flex flex-col items-start w-full cursor-pointer rounded-lg p-4 transition-colors",
+                  serviceMode === "physical"
+                    ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                    : "border border-border bg-background hover:border-muted-foreground/40"
                 )}
               >
                 <RadioGroupItem value="physical" className="sr-only" />
                 <span className="font-medium">{t("booking.physical")}</span>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">At customer location</p>
               </Label>
-              <Label
-                className={cn(
-                  "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
-                  serviceMode === "temple" ? "border-primary bg-primary/5" : "border-border"
-                )}
-              >
-                <RadioGroupItem value="temple" className="sr-only" />
-                <span className="font-medium">{t("booking.temple")}</span>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">At temple / specified venue</p>
-              </Label>
               {virtualEnabled && (
                 <Label
                   className={cn(
-                    "flex flex-col items-start w-full cursor-pointer rounded-lg border-2 p-4",
-                    serviceMode === "virtual" ? "border-primary bg-primary/5" : "border-border"
+                    "flex flex-col items-start w-full cursor-pointer rounded-lg p-4 transition-colors",
+                    serviceMode === "virtual"
+                      ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                      : "border border-border bg-background hover:border-muted-foreground/40"
                   )}
                 >
                   <RadioGroupItem value="virtual" className="sr-only" />
@@ -689,11 +732,23 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   setGeoError(null);
                   navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                      setLat(pos.coords.latitude);
-                      setLng(pos.coords.longitude);
-                      setGeoPending(false);
-                      if (!locationText) setLocationText("Current location (GPS)");
-                      toast.success("Location captured from device");
+                      const latitude = pos.coords.latitude;
+                      const longitude = pos.coords.longitude;
+                      setLat(latitude);
+                      setLng(longitude);
+                      void (async () => {
+                        try {
+                          const resolved = await reverseGeocodeCoords(latitude, longitude);
+                          setLocationText(resolved.address);
+                          if (resolved.city) setCity(resolved.city);
+                          toast.success("Address and city updated from your location");
+                        } catch {
+                          setLocationText(`Current location (GPS ${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
+                          toast.message("GPS saved — enter address and city manually if needed");
+                        } finally {
+                          setGeoPending(false);
+                        }
+                      })();
                     },
                     (err) => {
                       setGeoPending(false);
@@ -813,113 +868,6 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             <Label>Special Instructions</Label>
             <Textarea value={specialInstructions} onChange={(e) => setSpecialInstructions(e.target.value)} />
           </div>
-
-          {previous.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="font-semibold">{t("booking.previous")}</h4>
-              <p className="text-xs text-muted-foreground">Recommendations only — not required to select</p>
-              <div className="space-y-2">
-                {previous.map((p) => (
-                  <button
-                    key={p.priestId}
-                    type="button"
-                    onClick={() => setRecommendedPriestId(p.priestId)}
-                    className={cn(
-                      "w-full text-left p-3 rounded-lg border",
-                      recommendedPriestId === p.priestId ? "border-primary bg-primary/5" : "border-border"
-                    )}
-                  >
-                    <div className="flex justify-between">
-                      <span className="font-medium">{p.name}</span>
-                      <Badge variant="outline">
-                        {p.available ? t("booking.available") : t("booking.unavailable")}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Previously booked · {p.bookingCount} times</p>
-                    <a
-                      href={`/pujari-profile/${p.priestId}`}
-                      className="text-xs text-primary underline"
-                      onClick={(e) => e.stopPropagation()}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t("pujari.public.view")}
-                    </a>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <h4 className="font-semibold">{t("booking.nearby")}</h4>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Pujari</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead className="text-right">Distance</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Availability</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {nearby.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-muted-foreground text-sm">
-                      No nearby pujaris in this radius — pick any approved pujari at payment, or try another location.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {nearby.map((p) => (
-                  <TableRow
-                    key={p.priestId}
-                    className={cn("cursor-pointer", recommendedPriestId === p.priestId && "bg-primary/5")}
-                    onClick={() => setRecommendedPriestId(p.priestId)}
-                  >
-                    <TableCell className="font-medium">
-                      {p.name}
-                      {p.previouslyBooked && (
-                        <Badge className="ml-2 bg-blue-100 text-blue-700" variant="outline">
-                          Previous
-                        </Badge>
-                      )}
-                      <div>
-                        <a
-                          href={`/pujari-profile/${p.priestId}`}
-                          className="text-xs text-primary underline"
-                          onClick={(e) => e.stopPropagation()}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {t("pujari.public.view")}
-                        </a>
-                      </div>
-                    </TableCell>
-                    <TableCell>L{p.approvedLevel || "—"}</TableCell>
-                    <TableCell className="text-right">{p.distanceKm} km</TableCell>
-                    <TableCell>{pujaName}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          p.serviceStatus === "Available"
-                            ? "bg-green-100 text-green-800"
-                            : p.serviceStatus === "Busy"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-700"
-                        }
-                      >
-                        {p.serviceStatus}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <p className="text-xs text-muted-foreground">
-              Selecting a nearby/previous pujari is optional. Platform can assign later.
-            </p>
-          </div>
         </div>
       )}
 
@@ -933,11 +881,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   <p className="text-lg font-semibold">{pujaName}</p>
                   <Badge className="bg-primary mt-1">
                     {tierDetails[tier].name} ·{" "}
-                    {serviceMode === "virtual"
-                      ? t("booking.virtual")
-                      : serviceMode === "temple"
-                        ? t("booking.temple")
-                        : t("booking.physical")}
+                    {serviceMode === "virtual" ? t("booking.virtual") : t("booking.physical")}
                   </Badge>
                 </div>
               </div>
@@ -949,14 +893,9 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 <span className="text-muted-foreground">Location: </span>
                 {locationText}, {city}
               </p>
-              {recommendedPriestId && (
-                <p>
-                  Pujari: {nearby.find((x) => x.priestId === recommendedPriestId)?.name || recommendedPriestId}
-                  {nearby.find((x) => x.priestId === recommendedPriestId)?.approvedLevel
-                    ? ` · Approved Level ${nearby.find((x) => x.priestId === recommendedPriestId)?.approvedLevel}`
-                    : ""}
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Pujari details will be shared closer to the puja (notification / Ongoing bookings).
+              </p>
               <div className="bg-primary/5 border border-orange-200 rounded-md p-3 text-xs space-y-1">
                 <p className="font-medium">{cancellationPolicy?.title || "Cancellation Policy"}</p>
                 {(cancellationPolicy?.points || []).map((p, i) => (
@@ -980,13 +919,13 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 </div>
                 {Number(bill.samagri || 0) > 0 && (
                   <div className="flex justify-between">
-                    <span>Samagri (pujari buys · reimbursed)</span>
+                    <span>Samagri charge</span>
                     <span>₹{(bill.samagri / 100).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 {Number(bill.alankaram || 0) > 0 && (
                   <div className="flex justify-between">
-                    <span>Alankaram (pujari buys · reimbursed)</span>
+                    <span>Alankaram charge</span>
                     <span>₹{(bill.alankaram / 100).toLocaleString("en-IN")}</span>
                   </div>
                 )}
