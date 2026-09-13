@@ -15,6 +15,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, apiBookings } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
+  displayStatus,
+  formatPaise,
+  isExpiredBooking,
+  isPastBooking,
+  isUpcomingBooking,
+  mapApiBooking,
+  statusBadgeClass,
+  type PujariBookingRow,
+} from "@/lib/pujariBookings";
+import {
   Calendar as CalendarIcon,
   MapPin,
   Clock,
@@ -36,32 +46,9 @@ import { toast } from "sonner";
 import WalletPanel from "@/components/WalletPanel";
 import { useI18n } from "@/i18n/I18nProvider";
 
-type BookingRow = {
-  booking: {
-    id: string;
-    bookingNumber: string;
-    bookingDate: Date | string | null;
-    bookingTime: string | null;
-    location: string;
-    city: string | null;
-    status: string;
-    tier: string;
-    totalAmount: number;
-    priestAmount: number;
-    platformFee: number;
-    basePrice: number;
-    gstAmount: number;
-    specialInstructions: string | null;
-    customerName: string | null;
-    serviceName: string;
-  };
-  pujaType: { name: string; estimatedDuration: number };
-  customer: { name: string | null; email: string | null; phone: string | null };
-};
+const DASHBOARD_LIST_LIMIT = 4;
 
-function formatPaise(paise: number) {
-  return `₹${(paise / 100).toLocaleString("en-IN")}`;
-}
+type BookingRow = PujariBookingRow;
 
 function PujariDashboardContent() {
   const { t } = useI18n();
@@ -93,57 +80,30 @@ function PujariDashboardContent() {
       .finally(() => setIsLoading(false));
   }, [user]);
 
-  const rows = (bookings || []).map((b) => {
-    const base = Number(b.base_price_paise || 0);
-    const platform = Number(b.platform_fee_paise || Math.round(base * 0.15));
-    const priestAmount = Number(b.pujari_payable_paise || base - platform);
-    return {
-      booking: {
-        id: String(b.id),
-        bookingNumber: b.booking_number,
-        bookingDate: b.booking_date,
-        bookingTime: b.start_time,
-        location: b.location_label,
-        city: b.location_label,
-        status: b.status,
-        tier: b.package_type,
-        totalAmount: b.total_paise,
-        priestAmount,
-        platformFee: platform,
-        basePrice: base,
-        gstAmount: Number(b.gst_amount_paise || 0),
-        specialInstructions: null,
-        customerName: b.customer_name,
-        serviceName: b.service_name,
-      },
-      pujaType: { name: b.service_name, estimatedDuration: 90 },
-      customer: { name: b.customer_name, email: null, phone: null },
-    };
-  }) as BookingRow[];
+  const rows = useMemo(() => (bookings || []).map(mapApiBooking), [bookings]);
   const now = new Date();
   const monthStart = startOfMonth(now);
 
   const stats = useMemo(() => {
     const completed = rows.filter((r) => r.booking.status === "completed");
-    const upcoming = rows.filter(
+    const past = rows.filter((r) => isPastBooking(r, now));
+    const upcoming = rows.filter((r) => isUpcomingBooking(r, now));
+    const pending = rows.filter(
       (r) =>
-        r.booking.bookingDate &&
-        new Date(r.booking.bookingDate) >= now &&
-        !["cancelled", "completed", "refunded"].includes(r.booking.status)
-    );
-    const pending = rows.filter((r) =>
-      ["pending", "pending_acceptance", "confirmed"].includes(r.booking.status)
+        ["pending", "pending_acceptance", "confirmed"].includes(r.booking.status) &&
+        !isExpiredBooking(r, now)
     );
 
     const earningStatuses = ["completed", "confirmed", "in_progress"];
     const totalEarnings = rows
-      .filter((r) => earningStatuses.includes(r.booking.status))
+      .filter((r) => earningStatuses.includes(r.booking.status) && !isExpiredBooking(r, now))
       .reduce((sum, r) => sum + (r.booking.priestAmount || 0), 0);
 
     const monthEarnings = rows
       .filter(
         (r) =>
           earningStatuses.includes(r.booking.status) &&
+          !isExpiredBooking(r, now) &&
           r.booking.bookingDate &&
           isSameMonth(new Date(r.booking.bookingDate), now)
       )
@@ -156,7 +116,7 @@ function PujariDashboardContent() {
       monthEarnings,
       completedEarnings,
       upcomingCount: upcoming.length,
-      completedCount: completed.length,
+      completedCount: past.length,
       pendingCount: pending.length,
       totalBookings: rows.length,
     };
@@ -176,22 +136,25 @@ function PujariDashboardContent() {
   }, [rows, selectedDate]);
 
   const pendingAcceptance = useMemo(
-    () => rows.filter((r) => ["pending", "pending_acceptance"].includes(r.booking.status)),
+    () =>
+      rows.filter(
+        (r) =>
+          ["pending", "pending_acceptance"].includes(r.booking.status) && !isExpiredBooking(r, now)
+      ),
     [rows]
   );
 
-  const needsAction = useMemo(
+  const readyToStart = useMemo(
     () =>
-      rows.filter((r) =>
-        ["pending", "pending_acceptance", "confirmed", "in_progress"].includes(r.booking.status)
+      rows.filter(
+        (r) => r.booking.status === "confirmed" && !isExpiredBooking(r, now)
       ),
     [rows]
   );
 
   const upcoming = useMemo(() => {
     return rows
-      .filter((b) => b.booking.bookingDate && new Date(b.booking.bookingDate) >= now)
-      .filter((b) => !["cancelled", "completed", "refunded"].includes(b.booking.status))
+      .filter((b) => isUpcomingBooking(b, now))
       .sort(
         (a, b) =>
           new Date(a.booking.bookingDate!).getTime() - new Date(b.booking.bookingDate!).getTime()
@@ -200,11 +163,7 @@ function PujariDashboardContent() {
 
   const past = useMemo(() => {
     return rows
-      .filter(
-        (b) =>
-          ["completed", "cancelled", "refunded"].includes(b.booking.status) ||
-          (b.booking.bookingDate && new Date(b.booking.bookingDate) < now)
-      )
+      .filter((b) => isPastBooking(b, now))
       .sort(
         (a, b) =>
           new Date(b.booking.bookingDate || 0).getTime() -
@@ -213,29 +172,9 @@ function PujariDashboardContent() {
   }, [rows]);
 
   const ongoing = useMemo(
-    () => rows.filter((r) => r.booking.status === "in_progress"),
+    () => rows.filter((r) => r.booking.status === "in_progress" && !isExpiredBooking(r, now)),
     [rows]
   );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return "bg-green-100 text-green-800";
-      case "pending":
-      case "pending_acceptance":
-        return "bg-yellow-100 text-yellow-800";
-      case "in_progress":
-        return "bg-blue-100 text-blue-800";
-      case "completed":
-        return "bg-gray-100 text-gray-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const profileStatus = pujariProfile?.profile_status || "profile_incomplete";
 
   const metricCards = [
     {
@@ -272,7 +211,9 @@ function PujariDashboardContent() {
     },
   ];
 
-  const actionHint = (status: string) => {
+  const actionHint = (row: BookingRow) => {
+    const status = row.booking.status;
+    if (isExpiredBooking(row, now)) return null;
     if (status === "pending" || status === "pending_acceptance") return "Accept required";
     if (status === "confirmed") return "Start with OTP";
     if (status === "in_progress") return "Complete when done";
@@ -286,7 +227,8 @@ function PujariDashboardContent() {
     row: BookingRow;
     showAcceptReject?: boolean;
   }) => {
-    const hint = actionHint(row.booking.status);
+    const hint = actionHint(row);
+    const shown = displayStatus(row, now);
     const openDetail = (intent: "accept" | "reject" | null = null) => {
       setDetailIntent(intent);
       setSelectedBooking(row);
@@ -327,8 +269,8 @@ function PujariDashboardContent() {
                 <p className="text-xs text-orange-700 mt-1 font-medium">{hint}</p>
               )}
             </div>
-            <Badge className={getStatusColor(row.booking.status)}>
-              {row.booking.status.replace(/_/g, " ")}
+            <Badge className={statusBadgeClass(shown)}>
+              {shown.replace(/_/g, " ")}
             </Badge>
           </div>
         </button>
@@ -358,6 +300,10 @@ function PujariDashboardContent() {
       </div>
     );
   };
+
+  const upcomingPreview = upcoming.slice(0, DASHBOARD_LIST_LIMIT);
+  const pastPreview = past.slice(0, DASHBOARD_LIST_LIMIT);
+  const profileStatus = pujariProfile?.profile_status || "profile_incomplete";
 
   return (
     <>
@@ -438,24 +384,32 @@ function PujariDashboardContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {pendingAcceptance.map((row) => (
+              {pendingAcceptance.slice(0, DASHBOARD_LIST_LIMIT).map((row) => (
                 <BookingListItem key={row.booking.id} row={row} showAcceptReject />
               ))}
+              {pendingAcceptance.length > DASHBOARD_LIST_LIMIT && (
+                <Button variant="outline" size="sm" onClick={() => setLocation("/pujari/bookings?tab=upcoming&status=pending")}>
+                  More ({pendingAcceptance.length - DASHBOARD_LIST_LIMIT})
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {!isLoading && needsAction.filter((r) => r.booking.status === "confirmed").length > 0 && (
+        {!isLoading && readyToStart.length > 0 && (
           <Card className="border border-blue-200 bg-blue-50/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-base text-foreground">Ready to start (OTP)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {needsAction
-                .filter((r) => r.booking.status === "confirmed")
-                .map((row) => (
-                  <BookingListItem key={row.booking.id} row={row} />
-                ))}
+              {readyToStart.slice(0, DASHBOARD_LIST_LIMIT).map((row) => (
+                <BookingListItem key={row.booking.id} row={row} />
+              ))}
+              {readyToStart.length > DASHBOARD_LIST_LIMIT && (
+                <Button variant="outline" size="sm" onClick={() => setLocation("/pujari/bookings?tab=upcoming&status=confirmed")}>
+                  More ({readyToStart.length - DASHBOARD_LIST_LIMIT})
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
@@ -493,7 +447,7 @@ function PujariDashboardContent() {
                 {!isLoading && dayBookings.length === 0 && (
                   <p className="text-muted-foreground text-sm">No bookings on this date.</p>
                 )}
-                {dayBookings.map((row) => (
+                {dayBookings.slice(0, DASHBOARD_LIST_LIMIT).map((row) => (
                   <BookingListItem key={row.booking.id} row={row} />
                 ))}
               </div>
@@ -502,8 +456,11 @@ function PujariDashboardContent() {
 
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-border">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-foreground">Your Bookings</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setLocation("/pujari/bookings")}>
+                  View all
+                </Button>
               </CardHeader>
               <CardContent>
                 <Tabs value={listTab} onValueChange={setListTab}>
@@ -512,7 +469,7 @@ function PujariDashboardContent() {
                       <Hourglass size={14} /> Upcoming ({upcoming.length})
                     </TabsTrigger>
                     <TabsTrigger value="past" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
-                      <History size={14} /> Past ({past.length})
+                      <History size={14} /> Completed ({past.length})
                     </TabsTrigger>
                   </TabsList>
 
@@ -523,21 +480,39 @@ function PujariDashboardContent() {
                         No upcoming bookings. New customer bookings will appear here.
                       </p>
                     )}
-                    {upcoming.map((row) => (
+                    {upcomingPreview.map((row) => (
                       <BookingListItem key={row.booking.id} row={row} />
                     ))}
+                    {upcoming.length > DASHBOARD_LIST_LIMIT && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setLocation("/pujari/bookings?tab=upcoming")}
+                      >
+                        More ({upcoming.length - DASHBOARD_LIST_LIMIT})
+                      </Button>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="past" className="space-y-3 mt-0">
                     {isLoading && <Skeleton className="h-24 w-full" />}
                     {!isLoading && past.length === 0 && (
                       <p className="text-sm text-muted-foreground py-6 text-center">
-                        No past bookings yet.
+                        No completed or expired bookings yet.
                       </p>
                     )}
-                    {past.map((row) => (
+                    {pastPreview.map((row) => (
                       <BookingListItem key={row.booking.id} row={row} />
                     ))}
+                    {past.length > DASHBOARD_LIST_LIMIT && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setLocation("/pujari/bookings?tab=completed")}
+                      >
+                        More ({past.length - DASHBOARD_LIST_LIMIT})
+                      </Button>
+                    )}
                     {past.length > 0 && (
                       <div className="pt-3 border-t border-border flex justify-between text-sm">
                         <span className="text-muted-foreground">Completed Dakshina</span>
@@ -556,7 +531,7 @@ function PujariDashboardContent() {
                 <div className="font-semibold text-foreground">Dakshina & settlements</div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Accept pending bookings, start with customer OTP, then mark complete when finished so
-                  settlements stay accurate.
+                  settlements stay accurate. Past-dated unfinished bookings move to Completed as expired.
                 </p>
               </CardContent>
             </Card>

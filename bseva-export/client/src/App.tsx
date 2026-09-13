@@ -38,6 +38,7 @@ import PujariBankPage from "./pages/pujari/BankPage";
 import PujariReferralPage from "./pages/pujari/ReferralPage";
 import PujariAvailabilityPage from "./pages/pujari/AvailabilityPage";
 import PujariServicesPage from "./pages/pujari/ServicesPage";
+import PujariBookingsPage from "./pages/pujari/BookingsPage";
 import PujariExperiencePage from "./pages/pujari/ExperiencePage";
 import PujariChangePasswordPage from "./pages/pujari/ChangePasswordPage";
 import PujariEarningsPage from "./pages/pujari/EarningsPage";
@@ -94,6 +95,7 @@ function Router() {
       <Route path="/customer/invoices" component={CustomerInvoicesPage} />
       <Route path="/customer/rewards" component={CustomerRewardsPage} />
       <Route path="/pujari-profile/:id" component={PublicPujariProfile} />
+      <Route path="/pujari/bookings" component={PujariBookingsPage} />
       <Route path="/pujari" component={PujariDashboard} />
       <Route path="/pujari/head-ratings" component={HeadRatingsPage} />
       <Route path="/pujari/onboarding" component={PujariOnboarding} />

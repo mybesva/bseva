@@ -55,6 +55,7 @@ const customerNav: NavItem[] = [
 
 const pujariNav: NavItem[] = [
   { label: "Dashboard", href: "/pujari", icon: LayoutDashboard },
+  { label: "Bookings", href: "/pujari/bookings", icon: Calendar },
   { label: "Complete Profile", href: "/pujari/onboarding", icon: Sparkles },
   { label: "My Profile", href: "/pujari/profile", icon: User },
   { label: "Address", href: "/pujari/address", icon: MapPin },
