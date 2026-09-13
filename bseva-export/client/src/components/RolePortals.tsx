@@ -28,14 +28,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { api, apiBase, getToken, pujariMediaUrl } from "@/lib/api";
 import RolePortalGate from "@/components/RolePortalGate";
 import PujariProfileGate from "@/components/PujariProfileGate";
-import { LegalInlineLink } from "@/components/LegalModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import SeasonalPopup from "@/components/SeasonalPopup";
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number }> };
-
-const sidebarActionClass =
-  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-sidebar-foreground hover:bg-sidebar-accent/60";
 
 /** Persist sidebar scroll across SPA navigations (nav remounts on route change). */
 const sidebarScrollY: Record<string, number> = {};
@@ -51,6 +47,7 @@ const customerNav: NavItem[] = [
   { label: "Rewards & Referral", href: "/customer/rewards", icon: Sparkles },
   { label: "Support", href: "/customer/support", icon: FileText },
   { label: "Change Password", href: "/customer/change-password", icon: KeyRound },
+  { label: "Terms & Conditions", href: "/customer/terms", icon: ScrollText },
 ];
 
 const pujariNav: NavItem[] = [
@@ -70,6 +67,7 @@ const pujariNav: NavItem[] = [
   { label: "Assess Pujaris", href: "/pujari/head-ratings", icon: Star },
   { label: "Support", href: "/pujari/support", icon: FileText },
   { label: "Change Password", href: "/pujari/change-password", icon: KeyRound },
+  { label: "Terms & Conditions", href: "/pujari/terms", icon: ScrollText },
 ];
 
 function PortalShell({
@@ -89,7 +87,6 @@ function PortalShell({
 }) {
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
-  const [legalOpen, setLegalOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
   const scrollKey = `${role}-sidebar`;
   const { user, logout } = useAuth();
@@ -136,9 +133,8 @@ function PortalShell({
       >
           {nav.map((item) => {
             const routeActive =
-              !legalOpen &&
-              (location === item.href ||
-                (item.href !== "/customer" && item.href !== "/pujari" && location.startsWith(item.href)));
+              location === item.href ||
+              (item.href !== "/customer" && item.href !== "/pujari" && location.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}>
                 <a
@@ -148,7 +144,6 @@ function PortalShell({
                   )}
                   onClick={() => {
                     if (navRef.current) sidebarScrollY[scrollKey] = navRef.current.scrollTop;
-                    setLegalOpen(false);
                     setOpen(false);
                   }}
                 >
@@ -158,17 +153,6 @@ function PortalShell({
               </Link>
             );
           })}
-          <LegalInlineLink
-            kind="terms"
-            className={cn(
-              sidebarActionClass,
-              legalOpen && "bg-sidebar-accent text-primary font-medium"
-            )}
-            onOpenChange={setLegalOpen}
-          >
-            <FileText size={18} />
-            Terms & Conditions
-          </LegalInlineLink>
       </nav>
     </div>
   );

@@ -42,6 +42,7 @@ import PujariBookingsPage from "./pages/pujari/BookingsPage";
 import PujariExperiencePage from "./pages/pujari/ExperiencePage";
 import PujariChangePasswordPage from "./pages/pujari/ChangePasswordPage";
 import PujariEarningsPage from "./pages/pujari/EarningsPage";
+import { CustomerTermsPage, PujariTermsPage } from "./pages/portal/TermsPage";
 import Services from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
 import Astrology from "./pages/Astrology";
@@ -94,6 +95,7 @@ function Router() {
       <Route path="/customer/support" component={CustomerSupportPage} />
       <Route path="/customer/invoices" component={CustomerInvoicesPage} />
       <Route path="/customer/rewards" component={CustomerRewardsPage} />
+      <Route path="/customer/terms" component={CustomerTermsPage} />
       <Route path="/pujari-profile/:id" component={PublicPujariProfile} />
       <Route path="/pujari/bookings" component={PujariBookingsPage} />
       <Route path="/pujari" component={PujariDashboard} />
@@ -111,6 +113,7 @@ function Router() {
       <Route path="/pujari/referral" component={PujariReferralPage} />
       <Route path="/pujari/change-password" component={PujariChangePasswordPage} />
       <Route path="/pujari/support" component={PujariSupportPage} />
+      <Route path="/pujari/terms" component={PujariTermsPage} />
       <Route path="/support" component={SupportPage} />
       <Route path="/pujaris" component={PujariDashboard} />
       <Route path="/book/:slug" component={Book} />
