@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams, useLocation } from "wouter";
 import Layout from "@/components/Layout";
+import { CustomerPortal } from "@/components/RolePortals";
 import BookingWizard from "@/components/BookingWizard";
 import MuhurtaConsultationBook from "@/components/MuhurtaConsultationBook";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,15 @@ import { getLoginUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { Loader2 } from "lucide-react";
 
+function BookShell({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  // Logged-in customers book inside the Customer portal (no public site headers).
+  if (user?.role === "customer") {
+    return <CustomerPortal>{children}</CustomerPortal>;
+  }
+  return <Layout>{children}</Layout>;
+}
+
 export default function Book() {
   const params = useParams();
   const pujaSlug = params.slug as string;
@@ -18,6 +28,7 @@ export default function Book() {
   const { config: publicConfig } = usePublicConfig();
   const [pujaType, setPujaType] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const inCustomerPortal = user?.role === "customer";
 
   useEffect(() => {
     if (authLoading) return;
@@ -35,11 +46,11 @@ export default function Book() {
 
   if (authLoading || isLoading) {
     return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
+      <BookShell>
+        <div className="min-h-[40vh] flex items-center justify-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
-      </Layout>
+      </BookShell>
     );
   }
 
@@ -49,15 +60,17 @@ export default function Book() {
 
   if (!pujaType) {
     return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
+      <BookShell>
+        <div className="min-h-[40vh] flex items-center justify-center">
           <div className="text-center space-y-4">
-            <h1 className="text-h1 text-gray-800 mb-2">Service Not Found</h1>
-            <p className="text-gray-600">The requested puja service could not be found.</p>
-            <Button onClick={() => setLocation("/services")}>Browse services</Button>
+            <h1 className="text-h1 text-foreground mb-2">Service Not Found</h1>
+            <p className="text-muted-foreground">The requested puja service could not be found.</p>
+            <Button onClick={() => setLocation(inCustomerPortal ? "/customer" : "/services")}>
+              {inCustomerPortal ? "Back to dashboard" : "Browse services"}
+            </Button>
           </div>
         </div>
-      </Layout>
+      </BookShell>
     );
   }
 
@@ -68,18 +81,29 @@ export default function Book() {
     user?.role === "customer" && (pujaType.muhurta_consultation_enabled || pujaType.requires_muhurta);
 
   return (
-    <Layout>
-      <section className="bg-sidebar text-sidebar-foreground py-10">
-        <div className="container">
-          <h1 className="text-h1 text-primary">{pujaType.name}</h1>
-          <p className="text-sidebar-foreground/80 mt-1">
+    <BookShell>
+      {inCustomerPortal ? (
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{pujaType.name}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {publicConfig?.virtual_puja_enabled
               ? "Book Standard or Premium · In-person or Virtual"
               : "Book Standard or Premium · In-person"}
           </p>
         </div>
-      </section>
-      <div className="container pb-12">
+      ) : (
+        <section className="bg-sidebar text-sidebar-foreground py-10 -mx-4 lg:-mx-8 mb-6 px-4 lg:px-8">
+          <div className="container px-0">
+            <h1 className="text-h1 text-primary">{pujaType.name}</h1>
+            <p className="text-sidebar-foreground/80 mt-1">
+              {publicConfig?.virtual_puja_enabled
+                ? "Book Standard or Premium · In-person or Virtual"
+                : "Book Standard or Premium · In-person"}
+            </p>
+          </div>
+        </section>
+      )}
+      <div className={inCustomerPortal ? "pb-8" : "container pb-12 px-0"}>
         {showMuhurta && (
           <MuhurtaConsultationBook
             serviceId={pujaType.id}
@@ -100,13 +124,12 @@ export default function Book() {
             samagri: pujaType.samagri_price_paise,
             alankaram: pujaType.alankaram_price_paise,
             food: pujaType.food_price_paise,
-            // Per-puja Admin settings (Services → edit).
             samagriAvailable: pujaType.samagri_available !== false,
             alankaramAvailable: Boolean(pujaType.alankaram_available),
             foodAvailable: Boolean(pujaType.food_available),
           }}
         />
       </div>
-    </Layout>
+    </BookShell>
   );
 }
