@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import re
 from pathlib import Path
 
@@ -129,6 +130,14 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
             if res.status_code not in (200, 201):
                 raise HTTPException(502, f"Storage upload failed: {_storage_error_detail(res)}")
         return object_path
+
+    # Serverless (Vercel) has a read-only filesystem — never fall back to local disk there.
+    if os.environ.get("VERCEL") == "1" or (settings.environment or "").lower() == "production":
+        raise HTTPException(
+            503,
+            "Object storage is not configured on the server. Set SUPABASE_URL, "
+            "SUPABASE_SERVICE_ROLE_KEY (eyJ… JWT), and STORAGE_BUCKET, then redeploy.",
+        )
 
     # Local fallback for uvicorn/dev without Supabase Storage
     try:

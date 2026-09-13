@@ -143,6 +143,7 @@ def patch_pujari_profile(
     ).first()
     if not exists:
         raise HTTPException(404, "Pujari not found")
+    db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_account_number TEXT"))
     year = body.qualification_year
     if year is not None and year > date.today().year:
         raise HTTPException(400, "Qualification year cannot be in the future")

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 
 from app.config import settings
 from app.routers import (
@@ -66,6 +66,21 @@ async def database_unavailable(_request: Request, _exc: OperationalError):
             ),
         },
     )
+
+
+@app.exception_handler(ProgrammingError)
+async def database_schema_error(_request: Request, exc: ProgrammingError):
+    msg = str(getattr(exc, "orig", None) or exc).split("\n")[0][:240]
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Database schema error: {msg}"},
+    )
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_error(_request: Request, exc: SQLAlchemyError):
+    msg = str(getattr(exc, "orig", None) or exc).split("\n")[0][:240]
+    return JSONResponse(status_code=500, content={"detail": f"Database error: {msg}"})
 
 
 @app.get("/health")

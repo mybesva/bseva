@@ -215,6 +215,15 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             require_all=True,
         )
 
+    # Profile PATCH always references bank_account_number — ensure column exists
+    # (schema_migrate is not run on Vercel cold start). Use AUTOCOMMIT so pooler DDL works.
+    db.commit()
+    try:
+        db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_account_number TEXT"))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     touching_bank = any(
         v is not None
         for v in (
@@ -227,11 +236,6 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
     )
     bank = {}
     if touching_bank:
-        db.execute(
-            text(
-                "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_account_number TEXT"
-            )
-        )
         bank = validate_bank_fields(
             holder=body.bank_holder_name,
             ifsc=body.bank_ifsc,
@@ -537,10 +541,22 @@ async def _store_asset(user_id: str, file: UploadFile, stem: str) -> str:
 
 @router.post("/profile/photo")
 async def upload_photo(file: UploadFile = File(...), user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
-    rel = await _store_asset(str(user["id"]), file, "profile")
-    db.execute(text("UPDATE pujari_profiles SET profile_photo_path = :p WHERE user_id = CAST(:id AS uuid)"), {"p": rel, "id": user["id"]})
-    db.commit()
-    return _load_profile(db, user)
+    try:
+        rel = await _store_asset(str(user["id"]), file, "profile")
+        result = db.execute(
+            text("UPDATE pujari_profiles SET profile_photo_path = :p WHERE user_id = CAST(:id AS uuid)"),
+            {"p": rel, "id": user["id"]},
+        )
+        if result.rowcount == 0:
+            raise HTTPException(404, "Pujari profile not found")
+        db.commit()
+        return _load_profile(db, user)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(500, f"Photo save failed: {exc}") from exc
 
 
 @router.delete("/profile/photo")
@@ -552,10 +568,22 @@ def delete_photo(user=Depends(require_roles("pujari")), db: Session = Depends(ge
 
 @router.post("/profile/signature")
 async def upload_signature(file: UploadFile = File(...), user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
-    rel = await _store_asset(str(user["id"]), file, "signature")
-    db.execute(text("UPDATE pujari_profiles SET signature_path = :p WHERE user_id = CAST(:id AS uuid)"), {"p": rel, "id": user["id"]})
-    db.commit()
-    return _load_profile(db, user)
+    try:
+        rel = await _store_asset(str(user["id"]), file, "signature")
+        result = db.execute(
+            text("UPDATE pujari_profiles SET signature_path = :p WHERE user_id = CAST(:id AS uuid)"),
+            {"p": rel, "id": user["id"]},
+        )
+        if result.rowcount == 0:
+            raise HTTPException(404, "Pujari profile not found")
+        db.commit()
+        return _load_profile(db, user)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(500, f"Signature save failed: {exc}") from exc
 
 
 @router.get("/profile/file/{kind}")
