@@ -245,8 +245,8 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS samagri_requested BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS alankaram_requested BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS food_requested BOOLEAN NOT NULL DEFAULT FALSE",
-    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS licence_type TEXT",
-    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS licence_number TEXT",
+    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_account_number TEXT",
+
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS basic_price_paise INTEGER",
     """
     CREATE TABLE IF NOT EXISTS support_conversations (

@@ -719,7 +719,13 @@ export default function PujariDetailPage() {
               <>
                 <Field label="Bank holder">{p.bank_holder_name}</Field>
                 <Field label="IFSC">{p.bank_ifsc}</Field>
-                <Field label="Account last4">{p.bank_account_last4}</Field>
+                <Field label="Account number">
+                  {p.bank_account_number
+                    ? String(p.bank_account_number)
+                    : p.bank_account_last4
+                      ? `****${p.bank_account_last4}`
+                      : "—"}
+                </Field>
               </>
             )}
           </CardContent>

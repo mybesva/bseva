@@ -185,6 +185,7 @@ def patch_pujari_profile(
               available = COALESCE(:avail, available),
               service_radius_km = COALESCE(:radius, service_radius_km),
               bank_account_last4 = COALESCE(:bank4, bank_account_last4),
+              bank_account_number = COALESCE(:bank_acct, bank_account_number),
               bank_ifsc = COALESCE(:ifsc, bank_ifsc),
               bank_holder_name = COALESCE(:holder, bank_holder_name),
               updated_at = NOW()
@@ -222,6 +223,7 @@ def patch_pujari_profile(
             "avail": body.available,
             "radius": body.service_radius_km,
             "bank4": body.bank_account_last4,
+            "bank_acct": body.bank_account_number,
             "ifsc": body.bank_ifsc,
             "holder": body.bank_holder_name,
             "id": pujari_id,

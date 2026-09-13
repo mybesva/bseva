@@ -146,14 +146,23 @@ def validate_bank_fields(
     *,
     holder: str | None,
     ifsc: str | None,
-    last4: str | None,
+    last4: str | None = None,
+    account_number: str | None = None,
+    account_confirm: str | None = None,
     require_all: bool = True,
 ) -> dict:
     h = (holder or "").strip()
     i = (ifsc or "").strip().upper()
-    a = (last4 or "").strip()
-    if not require_all and not h and not i and not a:
-        return {"bank_holder_name": None, "bank_ifsc": None, "bank_account_last4": None}
+    acct = re.sub(r"\D", "", (account_number or "").strip())
+    confirm = re.sub(r"\D", "", (account_confirm or "").strip()) if account_confirm is not None else None
+    a4 = (last4 or "").strip()
+    if not require_all and not h and not i and not acct and not a4:
+        return {
+            "bank_holder_name": None,
+            "bank_ifsc": None,
+            "bank_account_last4": None,
+            "bank_account_number": None,
+        }
     if not h:
         raise HTTPException(400, "Account holder name is required")
     if len(h) < 2 or not _MEANINGFUL_RE.search(h):
@@ -162,9 +171,24 @@ def validate_bank_fields(
         raise HTTPException(400, "IFSC is required")
     if not _IFSC_RE.match(i):
         raise HTTPException(400, "Enter a valid IFSC (e.g. SBIN0001234)")
-    if not a or not a.isdigit() or len(a) != 4:
-        raise HTTPException(400, "Account number last 4 digits must be exactly 4 digits")
-    return {"bank_holder_name": h, "bank_ifsc": i, "bank_account_last4": a}
+    if acct:
+        if len(acct) < 9 or len(acct) > 18:
+            raise HTTPException(400, "Account number must be 9–18 digits")
+        if confirm is not None and confirm != acct:
+            raise HTTPException(400, "Account number and confirmation do not match")
+        a4 = acct[-4:]
+    elif a4:
+        if not a4.isdigit() or len(a4) != 4:
+            raise HTTPException(400, "Account number last 4 digits must be exactly 4 digits")
+        acct = None
+    else:
+        raise HTTPException(400, "Full account number is required")
+    return {
+        "bank_holder_name": h,
+        "bank_ifsc": i,
+        "bank_account_last4": a4,
+        "bank_account_number": acct,
+    }
 
 
 def validate_support_text(subject: str, description: str) -> tuple[str, str]:

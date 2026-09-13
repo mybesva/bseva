@@ -11,7 +11,8 @@ import { toast } from "sonner";
 export default function PujariBankPage() {
   const [holder, setHolder] = useState("");
   const [ifsc, setIfsc] = useState("");
-  const [last4, setLast4] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountConfirm, setAccountConfirm] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -21,7 +22,9 @@ export default function PujariBankPage() {
       .then((p) => {
         setHolder(p.bank_holder_name || "");
         setIfsc(p.bank_ifsc || "");
-        setLast4(p.bank_account_last4 || "");
+        const acct = String(p.bank_account_number || "").replace(/\D/g, "");
+        setAccountNumber(acct);
+        setAccountConfirm(acct);
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
@@ -29,7 +32,7 @@ export default function PujariBankPage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const errs = validateBank({ holder, ifsc, last4 });
+    const errs = validateBank({ holder, ifsc, accountNumber, accountConfirm });
     setErrors(errs);
     if (Object.keys(errs).length) {
       toast.error("Please fill all mandatory bank fields correctly");
@@ -37,12 +40,15 @@ export default function PujariBankPage() {
     }
     setSaving(true);
     try {
+      const digits = accountNumber.replace(/\D/g, "");
       await api("/pujari/profile", {
         method: "PATCH",
         body: JSON.stringify({
           bank_holder_name: holder.trim(),
           bank_ifsc: ifsc.trim().toUpperCase(),
-          bank_account_last4: last4.trim(),
+          bank_account_number: digits,
+          bank_account_confirm: accountConfirm.replace(/\D/g, ""),
+          bank_account_last4: digits.slice(-4),
         }),
       });
       toast.success("Bank details saved");
@@ -80,14 +86,28 @@ export default function PujariBankPage() {
                 {errors.ifsc && <p className="text-sm text-destructive">{errors.ifsc}</p>}
               </div>
               <div className="space-y-1">
-                <Label>Account number (last 4) *</Label>
+                <Label>Account number *</Label>
                 <Input
-                  value={last4}
-                  onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  maxLength={4}
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 18))}
+                  inputMode="numeric"
+                  autoComplete="off"
                   required
                 />
-                {errors.last4 && <p className="text-sm text-destructive">{errors.last4}</p>}
+                {errors.accountNumber && <p className="text-sm text-destructive">{errors.accountNumber}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label>Confirm account number *</Label>
+                <Input
+                  value={accountConfirm}
+                  onChange={(e) => setAccountConfirm(e.target.value.replace(/\D/g, "").slice(0, 18))}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  required
+                />
+                {errors.accountConfirm && (
+                  <p className="text-sm text-destructive">{errors.accountConfirm}</p>
+                )}
               </div>
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving…" : "Save"}

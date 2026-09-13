@@ -63,9 +63,25 @@ def test_address_rejects_junk_and_bad_pin():
 
 def test_bank_requires_all_fields():
     with pytest.raises(HTTPException):
-        validate_bank_fields(holder="", ifsc="", last4="", require_all=True)
-    out = validate_bank_fields(holder="Ram Kumar", ifsc="SBIN0001234", last4="1234", require_all=True)
+        validate_bank_fields(holder="", ifsc="", account_number="", require_all=True)
+    out = validate_bank_fields(
+        holder="Ram Kumar",
+        ifsc="SBIN0001234",
+        account_number="123456789012",
+        account_confirm="123456789012",
+        require_all=True,
+    )
     assert out["bank_ifsc"] == "SBIN0001234"
+    assert out["bank_account_last4"] == "9012"
+    assert out["bank_account_number"] == "123456789012"
+    with pytest.raises(HTTPException):
+        validate_bank_fields(
+            holder="Ram Kumar",
+            ifsc="SBIN0001234",
+            account_number="123456789012",
+            account_confirm="999999999999",
+            require_all=True,
+        )
 
 
 def test_support_text_min_meaningful():

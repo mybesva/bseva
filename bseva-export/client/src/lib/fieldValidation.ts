@@ -65,11 +65,28 @@ export function validateAddress(v: {
   return errors;
 }
 
-export function validateBank(v: { holder?: string; ifsc?: string; last4?: string }): Record<string, string> {
+export function validateBank(v: {
+  holder?: string;
+  ifsc?: string;
+  accountNumber?: string;
+  accountConfirm?: string;
+  last4?: string;
+}): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!isMeaningfulText(v.holder || "", 2)) errors.holder = "Account holder name is required";
   if (!isValidIfsc(v.ifsc || "")) errors.ifsc = "Enter a valid IFSC (e.g. SBIN0001234)";
-  if (!/^\d{4}$/.test(String(v.last4 || "").trim())) errors.last4 = "Enter exactly 4 account digits";
+  const acct = String(v.accountNumber || "").replace(/\D/g, "");
+  const confirm = String(v.accountConfirm || "").replace(/\D/g, "");
+  if (acct || v.accountConfirm != null || !v.last4) {
+    if (acct.length < 9 || acct.length > 18) {
+      errors.accountNumber = "Enter full account number (9–18 digits)";
+    }
+    if (confirm !== acct) {
+      errors.accountConfirm = "Account number and confirmation do not match";
+    }
+  } else if (!/^\d{4}$/.test(String(v.last4 || "").trim())) {
+    errors.last4 = "Enter exactly 4 account digits";
+  }
   return errors;
 }
 

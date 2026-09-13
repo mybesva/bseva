@@ -266,6 +266,8 @@ class PujariProfileIn(BaseModel):
     available: Optional[bool] = None
     service_radius_km: Optional[float] = Field(default=None, ge=1, le=100)
     bank_account_last4: Optional[str] = Field(default=None, max_length=4)
+    bank_account_number: Optional[str] = Field(default=None, max_length=32)
+    bank_account_confirm: Optional[str] = Field(default=None, max_length=32)
     bank_ifsc: Optional[str] = Field(default=None, max_length=11)
     bank_holder_name: Optional[str] = Field(default=None, max_length=120)
     onboarding_step: Optional[int] = Field(default=None, ge=1, le=6)

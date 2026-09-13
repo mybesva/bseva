@@ -46,6 +46,7 @@ export default function PujariOnboardingPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [countryCode, setCountryCode] = useState("+91");
   const [phoneNational, setPhoneNational] = useState("");
+  const [bankConfirm, setBankConfirm] = useState("");
 
   async function load() {
     const p = await api<any>("/pujari/profile");
@@ -58,6 +59,8 @@ export default function PujariOnboardingPage() {
     setPhoneNational(parsed.national);
     const fullName = String(p.full_name || user?.name || "").replace(/\s+Reddy\s*$/i, "").trim() || user?.name || "";
     setProfile({ ...p, full_name: fullName, mobile_number: parsed.national || p.mobile_number });
+    const acct = String(p.bank_account_number || "").replace(/\D/g, "");
+    setBankConfirm(acct);
     const s = Number(p.onboarding_step || 1);
     setStep(Math.min(6, Math.max(1, s)));
     setConsent(!!p.final_submission_consent);
@@ -167,11 +170,13 @@ export default function PujariOnboardingPage() {
       const bankErrs = validateBank({
         holder: profile.bank_holder_name,
         ifsc: profile.bank_ifsc,
-        last4: profile.bank_account_last4,
+        accountNumber: profile.bank_account_number,
+        accountConfirm: bankConfirm,
       });
       if (bankErrs.holder) errors.bank_holder_name = bankErrs.holder;
       if (bankErrs.ifsc) errors.bank_ifsc = bankErrs.ifsc;
-      if (bankErrs.last4) errors.bank_account_last4 = bankErrs.last4;
+      if (bankErrs.accountNumber) errors.bank_account_number = bankErrs.accountNumber;
+      if (bankErrs.accountConfirm) errors.bank_account_confirm = bankErrs.accountConfirm;
     }
     if (current === 6) {
       req("consent", "Final submission consent", consent);
@@ -266,10 +271,13 @@ export default function PujariOnboardingPage() {
       return;
     }
     if (step === 5) {
+      const digits = String(profile.bank_account_number || "").replace(/\D/g, "");
       await saveStep(6, {
         available: !!profile.available,
         service_radius_km: profile.service_radius_km ? Number(profile.service_radius_km) : null,
-        bank_account_last4: profile.bank_account_last4 || null,
+        bank_account_number: digits || null,
+        bank_account_confirm: bankConfirm.replace(/\D/g, "") || null,
+        bank_account_last4: digits ? digits.slice(-4) : null,
         bank_ifsc: profile.bank_ifsc || null,
         bank_holder_name: profile.bank_holder_name || null,
       });
@@ -738,16 +746,40 @@ export default function PujariOnboardingPage() {
                   <Err name="bank_ifsc" />
                 </div>
                 <div>
-                  <Label className={fieldErrors.bank_account_last4 ? "text-red-600" : undefined}>
-                    Account number (last 4) *
+                  <Label className={fieldErrors.bank_account_number ? "text-red-600" : undefined}>
+                    Account number *
                   </Label>
                   <Input
-                    className={errClass("bank_account_last4")}
-                    maxLength={4}
-                    value={profile.bank_account_last4 || ""}
-                    onChange={(e) => setField("bank_account_last4", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    className={errClass("bank_account_number")}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={profile.bank_account_number || ""}
+                    onChange={(e) =>
+                      setField("bank_account_number", e.target.value.replace(/\D/g, "").slice(0, 18))
+                    }
                   />
-                  <Err name="bank_account_last4" />
+                  <Err name="bank_account_number" />
+                </div>
+                <div>
+                  <Label className={fieldErrors.bank_account_confirm ? "text-red-600" : undefined}>
+                    Confirm account number *
+                  </Label>
+                  <Input
+                    className={errClass("bank_account_confirm")}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={bankConfirm}
+                    onChange={(e) => {
+                      setBankConfirm(e.target.value.replace(/\D/g, "").slice(0, 18));
+                      setFieldErrors((prev) => {
+                        if (!prev.bank_account_confirm) return prev;
+                        const next = { ...prev };
+                        delete next.bank_account_confirm;
+                        return next;
+                      });
+                    }}
+                  />
+                  <Err name="bank_account_confirm" />
                 </div>
               </div>
             </section>
