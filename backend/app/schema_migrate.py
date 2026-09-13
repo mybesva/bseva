@@ -249,6 +249,9 @@ _FOUNDATION_STMTS = [
 
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS basic_price_paise INTEGER",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS booking_lead_hours INTEGER NOT NULL DEFAULT 48",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS meeting_url TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS google_calendar_event_id TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS meeting_invite_token TEXT",
     """
     CREATE TABLE IF NOT EXISTS support_conversations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -656,61 +659,80 @@ def _seed_pujari_booking_terms(conn) -> None:
     )
 
 
-def _exec_safe(conn, stmt: str) -> None:
-    """Run a statement; on failure roll back to savepoint so the outer txn can continue (Postgres)."""
+def _exec_safe(conn, stmt: str) -> str | None:
+    """Run a statement; on failure roll back to savepoint so the outer txn can continue (Postgres).
+
+    Returns None on success, or a short error string on failure.
+    """
     conn.execute(text("SAVEPOINT bseva_mig"))
     try:
         conn.execute(text(stmt))
         conn.execute(text("RELEASE SAVEPOINT bseva_mig"))
-    except Exception:
+        return None
+    except Exception as e:
         conn.execute(text("ROLLBACK TO SAVEPOINT bseva_mig"))
+        msg = str(getattr(e, "orig", None) or e).split("\n")[0][:180]
+        return msg
 
 
-def ensure_schema() -> None:
+def ensure_schema(*, quiet: bool = False) -> None:
+    def log(msg: str) -> None:
+        if not quiet:
+            print(msg, flush=True)
+
+    log("Connecting to database…")
+    ok = 0
+    failed: list[tuple[str, str]] = []
+
+    def run_batch(label: str, stmts: list[str]) -> None:
+        nonlocal ok
+        log(f"  → {label} ({len(stmts)} statements)")
+        for stmt in stmts:
+            err = _exec_safe(conn, stmt)
+            if err:
+                preview = " ".join(stmt.split())[:90]
+                failed.append((preview, err))
+            else:
+                ok += 1
+
     with engine.begin() as conn:
         conn.execute(text("SET LOCAL statement_timeout = '120s'"))
         conn.execute(text("SET LOCAL lock_timeout = '30s'"))
-        for stmt in _STMTS:
-            _exec_safe(conn, stmt)
-        for stmt in _FOUNDATION_STMTS:
-            _exec_safe(conn, stmt)
+        log("Connected. Applying schema updates (this can take 1–2 minutes)…")
+        run_batch("core", list(_STMTS))
+        run_batch("foundation", list(_FOUNDATION_STMTS))
         try:
             from app.phase2_migrate import _PHASE2_STMTS
 
-            for stmt in _PHASE2_STMTS:
-                _exec_safe(conn, stmt)
-        except Exception:
-            pass
+            run_batch("phase2", list(_PHASE2_STMTS))
+        except Exception as e:
+            log(f"  ! phase2 skipped: {e}")
         try:
             from app.phase3_migrate import _PHASE3_STMTS
 
-            for stmt in _PHASE3_STMTS:
-                _exec_safe(conn, stmt)
-        except Exception:
-            pass
+            run_batch("phase3", list(_PHASE3_STMTS))
+        except Exception as e:
+            log(f"  ! phase3 skipped: {e}")
         try:
             from app.phase4_catalog_migrate import _PHASE4_STMTS
 
-            for stmt in _PHASE4_STMTS:
-                _exec_safe(conn, stmt)
-        except Exception:
-            pass
+            run_batch("phase4", list(_PHASE4_STMTS))
+        except Exception as e:
+            log(f"  ! phase4 skipped: {e}")
         try:
             from app.phase5_samagri_migrate import _PHASE5_STMTS
 
-            for stmt in _PHASE5_STMTS:
-                _exec_safe(conn, stmt)
-        except Exception:
-            pass
+            run_batch("phase5", list(_PHASE5_STMTS))
+        except Exception as e:
+            log(f"  ! phase5 skipped: {e}")
         try:
             from app.phase6_puja_master_migrate import _PHASE6_STMTS
 
-            for stmt in _PHASE6_STMTS:
-                _exec_safe(conn, stmt)
-        except Exception:
-            pass
+            run_batch("phase6", list(_PHASE6_STMTS))
+        except Exception as e:
+            log(f"  ! phase6 skipped: {e}")
         # Backfill main_puja_price from standard when null
-        _exec_safe(
+        err = _exec_safe(
             conn,
             """
             UPDATE services SET main_puja_price_paise = standard_price_paise
@@ -718,70 +740,84 @@ def ensure_schema() -> None:
               AND standard_price_paise IS NOT NULL
             """,
         )
+        if err:
+            failed.append(("backfill main_puja_price", err))
+        else:
+            ok += 1
         try:
             from app.catalog_seed import ensure_catalog
 
+            log("  → catalog seed")
             conn.execute(text("SAVEPOINT bseva_catalog"))
             try:
                 ensure_catalog(conn)
                 conn.execute(text("RELEASE SAVEPOINT bseva_catalog"))
-            except Exception:
+                ok += 1
+            except Exception as e:
                 conn.execute(text("ROLLBACK TO SAVEPOINT bseva_catalog"))
-        except Exception:
-            pass
+                failed.append(("catalog seed", str(e).split("\n")[0][:180]))
+        except Exception as e:
+            log(f"  ! catalog seed skipped: {e}")
         try:
             from app.samagri_seed import ensure_samagri_content
 
+            log("  → samagri seed")
             conn.execute(text("SAVEPOINT bseva_samagri"))
             try:
                 ensure_samagri_content(conn)
                 conn.execute(text("RELEASE SAVEPOINT bseva_samagri"))
-            except Exception:
+                ok += 1
+            except Exception as e:
                 conn.execute(text("ROLLBACK TO SAVEPOINT bseva_samagri"))
-        except Exception:
-            pass
+                failed.append(("samagri seed", str(e).split("\n")[0][:180]))
+        except Exception as e:
+            log(f"  ! samagri seed skipped: {e}")
         try:
             from app.puja_catalog_import import ensure_puja_catalog_import
 
+            log("  → puja catalog import")
             conn.execute(text("SAVEPOINT bseva_puja_docs"))
             try:
                 ensure_puja_catalog_import(conn)
                 conn.execute(text("RELEASE SAVEPOINT bseva_puja_docs"))
-            except Exception:
+                ok += 1
+            except Exception as e:
                 conn.execute(text("ROLLBACK TO SAVEPOINT bseva_puja_docs"))
-        except Exception:
-            pass
+                failed.append(("puja catalog import", str(e).split("\n")[0][:180]))
+        except Exception as e:
+            log(f"  ! puja catalog import skipped: {e}")
+        log("  → seeds (roles, legal, settings)")
         _seed_pujari_roles(conn)
         _seed_legal_policies(conn)
         try:
             _seed_platform_settings(conn)
             _seed_reward_campaigns(conn)
             _seed_pujari_booking_terms(conn)
-        except Exception:
-            pass
+        except Exception as e:
+            failed.append(("platform seeds", str(e).split("\n")[0][:180]))
         # Mark historical payouts as legacy settlements
-        _exec_safe(
-            conn,
-            """
+        for label, stmt in (
+            (
+                "legacy settlements",
+                """
             UPDATE bookings SET settlement_status = 'legacy'
             WHERE (settlement_status IS NULL OR settlement_status = 'not_applicable')
               AND status IN ('confirmed', 'completed', 'in_progress')
               AND pujari_id IS NOT NULL
             """,
-        )
-        # Demo pujari display name: "Pandit Reddy" → "Pandit"
-        _exec_safe(
-            conn,
-            """
+            ),
+            (
+                "demo pujari name",
+                """
             UPDATE users
             SET name = 'Pandit'
             WHERE name ILIKE '%Reddy%'
                OR (lower(email) = 'pujari2@bseva.test' AND name <> 'Pandit')
             """,
-        )
-        _exec_safe(
-            conn,
-            """
+            ),
+            (
+                "demo pujari profile",
+                """
             UPDATE pujari_profiles pp
             SET full_name = 'Pandit',
                 mobile_number = COALESCE(
@@ -795,16 +831,51 @@ def ensure_schema() -> None:
                 OR lower(u.email) = 'pujari2@bseva.test'
               )
             """,
-        )
-        _exec_safe(
-            conn,
-            """
+            ),
+            (
+                "normalize mobile",
+                """
             UPDATE pujari_profiles
             SET mobile_number = right(regexp_replace(mobile_number, '\\D', '', 'g'), 10)
             WHERE mobile_number IS NOT NULL
               AND length(regexp_replace(mobile_number, '\\D', '', 'g')) > 10
             """,
-        )
+            ),
+        ):
+            err = _exec_safe(conn, stmt)
+            if err:
+                failed.append((label, err))
+            else:
+                ok += 1
+
+        # Verify columns we care about for recent features
+        log("  → verifying recent columns")
+        for table, col in (
+            ("services", "booking_lead_hours"),
+            ("bookings", "meeting_url"),
+            ("bookings", "google_calendar_event_id"),
+            ("bookings", "meeting_invite_token"),
+        ):
+            present = conn.execute(
+                text(
+                    """
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = :t AND column_name = :c
+                    """
+                ),
+                {"t": table, "c": col},
+            ).first()
+            log(f"     {table}.{col}: {'OK' if present else 'MISSING'}")
+
+    log(f"Schema migrate finished. Applied/ok steps: {ok}. Failed statements: {len(failed)}.")
+    if failed:
+        log("Failed (first 15):")
+        for preview, err in failed[:15]:
+            log(f"  - {preview}")
+            log(f"    {err}")
+        log("Note: IF NOT EXISTS failures are rare; lock/timeout or permission errors are more common.")
+    else:
+        log("All statements succeeded (or were already applied).")
 
 
 def ensure_pujari_profile_schema() -> None:

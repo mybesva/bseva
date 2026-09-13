@@ -20,6 +20,7 @@ import {
   isExpiredBooking,
   isUpcomingBooking,
   mapApiBooking,
+  bookingStartAt,
   statusBadgeClass,
   type PujariBookingRow,
 } from "@/lib/pujariBookings";
@@ -34,6 +35,7 @@ import {
   TrendingUp,
   PlayCircle,
   AlertCircle,
+  Video,
 } from "lucide-react";
 import { format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
@@ -187,10 +189,18 @@ function PujariDashboardContent() {
       );
   }, [rows]);
 
-  const ongoing = useMemo(
-    () => rows.filter((r) => r.booking.status === "in_progress" && !isExpiredBooking(r, now)),
-    [rows]
-  );
+  const ongoing = useMemo(() => {
+    const nowMs = Date.now();
+    return rows.filter((r) => {
+      if (isExpiredBooking(r, now)) return false;
+      if (r.booking.status === "in_progress") return true;
+      if (r.booking.status !== "confirmed") return false;
+      const start = bookingStartAt(r);
+      if (!start) return true;
+      const ms = start.getTime() - nowMs;
+      return ms <= 24 * 60 * 60 * 1000 && ms >= -2 * 60 * 60 * 1000;
+    });
+  }, [rows]);
 
   const metricCards = [
     {
@@ -279,6 +289,24 @@ function PujariDashboardContent() {
               </div>
               {hint && !showAcceptReject && (
                 <p className="text-xs text-orange-700 mt-1 font-medium">{hint}</p>
+              )}
+              {row.booking.mode === "virtual" && row.booking.meetingUrl && (
+                <div className="mt-3 rounded-md border-2 border-blue-300 bg-blue-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-1 mb-2">
+                    <Video size={14} className="text-blue-600" />
+                    Google Meet ready
+                  </p>
+                  <Button
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(row.booking.meetingUrl!, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    Join Google Meet
+                  </Button>
+                </div>
               )}
             </div>
             <Badge className={statusBadgeClass(shown)}>

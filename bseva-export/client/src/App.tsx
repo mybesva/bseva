@@ -27,6 +27,7 @@ import AdminReports from "./pages/admin/Reports";
 import Book from "./pages/Book";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import BookingReceipt from "./pages/BookingReceipt";
+import JoinMeetPage from "./pages/JoinMeetPage";
 import MyBookings from "./pages/MyBookings";
 import PujariDashboard from "./pages/pujari/Dashboard";
 import PujariProfilePage from "./pages/pujari/Profile";
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/pujari/terms" component={PujariTermsPage} />
       <Route path="/support" component={SupportPage} />
       <Route path="/pujaris" component={PujariDashboard} />
+      <Route path="/join/:token" component={JoinMeetPage} />
       <Route path="/book/:slug" component={Book} />
       <Route path="/my-bookings" component={MyBookings} />
       <Route path="/booking/:id" component={BookingReceipt} />

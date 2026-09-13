@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 
 from app.config import settings
+from app import env_loader  # noqa: F401 — load .env into os.environ
 from app.routers import (
     admin,
     admin_pujari,
@@ -13,7 +14,9 @@ from app.routers import (
     bookings,
     consultations,
     customer,
+    google_oauth,
     lifecycle,
+    meetings,
     notifications,
     ops,
     promos,
@@ -41,7 +44,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(google_oauth.router, prefix="/api/v1")
 app.include_router(bookings.router, prefix="/api/v1")
+app.include_router(meetings.router, prefix="/api/v1")
 app.include_router(wallet.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(admin_pujari.router, prefix="/api/v1")

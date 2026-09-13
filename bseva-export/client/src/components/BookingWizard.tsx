@@ -156,6 +156,8 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [bookingTime, setBookingTime] = useState("10:00");
   const [locationText, setLocationText] = useState("");
+  const [doorNumber, setDoorNumber] = useState("");
+  const [landmark, setLandmark] = useState("");
   const [city, setCity] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
@@ -262,6 +264,8 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
     if (!savedAddress) return;
     setAddressMode("saved");
     setLocationText(savedAddress.label);
+    setDoorNumber("");
+    setLandmark("");
     setCity(savedAddress.city);
     setLat(savedAddress.lat);
     setLng(savedAddress.lng);
@@ -271,10 +275,17 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   function startNewAddress() {
     setAddressMode("new");
     setLocationText("");
+    setDoorNumber("");
+    setLandmark("");
     setCity("");
     setLat(null);
     setLng(null);
     setGeoError(null);
+  }
+
+  function composedServiceAddress() {
+    if (addressMode === "saved") return locationText.trim();
+    return [doorNumber.trim(), locationText.trim(), landmark.trim()].filter(Boolean).join(", ");
   }
 
   useEffect(() => {
@@ -574,7 +585,13 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
 
   const canProceed = () => {
     if (currentStep === 1) return !!tier && !!serviceMode;
-    if (currentStep === 2) return !!(bookingDate && locationText && city);
+    if (currentStep === 2) {
+      const addr = composedServiceAddress();
+      if (addressMode === "new") {
+        return !!(bookingDate && doorNumber.trim() && locationText.trim() && city.trim());
+      }
+      return !!(bookingDate && addr && city.trim());
+    }
     return true;
   };
 
@@ -604,8 +621,8 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           mode: serviceMode === "virtual" ? "virtual" : "in_person",
           booking_date: format(bookingDate, "yyyy-MM-dd"),
           start_time: bookingTime.length === 5 ? `${bookingTime}:00` : bookingTime,
-          location_label: `${locationText}${city ? `, ${city}` : ""}`,
-          address: locationText,
+          location_label: `${composedServiceAddress()}${city ? `, ${city}` : ""}`,
+          address: composedServiceAddress(),
           city,
           latitude: lat ?? DEMO_LAT,
           longitude: lng ?? DEMO_LNG,
@@ -801,50 +818,27 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
             {savedAddressLoading ? (
               <p className="text-sm text-muted-foreground">Loading saved address…</p>
             ) : (
-              <RadioGroup
-                value={addressMode}
+              <Select
+                value={addressMode === "saved" && savedAddress ? "saved" : "new"}
                 onValueChange={(v) => {
                   if (v === "saved") applySavedAddress();
                   else startNewAddress();
                 }}
-                className="grid grid-cols-1 gap-2"
               >
-                {savedAddress && (
-                  <Label
-                    className={cn(
-                      "flex flex-col items-start w-full cursor-pointer rounded-lg p-3 transition-colors",
-                      addressMode === "saved"
-                        ? "border-[3px] border-primary bg-primary/10 shadow-sm"
-                        : "border border-border bg-background hover:border-muted-foreground/40"
-                    )}
-                  >
-                    <RadioGroupItem value="saved" className="sr-only" />
-                    <span className="font-medium">Use saved address</span>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{savedAddress.label}</p>
-                    {savedAddress.city ? (
-                      <p className="text-xs text-muted-foreground">City: {savedAddress.city}</p>
-                    ) : null}
-                  </Label>
-                )}
-                <Label
-                  className={cn(
-                    "flex flex-col items-start w-full cursor-pointer rounded-lg p-3 transition-colors",
-                    addressMode === "new"
-                      ? "border-[3px] border-primary bg-primary/10 shadow-sm"
-                      : "border border-border bg-background hover:border-muted-foreground/40"
-                  )}
-                >
-                  <RadioGroupItem value="new" className="sr-only" />
-                  <span className="font-medium">
-                    {savedAddress ? "Use a different address" : "Enter address"}
-                  </span>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {savedAddress
-                      ? "Add a new location for this booking only"
-                      : "No saved address in your profile yet — enter one below"}
-                  </p>
-                </Label>
-              </RadioGroup>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select address" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Add new address</SelectItem>
+                  {savedAddress ? (
+                    <SelectItem value="saved">
+                      {savedAddress.label.length > 80
+                        ? `${savedAddress.label.slice(0, 80)}…`
+                        : savedAddress.label}
+                    </SelectItem>
+                  ) : null}
+                </SelectContent>
+              </Select>
             )}
 
             {addressMode === "saved" && savedAddress ? (
@@ -859,9 +853,9 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="text-sm font-normal text-muted-foreground">New address</Label>
+                  <p className="text-sm text-muted-foreground">New address for this booking</p>
                   <Button
                     type="button"
                     size="sm"
@@ -885,12 +879,12 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                               const resolved = await reverseGeocodeCoords(latitude, longitude);
                               setLocationText(resolved.address);
                               if (resolved.city) setCity(resolved.city);
-                              toast.success("Address and city updated from your location");
+                              toast.success("Location filled — add door / flat number below");
                             } catch {
                               setLocationText(
                                 `Current location (GPS ${latitude.toFixed(5)}, ${longitude.toFixed(5)})`,
                               );
-                              toast.message("GPS saved — enter address and city manually if needed");
+                              toast.message("GPS saved — enter door number, street, and city");
                             } finally {
                               setGeoPending(false);
                             }
@@ -911,29 +905,47 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     {geoPending ? "Locating…" : "Use my location"}
                   </Button>
                 </div>
-                <Textarea
-                  value={locationText}
-                  onChange={(e) => setLocationText(e.target.value)}
-                  placeholder="House/flat, street, landmark"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="booking-door">Door / flat / house no. *</Label>
+                  <Input
+                    id="booking-door"
+                    value={doorNumber}
+                    onChange={(e) => setDoorNumber(e.target.value)}
+                    placeholder="e.g. Flat 302, Door 12-A"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="booking-street">Street / area *</Label>
+                  <Textarea
+                    id="booking-street"
+                    value={locationText}
+                    onChange={(e) => setLocationText(e.target.value)}
+                    placeholder="Street, colony, area"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="booking-landmark">Landmark (optional)</Label>
+                  <Input
+                    id="booking-landmark"
+                    value={landmark}
+                    onChange={(e) => setLandmark(e.target.value)}
+                    placeholder="Near temple / society gate"
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <MapPin size={12} /> Service location for the assigned pujari
                   {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
                 </p>
                 {geoError && <p className="text-xs text-destructive">{geoError}</p>}
-                <div className="space-y-2 pt-1">
-                  <Label>City *</Label>
-                  <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
-                </div>
               </div>
             )}
-          </div>
-          {addressMode === "saved" && (
+
             <div className="space-y-2">
               <Label>City *</Label>
               <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
             </div>
-          )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("booking.recurring")}</Label>
@@ -1048,7 +1060,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               </p>
               <p>
                 <span className="text-muted-foreground">Location: </span>
-                {locationText}, {city}
+                {composedServiceAddress()}, {city}
               </p>
               <p className="text-xs text-muted-foreground">
                 Pujari details will be shared closer to the puja (notification / Ongoing bookings).
@@ -1220,7 +1232,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 </div>
                 {serviceMode === "virtual" && (
                   <p className="text-sm">
-                    {t("booking.meetingLink")}: will appear after confirmation
+                    {t("booking.meetingLink")}: Google Meet invite is created for virtual bookings; join link unlocks in Ongoing within 24 hours
                   </p>
                 )}
               </CardContent>

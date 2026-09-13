@@ -160,14 +160,45 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             {"id": booking_id},
         )
     write_audit(db, str(user["id"]), "booking_accept", "booking", booking_id)
+
+    meet_info: dict = {}
+    if str(b.get("mode") or "") == "virtual":
+        try:
+            from app.meetings.service import ensure_virtual_meeting
+
+            cust_email_row = db.execute(
+                text("SELECT email FROM users WHERE id = CAST(:id AS uuid)"),
+                {"id": str(b["customer_id"])},
+            ).mappings().first()
+            dur = db.execute(
+                text("SELECT duration_minutes, name FROM services WHERE id = CAST(:id AS uuid)"),
+                {"id": str(b["service_id"])},
+            ).mappings().first()
+            meet_info = ensure_virtual_meeting(
+                db,
+                dict(b),
+                service_name=str((dur or {}).get("name") or "Virtual Puja"),
+                customer_email=str((cust_email_row or {}).get("email") or ""),
+                pujari_email=str(user.get("email") or ""),
+                duration_minutes=int((dur or {}).get("duration_minutes") or 90),
+                send_google_invites=True,
+            )
+            if meet_info.get("meeting_url"):
+                b = {**dict(b), **meet_info}
+        except Exception:
+            meet_info = {}
+
     try:
         from app.routers.notifications import create_notification
 
+        meet_note = ""
+        if meet_info.get("meeting_url") or meet_info.get("public_invite_url"):
+            meet_note = " Virtual Meet link is ready in your booking."
         create_notification(
             db,
             user_id=str(b["customer_id"]),
             title="Booking accepted",
-            body=f"Your booking {b.get('booking_number') or booking_id[:8]} was accepted.",
+            body=f"Your booking {b.get('booking_number') or booking_id[:8]} was accepted.{meet_note}",
             category="booking",
             link="/customer/bookings",
         )
@@ -175,8 +206,9 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
         pass
     db.commit()
     try:
-        from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
+        from app.mail.booking_payload import booking_email_data_from_row, load_service_name
         from app.mail.senders import send_booking_confirmation_email
+        from app.meetings.service import public_invite_url_for
 
         cust = db.execute(
             text("SELECT email, name, preferred_language FROM users WHERE id = CAST(:id AS uuid)"),
@@ -184,17 +216,34 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
         ).mappings().first()
         svc_name = load_service_name(db, str(b["service_id"]))
         if cust and cust.get("email"):
+            extra = {"status": "confirmed"}
             data = booking_email_data_from_row(
                 dict(b),
                 customer_name=str(cust.get("name") or ""),
                 service_name=svc_name,
                 language=str(cust.get("preferred_language") or "en"),
-                extra={"status": "confirmed"},
+                extra=extra,
             )
+            if str(b.get("mode") or "") == "virtual":
+                meet_url = meet_info.get("meeting_url") or b.get("meeting_url")
+                invite = meet_info.get("public_invite_url") or public_invite_url_for(
+                    b.get("meeting_invite_token") or meet_info.get("meeting_invite_token")
+                )
+                rows = list(data.extra_rows)
+                if meet_url:
+                    rows.append(("Google Meet", str(meet_url)))
+                if invite:
+                    rows.append(("Public invite link", str(invite)))
+                data.extra_rows = rows
             send_booking_confirmation_email(to=str(cust["email"]), data=data)
     except Exception:
         pass
-    return {"ok": True, "status": "confirmed"}
+    return {
+        "ok": True,
+        "status": "confirmed",
+        "meeting_url": meet_info.get("meeting_url") or b.get("meeting_url"),
+        "public_invite_url": meet_info.get("public_invite_url"),
+    }
 
 
 @router.post("/bookings/{booking_id}/reject")

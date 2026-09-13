@@ -14,6 +14,7 @@ import {
   CreditCard,
   ArrowRight,
   PlayCircle,
+  Video,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useLocation } from "wouter";
@@ -180,6 +181,27 @@ function CustomerDashboardContent() {
                                 {otp?.message || "OTP appears 15 minutes before start. Share it with your pujari to begin."}
                               </p>
                             )}
+                          </div>
+                        )}
+                        {booking.mode === "virtual" && (booking.meeting_url || booking.public_invite_url) && (
+                          <div className="mt-3 rounded-lg border-2 border-blue-400 bg-white px-3 py-3 space-y-2">
+                            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                              <Video size={16} className="text-blue-600" />
+                              Google Meet ready — join your virtual puja
+                            </p>
+                            {booking.meeting_url ? (
+                              <Button asChild size="sm">
+                                <a href={booking.meeting_url} target="_blank" rel="noopener noreferrer">
+                                  Join Google Meet
+                                </a>
+                              </Button>
+                            ) : booking.public_invite_url ? (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={booking.public_invite_url} target="_blank" rel="noopener noreferrer">
+                                  Open invite page
+                                </a>
+                              </Button>
+                            ) : null}
                           </div>
                         )}
                       </div>

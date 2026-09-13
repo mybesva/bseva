@@ -391,7 +391,8 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
 
     booking_id = str(uuid4())
     number = f"BSV-{datetime.utcnow().strftime('%y%m%d')}-{booking_id[:8].upper()}"
-    meeting = f"https://meet.bseva.example/virtual/{booking_id[:8]}" if body.mode == "virtual" else None
+    meeting = None
+    public_invite = None
     # New bookings await pujari acceptance; customer pays now; pujari settlement after completion
     db.execute(
         text(
@@ -455,6 +456,42 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         text("INSERT INTO payments (booking_id, amount_paise, status, provider) VALUES (CAST(:id AS uuid), :amt, 'successful', 'wallet')"),
         {"id": booking_id, "amt": total},
     )
+
+    # Virtual puja: create Google Meet (when configured) + public invite token
+    if body.mode == "virtual":
+        try:
+            from app.meetings.service import ensure_virtual_meeting
+
+            pujari_email_row = db.execute(
+                text("SELECT email FROM users WHERE id = CAST(:id AS uuid)"),
+                {"id": str(body.pujari_id)},
+            ).mappings().first()
+            b_for_meet = {
+                "id": booking_id,
+                "booking_number": number,
+                "mode": "virtual",
+                "booking_date": body.booking_date,
+                "start_time": start,
+                "end_time": end,
+                "meeting_url": None,
+                "meeting_invite_token": None,
+                "google_calendar_event_id": None,
+            }
+            meet_info = ensure_virtual_meeting(
+                db,
+                b_for_meet,
+                service_name=str(svc.get("name") or "Virtual Puja"),
+                customer_email=str(user.get("email") or ""),
+                pujari_email=str((pujari_email_row or {}).get("email") or ""),
+                duration_minutes=duration,
+                send_google_invites=True,
+            )
+            meeting = meet_info.get("meeting_url")
+            public_invite = meet_info.get("public_invite_url")
+        except Exception:
+            meeting = None
+            public_invite = None
+
     # Snapshot preparation / Samagri (localized, package-aware, frozen)
     prep_view: dict = {}
     try:
@@ -699,6 +736,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         "booking_number": number,
         "total_paise": total,
         "meeting_url": meeting,
+        "public_invite_url": public_invite,
         "status": "pending_acceptance",
         "recurring_series_id": series_id,
         "recurring_next_dates": next_dates,

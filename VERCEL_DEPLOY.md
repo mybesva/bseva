@@ -53,6 +53,40 @@ STORAGE_BUCKET=bseva
 OTP_DEV_CODE=123456
 ```
 
+### Google Meet (virtual puja) — Vercel
+
+You already authorized **once** locally (refresh token). Put the **same** secrets on Vercel — no need to log in again on production unless the token is revoked.
+
+**Google Cloud → Credentials → your OAuth Web client → Authorised redirect URIs** — add **both**:
+
+```text
+http://localhost:8000/api/v1/auth/google/callback
+https://bseva.vercel.app/api/v1/auth/google/callback
+```
+
+**Vercel → Settings → Environment Variables** (Production + Preview):
+
+```text
+GOOGLE_MEET_ENABLED=1
+GOOGLE_CALENDAR_ID=primary
+GOOGLE_MEET_TIMEZONE=Asia/Kolkata
+PUBLIC_APP_URL=https://bseva.vercel.app
+GOOGLE_OAUTH_CLIENT_ID=<same as local>
+GOOGLE_OAUTH_CLIENT_SECRET=<same as local>
+GOOGLE_CLIENT_ID=<same as local>
+GOOGLE_CLIENT_SECRET=<same as local>
+GOOGLE_OAUTH_REDIRECT_URI=https://bseva.vercel.app/api/v1/auth/google/callback
+GOOGLE_REFRESH_TOKEN=<same token from local .env after /auth/google>
+```
+
+Do **not** upload the service-account JSON file to Vercel for Meet — OAuth refresh token is enough.
+
+**Google “verification”:** for this setup you do **not** need Google’s long Verification review. Keep OAuth consent screen on **Testing**, with `mybseva@gmail.com` as a **Test user**. That one Allow click is the only user consent you need. Full “Verify app” is only required if you publish the OAuth app to all Google users.
+
+To re-authorize on production later: open  
+`https://bseva.vercel.app/api/v1/auth/google`  
+(while logged into the Meet Google account).
+
 ## Supabase manual setup (India / low latency)
 
 Supabase **region is fixed when the project is created** — you cannot move an existing project from Sydney (`ap-southeast-2`) to Mumbai (`ap-south-1`).

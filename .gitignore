@@ -7,6 +7,11 @@
 .env.test.local
 .env.production.local
 
+# Google service-account keys
+backend/secrets/
+**/service-account*.json
+**/*-meet-service.json
+
 # Python
 backend/.venv/
 **/__pycache__/

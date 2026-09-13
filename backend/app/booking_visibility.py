@@ -6,6 +6,7 @@ from datetime import date, datetime, time
 from sqlalchemy.orm import Session
 
 from app.domain import hours_until, row_dict
+from app.meetings.service import public_invite_url_for
 from app.platform_config import get_setting
 
 
@@ -40,6 +41,25 @@ def public_pujari(row: dict) -> dict:
     return out
 
 
+def _attach_invite_urls(data: dict, *, reveal_meet: bool) -> None:
+    token = data.get("meeting_invite_token")
+    public = public_invite_url_for(str(token) if token else None)
+    if reveal_meet:
+        if public:
+            data["public_invite_url"] = public
+        data["meeting_link_visible"] = True
+    else:
+        data.pop("meeting_url", None)
+        data.pop("public_invite_url", None)
+        data.pop("meeting_invite_token", None)
+        data.pop("google_calendar_event_id", None)
+        data["meeting_link_visible"] = False
+        if str(data.get("mode") or "") == "virtual":
+            data["meeting_reveal_note"] = (
+                "Google Meet link unlocks within 24 hours before your scheduled virtual puja."
+            )
+
+
 def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
     """Return role/time-appropriate booking representation."""
     data = row_dict(booking) if not isinstance(booking, dict) else dict(booking)
@@ -47,6 +67,7 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
     if role in ("admin", "super_admin"):
         data["details_level"] = "full"
         data["pujari_details_visible"] = True
+        _attach_invite_urls(data, reveal_meet=True)
         return data
 
     bd = data.get("booking_date")
@@ -72,12 +93,12 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                 "pujari_phone",
                 "pujari_email",
                 "pujari_id",
-                "meeting_url",
             ):
                 data.pop(k, None)
             data["pujari_reveal_note"] = (
                 "Pujari details will be shared within 24 hours before your scheduled puja."
             )
+        _attach_invite_urls(data, reveal_meet=within_window)
         return data
 
     if role in ("pujari", "head_pujari") and str(data.get("pujari_id")) == str(user.get("id")):
@@ -100,12 +121,12 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                 "customer_phone",
                 "latitude",
                 "longitude",
-                "meeting_url",
             ):
                 data.pop(k, None)
             if data.get("location_label"):
                 parts = str(data["location_label"]).split(",")
                 data["location_label"] = parts[-1].strip() if parts else data["location_label"]
                 data["location_area"] = data["location_label"]
+        _attach_invite_urls(data, reveal_meet=full)
         return data
     raise PermissionError("Not allowed")

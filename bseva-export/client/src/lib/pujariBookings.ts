@@ -10,6 +10,9 @@ export type PujariBookingRow = {
     city: string | null;
     status: string;
     tier: string;
+    mode?: string | null;
+    meetingUrl?: string | null;
+    publicInviteUrl?: string | null;
     totalAmount: number;
     priestAmount: number;
     platformFee: number;
@@ -39,6 +42,9 @@ export function mapApiBooking(b: any): PujariBookingRow {
       city: b.location_label,
       status: b.status,
       tier: b.package_type,
+      mode: b.mode || null,
+      meetingUrl: b.meeting_url || null,
+      publicInviteUrl: b.public_invite_url || null,
       totalAmount: b.total_paise,
       priestAmount,
       platformFee: platform,

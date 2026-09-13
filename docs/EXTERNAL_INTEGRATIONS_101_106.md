@@ -53,4 +53,16 @@ Wire after consultation confirm:
 3. Expose join URLs only to authorized customer + assigned pujari
 4. Never expose personal phone as the meeting channel when virtual mode is used
 
-Suggested providers: Agora, Twilio Video, Daily.co — pick one and implement the adapter above.
+Suggested providers for muhurta: Agora, Twilio Video, Daily.co.
+
+## Virtual Puja — Google Meet
+
+Application wiring:
+
+- On virtual booking create / pujari accept → `ensure_virtual_meeting` creates a Calendar event with Meet (`GOOGLE_MEET_*` env).
+- Stores `meeting_url`, `google_calendar_event_id`, `meeting_invite_token` on `bookings`.
+- Public invite page: `/join/{token}` → `GET /api/v1/meetings/invite/{token}`.
+- In-app Meet link is revealed within the same ~24h window as Ongoing / pujari details.
+
+Until Google credentials are set, invite tokens still work; the join page shows a “preparing” message until a real `meet.google.com` URL exists.
+

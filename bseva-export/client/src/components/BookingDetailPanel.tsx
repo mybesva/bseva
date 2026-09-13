@@ -33,6 +33,9 @@ export type BookingDetail = {
   longitude?: number | null;
   location_label?: string;
   mode?: string;
+  meeting_url?: string | null;
+  public_invite_url?: string | null;
+  meeting_link_visible?: boolean;
   base_price_paise?: number;
   platform_fee_paise?: number;
   gst_amount_paise?: number;
@@ -235,6 +238,24 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         {booking.package_type && <Badge variant="secondary" className="capitalize">{booking.package_type}</Badge>}
         {booking.needs_reassignment && <Badge variant="destructive">needs reassignment</Badge>}
       </div>
+
+      {booking.mode === "virtual" && (booking.meeting_url || booking.public_invite_url) && (
+        <div className="rounded-lg border-2 border-blue-300 bg-blue-50 px-3 py-3 space-y-2">
+          <p className="text-sm font-semibold text-foreground">Google Meet — Virtual Puja</p>
+          {booking.meeting_url ? (
+            <Button asChild size="sm" className="w-full sm:w-auto">
+              <a href={booking.meeting_url} target="_blank" rel="noopener noreferrer">
+                Join Google Meet
+              </a>
+            </Button>
+          ) : null}
+          {booking.public_invite_url ? (
+            <p className="text-xs text-muted-foreground break-all">
+              Public invite: {booking.public_invite_url}
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {status === "rejected" && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
