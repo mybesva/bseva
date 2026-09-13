@@ -47,7 +47,8 @@ CORS_ORIGINS=https://YOUR-APP.vercel.app
 ENVIRONMENT=production
 SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+# Must be legacy service_role JWT (starts with eyJ…) — not sb_secret_ / sb_publishable_
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....
 STORAGE_BUCKET=bseva
 OTP_DEV_CODE=123456
 ```

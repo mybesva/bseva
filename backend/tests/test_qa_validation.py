@@ -93,11 +93,19 @@ def test_storage_headers_jwt_uses_bearer(monkeypatch):
     assert h["apikey"].startswith("eyJ")
 
 
-def test_storage_headers_sb_secret_no_bearer(monkeypatch):
+def test_storage_headers_sb_secret_rejected(monkeypatch):
     monkeypatch.setattr(settings, "supabase_service_role_key", "sb_secret_abc123xyz")
-    h = _supabase_auth_headers()
-    assert "Authorization" not in h
-    assert h["apikey"] == "sb_secret_abc123xyz"
+    with pytest.raises(HTTPException) as ei:
+        _supabase_auth_headers()
+    assert ei.value.status_code == 503
+    assert "eyJ" in str(ei.value.detail)
+
+
+def test_storage_headers_publishable_rejected(monkeypatch):
+    monkeypatch.setattr(settings, "supabase_service_role_key", "sb_publishable_abc123xyz")
+    with pytest.raises(HTTPException) as ei:
+        _supabase_auth_headers()
+    assert ei.value.status_code == 503
 
 
 def test_storage_headers_reject_placeholder(monkeypatch):

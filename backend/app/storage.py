@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import mimetypes
 import re
 from pathlib import Path
@@ -24,9 +25,20 @@ _PLACEHOLDER_KEYS = {
     "replace-me",
 }
 
+_JWT_HINT = (
+    "SUPABASE_SERVICE_ROLE_KEY must be the legacy service_role JWT "
+    "(starts with eyJ…) from Supabase → Project Settings → API. "
+    "Do not use sb_publishable_… or sb_secret_… for Storage uploads — "
+    "Storage requires a real JWT in the Authorization header."
+)
+
+
+def _service_role_key() -> str:
+    return (settings.supabase_service_role_key or "").strip()
+
 
 def storage_configured() -> bool:
-    key = (settings.supabase_service_role_key or "").strip()
+    key = _service_role_key()
     return bool(
         settings.supabase_url
         and key
@@ -45,28 +57,27 @@ def content_type_for(filename: str) -> str:
     return guessed or "application/octet-stream"
 
 
-def _supabase_auth_headers(extra: dict | None = None) -> dict[str, str]:
+def _require_storage_jwt() -> str:
     """
-    Build Supabase Storage auth headers.
-
-    Storage always requires both `apikey` and `Authorization`.
-    supabase-js copies the project key into Authorization as Bearer when there is
-    no user JWT. Matching apikey === Bearer value is required for opaque
-    `sb_secret_*` / `sb_publishable_*` keys (they are not JWTs).
+    Supabase Storage requires Authorization: Bearer <JWT>.
+    Opaque keys (sb_secret_ / sb_publishable_) are not JWTs and cause:
+      - missing Authorization, or
+      - Invalid Compact JWS when forced as Bearer.
     """
-    key = (settings.supabase_service_role_key or "").strip()
+    key = _service_role_key()
     if not key or key.lower() in _PLACEHOLDER_KEYS:
         raise HTTPException(
             503,
-            "Object storage is not configured. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and STORAGE_BUCKET.",
+            "Object storage is not configured. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (eyJ… JWT), and STORAGE_BUCKET.",
         )
-    if key.startswith("sb_publishable_"):
-        raise HTTPException(
-            503,
-            "SUPABASE_SERVICE_ROLE_KEY is a publishable key. Use the service_role JWT (eyJ…) or sb_secret_… key for uploads.",
-        )
-    # Always send Authorization — Storage rejects requests without it
-    # ("headers must have required property 'authorization'").
+    if not key.startswith("eyJ"):
+        raise HTTPException(503, _JWT_HINT)
+    return key
+
+
+def _supabase_auth_headers(extra: dict | None = None) -> dict[str, str]:
+    """Build Supabase Storage auth headers (JWT service_role only)."""
+    key = _require_storage_jwt()
     headers: dict[str, str] = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
@@ -74,6 +85,24 @@ def _supabase_auth_headers(extra: dict | None = None) -> dict[str, str]:
     if extra:
         headers.update(extra)
     return headers
+
+
+def _storage_error_detail(res: httpx.Response) -> str:
+    detail = (res.text or "").strip()
+    try:
+        payload = json.loads(detail)
+        detail = (
+            payload.get("message")
+            or payload.get("error")
+            or payload.get("msg")
+            or detail
+        )
+    except Exception:
+        pass
+    text = str(detail)
+    if "Invalid Compact JWS" in text or "authorization" in text.lower():
+        return _JWT_HINT
+    return text[:240]
 
 
 def upload_bytes(object_path: str, data: bytes, content_type: str | None = None) -> str:
@@ -85,6 +114,8 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
     ct = content_type or content_type_for(object_path)
 
     if storage_configured():
+        # Fail fast with a clear message if the key cannot authorize Storage
+        _require_storage_jwt()
         url = (
             f"{settings.supabase_url.rstrip('/')}/storage/v1/object/"
             f"{settings.storage_bucket}/{object_path}"
@@ -96,21 +127,7 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
                 # retry as PUT for some Storage API versions
                 res = client.put(url, content=data, headers=headers)
             if res.status_code not in (200, 201):
-                detail = (res.text or "").strip()
-                # Surface Storage JSON errors cleanly for the UI
-                try:
-                    import json as _json
-
-                    payload = _json.loads(detail)
-                    detail = (
-                        payload.get("message")
-                        or payload.get("error")
-                        or payload.get("msg")
-                        or detail
-                    )
-                except Exception:
-                    pass
-                raise HTTPException(502, f"Storage upload failed: {str(detail)[:240]}")
+                raise HTTPException(502, f"Storage upload failed: {_storage_error_detail(res)}")
         return object_path
 
     # Local fallback for uvicorn/dev without Supabase Storage
@@ -135,7 +152,7 @@ def fetch_bytes(object_path: str) -> tuple[bytes, str]:
         if res.status_code == 404:
             raise HTTPException(404, "File missing")
         if res.status_code >= 400:
-            raise HTTPException(502, f"Storage download failed: {res.text[:200]}")
+            raise HTTPException(502, f"Storage download failed: {_storage_error_detail(res)}")
         return res.content, res.headers.get("content-type", ct)
 
     path = DOC_ROOT / object_path
