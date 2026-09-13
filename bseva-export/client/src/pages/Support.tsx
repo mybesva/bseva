@@ -41,23 +41,6 @@ function SupportForm({ categories }: { categories: string[] }) {
     }
   }
 
-  async function startChat() {
-    if (!description.trim()) {
-      toast.error("Enter a message to start chat");
-      return;
-    }
-    try {
-      await api("/support/conversations", {
-        method: "POST",
-        body: JSON.stringify({ subject: subject || category, message: description }),
-      });
-      toast.success("Chat started — an agent will respond when available");
-      setDescription("");
-    } catch (e: any) {
-      toast.error(e.message);
-    }
-  }
-
   useEffect(() => {
     void load();
   }, []);
@@ -126,9 +109,6 @@ function SupportForm({ categories }: { categories: string[] }) {
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={saving}>
                 {saving ? "Sending…" : "Submit ticket"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void startChat()}>
-                Start live chat
               </Button>
             </div>
           </form>

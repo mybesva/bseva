@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api, apiBookings, rupees } from "@/lib/api";
 import { toast } from "sonner";
-import { IndianRupee, TrendingUp, CheckCircle2, Clock } from "lucide-react";
+import { Wallet, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 import { format, isSameMonth, parseISO, startOfMonth } from "date-fns";
 
 function priestShare(b: any) {
@@ -103,7 +103,7 @@ export default function PujariEarningsPage() {
         <Card>
           <CardContent className="p-4 flex items-start gap-3">
             <div className="rounded-md bg-blue-500/10 p-2 text-blue-700">
-              <IndianRupee size={18} />
+              <Wallet size={18} />
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Settlement pending</p>

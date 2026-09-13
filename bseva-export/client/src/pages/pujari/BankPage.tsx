@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PujariPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,11 +8,19 @@ import { api } from "@/lib/api";
 import { validateBank } from "@/lib/fieldValidation";
 import { toast } from "sonner";
 
+type BankDraft = {
+  holder: string;
+  ifsc: string;
+  accountNumber: string;
+  accountConfirm: string;
+};
+
+const empty: BankDraft = { holder: "", ifsc: "", accountNumber: "", accountConfirm: "" };
+
 export default function PujariBankPage() {
-  const [holder, setHolder] = useState("");
-  const [ifsc, setIfsc] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [accountConfirm, setAccountConfirm] = useState("");
+  const [draft, setDraft] = useState<BankDraft>(empty);
+  const [baseline, setBaseline] = useState<BankDraft>(empty);
+  const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -20,19 +28,49 @@ export default function PujariBankPage() {
   useEffect(() => {
     api<any>("/pujari/profile")
       .then((p) => {
-        setHolder(p.bank_holder_name || "");
-        setIfsc(p.bank_ifsc || "");
         const acct = String(p.bank_account_number || "").replace(/\D/g, "");
-        setAccountNumber(acct);
-        setAccountConfirm(acct);
+        const next: BankDraft = {
+          holder: p.bank_holder_name || "",
+          ifsc: p.bank_ifsc || "",
+          accountNumber: acct,
+          accountConfirm: acct,
+        };
+        setDraft(next);
+        setBaseline(next);
+        setEditing(false);
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []);
 
+  const dirty = useMemo(
+    () =>
+      draft.holder.trim() !== baseline.holder.trim() ||
+      draft.ifsc.trim().toUpperCase() !== baseline.ifsc.trim().toUpperCase() ||
+      draft.accountNumber !== baseline.accountNumber ||
+      draft.accountConfirm !== baseline.accountConfirm,
+    [draft, baseline],
+  );
+
+  function setField<K extends keyof BankDraft>(key: K, value: BankDraft[K]) {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function cancelEdit() {
+    setDraft(baseline);
+    setErrors({});
+    setEditing(false);
+  }
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const errs = validateBank({ holder, ifsc, accountNumber, accountConfirm });
+    if (!editing || !dirty) return;
+    const errs = validateBank({
+      holder: draft.holder,
+      ifsc: draft.ifsc,
+      accountNumber: draft.accountNumber,
+      accountConfirm: draft.accountConfirm,
+    });
     setErrors(errs);
     if (Object.keys(errs).length) {
       toast.error("Please fill all mandatory bank fields correctly");
@@ -40,17 +78,27 @@ export default function PujariBankPage() {
     }
     setSaving(true);
     try {
-      const digits = accountNumber.replace(/\D/g, "");
+      const digits = draft.accountNumber.replace(/\D/g, "");
       await api("/pujari/profile", {
         method: "PATCH",
         body: JSON.stringify({
-          bank_holder_name: holder.trim(),
-          bank_ifsc: ifsc.trim().toUpperCase(),
+          bank_holder_name: draft.holder.trim(),
+          bank_ifsc: draft.ifsc.trim().toUpperCase(),
           bank_account_number: digits,
-          bank_account_confirm: accountConfirm.replace(/\D/g, ""),
+          bank_account_confirm: draft.accountConfirm.replace(/\D/g, ""),
           bank_account_last4: digits.slice(-4),
         }),
       });
+      const saved: BankDraft = {
+        holder: draft.holder.trim(),
+        ifsc: draft.ifsc.trim().toUpperCase(),
+        accountNumber: digits,
+        accountConfirm: digits,
+      };
+      setDraft(saved);
+      setBaseline(saved);
+      setEditing(false);
+      setErrors({});
       toast.success("Bank details saved");
     } catch (err: any) {
       toast.error(err.message || "Could not save bank details");
@@ -72,15 +120,21 @@ export default function PujariBankPage() {
             <form className="space-y-4" onSubmit={save}>
               <div className="space-y-1">
                 <Label>Account holder name *</Label>
-                <Input value={holder} onChange={(e) => setHolder(e.target.value)} required />
+                <Input
+                  value={draft.holder}
+                  onChange={(e) => setField("holder", e.target.value)}
+                  disabled={!editing}
+                  required
+                />
                 {errors.holder && <p className="text-sm text-destructive">{errors.holder}</p>}
               </div>
               <div className="space-y-1">
                 <Label>IFSC *</Label>
                 <Input
-                  value={ifsc}
-                  onChange={(e) => setIfsc(e.target.value.toUpperCase())}
+                  value={draft.ifsc}
+                  onChange={(e) => setField("ifsc", e.target.value.toUpperCase())}
                   maxLength={11}
+                  disabled={!editing}
                   required
                 />
                 {errors.ifsc && <p className="text-sm text-destructive">{errors.ifsc}</p>}
@@ -88,10 +142,11 @@ export default function PujariBankPage() {
               <div className="space-y-1">
                 <Label>Account number *</Label>
                 <Input
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 18))}
+                  value={draft.accountNumber}
+                  onChange={(e) => setField("accountNumber", e.target.value.replace(/\D/g, "").slice(0, 18))}
                   inputMode="numeric"
                   autoComplete="off"
+                  disabled={!editing}
                   required
                 />
                 {errors.accountNumber && <p className="text-sm text-destructive">{errors.accountNumber}</p>}
@@ -99,19 +154,31 @@ export default function PujariBankPage() {
               <div className="space-y-1">
                 <Label>Confirm account number *</Label>
                 <Input
-                  value={accountConfirm}
-                  onChange={(e) => setAccountConfirm(e.target.value.replace(/\D/g, "").slice(0, 18))}
+                  value={draft.accountConfirm}
+                  onChange={(e) => setField("accountConfirm", e.target.value.replace(/\D/g, "").slice(0, 18))}
                   inputMode="numeric"
                   autoComplete="off"
+                  disabled={!editing}
                   required
                 />
                 {errors.accountConfirm && (
                   <p className="text-sm text-destructive">{errors.accountConfirm}</p>
                 )}
               </div>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {!editing ? (
+                  <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+                    Edit
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
+                    Cancel
+                  </Button>
+                )}
+                <Button type="submit" disabled={saving || !editing || !dirty}>
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              </div>
             </form>
           )}
         </CardContent>

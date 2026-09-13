@@ -33,19 +33,17 @@ type OffersPayload = {
   note?: string;
 };
 
-function statusBadge(status: OfferService["status"]) {
-  switch (status) {
-    case "approved":
-      return <span className="text-xs font-medium text-emerald-700">Approved · locked</span>;
-    case "pending":
-      return <span className="text-xs font-medium text-amber-700">Pending approval · locked</span>;
-    case "pending_removal":
-      return <span className="text-xs font-medium text-amber-700">Removal pending</span>;
-    case "rejected":
-      return <span className="text-xs font-medium text-red-600">Rejected — you can request again</span>;
-    default:
-      return <span className="text-xs text-muted-foreground">Available to select</span>;
+function statusBadge(status: OfferService["status"], checked: boolean) {
+  if (status === "rejected") {
+    return <span className="text-xs font-medium text-red-600">Rejected — you can request again</span>;
   }
+  if (status === "pending_removal") {
+    return <span className="text-xs font-medium text-amber-700">Removal pending</span>;
+  }
+  if (checked || status === "pending" || status === "approved") {
+    return <span className="text-xs font-medium text-primary">Selected</span>;
+  }
+  return null;
 }
 
 export default function PujariServicesPage() {
@@ -225,36 +223,52 @@ export default function PujariServicesPage() {
   return (
     <PujariPortal>
       <div className="w-full max-w-none space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Services &amp; Dakshina</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
-            {data.note ||
-              "All BSeva catalog pujas are listed by section. Select new ones and submit for approval. Locked selections cannot be edited — only Admin can remove access."}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Dakshina shown is the estimated amount for the standard package.{" "}
-            <span className="font-medium text-foreground">
-              Catalog: {data.services.length} · Approved: {data.approved_count} · Pending:{" "}
-              {data.pending_count}
-            </span>
-          </p>
-        </header>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search all pujas…"
-            className="max-w-md bg-background"
-          />
-          <Button type="button" disabled={saving || newSelectionCount === 0} onClick={() => void save()}>
-            {saving
-              ? "Submitting…"
-              : newSelectionCount > 0
-                ? `Submit ${newSelectionCount} new puja${newSelectionCount === 1 ? "" : "s"} for approval`
-                : "Select new pujas to submit"}
-          </Button>
+        {/* Stays under portal nav while scrolling the catalog */}
+        <div className="sticky top-14 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">
+                Services &amp; Dakshina
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                {newSelectionCount > 0 ? (
+                  <span className="font-medium text-foreground">
+                    {newSelectionCount} new puja{newSelectionCount === 1 ? "" : "s"} ready to submit
+                  </span>
+                ) : (
+                  <>
+                    Catalog: {data.services.length} · Approved: {data.approved_count} · Pending:{" "}
+                    {data.pending_count}
+                  </>
+                )}
+              </p>
+            </div>
+            <Button
+              type="button"
+              className="shrink-0 w-full sm:w-auto"
+              disabled={saving || newSelectionCount === 0}
+              onClick={() => void save()}
+            >
+              {saving
+                ? "Submitting…"
+                : newSelectionCount > 0
+                  ? `Submit ${newSelectionCount} for review`
+                  : "Submit pujas for review"}
+            </Button>
+          </div>
         </div>
+
+        <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
+          {data.note ||
+            "All BSeva catalog pujas are listed by section. Select new ones and submit for approval. Locked selections cannot be edited — only Admin can remove access."}
+        </p>
+
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search all pujas…"
+          className="max-w-md bg-background"
+        />
 
         <div className="flex flex-wrap gap-2">
           {sections.map((sec) => (
@@ -310,10 +324,7 @@ export default function PujariServicesPage() {
                           {s.short_description ? (
                             <p className="text-xs text-muted-foreground line-clamp-2">{s.short_description}</p>
                           ) : null}
-                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                            <span>Catalog {rupees(s.catalog_price_paise)}</span>
-                            {statusBadge(s.status)}
-                          </div>
+                          {statusBadge(s.status, checked)}
                         </div>
                       </label>
                     );
