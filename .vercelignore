@@ -1,5 +1,14 @@
-# Prevent oversized Vercel CLI uploads (Git deploys ignore this; CLI does not)
+# Keep CLI uploads small. Use root-anchored paths only —
+# unanchored "client/" also excludes bseva-export/client and breaks the build.
 docs/
+docs/testing_points_media/
+docs/puja_sources/
+*.docx
+/apps/
+/packages/
+/client/
+/server/
+/mobile/
 **/__pycache__/
 **/*.pyc
 **/.venv/
@@ -7,10 +16,7 @@ docs/
 **/node_modules/
 **/.pytest_cache/
 **/coverage/
-docs/testing_points_media/
-docs/puja_sources/
-*.docx
-apps/mobile/
-packages/
-client/
-server/
+*.tar.gz
+*.zip
+bseva-project-macos.tar.gz
+bseva-project-macos.zip
