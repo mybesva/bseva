@@ -10,6 +10,7 @@ import { getLoginUrl } from "@/const";
 import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
+import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 
 function statusColor(status: string) {
   switch (status) {
@@ -255,6 +256,18 @@ export default function BookingReceipt() {
                 </p>
               )}
             </div>
+
+            {user?.role === "customer" &&
+              booking.mode !== "virtual" &&
+              ["confirmed", "in_progress"].includes(String(booking.status || "")) && (
+                <div className="print:hidden">
+                  <PujariLiveTrackCard
+                    bookingId={String(booking.id)}
+                    destinationLat={booking.latitude}
+                    destinationLng={booking.longitude}
+                  />
+                </div>
+              )}
 
             {booking.preparation ? (
               <PreparationChecklist preparation={booking.preparation} interactive={false} />

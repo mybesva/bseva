@@ -20,6 +20,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
+import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
+import { Loader2, Navigation } from "lucide-react";
 
 export type BookingDetail = {
   id: string;
@@ -107,13 +109,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
-  const [lastPing, setLastPing] = useState<{
-    latitude?: number;
-    longitude?: number;
-    recorded_at?: string;
-    available?: boolean;
-    message?: string;
-  } | null>(null);
+  const [sharingLocation, setSharingLocation] = useState(false);
   const [customerOtp, setCustomerOtp] = useState<{
     available?: boolean;
     code?: string | null;
@@ -132,16 +128,6 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     try {
       const row = await api<BookingDetail>(`/bookings/${bookingId}`);
       setBooking(row);
-      if (viewerRole === "customer") {
-        try {
-          const ping = await api<any>(`/bookings/${bookingId}/location`);
-          setLastPing(ping);
-        } catch {
-          setLastPing(null);
-        }
-      } else {
-        setLastPing(null);
-      }
       try {
         const otp = await api<any>(`/bookings/${bookingId}/start-otp`);
         setCustomerOtp(otp);
@@ -256,6 +242,79 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           ) : null}
         </div>
       )}
+
+      {viewerRole === "customer" &&
+        booking.mode !== "virtual" &&
+        (status === "confirmed" || status === "in_progress") && (
+          <PujariLiveTrackCard
+            bookingId={bookingId}
+            destinationLat={booking.latitude}
+            destinationLng={booking.longitude}
+          />
+        )}
+
+      {viewerRole === "pujari" &&
+        booking.mode !== "virtual" &&
+        (status === "confirmed" || status === "in_progress") && (
+          <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-2">
+            <p className="font-semibold text-foreground flex items-center gap-2">
+              <Navigation size={16} className="text-primary" />
+              Live location for customer
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Within 15 minutes of start (or while in progress), share your GPS so the customer can track you on the map.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy || sharingLocation}
+              onClick={() => {
+                if (!navigator.geolocation) {
+                  toast.error("Geolocation is not supported in this browser");
+                  return;
+                }
+                setSharingLocation(true);
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    void (async () => {
+                      try {
+                        await api(`/bookings/${bookingId}/location`, {
+                          method: "POST",
+                          body: JSON.stringify({
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                          }),
+                        });
+                        toast.success("Live location shared with customer");
+                      } catch (e: any) {
+                        toast.error(e.message || "Could not share location");
+                      } finally {
+                        setSharingLocation(false);
+                      }
+                    })();
+                  },
+                  (err) => {
+                    setSharingLocation(false);
+                    toast.error(
+                      err.code === err.PERMISSION_DENIED
+                        ? "Location permission denied"
+                        : "Could not get your GPS location",
+                    );
+                  },
+                  { enableHighAccuracy: true, timeout: 15000 },
+                );
+              }}
+            >
+              {sharingLocation ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" /> Sharing…
+                </>
+              ) : (
+                "Share live location"
+              )}
+            </Button>
+          </div>
+        )}
 
       {status === "rejected" && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
@@ -694,18 +753,6 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             </Button>
           </div>
         </div>
-      )}
-
-      {viewerRole === "customer" && lastPing?.available === false && (
-        <p className="text-xs text-muted-foreground">
-          {lastPing.message || "Pujari tracking opens 15 minutes before start."}
-        </p>
-      )}
-
-      {viewerRole === "customer" && lastPing?.latitude != null && (
-        <p className="text-xs text-muted-foreground">
-          Pujari location: {lastPing.latitude}, {lastPing.longitude} (updated {lastPing.recorded_at})
-        </p>
       )}
 
       {viewerRole === "customer" && booking.payment_status === "pending" && status !== "cancelled" && (

@@ -817,7 +817,13 @@ def get_location(booking_id: str, user=Depends(current_user), db: Session = Depe
         {"b": booking_id},
     ).mappings().first()
     if not row:
-        return None
+        return {
+            "available": True,
+            "latitude": None,
+            "longitude": None,
+            "recorded_at": None,
+            "message": "Waiting for the pujari to share their live location",
+        }
     out = row_dict(row)
     out["available"] = True
     return out

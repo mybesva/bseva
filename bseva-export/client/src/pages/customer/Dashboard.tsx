@@ -6,16 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { api, apiBookings } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
-import {
-  Calendar,
-  MapPin,
-  Clock,
-  Sparkles,
-  CreditCard,
-  ArrowRight,
-  PlayCircle,
-  Video,
-} from "lucide-react";
+import { Calendar, MapPin, Clock, Sparkles, CreditCard, ArrowRight, PlayCircle, Video } from "lucide-react";
+import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { format } from "date-fns";
 import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -204,6 +196,16 @@ function CustomerDashboardContent() {
                             ) : null}
                           </div>
                         )}
+                        {booking.mode !== "virtual" &&
+                          ["confirmed", "in_progress"].includes(String(booking.status || "")) && (
+                            <div className="mt-3">
+                              <PujariLiveTrackCard
+                                bookingId={String(booking.id)}
+                                destinationLat={booking.latitude}
+                                destinationLng={booking.longitude}
+                              />
+                            </div>
+                          )}
                       </div>
                       <Badge
                         variant="outline"
