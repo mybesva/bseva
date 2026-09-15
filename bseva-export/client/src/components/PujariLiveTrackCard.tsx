@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { Loader2, Navigation, RefreshCw, UserRound } from "lucide-react";
+import { Loader2, Navigation, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatDisplayDateTime } from "@/lib/formatDate";
@@ -41,13 +41,15 @@ function mapsExternalUrl(lat: number, lng: number) {
 function PujariMapPin({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-col items-center drop-shadow-lg", className)} aria-hidden>
-      <div className="relative flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-white bg-primary text-primary-foreground shadow-md">
-        <UserRound className="h-6 w-6" strokeWidth={2.25} />
-      </div>
-      <span className="mt-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground shadow">
+      <img
+        src="/pujari-track-marker.png"
+        alt=""
+        className="h-16 w-16 md:h-20 md:w-20 object-contain select-none"
+        draggable={false}
+      />
+      <span className="-mt-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground shadow">
         Pujari
       </span>
-      <span className="-mt-0.5 h-0 w-0 border-x-[6px] border-t-[8px] border-x-transparent border-t-primary" />
     </div>
   );
 }
@@ -153,9 +155,7 @@ export default function PujariLiveTrackCard({
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <UserRound className="h-3 w-3" />
-              </span>
+              <img src="/pujari-track-marker.png" alt="" className="h-6 w-6 object-contain" />
               {lat!.toFixed(5)}, {lng!.toFixed(5)}
             </span>
             <Button asChild size="sm" variant="secondary">

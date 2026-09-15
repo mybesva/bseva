@@ -7,11 +7,24 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import current_user, require_roles
-from app.domain import apply_wallet, cancel_policy, hours_until, nearby_pujaris, row_dict, slot_conflict
+from app.domain import (
+    SERVICE_RADIUS_KM,
+    apply_wallet,
+    cancel_policy,
+    hours_until,
+    nearby_pujaris,
+    pujari_covers_location,
+    row_dict,
+    service_available_near,
+    slot_conflict,
+)
 from app.panchang import panchang_for
 from app.schemas import BookingCreateIn
 
 router = APIRouter(tags=["bookings"])
+
+# Stable code for clients — map to a friendly consumer message; never show raw geo errors.
+SERVICE_AREA_UNAVAILABLE = "SERVICE_AREA_UNAVAILABLE"
 
 
 @router.get("/panchang")
@@ -258,6 +271,34 @@ def list_pujaris(db: Session = Depends(get_db), user=Depends(require_roles("cust
     return [row_dict(r) for r in rows]
 
 
+@router.get("/service-availability")
+def service_availability(
+    lat: float = Query(..., ge=-90, le=90),
+    lng: float = Query(..., ge=-180, le=180),
+    service_id: str | None = None,
+    db: Session = Depends(get_db),
+    user=Depends(require_roles("customer", "admin")),
+):
+    """Whether at least one eligible pujari is within the service radius of the given coordinates.
+
+    Does not expose pujari identities, coordinates, or distances.
+    """
+    required = 1
+    if service_id:
+        row = db.execute(
+            text("SELECT required_level FROM services WHERE id = CAST(:id AS uuid)"),
+            {"id": service_id},
+        ).first()
+        if not row:
+            raise HTTPException(404, "Service not found")
+        required = int(row[0])
+    try:
+        available = service_available_near(db, lat, lng, required, SERVICE_RADIUS_KM)
+    except Exception:
+        raise HTTPException(503, "Unable to check service availability. Please try again.")
+    return {"service_available": bool(available)}
+
+
 @router.get("/pujaris/nearby")
 def nearby(
     lat: float = Query(...),
@@ -310,6 +351,22 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     if body.mode == "virtual" and not bool(get_setting(db, "virtual_puja_enabled", False)):
         raise HTTPException(400, "Virtual Puja is currently disabled by Admin")
 
+    # Service-area gate: booking location must have an eligible pujari within radius.
+    if body.latitude is None or body.longitude is None:
+        raise HTTPException(400, "Booking location coordinates are required")
+    try:
+        area_ok = service_available_near(
+            db,
+            float(body.latitude),
+            float(body.longitude),
+            int(svc["required_level"] or 1),
+            SERVICE_RADIUS_KM,
+        )
+    except Exception:
+        raise HTTPException(503, "Unable to verify service availability. Please try again.")
+    if not area_ok:
+        raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
+
     # Per-puja minimum booking notice (default 48h / 2 days)
     lead_hours = int(svc.get("booking_lead_hours") if svc.get("booking_lead_hours") is not None else 48)
     if lead_hours < 1:
@@ -339,6 +396,10 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     ).mappings().first()
     if not pujari or pujari["blocked"] or pujari["verification_status"] != "approved" or not pujari["available"]:
         raise HTTPException(400, "This pujari is not available")
+    if not pujari_covers_location(
+        db, str(body.pujari_id), float(body.latitude), float(body.longitude), SERVICE_RADIUS_KM
+    ):
+        raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
     blocked = db.execute(
         text(
             """

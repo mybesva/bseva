@@ -4,11 +4,17 @@ import Layout from "@/components/Layout";
 import { CustomerPortal } from "@/components/RolePortals";
 import BookingWizard from "@/components/BookingWizard";
 import MuhurtaConsultationBook from "@/components/MuhurtaConsultationBook";
+import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
+import {
+  COMING_SOON_BODY,
+  COMING_SOON_TITLE,
+} from "@/lib/serviceAvailabilityMessages";
 import { Loader2 } from "lucide-react";
 
 function BookShell({ children }: { children: ReactNode }) {
@@ -26,9 +32,14 @@ export default function Book() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { config: publicConfig } = usePublicConfig();
+  const { canBook, checking, status, refresh } = useServiceAvailability();
   const [pujaType, setPujaType] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const inCustomerPortal = user?.role === "customer";
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -80,6 +91,8 @@ export default function Book() {
   const showMuhurta =
     user?.role === "customer" && (pujaType.muhurta_consultation_enabled || pujaType.requires_muhurta);
 
+  const blockBooking = user?.role === "customer" && (!canBook || checking);
+
   return (
     <BookShell>
       {inCustomerPortal ? (
@@ -103,33 +116,53 @@ export default function Book() {
           </div>
         </section>
       )}
-      <div className={inCustomerPortal ? "pb-8" : "container pb-12 px-0"}>
-        {showMuhurta && (
-          <MuhurtaConsultationBook
+
+      {user?.role === "customer" ? <ServiceAvailabilityBanner /> : null}
+
+      {blockBooking ? (
+        <div className="pb-8 max-w-2xl space-y-4">
+          {status === "unavailable" ? (
+            <div className="rounded-xl border border-primary/25 bg-orange-50/80 dark:bg-orange-950/30 px-5 py-5">
+              <h2 className="text-lg font-bold text-[#1A2B4A] dark:text-primary mb-2">{COMING_SOON_TITLE}</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">{COMING_SOON_BODY}</p>
+            </div>
+          ) : null}
+          <p className="text-sm text-muted-foreground">
+            You can still browse this puja and other services. Booking will unlock when service is available in your area.
+          </p>
+          <Button variant="outline" onClick={() => setLocation(inCustomerPortal ? "/customer" : "/services")}>
+            {inCustomerPortal ? "Back to dashboard" : "Browse services"}
+          </Button>
+        </div>
+      ) : (
+        <div className={inCustomerPortal ? "pb-8" : "container pb-12 px-0"}>
+          {showMuhurta && (
+            <MuhurtaConsultationBook
+              serviceId={pujaType.id}
+              serviceName={pujaType.name}
+              requiresMuhurtham={Boolean(pujaType.requires_muhurta)}
+              feePaise={muhurtaFee}
+            />
+          )}
+          <BookingWizard
             serviceId={pujaType.id}
-            serviceName={pujaType.name}
-            requiresMuhurta={Boolean(pujaType.requires_muhurta)}
-            feePaise={muhurtaFee}
+            pujaName={pujaType.name}
+            basePrices={{
+              basic: pujaType.basic_price_paise || undefined,
+              standard: pujaType.standard_price_paise,
+              premium: pujaType.premium_price_paise,
+            }}
+            addonPrices={{
+              samagri: pujaType.samagri_price_paise,
+              alankaram: pujaType.alankaram_price_paise,
+              food: pujaType.food_price_paise,
+              samagriAvailable: pujaType.samagri_available !== false,
+              alankaramAvailable: Boolean(pujaType.alankaram_available),
+              foodAvailable: Boolean(pujaType.food_available),
+            }}
           />
-        )}
-        <BookingWizard
-          serviceId={pujaType.id}
-          pujaName={pujaType.name}
-          basePrices={{
-            basic: pujaType.basic_price_paise || undefined,
-            standard: pujaType.standard_price_paise,
-            premium: pujaType.premium_price_paise,
-          }}
-          addonPrices={{
-            samagri: pujaType.samagri_price_paise,
-            alankaram: pujaType.alankaram_price_paise,
-            food: pujaType.food_price_paise,
-            samagriAvailable: pujaType.samagri_available !== false,
-            alankaramAvailable: Boolean(pujaType.alankaram_available),
-            foodAvailable: Boolean(pujaType.food_available),
-          }}
-        />
-      </div>
+        </div>
+      )}
     </BookShell>
   );
 }

@@ -53,6 +53,7 @@ import { getLoginUrl } from "@/const";
 import { useI18n } from "@/i18n/I18nProvider";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { friendlyBookingError, isServiceAreaUnavailableError, COMING_SOON_TITLE, COMING_SOON_BODY } from "@/lib/serviceAvailabilityMessages";
 
 interface BookingWizardProps {
   serviceId: string;
@@ -77,9 +78,6 @@ type BookingStep = 1 | 2 | 3 | 4;
 type Tier = "basic" | "standard" | "premium";
 type ServiceMode = "physical" | "virtual";
 type CalendarType = "north" | "south" | "lunar";
-
-const DEMO_LAT = 12.9352;
-const DEMO_LNG = 77.6245;
 
 export default function BookingWizard({ serviceId, pujaName, basePrices, addonPrices }: BookingWizardProps) {
   const { t } = useI18n();
@@ -542,16 +540,19 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       toast.error("Please select a booking date");
       return;
     }
+    if (lat == null || lng == null) {
+      toast.error("Please set a service location with GPS coordinates before booking");
+      return;
+    }
     try {
       setSubmitting(true);
       // Resolve a pujari id only (no details shown to customer during booking).
       const nearby = await api<any[]>(
-        `/pujaris/nearby?lat=${lat ?? DEMO_LAT}&lng=${lng ?? DEMO_LNG}&service_id=${serviceId}`,
+        `/pujaris/nearby?lat=${lat}&lng=${lng}&service_id=${serviceId}`,
       ).catch(() => [] as any[]);
-      const list = nearby.length ? nearby : await api<any[]>("/pujaris").catch(() => [] as any[]);
-      const pujariId = list[0]?.id || list[0]?.priestId;
+      const pujariId = nearby[0]?.id || nearby[0]?.priestId;
       if (!pujariId) {
-        toast.error("No available pujari for this service");
+        toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
         return;
       }
       const result = await api<{ id: string; booking_number: string; total_paise: number; meeting_url?: string }>("/bookings", {
@@ -566,8 +567,8 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           location_label: `${composedServiceAddress()}${city ? `, ${city}` : ""}`,
           address: composedServiceAddress(),
           city,
-          latitude: lat ?? DEMO_LAT,
-          longitude: lng ?? DEMO_LNG,
+          latitude: lat,
+          longitude: lng,
           special_instructions: specialInstructions || undefined,
           terms_accepted: true,
           include_samagri: includeSamagri,
@@ -584,7 +585,11 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       toast.success("Booking confirmed and paid from wallet");
       setLocation(`/booking/${result.id || result.booking_number}`);
     } catch (error: any) {
-      toast.error(error?.message || "Failed to create booking");
+      if (isServiceAreaUnavailableError(error?.message)) {
+        toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
+      } else {
+        toast.error(friendlyBookingError(error?.message) || "Failed to create booking");
+      }
     } finally {
       setSubmitting(false);
     }

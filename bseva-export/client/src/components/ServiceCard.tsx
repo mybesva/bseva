@@ -8,9 +8,20 @@ interface ServiceCardProps {
   image: string;
   icon?: React.ReactNode;
   comingSoon?: boolean;
+  /** Area / location gate — service is listed but booking CTAs disabled */
+  bookingDisabled?: boolean;
+  bookingDisabledLabel?: string;
 }
 
-export default function ServiceCard({ title, description, image, icon, comingSoon }: ServiceCardProps) {
+export default function ServiceCard({
+  title,
+  description,
+  image,
+  icon,
+  comingSoon,
+  bookingDisabled,
+  bookingDisabledLabel,
+}: ServiceCardProps) {
   return (
     <Card className="group border-none shadow-md hover:shadow-xl transition-all duration-300 bg-card h-full flex flex-col relative overflow-visible min-w-0 w-full">
       {comingSoon && (
@@ -67,6 +78,10 @@ export default function ServiceCard({ title, description, image, icon, comingSoo
         {comingSoon ? (
           <span className="text-sm font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
             Coming Soon
+          </span>
+        ) : bookingDisabled ? (
+          <span className="text-sm font-semibold text-muted-foreground">
+            {bookingDisabledLabel || "Booking unavailable in your area"}
           </span>
         ) : (
           <Button variant="link" className="p-0 h-auto text-primary font-bold group-hover:translate-x-1 transition-transform">

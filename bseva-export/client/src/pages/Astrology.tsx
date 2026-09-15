@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,9 @@ import { api, rupees } from "@/lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "wouter";
+import { useStartBooking } from "@/hooks/useStartBooking";
+import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
 
 type AstrologyService = {
   id: string;
@@ -22,6 +24,7 @@ type AstrologyService = {
 
 export default function AstrologyPage() {
   const { t } = useI18n();
+  const { startBooking, bookingBlocked, checking } = useStartBooking();
   const [services, setServices] = useState<AstrologyService[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,11 +80,14 @@ export default function AstrologyPage() {
                   ) : null}
                   {s.muhurta_consultation_enabled && <Badge variant="secondary">Muhurtham</Badge>}
                 </div>
-                <Link href={`/book/${s.slug}`}>
-                  <Button className="w-full bg-primary hover:bg-primary/90 font-bold">
-                    {t("nav.bookPuja")}
-                  </Button>
-                </Link>
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90 font-bold"
+                  disabled={bookingBlocked}
+                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
+                  onClick={() => startBooking(s.slug)}
+                >
+                  {checking ? "Checking…" : bookingBlocked ? BOOKING_UNAVAILABLE_HINT : t("nav.bookPuja")}
+                </Button>
               </CardContent>
             </Card>
           ))}

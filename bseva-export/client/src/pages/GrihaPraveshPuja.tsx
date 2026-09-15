@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Check, Clock, Users, Star, ArrowRight, Download, Home } from "lucide-react";
-import { useLocation } from "wouter";
+import { useStartBooking } from "@/hooks/useStartBooking";
+import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
 
 export default function GrihaPraveshPuja() {
-  const [, setLocation] = useLocation();
+  const { startBooking, bookingBlocked, checking } = useStartBooking();
+  const goBook = () => startBooking("griha-pravesh-puja");
   return (
     <Layout>
       {/* Hero Section */}
@@ -158,7 +160,9 @@ export default function GrihaPraveshPuja() {
               <CardFooter>
                 <Button 
                   className="w-full bg-sidebar text-white hover:bg-sidebar/90"
-                  onClick={() => setLocation('/book/griha-pravesh-puja')}
+                  onClick={goBook}
+                  disabled={bookingBlocked}
+                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
                 >
                   Select Package
                 </Button>
@@ -197,7 +201,9 @@ export default function GrihaPraveshPuja() {
               <CardFooter>
                 <Button 
                   className="w-full bg-primary text-white hover:bg-primary/90 h-12 font-bold shadow-md"
-                  onClick={() => setLocation('/book/griha-pravesh-puja')}
+                  onClick={goBook}
+                  disabled={bookingBlocked}
+                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
                 >
                   Select Package
                 </Button>
@@ -233,7 +239,9 @@ export default function GrihaPraveshPuja() {
               <CardFooter>
                 <Button 
                   className="w-full bg-sidebar text-white hover:bg-sidebar/90"
-                  onClick={() => setLocation('/book/griha-pravesh-puja')}
+                  onClick={goBook}
+                  disabled={bookingBlocked}
+                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
                 >
                   Select Package
                 </Button>

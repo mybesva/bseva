@@ -1,11 +1,17 @@
 import { CustomerPortal } from "@/components/RolePortals";
 import PromoBannerCarousel from "@/components/PromoBannerCarousel";
+import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { api, apiBookings } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
+import {
+  BOOKING_UNAVAILABLE_HINT,
+} from "@/lib/serviceAvailabilityMessages";
+import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 import { Calendar, MapPin, Clock, Sparkles, CreditCard, ArrowRight, PlayCircle, Video } from "lucide-react";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
@@ -28,12 +34,17 @@ function CustomerDashboardContent() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const { canBook, checking, status, refresh } = useServiceAvailability();
   const [calPref, setCalPref] = useState<"north" | "south" | "lunar">("north");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujas, setPujas] = useState<any[]>([]);
   const [panchang, setPanchang] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     const pref = (user?.calendar_preference as "north" | "south" | "lunar") || "north";
@@ -121,6 +132,7 @@ function CustomerDashboardContent() {
           <p className="mt-2 text-sm text-sidebar-foreground/70 font-mono">ID: {user.public_id}</p>
         ) : null}
       </section>
+      <ServiceAvailabilityBanner />
       <PromoBannerCarousel />
       <div className="space-y-12">
         <div>
@@ -294,9 +306,17 @@ function CustomerDashboardContent() {
                     </div>
                     <Button
                       className="w-full bg-primary hover:bg-primary/90 font-bold"
-                      onClick={() => setLocation(`/book/${rec.service_slug}`)}
+                      disabled={!canBook || checking}
+                      title={!canBook ? BOOKING_UNAVAILABLE_HINT : undefined}
+                      onClick={() => {
+                        if (!canBook || checking) {
+                          notifyBookingBlocked(status);
+                          return;
+                        }
+                        setLocation(`/book/${rec.service_slug}`);
+                      }}
                     >
-                      {t("customer.bookNow")}
+                      {checking ? "Checking…" : t("customer.bookNow")}
                     </Button>
                   </CardContent>
                 </Card>
@@ -331,9 +351,17 @@ function CustomerDashboardContent() {
                   </div>
                   <Button
                     className="w-full bg-primary hover:bg-primary/90 font-bold"
-                    onClick={() => setLocation(`/book/${puja.slug}`)}
+                    disabled={!canBook || checking}
+                    title={!canBook ? BOOKING_UNAVAILABLE_HINT : undefined}
+                    onClick={() => {
+                      if (!canBook || checking) {
+                        notifyBookingBlocked(status);
+                        return;
+                      }
+                      setLocation(`/book/${puja.slug}`);
+                    }}
                   >
-                    {t("customer.bookNow")}
+                    {checking ? "Checking…" : t("customer.bookNow")}
                   </Button>
                 </CardContent>
               </Card>

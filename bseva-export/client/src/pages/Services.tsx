@@ -12,6 +12,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
 import { serviceImageUrl } from "@/lib/serviceImage";
+import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
+import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
+import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 
 const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
 
@@ -35,6 +38,7 @@ export default function Services() {
   const [, setLocation] = useLocation();
   const searchStr = useSearch();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { canBook, checking, status } = useServiceAvailability();
   const [services, setServices] = useState<Svc[]>([]);
   const [categories, setCategories] = useState<Cat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,13 +71,22 @@ export default function Services() {
       setLocation(`/services/${slug}`);
       return;
     }
-    const path = `/book/${slug}`;
-    if (authLoading) return;
+    // Always allow browsing the detail page; only go to booking when area is confirmed.
+    if (authLoading || checking) {
+      setLocation(`/services/${slug}`);
+      return;
+    }
     if (!isAuthenticated || user?.role !== "customer") {
+      const path = `/book/${slug}`;
       setLocation(getLoginUrl({ role: "customer", returnPath: path }));
       return;
     }
-    setLocation(path);
+    if (!canBook) {
+      notifyBookingBlocked(status);
+      setLocation(`/services/${slug}`);
+      return;
+    }
+    setLocation(`/book/${slug}`);
   }
 
   function selectCategory(slug: string) {
@@ -170,6 +183,8 @@ export default function Services() {
                             image={img}
                             icon={<Icon size={24} />}
                             comingSoon={!s.bookable}
+                            bookingDisabled={Boolean(s.bookable && isAuthenticated && user?.role === "customer" && (!canBook || checking))}
+                            bookingDisabledLabel={checking ? "Checking availability…" : BOOKING_UNAVAILABLE_HINT}
                           />
                         </div>
                       );

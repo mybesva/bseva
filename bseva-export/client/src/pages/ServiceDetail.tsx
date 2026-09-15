@@ -11,6 +11,9 @@ import { toast } from "sonner";
 import PreparationChecklist, { type PreparationView } from "@/components/PreparationChecklist";
 import { serviceImageUrl } from "@/lib/serviceImage";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
+import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
+import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 
 type Svc = {
   id: string;
@@ -58,6 +61,7 @@ export default function ServiceDetail() {
   const slug = params.slug || "";
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { canBook, checking, status } = useServiceAvailability();
   const { lang } = useI18n();
   const [svc, setSvc] = useState<Svc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,9 +95,13 @@ export default function ServiceDetail() {
   function book() {
     if (!svc?.bookable) return;
     const path = `/book/${svc.canonical_slug || svc.slug}`;
-    if (authLoading) return;
+    if (authLoading || checking) return;
     if (!isAuthenticated || user?.role !== "customer") {
       setLocation(getLoginUrl({ role: "customer", returnPath: path }));
+      return;
+    }
+    if (!canBook) {
+      notifyBookingBlocked(status);
       return;
     }
     setLocation(path);
@@ -266,10 +274,21 @@ export default function ServiceDetail() {
                 <Button
                   size="lg"
                   className="bg-primary text-white font-bold"
-                  disabled={!svc.bookable}
+                  disabled={!svc.bookable || (isAuthenticated && user?.role === "customer" && (!canBook || checking))}
+                  title={
+                    svc.bookable && isAuthenticated && user?.role === "customer" && !canBook
+                      ? BOOKING_UNAVAILABLE_HINT
+                      : undefined
+                  }
                   onClick={book}
                 >
-                  {svc.bookable ? "Book this puja" : "Coming Soon"}
+                  {!svc.bookable
+                    ? "Coming Soon"
+                    : checking
+                      ? "Checking…"
+                      : isAuthenticated && user?.role === "customer" && !canBook
+                        ? BOOKING_UNAVAILABLE_HINT
+                        : "Book this puja"}
                 </Button>
                 <Link href="/services">
                   <Button size="lg" variant="outline">

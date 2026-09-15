@@ -61,6 +61,7 @@ import CustomerBookingsPage from "./pages/customer/BookingsPage";
 import CustomerHistoryPage from "./pages/customer/HistoryPage";
 import CustomerChangePasswordPage from "./pages/customer/ChangePasswordPage";
 import { AuthProvider } from "./lib/AuthContext";
+import { ServiceAvailabilityProvider } from "./lib/ServiceAvailabilityContext";
 import LogoWatermark from "./components/LogoWatermark";
 import AdminSettlements from "./pages/admin/Settlements";
 import AdminPricingRules from "./pages/admin/PricingRules";
@@ -170,11 +171,13 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light" switchable>
         <AuthProvider>
-          <TooltipProvider>
-            <LogoWatermark />
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <ServiceAvailabilityProvider>
+            <TooltipProvider>
+              <LogoWatermark />
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </ServiceAvailabilityProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -104,8 +104,12 @@ def slot_conflict(db: Session, pujari_id: str, booking_date: date, start: time, 
     return row is not None
 
 
-def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, radius_km: float = 10):
-    rows = db.execute(
+SERVICE_RADIUS_KM = 10.0
+
+
+def _eligible_pujari_location_rows(db: Session, required_level: int):
+    """Approved, available, unblocked pujaris with coordinates (no coords returned to callers)."""
+    return db.execute(
         text(
             """
             SELECT u.id, u.name, p.approved_level, p.verification_status, p.available,
@@ -113,7 +117,7 @@ def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, rad
                    p.experience_years, p.languages, p.specializations, p.city
             FROM pujari_profiles p
             JOIN users u ON u.id = p.user_id
-            WHERE u.blocked = FALSE AND u.role = 'pujari'
+            WHERE u.blocked = FALSE AND u.role IN ('pujari', 'head_pujari')
               AND p.verification_status = 'approved'
               AND p.approved_level IS NOT NULL AND p.approved_level >= :lvl
               AND p.available = TRUE
@@ -122,6 +126,55 @@ def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, rad
         ),
         {"lvl": required_level},
     ).mappings().all()
+
+
+def service_available_near(
+    db: Session,
+    lat: float,
+    lng: float,
+    required_level: int = 1,
+    radius_km: float = SERVICE_RADIUS_KM,
+) -> bool:
+    """True if at least one eligible pujari is within radius_km of (lat, lng)."""
+    for r in _eligible_pujari_location_rows(db, required_level):
+        dist = haversine_km(lat, lng, float(r["latitude"]), float(r["longitude"]))
+        effective = min(radius_km, float(r["service_radius_km"] or radius_km))
+        if dist <= effective:
+            return True
+    return False
+
+
+def pujari_covers_location(
+    db: Session,
+    pujari_id: str,
+    lat: float,
+    lng: float,
+    radius_km: float = SERVICE_RADIUS_KM,
+) -> bool:
+    """True if the given eligible pujari is within radius of the booking location."""
+    row = db.execute(
+        text(
+            """
+            SELECT p.latitude, p.longitude, p.service_radius_km, p.available, p.verification_status,
+                   u.blocked
+            FROM pujari_profiles p
+            JOIN users u ON u.id = p.user_id
+            WHERE u.id = CAST(:id AS uuid)
+            """
+        ),
+        {"id": pujari_id},
+    ).mappings().first()
+    if not row or row["blocked"] or row["verification_status"] != "approved" or not row["available"]:
+        return False
+    if row["latitude"] is None or row["longitude"] is None:
+        return False
+    dist = haversine_km(lat, lng, float(row["latitude"]), float(row["longitude"]))
+    effective = min(radius_km, float(row["service_radius_km"] or radius_km))
+    return dist <= effective
+
+
+def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, radius_km: float = SERVICE_RADIUS_KM):
+    rows = _eligible_pujari_location_rows(db, required_level)
     out = []
     for r in rows:
         dist = haversine_km(lat, lng, float(r["latitude"]), float(r["longitude"]))
