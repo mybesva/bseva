@@ -89,7 +89,7 @@ function loadMaps() {
   return mapsLoadPromise;
 }
 
-function LocationPicker({ value, onChange }: { value: AddressValue; onChange: (v: AddressValue) => void }) {
+export function MapLocationPicker({ value, onChange }: { value: AddressValue; onChange: (v: AddressValue) => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapObj = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -413,7 +413,7 @@ export default function AddressFields({ value, onChange, className }: Props) {
           />
         </div>
       </div>
-      <LocationPicker value={value} onChange={onChange} />
+      <MapLocationPicker value={value} onChange={onChange} />
     </div>
   );
 }

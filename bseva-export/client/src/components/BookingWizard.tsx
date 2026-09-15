@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { MapLocationPicker, type AddressValue } from "@/components/AddressFields";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -80,65 +81,6 @@ type CalendarType = "north" | "south" | "lunar";
 const DEMO_LAT = 12.9352;
 const DEMO_LNG = 77.6245;
 
-function pickAddressComponent(
-  components: { long_name: string; types: string[] }[] | undefined,
-  type: string,
-) {
-  return components?.find((c) => c.types.includes(type))?.long_name || "";
-}
-
-async function reverseGeocodeCoords(
-  latitude: number,
-  longitude: number,
-): Promise<{ address: string; city: string }> {
-  // Prefer Google Geocoder when Maps is already loaded (e.g. address page)
-  const g = typeof window !== "undefined" ? (window as any).google : null;
-  if (g?.maps?.Geocoder) {
-    const result = await new Promise<any | null>((resolve) => {
-      const geocoder = new g.maps.Geocoder();
-      geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results: any[], status: string) => {
-        resolve(status === "OK" && results?.[0] ? results[0] : null);
-      });
-    });
-    if (result) {
-      const city =
-        pickAddressComponent(result.address_components, "locality") ||
-        pickAddressComponent(result.address_components, "administrative_area_level_2") ||
-        pickAddressComponent(result.address_components, "administrative_area_level_3");
-      return {
-        address: result.formatted_address || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
-        city,
-      };
-    }
-  }
-
-  // Fallback: OpenStreetMap Nominatim (works without Maps API key)
-  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(
-    String(latitude),
-  )}&lon=${encodeURIComponent(String(longitude))}&addressdetails=1`;
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error("Could not resolve address for this location");
-  const data = (await res.json()) as {
-    display_name?: string;
-    address?: {
-      city?: string;
-      town?: string;
-      village?: string;
-      suburb?: string;
-      county?: string;
-      state_district?: string;
-      road?: string;
-      neighbourhood?: string;
-      house_number?: string;
-    };
-  };
-  const a = data.address || {};
-  const city = a.city || a.town || a.village || a.suburb || a.county || a.state_district || "";
-  const street = [a.house_number, a.road, a.neighbourhood].filter(Boolean).join(" ");
-  const address = data.display_name || street || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-  return { address, city };
-}
-
 export default function BookingWizard({ serviceId, pujaName, basePrices, addonPrices }: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
@@ -163,7 +105,6 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
-  const [geoPending, setGeoPending] = useState(false);
   const [addressMode, setAddressMode] = useState<"saved" | "new">("new");
   const [savedAddress, setSavedAddress] = useState<{
     label: string;
@@ -855,57 +796,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm text-muted-foreground">New address for this booking</p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={geoPending}
-                    onClick={() => {
-                      if (!navigator.geolocation) {
-                        setGeoError("Geolocation is not supported in this browser. Enter address manually.");
-                        return;
-                      }
-                      setGeoPending(true);
-                      setGeoError(null);
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          const latitude = pos.coords.latitude;
-                          const longitude = pos.coords.longitude;
-                          setLat(latitude);
-                          setLng(longitude);
-                          void (async () => {
-                            try {
-                              const resolved = await reverseGeocodeCoords(latitude, longitude);
-                              setLocationText(resolved.address);
-                              if (resolved.city) setCity(resolved.city);
-                              toast.success("Location filled — add door / flat number below");
-                            } catch {
-                              setLocationText(
-                                `Current location (GPS ${latitude.toFixed(5)}, ${longitude.toFixed(5)})`,
-                              );
-                              toast.message("GPS saved — enter door number, street, and city");
-                            } finally {
-                              setGeoPending(false);
-                            }
-                          })();
-                        },
-                        (err) => {
-                          setGeoPending(false);
-                          setGeoError(
-                            err.code === err.PERMISSION_DENIED
-                              ? "Location permission denied. Enter the address manually."
-                              : "Could not get location. Enter the address manually.",
-                          );
-                        },
-                        { enableHighAccuracy: true, timeout: 12000 },
-                      );
-                    }}
-                  >
-                    {geoPending ? "Locating…" : "Use my location"}
-                  </Button>
-                </div>
+                <p className="text-sm text-muted-foreground">New address for this booking</p>
                 <div className="space-y-2">
                   <Label htmlFor="booking-door">Door / flat / house no. *</Label>
                   <Input
@@ -934,8 +825,35 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                     placeholder="Near temple / society gate"
                   />
                 </div>
+                <MapLocationPicker
+                  value={
+                    {
+                      address_line1: doorNumber,
+                      address_line2: locationText,
+                      city,
+                      district: "",
+                      state: "",
+                      pincode: "",
+                      country: "India",
+                      location_label: locationText || city || "",
+                      latitude: lat,
+                      longitude: lng,
+                    } satisfies AddressValue
+                  }
+                  onChange={(v) => {
+                    setLat(v.latitude);
+                    setLng(v.longitude);
+                    if (v.address_line1?.trim()) setDoorNumber(v.address_line1.trim());
+                    const street =
+                      (v.address_line2 || "").trim() ||
+                      (v.location_label || "").trim();
+                    if (street) setLocationText(street);
+                    if (v.city?.trim()) setCity(v.city.trim());
+                    setGeoError(null);
+                  }}
+                />
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin size={12} /> Service location for the assigned pujari
+                  <MapPin size={12} /> Drag the pin or tap the map to set the exact location for the pujari
                   {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
                 </p>
                 {geoError && <p className="text-xs text-destructive">{geoError}</p>}

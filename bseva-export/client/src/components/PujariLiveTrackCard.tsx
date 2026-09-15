@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { Loader2, MapPin, Navigation, RefreshCw } from "lucide-react";
+import { Loader2, Navigation, RefreshCw, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatDisplayDateTime } from "@/lib/formatDate";
@@ -24,17 +24,32 @@ type Props = {
   pollMs?: number;
 };
 
+/** Marker-free map centered on coords — custom pujari pin is overlaid in UI. */
 function mapsEmbedUrl(lat: number, lng: number) {
   const key = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim();
   if (key) {
-    return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(key)}&q=${lat},${lng}&zoom=15`;
+    return `https://www.google.com/maps/embed/v1/view?key=${encodeURIComponent(key)}&center=${lat},${lng}&zoom=15`;
   }
   const delta = 0.012;
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - delta}%2C${lat - delta}%2C${lng + delta}%2C${lat + delta}&layer=mapnik&marker=${lat}%2C${lng}`;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - delta}%2C${lat - delta}%2C${lng + delta}%2C${lat + delta}&layer=mapnik`;
 }
 
 function mapsExternalUrl(lat: number, lng: number) {
   return `https://www.google.com/maps?q=${lat},${lng}`;
+}
+
+function PujariMapPin({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex flex-col items-center drop-shadow-lg", className)} aria-hidden>
+      <div className="relative flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-white bg-primary text-primary-foreground shadow-md">
+        <UserRound className="h-6 w-6" strokeWidth={2.25} />
+      </div>
+      <span className="mt-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground shadow">
+        Pujari
+      </span>
+      <span className="-mt-0.5 h-0 w-0 border-x-[6px] border-t-[8px] border-x-transparent border-t-primary" />
+    </div>
+  );
 }
 
 export default function PujariLiveTrackCard({
@@ -123,7 +138,7 @@ export default function PujariLiveTrackCard({
 
       {hasCoords ? (
         <>
-          <div className="overflow-hidden rounded-md border border-border bg-background">
+          <div className="relative overflow-hidden rounded-md border border-border bg-background">
             <iframe
               title="Pujari live location"
               src={mapsEmbedUrl(lat!, lng!)}
@@ -131,10 +146,16 @@ export default function PujariLiveTrackCard({
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />
+            {/* Custom pujari marker (map embed is marker-free and centered on coords) */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <PujariMapPin className="-translate-y-4" />
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
-            <span className="flex items-center gap-1">
-              <MapPin size={12} />
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <UserRound className="h-3 w-3" />
+              </span>
               {lat!.toFixed(5)}, {lng!.toFixed(5)}
             </span>
             <Button asChild size="sm" variant="secondary">
