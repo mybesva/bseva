@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { formatDisplayDate } from "@/lib/formatDate";
 import {
   Table,
   TableBody,
@@ -252,7 +253,7 @@ export default function Reviews() {
                     <TableCell>{review.pujaType}</TableCell>
                     <TableCell>{renderStars(review.rating)}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{review.review}</TableCell>
-                    <TableCell>{review.date}</TableCell>
+                    <TableCell>{formatDisplayDate(review.date)}</TableCell>
                     <TableCell>
                       <Badge className={statusColors[review.status]}>
                         {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
@@ -297,7 +298,7 @@ export default function Reviews() {
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-bold text-lg">{selectedReview.customerName}</div>
-                    <div className="text-sm text-muted-foreground">{selectedReview.date}</div>
+                    <div className="text-sm text-muted-foreground">{formatDisplayDate(selectedReview.date)}</div>
                   </div>
                   <Badge className={statusColors[selectedReview.status]}>
                     {selectedReview.status.charAt(0).toUpperCase() + selectedReview.status.slice(1)}

@@ -42,6 +42,7 @@ import {
   Loader2
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { formatDisplayDate } from "@/lib/formatDate";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("last_30_days");
@@ -287,7 +288,7 @@ export default function Reports() {
                     <div className="space-y-3">
                       {bookingAnalytics.daily.map((day: any, index: number) => (
                         <div key={index} className="flex items-center gap-4">
-                          <span className="w-16 text-sm text-gray-500">{day.date}</span>
+                          <span className="w-20 text-sm text-gray-500">{formatDisplayDate(day.date)}</span>
                           <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
                             <div 
                               className="h-full bg-primary rounded-full flex items-center justify-end pr-2"

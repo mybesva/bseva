@@ -7,6 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import {
+  dateInputToIsoEnd,
+  dateInputToIsoStart,
+  formatDisplayDate,
+  toDateInputValue,
+} from "@/lib/formatDate";
 import { toast } from "sonner";
 
 type Banner = {
@@ -92,8 +98,8 @@ export default function PromosAdmin() {
         method: "POST",
         body: JSON.stringify({
           ...bannerForm,
-          start_at: bannerForm.start_at || null,
-          end_at: bannerForm.end_at || null,
+          start_at: dateInputToIsoStart(bannerForm.start_at),
+          end_at: dateInputToIsoEnd(bannerForm.end_at),
         }),
       });
       toast.success("Banner saved");
@@ -114,8 +120,8 @@ export default function PromosAdmin() {
         method: "POST",
         body: JSON.stringify({
           ...popupForm,
-          start_at: popupForm.start_at || null,
-          end_at: popupForm.end_at || null,
+          start_at: dateInputToIsoStart(popupForm.start_at),
+          end_at: dateInputToIsoEnd(popupForm.end_at),
         }),
       });
       toast.success("Popup saved");
@@ -125,6 +131,30 @@ export default function PromosAdmin() {
       toast.error(err.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteBanner(b: Banner) {
+    if (!b.id) return;
+    if (!confirm(`Delete banner “${b.title}”? This cannot be undone.`)) return;
+    try {
+      await api(`/admin/promos/banners/${b.id}`, { method: "DELETE" });
+      toast.success("Banner deleted");
+      await load();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  }
+
+  async function deletePopup(p: Popup) {
+    if (!p.id) return;
+    if (!confirm(`Delete popup “${p.title}”? This cannot be undone.`)) return;
+    try {
+      await api(`/admin/promos/popups/${p.id}`, { method: "DELETE" });
+      toast.success("Popup deleted");
+      await load();
+    } catch (err: any) {
+      toast.error(err.message);
     }
   }
 
@@ -175,12 +205,26 @@ export default function PromosAdmin() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Start (ISO datetime)</Label>
-              <Input value={bannerForm.start_at || ""} onChange={(e) => setBannerForm({ ...bannerForm, start_at: e.target.value })} placeholder="2026-09-01T00:00:00Z" />
+              <Label>Start date</Label>
+              <Input
+                type="date"
+                value={toDateInputValue(bannerForm.start_at)}
+                onChange={(e) => setBannerForm({ ...bannerForm, start_at: e.target.value || null })}
+              />
+              {bannerForm.start_at ? (
+                <p className="text-xs text-muted-foreground">{formatDisplayDate(bannerForm.start_at)}</p>
+              ) : null}
             </div>
             <div className="space-y-1">
-              <Label>End (ISO datetime)</Label>
-              <Input value={bannerForm.end_at || ""} onChange={(e) => setBannerForm({ ...bannerForm, end_at: e.target.value })} />
+              <Label>End date</Label>
+              <Input
+                type="date"
+                value={toDateInputValue(bannerForm.end_at)}
+                onChange={(e) => setBannerForm({ ...bannerForm, end_at: e.target.value || null })}
+              />
+              {bannerForm.end_at ? (
+                <p className="text-xs text-muted-foreground">{formatDisplayDate(bannerForm.end_at)}</p>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <Checkbox checked={bannerForm.active} onCheckedChange={(v) => setBannerForm({ ...bannerForm, active: !!v })} />
@@ -212,19 +256,37 @@ export default function PromosAdmin() {
                 <TableHead>Audience</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Active</TableHead>
+                <TableHead>Start</TableHead>
+                <TableHead>End</TableHead>
                 <TableHead>Order</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {banners.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell>{b.title}</TableCell>
-                  <TableCell>{b.audience}</TableCell>
-                  <TableCell>{b.is_third_party ? "Sponsored" : "BSeva"}</TableCell>
-                  <TableCell>{b.active ? "Yes" : "No"}</TableCell>
-                  <TableCell>{b.display_order}</TableCell>
+              {banners.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-sm text-muted-foreground">
+                    No banners yet.
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                banners.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell>{b.title}</TableCell>
+                    <TableCell>{b.audience}</TableCell>
+                    <TableCell>{b.is_third_party ? "Sponsored" : "BSeva"}</TableCell>
+                    <TableCell>{b.active ? "Yes" : "No"}</TableCell>
+                    <TableCell>{formatDisplayDate(b.start_at)}</TableCell>
+                    <TableCell>{formatDisplayDate(b.end_at)}</TableCell>
+                    <TableCell>{b.display_order}</TableCell>
+                    <TableCell className="text-right">
+                      <Button type="button" size="sm" variant="destructive" onClick={() => void deleteBanner(b)}>
+                        Delete
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TabsContent>
@@ -258,6 +320,28 @@ export default function PromosAdmin() {
               <Label>Linked service ID (optional)</Label>
               <Input value={popupForm.service_id || ""} onChange={(e) => setPopupForm({ ...popupForm, service_id: e.target.value })} />
             </div>
+            <div className="space-y-1">
+              <Label>Start date</Label>
+              <Input
+                type="date"
+                value={toDateInputValue(popupForm.start_at)}
+                onChange={(e) => setPopupForm({ ...popupForm, start_at: e.target.value || null })}
+              />
+              {popupForm.start_at ? (
+                <p className="text-xs text-muted-foreground">{formatDisplayDate(popupForm.start_at)}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <Label>End date</Label>
+              <Input
+                type="date"
+                value={toDateInputValue(popupForm.end_at)}
+                onChange={(e) => setPopupForm({ ...popupForm, end_at: e.target.value || null })}
+              />
+              {popupForm.end_at ? (
+                <p className="text-xs text-muted-foreground">{formatDisplayDate(popupForm.end_at)}</p>
+              ) : null}
+            </div>
             <div className="flex items-center gap-2">
               <Checkbox checked={popupForm.active} onCheckedChange={(v) => setPopupForm({ ...popupForm, active: !!v })} />
               <Label>Active</Label>
@@ -274,16 +358,30 @@ export default function PromosAdmin() {
                 <TableHead>Title</TableHead>
                 <TableHead>Languages</TableHead>
                 <TableHead>Active</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {popups.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>{p.title}</TableCell>
-                  <TableCell>{p.languages}</TableCell>
-                  <TableCell>{p.active ? "Yes" : "No"}</TableCell>
+              {popups.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-sm text-muted-foreground">
+                    No popups yet.
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                popups.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>{p.title}</TableCell>
+                    <TableCell>{p.languages}</TableCell>
+                    <TableCell>{p.active ? "Yes" : "No"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button type="button" size="sm" variant="destructive" onClick={() => void deletePopup(p)}>
+                        Delete
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TabsContent>

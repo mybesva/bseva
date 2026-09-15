@@ -171,6 +171,22 @@ def admin_patch_banner(
     return {"ok": True}
 
 
+@router.delete("/admin/promos/banners/{banner_id}")
+def admin_delete_banner(
+    banner_id: str,
+    user=Depends(require_roles("admin", "super_admin")),
+    db: Session = Depends(get_db),
+):
+    result = db.execute(
+        text("DELETE FROM promo_banners WHERE id = CAST(:id AS uuid) RETURNING id"),
+        {"id": banner_id},
+    ).first()
+    if not result:
+        raise HTTPException(404, "Banner not found")
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/admin/promos/popups")
 def admin_list_popups(user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM seasonal_popups ORDER BY created_at DESC")).mappings().all()
@@ -208,3 +224,19 @@ def admin_create_popup(body: PopupIn, user=Depends(require_roles("admin", "super
     )
     db.commit()
     return {"id": pid, "ok": True}
+
+
+@router.delete("/admin/promos/popups/{popup_id}")
+def admin_delete_popup(
+    popup_id: str,
+    user=Depends(require_roles("admin", "super_admin")),
+    db: Session = Depends(get_db),
+):
+    result = db.execute(
+        text("DELETE FROM seasonal_popups WHERE id = CAST(:id AS uuid) RETURNING id"),
+        {"id": popup_id},
+    ).first()
+    if not result:
+        raise HTTPException(404, "Popup not found")
+    db.commit()
+    return {"ok": True}

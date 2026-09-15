@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { formatDisplayDate } from "@/lib/formatDate";
 import {
   Table,
   TableBody,
@@ -227,7 +228,7 @@ export default function Payments() {
                     <TableCell className="text-green-600">₹{payment.platformFee.toLocaleString()}</TableCell>
                     <TableCell className="text-blue-600">₹{payment.priestPayout.toLocaleString()}</TableCell>
                     <TableCell>{payment.method}</TableCell>
-                    <TableCell>{payment.date}</TableCell>
+                    <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                     <TableCell>
                       <Badge className={statusColors[payment.status]}>
                         {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
