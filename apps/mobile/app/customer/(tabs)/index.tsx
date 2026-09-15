@@ -9,6 +9,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
 
 export default function CustomerHome() {
   const { user, refresh } = useAuth();
@@ -83,7 +84,7 @@ export default function CustomerHome() {
                     <StatusBadge status={b.status} />
                   </View>
                   <AppText variant="small" color={colors.mutedForeground}>
-                    #{b.booking_number} · {b.booking_date}
+                    #{b.booking_number} · {formatDisplayDate(b.booking_date)}
                   </AppText>
                 </Card>
               </Pressable>
@@ -100,7 +101,7 @@ export default function CustomerHome() {
                     <AppText variant="h3">{b.service_name}</AppText>
                     <StatusBadge status={b.status} />
                   </View>
-                  <AppText variant="small">{b.booking_date} {b.start_time}</AppText>
+                  <AppText variant="small">{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
                 </Card>
               </Pressable>
             ))}

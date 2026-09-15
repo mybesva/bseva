@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api, apiBookings, rupees } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Calendar, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
@@ -64,7 +65,7 @@ export default function MyBookings() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4 text-sm items-center" onClick={(e) => e.stopPropagation()}>
               <span className="flex items-center gap-1">
-                <Calendar size={14} /> {b.booking_date} {b.start_time}
+                <Calendar size={14} /> {formatDisplayDate(b.booking_date)} {b.start_time}
               </span>
               <span className="flex items-center gap-1">
                 <MapPin size={14} /> {b.location_label || b.mode}

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiBookings, rupees } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,7 +71,7 @@ function BookingCard({
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar size={14} />
-            {booking.booking_date || "—"}
+            {formatDisplayDate(booking.booking_date)}
           </span>
           <span className="flex items-center gap-1">
             <Clock size={14} />
@@ -88,7 +89,7 @@ function BookingCard({
       )}
       {compact && (
         <div className="text-xs text-muted-foreground">
-          {booking.booking_date || "—"} · {rupees(booking.total_paise || 0)}
+          {formatDisplayDate(booking.booking_date)} · {rupees(booking.total_paise || 0)}
         </div>
       )}
       {!booking.pujari_details_visible && !CANCELLED.has(booking.status) && booking.status !== "completed" && (

@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
 
 export default function CustomerBookings() {
   const { colors } = useAppTheme();
@@ -34,7 +35,7 @@ export default function CustomerBookings() {
                 <StatusBadge status={b.status} />
               </View>
               <AppText variant="small" color={colors.mutedForeground}>
-                #{b.booking_number} · {b.booking_date} {b.start_time || ""}
+                #{b.booking_number} · {formatDisplaySlot(b.booking_date, b.start_time)}
               </AppText>
               <AppText style={{ marginTop: 6 }}>{rupees(b.total_paise)}</AppText>
             </Card>
@@ -48,7 +49,7 @@ export default function CustomerBookings() {
                 <AppText variant="h3">{b.service_name}</AppText>
                 <StatusBadge status={b.status} />
               </View>
-              <AppText variant="small">{b.booking_date}</AppText>
+              <AppText variant="small">{formatDisplayDate(b.booking_date)}</AppText>
             </Card>
           </Pressable>
         ))}

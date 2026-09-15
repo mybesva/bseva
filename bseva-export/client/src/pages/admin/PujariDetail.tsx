@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 import { PUJARI_SPECIALIZATIONS } from "@/lib/pujariSpecializations";
+import { formatDisplayDateTime } from "@/lib/formatDate";
 
 const DOC_LABELS: Record<string, string> = {
   identity: "Aadhaar (required)",
@@ -61,12 +62,7 @@ function listDisplay(v: unknown) {
 
 function fmtDate(v: unknown) {
   if (!v) return "—";
-  const s = String(v);
-  try {
-    return new Date(s).toLocaleString();
-  } catch {
-    return s;
-  }
+  return formatDisplayDateTime(String(v));
 }
 
 export default function PujariDetailPage() {

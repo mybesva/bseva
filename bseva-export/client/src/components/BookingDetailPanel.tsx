@@ -21,6 +21,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
+import { formatDisplayDate } from "@/lib/formatDate";
 
 export type BookingDetail = {
   id: string;
@@ -273,7 +274,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           <div>
             <div className="text-muted-foreground">Date & time</div>
             <div className="font-medium">
-              {booking.booking_date || "—"} {booking.start_time || ""}
+              {formatDisplayDate(booking.booking_date)} {booking.start_time || ""}
             </div>
           </div>
           <div>

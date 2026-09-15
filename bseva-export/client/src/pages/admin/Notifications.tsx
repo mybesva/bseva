@@ -3,6 +3,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { formatDisplayDateTime } from "@/lib/formatDate";
 import { toast } from "sonner";
 
 type Notification = {
@@ -92,7 +93,7 @@ export default function AdminNotifications() {
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">{n.body}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
+                  {n.created_at ? formatDisplayDateTime(n.created_at) : ""}
                   {n.link ? ` · ${n.link}` : ""}
                 </p>
               </div>

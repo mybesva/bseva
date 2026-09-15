@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { formatDisplayDateTime } from "@/lib/formatDate";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Link } from "wouter";
 import { toast } from "sonner";
@@ -32,7 +33,7 @@ export default function PujariDocumentsPage() {
                   <div>
                     <div className="font-medium">{t("pujari.angikara.title")}</div>
                     <div className="text-xs text-muted-foreground">
-                      {d.updated_at ? new Date(d.updated_at).toLocaleString() : "—"}
+                      {d.updated_at ? formatDisplayDateTime(d.updated_at) : "—"}
                     </div>
                   </div>
                   <Badge>{t(`pujari.status.${d.status}`) || d.status}</Badge>

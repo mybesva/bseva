@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { Loader2, MapPin, Navigation, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatDisplayDateTime } from "@/lib/formatDate";
 
 type Ping = {
   available?: boolean;
@@ -110,7 +111,7 @@ export default function PujariLiveTrackCard({
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {hasCoords
-              ? `Last updated ${ping?.recorded_at ? new Date(ping.recorded_at).toLocaleString() : "just now"}`
+              ? `Last updated ${ping?.recorded_at ? formatDisplayDateTime(ping.recorded_at) : "just now"}`
               : "Waiting for the pujari to share their location…"}
           </p>
         </div>

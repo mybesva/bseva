@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import { format, isSameDay, parseISO, startOfDay } from "date-fns";
 import { toast } from "sonner";
@@ -369,7 +370,7 @@ export default function PujariAvailabilityPage() {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-foreground">
-                            {format(parseISO(b.blocked_date), "EEE, dd MMM yyyy")}
+                            {formatDisplayDate(b.blocked_date)}
                           </p>
                           <p
                             className={cn(
@@ -441,7 +442,7 @@ export default function PujariAvailabilityPage() {
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed">
                 {selectedDate ? (
-                  <span className="font-medium text-foreground">{format(selectedDate,"EEEE, dd MMMM yyyy")}</span>
+                  <span className="font-medium text-foreground">{formatDisplayDate(selectedDate)}</span>
                 ) : null}
                 {selectedBlock
                   ? " Update the note below or unblock to make this date available again."

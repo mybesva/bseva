@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, apiBookings } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   displayStatus,
@@ -272,7 +273,7 @@ function PujariDashboardContent() {
                 <span className="flex items-center gap-1">
                   <CalendarIcon size={14} />
                   {row.booking.bookingDate
-                    ? format(new Date(row.booking.bookingDate), "dd MMM yyyy")
+                    ? formatDisplayDate(row.booking.bookingDate)
                     : "—"}
                 </span>
                 <span className="flex items-center gap-1">
@@ -485,7 +486,7 @@ function PujariDashboardContent() {
 
               <div className="mt-6 space-y-2">
                 <h4 className="font-medium text-sm text-foreground">
-                  {selectedDate ? format(selectedDate, "dd MMM yyyy") : "Select a date"}
+                  {selectedDate ? formatDisplayDate(selectedDate) : "Select a date"}
                 </h4>
                 {isLoading && <Skeleton className="h-16 w-full" />}
                 {!isLoading && dayBookings.length === 0 && (

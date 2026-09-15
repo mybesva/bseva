@@ -3,6 +3,7 @@ import { CustomerPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, apiBase, getToken, rupees } from "@/lib/api";
+import { formatDisplayDateTime } from "@/lib/formatDate";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 
@@ -54,7 +55,7 @@ export default function CustomerInvoicesPage() {
                 {t("invoice.type")}: {inv.invoice_type}
               </div>
               <div>
-                {t("invoice.created")}: {inv.created_at}
+                {t("invoice.created")}: {formatDisplayDateTime(inv.created_at)}
               </div>
               <Button size="sm" variant="outline" onClick={() => void openHtml(inv)}>
                 {t("invoice.viewPrint")}

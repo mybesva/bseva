@@ -9,6 +9,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { formatDisplayDate } from "@/utils/formatDate";
 
 export default function PujariHome() {
   const { user } = useAuth();
@@ -71,7 +72,7 @@ export default function PujariHome() {
                 <StatusBadge status={b.status} />
               </View>
               <AppText variant="small">
-                {b.booking_date} · {rupees(b.pujari_payable_paise || b.total_paise)}
+                {formatDisplayDate(b.booking_date)} · {rupees(b.pujari_payable_paise || b.total_paise)}
               </AppText>
             </Card>
           </Pressable>

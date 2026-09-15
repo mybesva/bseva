@@ -4,9 +4,10 @@ import WalletPanel from "@/components/WalletPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api, apiBookings, rupees } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { Wallet, TrendingUp, CheckCircle2, Clock } from "lucide-react";
-import { format, isSameMonth, parseISO, startOfMonth } from "date-fns";
+import { isSameMonth, parseISO, startOfMonth } from "date-fns";
 
 function priestShare(b: any) {
   if (b.pujari_payable_paise != null) return Number(b.pujari_payable_paise);
@@ -167,7 +168,7 @@ export default function PujariEarningsPage() {
                 <p className="text-xs text-muted-foreground">
                   {b.booking_number}
                   {b.booking_date
-                    ? ` · ${format(parseISO(String(b.booking_date).slice(0, 10)), "dd MMM yyyy")}`
+                    ? ` · ${formatDisplayDate(b.booking_date)}`
                     : ""}
                 </p>
               </div>

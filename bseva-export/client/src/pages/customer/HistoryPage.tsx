@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiBookings, rupees } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -62,7 +63,7 @@ export default function CustomerHistoryPage() {
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Calendar size={14} />
-                  {booking.booking_date || "—"}
+                  {formatDisplayDate(booking.booking_date)}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock size={14} />

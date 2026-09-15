@@ -33,7 +33,7 @@ import {
   type PujariBookingRow,
 } from "@/lib/pujariBookings";
 import { Calendar as CalendarIcon, Clock, MapPin, Sparkles } from "lucide-react";
-import { format } from "date-fns";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 
 type Segment = "all" | "upcoming" | "completed" | "cancelled" | "expired";
@@ -265,7 +265,7 @@ export default function PujariBookingsPage() {
                           <span className="flex items-center gap-1">
                             <CalendarIcon size={14} />
                             {row.booking.bookingDate
-                              ? format(new Date(row.booking.bookingDate), "dd MMM yyyy")
+                              ? formatDisplayDate(row.booking.bookingDate)
                               : "—"}
                           </span>
                           <span className="flex items-center gap-1">

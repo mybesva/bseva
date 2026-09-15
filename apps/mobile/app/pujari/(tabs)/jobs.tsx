@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { formatDisplaySlot } from "@/utils/formatDate";
 
 export default function PujariJobs() {
   const { colors } = useAppTheme();
@@ -31,7 +32,7 @@ export default function PujariJobs() {
                 <StatusBadge status={b.status} />
               </View>
               <AppText variant="small" color={colors.mutedForeground}>
-                {b.customer_name} · {b.booking_date} {b.start_time}
+                {b.customer_name} · {formatDisplaySlot(b.booking_date, b.start_time)}
               </AppText>
               <AppText>{rupees(b.pujari_payable_paise || 0)}</AppText>
             </Card>

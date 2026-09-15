@@ -4,6 +4,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiBase } from "@/lib/api";
+import { formatDisplaySlot } from "@/lib/formatDate";
 import { Loader2, Video } from "lucide-react";
 
 type InvitePayload = {
@@ -66,7 +67,7 @@ export default function JoinMeetPage() {
                   {data?.service_name ? <p className="text-base font-medium text-foreground">{data.service_name}</p> : null}
                   {data?.booking_number ? <p>Booking #{data.booking_number}</p> : null}
                   <p>
-                    {data?.booking_date || "—"} · {data?.start_time || "—"}
+                    {formatDisplaySlot(data?.booking_date, data?.start_time)}
                   </p>
                 </div>
                 {data?.ready && data.meeting_url ? (

@@ -8,6 +8,7 @@ import { api, apiBookings } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Calendar, MapPin, Clock, Sparkles, CreditCard, ArrowRight, PlayCircle, Video } from "lucide-react";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { format } from "date-fns";
 import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -155,7 +156,7 @@ function CustomerDashboardContent() {
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Calendar size={14} />
-                            {booking.booking_date || "—"}
+                            {formatDisplayDate(booking.booking_date)}
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock size={14} />
@@ -373,7 +374,7 @@ function CustomerDashboardContent() {
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar size={14} />
-                          {booking.booking_date || "—"}
+                          {formatDisplayDate(booking.booking_date)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock size={14} />

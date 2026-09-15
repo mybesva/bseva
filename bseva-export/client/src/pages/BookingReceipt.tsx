@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api, rupees } from "@/lib/api";
+import { formatDisplayDate, formatDisplaySlot } from "@/lib/formatDate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2 } from "lucide-react";
@@ -88,7 +89,7 @@ export default function BookingReceipt() {
   }
 
   const showPujari = booking.pujari_details_visible === true && !!booking.pujari_name;
-  const slot = `${booking.booking_date || "—"} · ${booking.start_time || "—"}`;
+  const slot = formatDisplaySlot(booking.booking_date, booking.start_time);
   const canCancel =
     user?.role === "customer" &&
     ["pending", "pending_acceptance", "confirmed"].includes(String(booking.status || ""));
@@ -162,7 +163,7 @@ export default function BookingReceipt() {
                 <p className="text-muted-foreground flex items-center gap-1">
                   <Calendar size={14} /> Booking date
                 </p>
-                <p className="font-medium">{booking.booking_date ||"—"}</p>
+                <p className="font-medium">{formatDisplayDate(booking.booking_date)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">

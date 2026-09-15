@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { formatDisplayDateTime } from "@/lib/formatDate";
 import { toast } from "sonner";
 
 const CATEGORIES_CUSTOMER = ["Payments", "Wallet", "Bookings", "Others"];
@@ -145,7 +146,7 @@ export default function AdminSupport() {
                   <Badge variant="secondary">{c.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {c.customer_name || c.customer_id} · {c.last_response_at || c.created_at}
+                  {c.customer_name || c.customer_id} · {formatDisplayDateTime(c.last_response_at || c.created_at)}
                 </p>
               </button>
             ))}

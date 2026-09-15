@@ -20,6 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, apiBookings, rupees } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
@@ -228,7 +229,7 @@ export default function Bookings() {
                 <TableCell>{b.customer_name}</TableCell>
                 <TableCell>{b.pujari_name || "—"}</TableCell>
                 <TableCell>
-                  {b.booking_date} {b.start_time}
+                  {formatDisplayDate(b.booking_date)} {b.start_time}
                 </TableCell>
                 <TableCell>{rupees(b.total_paise)}</TableCell>
                 <TableCell>

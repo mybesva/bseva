@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { CalendarIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -144,7 +145,7 @@ export default function MuhurtaConsultationBook({
                     className={cn("w-full justify-start", !apptDate &&"text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {apptDate ? format(apptDate, "PPP") : "Select date"}
+                    {apptDate ? formatDisplayDate(apptDate) : "Select date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -203,7 +204,7 @@ export default function MuhurtaConsultationBook({
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">Date & time</span>
               <span className="font-medium">
-                {apptDate ? format(apptDate, "PPP") : "—"} · {apptTime || "—"}
+                {apptDate ? formatDisplayDate(apptDate) : "—"} · {apptTime || "—"}
               </span>
             </div>
             <div className="flex justify-between gap-2 border-t pt-1 font-semibold">
@@ -242,7 +243,7 @@ export default function MuhurtaConsultationBook({
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">Appointment</span>
               <span className="font-medium">
-                {format(new Date(receipt.appointment_date + "T12:00:00"), "PPP")} · {timeDisplay}
+                {formatDisplayDate(receipt.appointment_date)} · {timeDisplay}
               </span>
             </div>
             <div className="flex justify-between gap-2">

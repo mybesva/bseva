@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 
 function paise(n: number | null | undefined) {
@@ -148,7 +149,7 @@ export default function AdminSettlements() {
                       {s.status === "settled" && s.override_flag ? " · override" : ""}
                     </Badge>
                   </TableCell>
-                  <TableCell>{s.due_date || "—"}</TableCell>
+                  <TableCell>{formatDisplayDate(s.due_date)}</TableCell>
                   <TableCell>{paise(s.customer_payment_paise)}</TableCell>
                   <TableCell>{paise(s.platform_fee_paise)}</TableCell>
                   <TableCell>{paise(s.settlement_amount_paise)}</TableCell>
@@ -173,7 +174,7 @@ export default function AdminSettlements() {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Normally this settles automatically on the due date ({active?.due_date || "—"}). Override credits the
+              Normally this settles automatically on the due date ({formatDisplayDate(active?.due_date)}). Override credits the
               pujari wallet now with {paise(active?.settlement_amount_paise)}.
             </p>
             <div className="space-y-1">

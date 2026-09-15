@@ -10,6 +10,7 @@ import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryBu
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { formatDisplaySlot } from "@/utils/formatDate";
 
 function prepLines(data: unknown): string[] {
   if (!data) return [];
@@ -88,7 +89,7 @@ export default function BookingDetail() {
             <StatusBadge status={b.status} />
           </View>
           <AppText>
-            {b.booking_date} {b.start_time}
+            {formatDisplaySlot(b.booking_date, b.start_time)}
           </AppText>
           <AppText color={colors.mutedForeground}>{b.location_label || b.address}</AppText>
           {pujari && b.customer_name ? <AppText>Customer: {b.customer_name}</AppText> : null}

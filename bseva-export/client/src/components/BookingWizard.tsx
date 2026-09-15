@@ -24,6 +24,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -773,7 +774,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-start", !bookingDate && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {bookingDate ? format(bookingDate, "PPP") : "Select date"}
+                  {bookingDate ? formatDisplayDate(bookingDate) : "Select date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -985,7 +986,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   <PopoverTrigger asChild>
                     <Button type="button" variant="outline">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {extraDate ? format(extraDate, "PPP") : t("booking.recurring.pickDate")}
+                      {extraDate ? formatDisplayDate(extraDate) : t("booking.recurring.pickDate")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1018,7 +1019,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               <ul className="text-sm space-y-1">
                 {selectedDates.map((d) => (
                   <li key={format(d, "yyyy-MM-dd")} className="flex justify-between gap-2">
-                    <span>{format(d, "PPP")}</span>
+                    <span>{formatDisplayDate(d)}</span>
                     <button
                       type="button"
                       className="text-xs text-red-600"
@@ -1056,7 +1057,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
               </div>
               <p>
                 <span className="text-muted-foreground">Date: </span>
-                {bookingDate ? format(bookingDate, "PPP") : "—"} {bookingTime}
+                {bookingDate ? formatDisplayDate(bookingDate) : "—"} {bookingTime}
               </p>
               <p>
                 <span className="text-muted-foreground">Location: </span>

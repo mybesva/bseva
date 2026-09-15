@@ -5,6 +5,7 @@ import { Pressable, ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, EmptyState, Screen, StatusBadge } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { formatDisplayDate } from "@/utils/formatDate";
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function HistoryScreen() {
             <Card>
               <AppText variant="h3">{b.service_name}</AppText>
               <StatusBadge status={b.status} />
-              <AppText variant="small">{b.booking_date}</AppText>
+              <AppText variant="small">{formatDisplayDate(b.booking_date)}</AppText>
             </Card>
           </Pressable>
         ))}

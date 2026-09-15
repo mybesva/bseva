@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { formatDisplayDateTime } from "@/lib/formatDate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -149,7 +150,7 @@ function RatingsForm() {
                 {"★".repeat(Number(r.stars || 0))} · {String(r.pujari_id).slice(0, 8)}…
               </div>
               <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{r.comments}</p>
-              <div className="text-xs text-muted-foreground mt-1">{r.created_at}</div>
+              <div className="text-xs text-muted-foreground mt-1">{formatDisplayDateTime(r.created_at)}</div>
             </div>
           ))}
         </CardContent>
