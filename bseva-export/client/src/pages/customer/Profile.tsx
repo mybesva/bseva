@@ -16,7 +16,7 @@ import { api, apiBase, getToken } from "@/lib/api";
 import { parsePhoneParts, toE164, validatePhoneNational } from "@/lib/phone";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { Lang } from "@/i18n/translations";
+import { PREFERRED_LANGUAGES, uiLangFromPreferred, type PreferredLang } from "@/lib/languages";
 import { toast } from "sonner";
 import PersonNameFields from "@/components/PersonNameFields";
 import {
@@ -25,18 +25,18 @@ import {
   type PersonNameParts,
 } from "@/lib/personName";
 
-const LANGS: Lang[] = ["en", "hi", "te"];
+const LANGS: PreferredLang[] = PREFERRED_LANGUAGES.map((l) => l.code);
 
 export default function CustomerProfilePage() {
   const { user, refresh } = useAuth();
-  const { setLang, labels } = useI18n();
+  const { setLang } = useI18n();
   const [nameParts, setNameParts] = useState<PersonNameParts>({
     first_name: "",
     middle_name: "",
     last_name: "",
   });
   const [nameErrors, setNameErrors] = useState<Partial<Record<keyof PersonNameParts, string>>>({});
-  const [language, setLanguage] = useState<Lang>("en");
+  const [language, setLanguage] = useState<PreferredLang>("en");
   const [countryCode, setCountryCode] = useState("+91");
   const [phoneNational, setPhoneNational] = useState("");
   const [phoneError, setPhoneError] = useState<string | undefined>();
@@ -101,7 +101,7 @@ export default function CustomerProfilePage() {
   ]);
 
   useEffect(() => {
-    const pref = user?.preferred_language as Lang | undefined;
+    const pref = user?.preferred_language as PreferredLang | undefined;
     if (pref && LANGS.includes(pref)) setLanguage(pref);
   }, [user?.preferred_language]);
 
@@ -159,7 +159,7 @@ export default function CustomerProfilePage() {
       } catch {
         /* profile row may not exist yet */
       }
-      setLang(language);
+      setLang(uiLangFromPreferred(language));
       nameFormDirty.current = false;
       await refresh();
       toast.success("Profile details updated");
@@ -259,14 +259,14 @@ export default function CustomerProfilePage() {
             />
             <div className="space-y-2">
               <Label>Preferred language</Label>
-              <Select value={language} onValueChange={(v) => setLanguage(v as Lang)}>
+              <Select value={language} onValueChange={(v) => setLanguage(v as PreferredLang)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {LANGS.map((code) => (
-                    <SelectItem key={code} value={code}>
-                      {labels[code]}
+                  {PREFERRED_LANGUAGES.map((l) => (
+                    <SelectItem key={l.code} value={l.code}>
+                      {l.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

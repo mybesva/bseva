@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,8 @@ import { adminPath } from "@/const";
 import { toast } from "sonner";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { nextSort, personLocation, SortableHead, StaticHead, type SortDir } from "@/components/SortableHead";
+import { AdminPager, DEFAULT_PAGE_SIZE, parsePage, parsePageSize } from "@/components/AdminPager";
 
 const emptyForm = { name: "", email: "", phone: "", password: "", requested_level: 2, location: "" };
 
@@ -134,6 +136,9 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
       </TableCell>
       <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={u.email}>
         {u.email}
+      </TableCell>
+      <TableCell className="max-w-[200px] truncate text-sm" title={personLocation(u)}>
+        {personLocation(u)}
       </TableCell>
       <TableCell>
         <div className="space-y-1 min-w-[200px] max-w-[240px]">
@@ -263,6 +268,9 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
               >
                 {u.blocked ? "Unblock account" : "Block account"}
               </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                Delete account — use Block
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -284,22 +292,47 @@ export default function PujarisPage() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   const statusFilter = params.get("status") || "all";
+  const sortBy = params.get("sort") || "created_at";
+  const sortDir = (params.get("dir") === "asc" ? "asc" : "desc") as SortDir;
+  const pageSize = parsePageSize(params.get("size"));
+  const urlPage = parsePage(params.get("page"));
   const [q, setQ] = useState(params.get("q") || "");
 
-  function updateFilters(next: { status?: string; q?: string }) {
+  function updateFilters(next: { status?: string; q?: string; sort?: string; dir?: SortDir; page?: number; size?: number }) {
     const sp = new URLSearchParams();
     const st = next.status ?? statusFilter;
     const query = next.q ?? q;
+    const sort = next.sort ?? sortBy;
+    const dir = next.dir ?? sortDir;
+    const size = next.size ?? pageSize;
+    const resetPage =
+      next.status !== undefined ||
+      next.q !== undefined ||
+      next.sort !== undefined ||
+      next.dir !== undefined ||
+      next.size !== undefined;
+    const p = next.page ?? (resetPage ? 1 : urlPage);
     if (st && st !== "all") sp.set("status", st);
     if (query.trim()) sp.set("q", query.trim());
+    if (sort && sort !== "created_at") sp.set("sort", sort);
+    if (dir && dir !== "desc") sp.set("dir", dir);
+    if (sort === "created_at" && dir === "asc") {
+      sp.set("sort", sort);
+      sp.set("dir", dir);
+    }
+    if (size !== DEFAULT_PAGE_SIZE) sp.set("size", String(size));
+    if (p > 1) sp.set("page", String(p));
     const qs = sp.toString();
     setLocation(adminPath(`/pujaris${qs ? `?${qs}` : ""}`));
   }
 
-  async function load(p = page) {
-    const qs = new URLSearchParams({ page: String(p), page_size: "50" });
+  async function load(p = urlPage) {
+    const qs = new URLSearchParams({ page: String(p), page_size: String(pageSize) });
     if (statusFilter && statusFilter !== "all") qs.set("status", statusFilter);
-    if (q.trim()) qs.set("q", q.trim());
+    const qParam = (params.get("q") || "").trim();
+    if (qParam) qs.set("q", qParam);
+    if (sortBy) qs.set("sort", sortBy);
+    if (sortDir) qs.set("dir", sortDir);
     const res = await api<{ items: any[]; total: number; page: number; pages: number } | any[]>(`/admin/pujaris?${qs}`);
     if (Array.isArray(res)) {
       setRows(res);
@@ -315,7 +348,8 @@ export default function PujarisPage() {
   }
 
   useEffect(() => {
-    void load(1).catch((e) => toast.error(e.message));
+    setQ(params.get("q") || "");
+    void load(urlPage).catch((e) => toast.error(e.message));
   }, [statusFilter, search]);
 
   async function handleAdd(e: React.FormEvent) {
@@ -342,15 +376,14 @@ export default function PujarisPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h1 className="text-h1">Pujaris</h1>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Page {page}/{pages} · {total}
-          </span>
-          <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => void load(page - 1)}>
-            Prev
-          </Button>
-          <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => void load(page + 1)}>
-            Next
-          </Button>
+          <AdminPager
+            page={page}
+            pages={pages}
+            total={total}
+            pageSize={pageSize}
+            onPage={(p) => updateFilters({ page: p })}
+            onPageSize={(size) => updateFilters({ size })}
+          />
           <Button onClick={() => setOpen(true)} className="gap-2">
             <Plus size={16} />
             Add pujari
@@ -377,7 +410,7 @@ export default function PujarisPage() {
         </div>
         <div className="flex gap-2 flex-1 min-w-[200px]">
           <Input
-            placeholder="Search name, email, phone"
+            placeholder="Search ID, name, email, phone, location"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -387,6 +420,11 @@ export default function PujarisPage() {
           <Button type="button" variant="secondary" onClick={() => updateFilters({ q })}>
             Search
           </Button>
+          {params.get("q") ? (
+            <Button type="button" variant="outline" onClick={() => { setQ(""); updateFilters({ q: "" }); }}>
+              Clear
+            </Button>
+          ) : null}
         </div>
         {statusFilter !== "all" && (
           <Badge variant="secondary" className="mb-1">
@@ -483,19 +521,19 @@ export default function PujarisPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="rounded-lg border bg-card/80 overflow-x-auto">
-      <Table>
+      <Table className="border-separate border-spacing-0" containerClassName="max-h-[calc(100vh-16rem)] overflow-auto rounded-lg border bg-card">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[100px]">ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead className="max-w-[200px]">Email</TableHead>
-            <TableHead className="min-w-[200px]">Approved level</TableHead>
-            <TableHead>Experience</TableHead>
-            <TableHead className="min-w-[130px]">Services</TableHead>
-            <TableHead>Verification</TableHead>
-            <TableHead>Account</TableHead>
-            <TableHead className="text-right min-w-[160px]">Actions</TableHead>
+            <SortableHead label="ID" column="id" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="w-[100px]" />
+            <SortableHead label="Name" column="name" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Email" column="email" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="max-w-[200px]" />
+            <SortableHead label="Location" column="location" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Approved level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[200px]" />
+            <SortableHead label="Experience" column="experience" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Services" column="services" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[130px]" />
+            <SortableHead label="Verification" column="verification" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Account" column="account" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <StaticHead label="Actions" className="text-right min-w-[160px]" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -504,7 +542,6 @@ export default function PujarisPage() {
           ))}
         </TableBody>
       </Table>
-      </div>
       {rows.length === 0 && (
         <p className="text-sm text-muted-foreground mt-4">No pujaris match this filter.</p>
       )}

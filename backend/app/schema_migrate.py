@@ -409,6 +409,45 @@ _FOUNDATION_STMTS = [
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check
     """,
     """
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'users'::regclass AND contype = 'c'
+          AND pg_get_constraintdef(oid) ILIKE '%preferred_language%'
+      LOOP
+        EXECUTE format('ALTER TABLE users DROP CONSTRAINT IF EXISTS %I', r.conname);
+      END LOOP;
+      BEGIN
+        ALTER TABLE users ADD CONSTRAINT users_preferred_language_check
+          CHECK (preferred_language IN ('en', 'hi', 'te', 'mr', 'ta', 'kn'));
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END;
+    END $$
+    """,
+    """
+    DO $$
+    DECLARE r record;
+    BEGIN
+      IF to_regclass('public.customer_profiles') IS NULL THEN
+        RETURN;
+      END IF;
+      FOR r IN
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'customer_profiles'::regclass AND contype = 'c'
+          AND pg_get_constraintdef(oid) ILIKE '%preferred_language%'
+      LOOP
+        EXECUTE format('ALTER TABLE customer_profiles DROP CONSTRAINT IF EXISTS %I', r.conname);
+      END LOOP;
+      BEGIN
+        ALTER TABLE customer_profiles ADD CONSTRAINT customer_profiles_preferred_language_check
+          CHECK (preferred_language IS NULL OR preferred_language IN ('en', 'hi', 'te', 'mr', 'ta', 'kn'));
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END;
+    END $$
+    """,
+    """
     DO $$ BEGIN
       ALTER TABLE users ADD CONSTRAINT users_role_check
         CHECK (role IN ('customer', 'pujari', 'head_pujari', 'admin', 'super_admin'));

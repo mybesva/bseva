@@ -619,7 +619,7 @@ export default function Settings() {
   }
 
   async function deleteRole(role: PujariLevelRow) {
-    if (!role.id) return;
+    if (!role.id || role.can_delete === false) return;
     if (!confirm(`Delete Level ${role.level} — ${role.title}?`)) return;
     try {
       await api(`/admin/pujari-roles/${role.id}`, { method: "DELETE" });
@@ -848,10 +848,25 @@ export default function Settings() {
                           <Pencil size={14} />
                           Edit
                         </Button>
-                        <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => deleteRole(role)}>
+                        <span
+                          className="inline-flex"
+                          title={
+                            role.can_delete === false
+                              ? "Cannot delete — pujaris or services still use this level"
+                              : "Remove this unused level"
+                          }
+                        >
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="gap-1.5"
+                          disabled={role.can_delete === false}
+                          onClick={() => deleteRole(role)}
+                        >
                           <Trash2 size={14} />
                           Delete
                         </Button>
+                        </span>
                       </div>
                     </div>
                   </div>

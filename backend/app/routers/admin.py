@@ -28,6 +28,58 @@ from app.storage import content_type_for, delete_object, file_response, upload_b
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+_CUSTOMER_LOCATION_SQL = """
+COALESCE(
+  NULLIF(TRIM(cp.location_label), ''),
+  NULLIF(TRIM(CONCAT_WS(', ',
+    NULLIF(TRIM(cp.city), ''),
+    NULLIF(TRIM(cp.district), ''),
+    NULLIF(TRIM(cp.state), '')
+  )), '')
+)"""
+
+_PUJARI_LOCATION_SQL = """
+COALESCE(
+  NULLIF(TRIM(p.location_label), ''),
+  NULLIF(TRIM(CONCAT_WS(', ',
+    NULLIF(TRIM(p.city), ''),
+    NULLIF(TRIM(p.district), ''),
+    NULLIF(TRIM(p.state), '')
+  )), '')
+)"""
+
+_USER_SORT_COLUMNS = {
+    "id": "u.public_id",
+    "public_id": "u.public_id",
+    "name": "LOWER(u.name)",
+    "email": "LOWER(u.email)",
+    "phone": "u.phone",
+    "location": f"LOWER({_CUSTOMER_LOCATION_SQL})",
+    "language": "u.preferred_language",
+    "status": "u.blocked",
+    "created_at": "u.created_at",
+}
+
+_PUJARI_SORT_COLUMNS = {
+    "id": "u.public_id",
+    "public_id": "u.public_id",
+    "name": "LOWER(u.name)",
+    "email": "LOWER(u.email)",
+    "location": f"LOWER({_PUJARI_LOCATION_SQL})",
+    "approved_level": "p.approved_level",
+    "experience": "p.experience_years",
+    "services": "(SELECT COUNT(*) FROM pujari_verified_services vs WHERE vs.pujari_id = u.id)",
+    "verification": "p.verification_status",
+    "account": "u.blocked",
+    "created_at": "u.created_at",
+}
+
+
+def _sql_order(sort_by: str | None, sort_dir: str | None, columns: dict[str, str], default: str) -> str:
+    col = columns.get((sort_by or "").strip().lower(), default)
+    direction = "DESC" if str(sort_dir or "desc").strip().lower() == "desc" else "ASC"
+    return f"ORDER BY {col} {direction} NULLS LAST, {default} DESC"
+
 
 @router.get("/stats")
 def stats(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
@@ -72,30 +124,45 @@ def list_users(
     role: str | None = None,
     blocked: bool | None = None,
     q: str | None = None,
+    sort_by: str | None = Query(None, alias="sort"),
+    sort_dir: str | None = Query(None, alias="dir"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=100),
+    page_size: int = Query(10, ge=1, le=100),
     user=Depends(require_any_permission("view_customers", "view_pujaris", "manage_admins")),
     db: Session = Depends(get_db),
 ):
-    sql = "SELECT id, public_id, name, email, phone, role, blocked, blocked_at, block_reason, created_at, preferred_language FROM users WHERE 1=1"
-    count_sql = "SELECT COUNT(*) FROM users WHERE 1=1"
+    sql = f"""
+        SELECT u.id, u.public_id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
+               u.created_at, u.preferred_language, cp.city, cp.district, cp.state, cp.location_label,
+               {_CUSTOMER_LOCATION_SQL} AS location
+        FROM users u
+        LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+        WHERE 1=1
+    """
+    count_sql = """
+        SELECT COUNT(*) FROM users u
+        LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+        WHERE 1=1
+    """
     params: dict = {}
     if role:
-        sql += " AND role = :role"
-        count_sql += " AND role = :role"
+        sql += " AND u.role = :role"
+        count_sql += " AND u.role = :role"
         params["role"] = role
     if blocked is not None:
-        sql += " AND blocked = :blocked"
-        count_sql += " AND blocked = :blocked"
+        sql += " AND u.blocked = :blocked"
+        count_sql += " AND u.blocked = :blocked"
         params["blocked"] = blocked
     if q:
-        sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q OR public_id ILIKE :q)"
-        count_sql += " AND (name ILIKE :q OR email ILIKE :q OR phone ILIKE :q OR public_id ILIKE :q)"
+        like = " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q OR u.public_id ILIKE :q OR cp.location_label ILIKE :q OR cp.city ILIKE :q)"
+        sql += like
+        count_sql += like
         params["q"] = f"%{q}%"
     total = int(db.execute(text(count_sql), params).scalar() or 0)
     params["lim"] = page_size
     params["off"] = (page - 1) * page_size
-    sql += " ORDER BY created_at DESC LIMIT :lim OFFSET :off"
+    order = _sql_order(sort_by, sort_dir, _USER_SORT_COLUMNS, "u.created_at")
+    sql += f" {order} LIMIT :lim OFFSET :off"
     items = [row_dict(r) for r in db.execute(text(sql), params).mappings().all()]
     return {
         "items": items,
@@ -314,8 +381,10 @@ def list_pujaris(
     status: str | None = None,
     blocked: bool | None = None,
     q: str | None = None,
+    sort_by: str | None = Query(None, alias="sort"),
+    sort_dir: str | None = Query(None, alias="dir"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=100),
+    page_size: int = Query(10, ge=1, le=100),
     user=Depends(require_any_permission("view_pujaris", "verify_pujaris")),
     db: Session = Depends(get_db),
 ):
@@ -336,7 +405,7 @@ def list_pujaris(
         base_where += " AND u.blocked = :blocked"
         params["blocked"] = blocked
     if q:
-        base_where += " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q OR u.public_id ILIKE :q)"
+        base_where += " AND (u.name ILIKE :q OR u.email ILIKE :q OR u.phone ILIKE :q OR u.public_id ILIKE :q OR p.location_label ILIKE :q OR p.city ILIKE :q)"
         params["q"] = f"%{q}%"
     total = int(
         db.execute(
@@ -347,16 +416,18 @@ def list_pujaris(
     )
     params["lim"] = page_size
     params["off"] = (page - 1) * page_size
+    order = _sql_order(sort_by, sort_dir, _PUJARI_SORT_COLUMNS, "u.created_at")
     sql = f"""
             SELECT u.id, u.public_id, u.name, u.email, u.phone, u.role, u.blocked, u.blocked_at, u.block_reason,
                    p.requested_level, p.approved_level, p.verification_status, p.available, p.location_label,
-                   p.experience_years, p.specializations, p.pravara, p.joining_fee_status,
+                   p.city, p.district, p.state, p.experience_years, p.specializations, p.pravara, p.joining_fee_status,
+                   {_PUJARI_LOCATION_SQL} AS location,
                    COALESCE(p.is_head_pujari, FALSE) AS is_head_pujari,
                    COALESCE(p.profile_complete, FALSE) AS profile_complete,
                    COALESCE(p.profile_completion_percentage, 0) AS profile_completion_percentage
             FROM users u JOIN pujari_profiles p ON p.user_id = u.id
             {base_where}
-            ORDER BY u.created_at DESC
+            {order}
             LIMIT :lim OFFSET :off
             """
     rows = db.execute(text(sql), params).mappings().all()
@@ -454,9 +525,16 @@ def admin_services(user=Depends(require_permission("manage_services")), db: Sess
         )
     ).mappings().all()
     try:
-        return [enrich_service(db, r, include_inactive_meta=True) for r in rows]
+        items = [enrich_service(db, r, include_inactive_meta=True) for r in rows]
     except Exception:
-        return [row_dict(r) for r in rows]
+        items = [row_dict(r) for r in rows]
+    counts = {
+        str(sid): int(n)
+        for sid, n in db.execute(text("SELECT service_id, COUNT(*) FROM bookings GROUP BY service_id")).all()
+    }
+    for item in items:
+        item["booking_count"] = counts.get(str(item.get("id") or ""), 0)
+    return items
 
 
 @router.patch("/services/{service_id}/availability")
@@ -1047,7 +1125,30 @@ def _serialize_pujari_role(row) -> dict:
 @router.get("/pujari-roles")
 def list_pujari_roles_admin(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM pujari_roles ORDER BY level ASC")).mappings().all()
-    return [_serialize_pujari_role(r) for r in rows]
+    out = []
+    for r in rows:
+        data = _serialize_pujari_role(r)
+        lvl = data.get("level")
+        pujari_n = int(
+            db.execute(
+                text(
+                    """
+                    SELECT COUNT(*) FROM pujari_profiles
+                    WHERE approved_level = :lvl OR requested_level = :lvl
+                    """
+                ),
+                {"lvl": lvl},
+            ).scalar()
+            or 0
+        )
+        svc_n = int(
+            db.execute(text("SELECT COUNT(*) FROM services WHERE required_level = :lvl"), {"lvl": lvl}).scalar() or 0
+        )
+        data["pujari_count"] = pujari_n
+        data["service_count"] = svc_n
+        data["can_delete"] = pujari_n == 0 and svc_n == 0
+        out.append(data)
+    return out
 
 
 @router.post("/pujari-roles")

@@ -599,8 +599,13 @@ export default function ServicesAdmin() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="">{editId ?"Edit puja service" :"Add puja service"}</DialogTitle>
+          <DialogHeader className="sticky top-0 z-20 bg-background pb-3 border-b border-border/70">
+            <p className="text-sm font-semibold text-primary">
+              {editId ? "Edit puja service" : "Add puja service"}
+            </p>
+            <DialogTitle className="text-xl font-bold text-foreground pr-8 leading-snug">
+              {form.name.trim() || (editId ? "Untitled puja" : "New puja")}
+            </DialogTitle>
           </DialogHeader>
           <form id="add-service-form" onSubmit={handleSave} className="space-y-4">
             <Tabs defaultValue="basic" className="w-full">
@@ -1712,8 +1717,9 @@ export default function ServicesAdmin() {
               const available = rows.filter((s) => isAvailable(s));
               const upcoming = rows.filter((s) => !isAvailable(s));
               const renderRow = (s: any) => {
-                const avail = isAvailable(s);
-                return (
+              const avail = isAvailable(s);
+              const hasBookings = Number(s.booking_count || 0) > 0;
+              return (
                   <TableRow key={s.id}>
                     <TableCell>
                       <button
@@ -1825,16 +1831,24 @@ export default function ServicesAdmin() {
                           <ImageIcon size={14} />
                           Image
                         </Button>
+                        <span
+                          className="inline-flex"
+                          title={
+                            hasBookings
+                              ? "Cannot delete — this puja has bookings. Set Coming Soon to hide it from customers."
+                              : "Remove this puja from the catalog (no bookings)"
+                          }
+                        >
                         <Button
                           size="sm"
                           variant="destructive"
+                          disabled={hasBookings}
                           onClick={async () => {
-                            if (!confirm(`Remove ${s.name}?`)) return;
+                            if (hasBookings) return;
+                            if (!confirm(`Permanently remove ${s.name}? Only pujas with no bookings can be deleted.`)) return;
                             try {
-                              const out = await api<{ deactivated?: boolean }>(`/admin/services/${s.id}`, {
-                                method: "DELETE",
-                              });
-                              toast.success(out.deactivated ? "Hidden (has bookings)" : "Deleted");
+                              await api(`/admin/services/${s.id}`, { method: "DELETE" });
+                              toast.success("Removed from catalog");
                               await load();
                             } catch (e: any) {
                               toast.error(e.message);
@@ -1843,6 +1857,7 @@ export default function ServicesAdmin() {
                         >
                           Delete
                         </Button>
+                        </span>
                       </div>
                     </TableCell>
                   </TableRow>

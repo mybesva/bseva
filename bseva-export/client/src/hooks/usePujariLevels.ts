@@ -8,6 +8,9 @@ export type PujariLevelRow = {
   title: string;
   summary?: string;
   examples?: string[];
+  pujari_count?: number;
+  service_count?: number;
+  can_delete?: boolean;
 };
 
 export function usePujariLevels() {

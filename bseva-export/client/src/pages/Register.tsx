@@ -9,7 +9,7 @@ import { LegalInlineLink } from "@/components/LegalModal";
 import { api, registerApi } from "@/lib/api";
 import { REGISTRATION_CONSENT_LABEL, TERMS_VERSION, PRIVACY_VERSION } from "@/lib/legal";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { Lang } from "@/i18n/translations";
+import { PREFERRED_LANGUAGES, uiLangFromPreferred, type PreferredLang } from "@/lib/languages";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -32,7 +32,7 @@ function formatMmSs(totalSec: number) {
 }
 
 export default function Register() {
-  const { t, lang, setLang, labels } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const { config: publicConfig } = usePublicConfig();
   const captchaEnabled = Boolean(publicConfig.registration_captcha_enabled);
   const captchaSiteKey = String(publicConfig.recaptcha_site_key || "");
@@ -71,7 +71,7 @@ export default function Register() {
       "";
     return fromUrl;
   });
-  const [language, setLanguage] = useState<Lang>(lang);
+  const [language, setLanguage] = useState<PreferredLang>(lang);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string; otp?: string }>({});
 
   const otpExpired = otpSent && otpSecondsLeft <= 0;
@@ -248,7 +248,7 @@ export default function Register() {
         referral_code: referralCode.trim() || undefined,
         captcha_token,
       });
-      setLang(language);
+      setLang(uiLangFromPreferred(language));
       toast.success(
         accountType === "pujari"
           ? `Welcome, ${displayName}. Complete your profile details next.`
@@ -373,11 +373,11 @@ export default function Register() {
                   <select
                     className="w-full h-10 rounded-md border px-2 text-sm"
                     value={language}
-                    onChange={(e) => setLanguage(e.target.value as Lang)}
+                    onChange={(e) => setLanguage(e.target.value as PreferredLang)}
                   >
-                    {(Object.keys(labels) as Lang[]).map((code) => (
-                      <option key={code} value={code}>
-                        {labels[code]}
+                    {PREFERRED_LANGUAGES.map((l) => (
+                      <option key={l.code} value={l.code}>
+                        {l.label}
                       </option>
                     ))}
                   </select>

@@ -19,11 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { nextSort, personLocation, SortableHead, StaticHead, type SortDir } from "@/components/SortableHead";
+import { PREFERRED_LANGUAGES } from "@/lib/languages";
+import { AdminPager, DEFAULT_PAGE_SIZE, parsePage, parsePageSize } from "@/components/AdminPager";
 
 const emptyForm = { name: "", email: "", phone: "", password: "", location: "" };
 
@@ -39,24 +42,48 @@ export default function CustomersPage() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   const statusFilter = params.get("status") || "all";
+  const sortBy = params.get("sort") || "created_at";
+  const sortDir = (params.get("dir") === "asc" ? "asc" : "desc") as SortDir;
+  const pageSize = parsePageSize(params.get("size"));
+  const urlPage = parsePage(params.get("page"));
   const [q, setQ] = useState(params.get("q") || "");
 
-  function updateFilters(next: { status?: string; q?: string }) {
+  function updateFilters(next: { status?: string; q?: string; sort?: string; dir?: SortDir; page?: number; size?: number }) {
     const sp = new URLSearchParams();
     const st = next.status ?? statusFilter;
     const query = next.q ?? q;
+    const sort = next.sort ?? sortBy;
+    const dir = next.dir ?? sortDir;
+    const size = next.size ?? pageSize;
+    const resetPage =
+      next.status !== undefined ||
+      next.q !== undefined ||
+      next.sort !== undefined ||
+      next.dir !== undefined ||
+      next.size !== undefined;
+    const p = next.page ?? (resetPage ? 1 : urlPage);
     if (st && st !== "all") sp.set("status", st);
     if (query.trim()) sp.set("q", query.trim());
+    if (sort && sort !== "created_at") sp.set("sort", sort);
+    if (dir && dir !== "desc") sp.set("dir", dir);
+    if (sort === "created_at" && dir === "asc") {
+      sp.set("sort", sort);
+      sp.set("dir", dir);
+    }
+    if (size !== DEFAULT_PAGE_SIZE) sp.set("size", String(size));
+    if (p > 1) sp.set("page", String(p));
     const qs = sp.toString();
     setLocation(adminPath(`/customers${qs ? `?${qs}` : ""}`));
   }
 
-  async function load(p = page) {
-    const qs = new URLSearchParams({ role: "customer", page: String(p), page_size: "50" });
+  async function load(p = urlPage) {
+    const qs = new URLSearchParams({ role: "customer", page: String(p), page_size: String(pageSize) });
     if (statusFilter === "blocked") qs.set("blocked", "true");
     if (statusFilter === "active") qs.set("blocked", "false");
-    const qParam = (params.get("q") || q).trim();
+    const qParam = (params.get("q") || "").trim();
     if (qParam) qs.set("q", qParam);
+    if (sortBy) qs.set("sort", sortBy);
+    if (sortDir) qs.set("dir", sortDir);
     const res = await api<{ items: any[]; total: number; page: number; pages: number } | any[]>(`/admin/users?${qs}`);
     if (Array.isArray(res)) {
       setRows(res);
@@ -72,7 +99,8 @@ export default function CustomersPage() {
   }
 
   useEffect(() => {
-    void load(1).catch((e) => toast.error(e.message));
+    setQ(params.get("q") || "");
+    void load(urlPage).catch((e) => toast.error(e.message));
   }, [statusFilter, search]);
 
   async function handleAdd(e: React.FormEvent) {
@@ -96,15 +124,14 @@ export default function CustomersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h1 className="text-h1">Customers</h1>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Page {page}/{pages} · {total}
-          </span>
-          <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => void load(page - 1)}>
-            Prev
-          </Button>
-          <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => void load(page + 1)}>
-            Next
-          </Button>
+          <AdminPager
+            page={page}
+            pages={pages}
+            total={total}
+            pageSize={pageSize}
+            onPage={(p) => updateFilters({ page: p })}
+            onPageSize={(size) => updateFilters({ size })}
+          />
           <Button onClick={() => setOpen(true)} className="gap-2">
             <Plus size={16} />
             Add customer
@@ -198,25 +225,21 @@ export default function CustomersPage() {
         </div>
         <div className="flex gap-2 flex-1 min-w-[200px]">
           <Input
-            placeholder="Search ID, name, email, phone"
+            placeholder="Search ID, name, email, phone, location"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") updateFilters({ q });
             }}
           />
-          <Button
-            type="button"
-            onClick={() => {
-              if (q.trim().length === 0) {
-                toast.error("Enter at least 1 character to search");
-                return;
-              }
-              updateFilters({ q });
-            }}
-          >
+          <Button type="button" onClick={() => updateFilters({ q })}>
             Search
           </Button>
+          {params.get("q") ? (
+            <Button type="button" variant="outline" onClick={() => { setQ(""); updateFilters({ q: "" }); }}>
+              Clear
+            </Button>
+          ) : null}
         </div>
         {statusFilter !== "all" && (
           <Badge variant="secondary" className="mb-1">
@@ -224,16 +247,17 @@ export default function CustomersPage() {
           </Badge>
         )}
       </div>
-      <Table>
+      <Table className="border-separate border-spacing-0" containerClassName="max-h-[calc(100vh-16rem)] overflow-auto rounded-lg border bg-card">
         <TableHeader>
-          <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Language</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead></TableHead>
+          <TableRow className="hover:bg-transparent">
+            <SortableHead label="ID" column="id" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Name" column="name" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Email" column="email" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Phone" column="phone" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Location" column="location" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Language" column="language" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Status" column="status" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <StaticHead />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -243,10 +267,13 @@ export default function CustomersPage() {
               <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>{u.phone}</TableCell>
+              <TableCell className="max-w-[220px] truncate" title={personLocation(u)}>
+                {personLocation(u)}
+              </TableCell>
               <TableCell>
                 <select
                   className="border rounded px-2 py-1 text-sm bg-background"
-                  value={u.preferred_language || "en"}
+                  value={PREFERRED_LANGUAGES.some((l) => l.code === (u.preferred_language || "en")) ? (u.preferred_language || "en") : "en"}
                   onChange={async (e) => {
                     const preferred_language = e.target.value;
                     try {
@@ -261,9 +288,11 @@ export default function CustomersPage() {
                     }
                   }}
                 >
-                  <option value="en">English</option>
-                  <option value="hi">Hindi</option>
-                  <option value="te">Telugu</option>
+                  {PREFERRED_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.label}
+                    </option>
+                  ))}
                 </select>
               </TableCell>
               <TableCell>
@@ -288,6 +317,11 @@ export default function CustomersPage() {
                 >
                   {u.blocked ? "Unblock" : "Block"}
                 </Button>
+                <span title="Cannot delete — bookings stay linked. Use Block to stop access." className="inline-flex">
+                  <Button size="sm" variant="destructive" disabled>
+                    Delete
+                  </Button>
+                </span>
               </TableCell>
             </TableRow>
           ))}

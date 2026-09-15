@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
+PreferredLang = Literal["en", "hi", "te", "mr", "ta", "kn"]
+
 
 class RegisterIn(BaseModel):
     account_type: Literal["customer", "pujari"]
@@ -19,7 +21,7 @@ class RegisterIn(BaseModel):
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    language: Literal["en", "hi", "te"] = "en"
+    language: PreferredLang = "en"
     calendar_preference: Literal["north", "south", "lunar"] = "north"
     requested_level: Optional[int] = Field(default=None, ge=1, le=4)
     backup_phone: Optional[str] = None
@@ -42,7 +44,7 @@ class MePatchIn(BaseModel):
     first_name: Optional[str] = Field(default=None, max_length=120)
     middle_name: Optional[str] = Field(default=None, max_length=120)
     last_name: Optional[str] = Field(default=None, max_length=120)
-    preferred_language: Optional[Literal["en", "hi", "te"]] = None
+    preferred_language: Optional[PreferredLang] = None
     calendar_preference: Optional[Literal["north", "south", "lunar"]] = None
     phone: Optional[str] = Field(default=None, min_length=8, max_length=20)
 
@@ -66,7 +68,7 @@ class AddressIn(BaseModel):
 
 
 class CustomerProfileIn(AddressIn):
-    preferred_language: Optional[Literal["en", "hi", "te"]] = None
+    preferred_language: Optional[PreferredLang] = None
     calendar_preference: Optional[Literal["north", "south", "lunar"]] = None
     gstin: Optional[str] = Field(default=None, max_length=15)
 
@@ -358,7 +360,7 @@ class AdminCustomerUpdateIn(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(default=None, min_length=10, max_length=15)
     location: Optional[str] = None
-    preferred_language: Optional[Literal["en", "hi", "te"]] = None
+    preferred_language: Optional[PreferredLang] = None
 
 
 class BookingAssignIn(BaseModel):
