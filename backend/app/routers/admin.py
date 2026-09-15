@@ -1026,8 +1026,8 @@ def get_pricing(user=Depends(require_roles("admin")), db: Session = Depends(get_
 @router.put("/pricing")
 def update_pricing(body: PricingIn, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
     db.execute(
-        text("UPDATE pricing_config SET gst_percent = :g, peak_day_fee_paise = :p, updated_at = NOW() WHERE id = 1"),
-        {"g": body.gst_percent, "p": body.peak_day_fee_paise},
+        text("UPDATE pricing_config SET gst_percent = :g, peak_day_fee_paise = 0, updated_at = NOW() WHERE id = 1"),
+        {"g": body.gst_percent},
     )
     db.commit()
     return {"ok": True}

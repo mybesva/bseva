@@ -259,7 +259,7 @@ def _customer_lines(booking: dict, service_name: str, sac: str, hsn: str) -> lis
     add("Samagri Package", int(booking.get("samagri_charge_paise") or 0), sac or hsn)
     add("Alankaram", int(booking.get("alankaram_charge_paise") or 0), sac or hsn)
     add("Food / Prasadam", int(booking.get("food_charge_paise") or 0), sac or hsn)
-    add("Peak / festival surge", int(booking.get("peak_fee_paise") or 0), sac or hsn)
+    add("Weekend / festival surge", int(booking.get("peak_fee_paise") or 0), sac or hsn)
     known = sum(int(x["taxable_paise"]) for x in lines)
     gst_amt = int(booking.get("gst_amount_paise") or 0)
     discount = int(booking.get("discount_paise") or 0)

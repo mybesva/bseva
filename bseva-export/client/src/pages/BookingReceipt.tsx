@@ -214,7 +214,7 @@ export default function BookingReceipt() {
               )}
               {Number(booking.peak_fee_paise || 0) > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Surge / peak</span>
+                  <span className="text-muted-foreground">Weekend / festival surge</span>
                   <span>{rupees(booking.peak_fee_paise)}</span>
                 </div>
               )}

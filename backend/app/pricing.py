@@ -1,6 +1,7 @@
 """Central pricing: base + location + surge/weekend − discount + GST."""
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from typing import Any
 
@@ -34,6 +35,44 @@ def _weekend_days(db: Session) -> set[int]:
     return {6, 7}
 
 
+def surge_amount_from_mode(
+    base: int,
+    mode: str | None,
+    percent: float | None,
+    paise: int | None,
+) -> int:
+    """Percent of base, or a fixed paise amount — never both."""
+    mode_n = str(mode or "percent").strip().lower()
+    if mode_n in {"amount", "fixed", "paise", "rupees"}:
+        try:
+            return max(0, int(paise or 0))
+        except (TypeError, ValueError):
+            return 0
+    try:
+        pct = float(percent or 0)
+    except (TypeError, ValueError):
+        pct = 0.0
+    if pct <= 0:
+        return 0
+    return max(0, int(round(int(base or 0) * pct / 100.0)))
+
+
+def festival_date_set(raw: Any) -> set[str]:
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except Exception:
+            raw = [p.strip() for p in raw.replace(";", ",").split(",")]
+    if not isinstance(raw, (list, tuple, set)):
+        return set()
+    out: set[str] = set()
+    for item in raw:
+        s = str(item or "").strip()[:10]
+        if len(s) == 10 and s[4] == "-" and s[7] == "-":
+            out.add(s)
+    return out
+
+
 def location_adjustment_paise(db: Session, service_id: str, city: str | None) -> int:
     if not city:
         return 0
@@ -61,30 +100,31 @@ def surge_paise(
     city: str | None,
     booking_date: date | None,
 ) -> tuple[int, str | None]:
-    """Return (surge_amount_paise, reason)."""
+    """Return (surge_amount_paise, reason). Weekend + selected festival dates stack."""
     peak_fee = 0
     reason = None
-    pricing = db.execute(text("SELECT peak_day_fee_paise FROM pricing_config WHERE id = 1")).first()
-    default_peak = int(pricing[0] if pricing else 0)
 
-    # Weekend surge % from settings
-    weekend_pct = float(get_setting(db, "weekend_surge_percent", 0) or 0)
     if booking_date and booking_date.isoweekday() in _weekend_days(db):
-        amt = int(round(base * weekend_pct / 100))
-        if amt <= 0 and default_peak > 0:
-            amt = default_peak
+        amt = surge_amount_from_mode(
+            base,
+            get_setting(db, "weekend_surge_mode", "percent"),
+            get_setting(db, "weekend_surge_percent", 0),
+            get_setting(db, "weekend_surge_paise", 0),
+        )
         if amt > 0:
-            peak_fee = amt
+            peak_fee += amt
             reason = "weekend"
 
-    festival_fixed = int(get_setting(db, "festival_surge_paise", 0) or 0)
-    if festival_fixed <= 0:
-        festival_fixed = int(get_setting(db, "weekend_surge_paise", 0) or 0)
-    if booking_date and festival_fixed > 0:
-        from app.panchang import is_festival_day
-
-        if is_festival_day(booking_date):
-            peak_fee += festival_fixed
+    fest_dates = festival_date_set(get_setting(db, "festival_surge_dates", []))
+    if booking_date and booking_date.isoformat() in fest_dates:
+        amt = surge_amount_from_mode(
+            base,
+            get_setting(db, "festival_surge_mode", "amount"),
+            get_setting(db, "festival_surge_percent", 0),
+            get_setting(db, "festival_surge_paise", 0),
+        )
+        if amt > 0:
+            peak_fee += amt
             reason = "festival" if reason is None else f"{reason}+festival"
 
     # Configurable surge rules table (optional)

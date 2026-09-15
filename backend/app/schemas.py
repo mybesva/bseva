@@ -141,7 +141,7 @@ class PujariLevelIn(BaseModel):
 
 class PricingIn(BaseModel):
     gst_percent: float
-    peak_day_fee_paise: int
+    peak_day_fee_paise: int = 0
 
 
 class PujariRoleIn(BaseModel):

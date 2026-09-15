@@ -13,9 +13,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import type { PujariLevelRow } from "@/hooks/usePujariLevels";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -39,7 +41,7 @@ const SETTING_GROUPS: { id: string; title: string; description?: string }[] = [
   { id: "contact", title: "Contact", description: "How customers reach BSeva." },
   { id: "features", title: "Features", description: "Platform feature flags." },
   { id: "booking", title: "Booking & puja day", description: "When OTP, tracking, and full booking details become available." },
-  { id: "pricing", title: "Pricing & surge", description: "GST, peak-day fee, and date-based surcharges. Puja prices are set per service." },
+  { id: "pricing", title: "Pricing & surge", description: "GST and date-based surcharges. Puja prices are set per service. Surge is added to the quoted puja total." },
   { id: "pujari", title: "Pujari", description: "Settlement, joining fee, no-show, and assignment rules." },
   { id: "email", title: "Email", description: "From-addresses used in outgoing mail." },
     { id: "invoices", title: "Invoices", description: "Company, GST, numbering, SAC/HSN, and invoice notes. Used on new invoices only — issued invoices stay unchanged." },
@@ -75,15 +77,6 @@ const PLATFORM_KEYS: PlatformKey[] = [
     label: "Full booking details before (hours)",
     type: "number",
     group: "booking",
-  },
-  { key: "weekend_surge_percent", label: "Weekend surge %", type: "number", group: "pricing", hint: "Percent added on Saturday and Sunday." },
-  {
-    key: "festival_surge_paise",
-    label: "Festival surge (₹)",
-    type: "number",
-    group: "pricing",
-    money: true,
-    hint: "Extra rupees added on festival days (Ekadashi, Purnima). Example: 200.",
   },
   { key: "pujari_settlement_days", label: "Settlement hold days", type: "number", group: "pujari", hint: "Auto-settle every N days (≈ 2 weeks)." },
   {
@@ -142,9 +135,7 @@ const PLATFORM_KEYS: PlatformKey[] = [
   { key: "invoice_company_email", label: "Invoice email", type: "string", group: "invoices" },
   { key: "invoice_company_phone", label: "Phone", type: "string", group: "invoices" },
   { key: "invoice_gstin", label: "GSTIN", type: "string", group: "invoices" },
-  { key: "invoice_pan", label: "PAN", type: "string", group: "invoices" },
   { key: "invoice_website", label: "Website", type: "string", group: "invoices" },
-  { key: "invoice_logo_path", label: "Company logo path or URL", type: "string", group: "invoices", hint: "Optional. Leave blank to use the BSeva wordmark." },
   { key: "invoice_prefix_customer", label: "Customer invoice prefix", type: "string", group: "invoices", hint: "Used as BSEVA/2026-27/000001." },
   { key: "invoice_prefix_settlement", label: "Settlement invoice prefix", type: "string", group: "invoices" },
   { key: "invoice_signatory_name", label: "Authorized signatory name", type: "string", group: "invoices" },
@@ -274,13 +265,220 @@ function isSettingDirty(
   return String(draft[item.key] ?? "") !== String(stored[item.key] ?? "");
 }
 
+type SurgeMode = "percent" | "amount";
+
+function isoDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseIsoDate(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+function datesFromConfig(raw: unknown): string[] {
+  if (Array.isArray(raw)) return [...new Set(raw.map((x) => String(x).slice(0, 10)))].filter((s) => s.length === 10).sort();
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return datesFromConfig(parsed);
+    } catch {
+      return raw
+        .split(/[,\s]+/)
+        .map((s) => s.trim().slice(0, 10))
+        .filter((s) => s.length === 10)
+        .sort();
+    }
+  }
+  return [];
+}
+
+function DateSurgeEditor({ cfg, onSaved }: { cfg: Record<string, unknown>; onSaved: () => Promise<void> }) {
+  const [weekendMode, setWeekendMode] = useState<SurgeMode>("percent");
+  const [weekendPercent, setWeekendPercent] = useState("0");
+  const [weekendAmount, setWeekendAmount] = useState("0");
+  const [festivalMode, setFestivalMode] = useState<SurgeMode>("amount");
+  const [festivalPercent, setFestivalPercent] = useState("0");
+  const [festivalAmount, setFestivalAmount] = useState("0");
+  const [festivalDates, setFestivalDates] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [addDate, setAddDate] = useState("");
+
+  useEffect(() => {
+    const wMode = String(cfg.weekend_surge_mode || "percent") === "amount" ? "amount" : "percent";
+    const fMode = String(cfg.festival_surge_mode || "amount") === "percent" ? "percent" : "amount";
+    setWeekendMode(wMode);
+    setFestivalMode(fMode);
+    setWeekendPercent(String(cfg.weekend_surge_percent ?? 0));
+    setWeekendAmount(rupeesDraft(cfg.weekend_surge_paise) || "0");
+    setFestivalPercent(String(cfg.festival_surge_percent ?? 0));
+    setFestivalAmount(rupeesDraft(cfg.festival_surge_paise) || "0");
+    setFestivalDates(datesFromConfig(cfg.festival_surge_dates));
+  }, [cfg]);
+
+  const selectedDays = festivalDates.map(parseIsoDate).filter((d): d is Date => !!d);
+
+  async function save() {
+    setSaving(true);
+    const payload: { key: string; value: unknown }[] = [
+      { key: "weekend_surge_mode", value: weekendMode },
+      { key: "weekend_surge_percent", value: Number(weekendPercent || 0) },
+      { key: "weekend_surge_paise", value: Math.round(Number(weekendAmount || 0) * 100) },
+      { key: "festival_surge_mode", value: festivalMode },
+      { key: "festival_surge_percent", value: Number(festivalPercent || 0) },
+      { key: "festival_surge_paise", value: Math.round(Number(festivalAmount || 0) * 100) },
+      { key: "festival_surge_dates", value: festivalDates },
+    ];
+    try {
+      for (const row of payload) {
+        await api("/admin/config", { method: "PUT", body: JSON.stringify(row) });
+      }
+      toast.success("Surge settings saved");
+      await onSaved();
+    } catch (e: any) {
+      toast.error(e.message || "Could not save surge");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function ModeToggle({ value, onChange }: { value: SurgeMode; onChange: (v: SurgeMode) => void }) {
+    return (
+      <ToggleGroup
+        type="single"
+        value={value}
+        onValueChange={(v) => {
+          if (v === "percent" || v === "amount") onChange(v);
+        }}
+        variant="outline"
+        size="sm"
+      >
+        <ToggleGroupItem value="percent">Percent %</ToggleGroupItem>
+        <ToggleGroupItem value="amount">Amount ₹</ToggleGroupItem>
+      </ToggleGroup>
+    );
+  }
+
+  function valueField(mode: SurgeMode, percent: string, setPercent: (v: string) => void, amount: string, setAmount: (v: string) => void) {
+    if (mode === "percent") {
+      return (
+        <div className="space-y-1">
+          <Label>Surge %</Label>
+          <Input type="number" min={0} step="0.1" value={percent} onChange={(e) => setPercent(e.target.value)} />
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-1">
+        <Label>Surge amount (₹)</Label>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+          <Input className="pl-7" type="number" min={0} step="1" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 rounded-lg border border-border p-4">
+      <h3 className="font-semibold text-foreground">Date surge</h3>
+      <p className="text-xs text-muted-foreground">
+        Added to the puja total at quote and checkout. If a festival date falls on a weekend, both surges apply.
+      </p>
+
+      <div className="space-y-3 rounded-md border border-border/70 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-sm font-medium">Weekend (Saturday & Sunday)</h4>
+          <ModeToggle value={weekendMode} onChange={setWeekendMode} />
+        </div>
+        {valueField(weekendMode, weekendPercent, setWeekendPercent, weekendAmount, setWeekendAmount)}
+      </div>
+
+      <div className="space-y-3 rounded-md border border-border/70 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-sm font-medium">Festival dates</h4>
+          <ModeToggle value={festivalMode} onChange={setFestivalMode} />
+        </div>
+        {valueField(festivalMode, festivalPercent, setFestivalPercent, festivalAmount, setFestivalAmount)}
+        <div className="space-y-2">
+          <Label>Select festival dates</Label>
+          <p className="text-xs text-muted-foreground">Tap dates on the calendar. Surge applies only on the dates you select.</p>
+          <div className="rounded-md border border-border w-fit bg-background">
+            <Calendar
+              mode="multiple"
+              selected={selectedDays}
+              onSelect={(days) => {
+                const next = (days || []).map(isoDate);
+                setFestivalDates([...new Set(next)].sort());
+              }}
+              captionLayout="dropdown"
+              className="p-2"
+            />
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1">
+              <Label htmlFor="add-fest-date">Or add a date</Label>
+              <Input
+                id="add-fest-date"
+                type="date"
+                value={addDate}
+                onChange={(e) => setAddDate(e.target.value)}
+                className="w-44"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!addDate}
+              onClick={() => {
+                if (!addDate) return;
+                setFestivalDates((prev) => [...new Set([...prev, addDate])].sort());
+                setAddDate("");
+              }}
+            >
+              Add date
+            </Button>
+          </div>
+          {festivalDates.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {festivalDates.map((d) => (
+                <span
+                  key={d}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs"
+                >
+                  {d}
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => setFestivalDates((prev) => prev.filter((x) => x !== d))}
+                    aria-label={`Remove ${d}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Button onClick={() => void save()} disabled={saving}>
+        {saving ? "Saving…" : "Save surge"}
+      </Button>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const isSuper = user?.role === "super_admin";
   const [gst, setGst] = useState("18");
-  const [peak, setPeak] = useState("0");
   const [savedGst, setSavedGst] = useState("18");
-  const [savedPeak, setSavedPeak] = useState("0");
   const [savingPricing, setSavingPricing] = useState(false);
 
   const [platform, setPlatform] = useState<Record<string, unknown>>({});
@@ -299,19 +497,13 @@ export default function Settings() {
     [isSuper]
   );
 
-  const pricingDirty = useMemo(
-    () => gst.trim() !== savedGst.trim() || peak.trim() !== savedPeak.trim(),
-    [gst, peak, savedGst, savedPeak]
-  );
+  const pricingDirty = useMemo(() => gst.trim() !== savedGst.trim(), [gst, savedGst]);
 
   async function loadPricing() {
     const p = await api<any>("/admin/pricing");
     const gstVal = String(p.gst_percent ?? 18);
-    const peakVal = String((p.peak_day_fee_paise ?? 0) / 100);
     setGst(gstVal);
-    setPeak(peakVal);
     setSavedGst(gstVal);
-    setSavedPeak(peakVal);
   }
 
   async function loadPlatform() {
@@ -368,12 +560,10 @@ export default function Settings() {
         method: "PUT",
         body: JSON.stringify({
           gst_percent: Number(gst),
-          peak_day_fee_paise: Math.round(Number(peak) * 100),
         }),
       });
       setSavedGst(gst);
-      setSavedPeak(peak);
-      toast.success("Pricing saved");
+      toast.success("GST saved");
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -527,19 +717,10 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 {isPricing && (
                   <div className="space-y-4 rounded-lg border border-border p-4">
-                    <h3 className="font-semibold text-foreground">Tax & peak day</h3>
+                    <h3 className="font-semibold text-foreground">Tax</h3>
                     <div className="space-y-1">
                       <Label>GST %</Label>
                       <Input value={gst} onChange={(e) => setGst(e.target.value)} type="number" min={0} step="0.01" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Peak day fee (₹)</Label>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                          ₹
-                        </span>
-                        <Input className="pl-7" value={peak} onChange={(e) => setPeak(e.target.value)} type="number" min={0} step="1" />
-                      </div>
                     </div>
                     {pricingDirty && (
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -550,10 +731,7 @@ export default function Settings() {
                           type="button"
                           variant="outline"
                           disabled={savingPricing}
-                          onClick={() => {
-                            setGst(savedGst);
-                            setPeak(savedPeak);
-                          }}
+                          onClick={() => setGst(savedGst)}
                         >
                           Discard
                         </Button>
@@ -561,9 +739,9 @@ export default function Settings() {
                     )}
                   </div>
                 )}
+                {isPricing && <DateSurgeEditor cfg={platform} onSaved={loadPlatform} />}
                 {items.length > 0 && (
-                  <div className={isPricing ? "space-y-4 rounded-lg border border-border p-4" : "space-y-4"}>
-                    {isPricing && <h3 className="font-semibold text-foreground">Date surge</h3>}
+                  <div className="space-y-4">
                     {items.map((item) => renderSettingRow(item))}
                   </div>
                 )}

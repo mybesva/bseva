@@ -1005,8 +1005,8 @@ export default function BookingWizard({
                   <p>
                     <span className="font-medium">Rahu Kalam:</span> {panchang.rahukaalam}
                   </p>
-                  {panchang.isPeakDay && (
-                    <Badge className="bg-red-100 text-red-700 mt-1">Peak Day — surge fee applies</Badge>
+                  {Number(quote?.peakFee || 0) > 0 && (
+                    <Badge className="bg-orange-100 text-orange-800 mt-1">Weekend / festival surge applies</Badge>
                   )}
                 </CardContent>
               </Card>

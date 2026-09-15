@@ -72,8 +72,13 @@ _DEFAULTS: dict[str, Any] = {
     "assign_distance_rings_km": [10, 15, 20, 30],
     # After puja end, pujari unavailable for this many hours (same before puja start)
     "pujari_schedule_buffer_hours": 4,
+    "weekend_surge_mode": "percent",
     "weekend_surge_percent": 0,
+    "weekend_surge_paise": 0,
+    "festival_surge_mode": "amount",
+    "festival_surge_percent": 0,
     "festival_surge_paise": 0,
+    "festival_surge_dates": [],
 }
 
 
