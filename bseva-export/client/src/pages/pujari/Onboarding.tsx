@@ -13,10 +13,14 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 import { splitDisplayName, validatePersonNameParts } from "@/lib/personName";
 
-function ChecklistItem({ ok, label }: { ok: boolean; label: string }) {
+function ChecklistItem({ ok, label, highlight }: { ok: boolean; label: string; highlight?: boolean }) {
   return (
-    <li className={`text-sm flex gap-2 ${ok ? "text-emerald-700" : "text-muted-foreground"}`}>
-      <span aria-hidden>{ok ? "✓" : "○"}</span>
+    <li
+      className={`text-sm flex gap-2 ${
+        highlight ? "text-red-600 font-medium" : ok ? "text-emerald-700" : "text-muted-foreground"
+      }`}
+    >
+      <span aria-hidden>{ok ? "✓" : highlight ? "!" : "○"}</span>
       <span>{label}</span>
     </li>
   );
@@ -128,12 +132,12 @@ export default function PujariOnboardingPage() {
       return false;
     }
     const errors: Record<string, string> = {};
-    const req = (key: string, label: string, ok: boolean) => {
-      if (!ok) errors[key] = `${label} is required`;
+    const miss = (key: string, message: string, ok: boolean) => {
+      if (!ok) errors[key] = message;
     };
 
     if (current === 1) {
-      req("profile_photo_path", "Profile photo (My Profile)", !!p.profile_photo_path);
+      miss("profile_photo_path", "Add a profile photo in My Profile", !!p.profile_photo_path);
       Object.assign(
         errors,
         validatePersonNameParts(
@@ -146,15 +150,15 @@ export default function PujariOnboardingPage() {
         ),
       );
       const dob = String(p.date_of_birth || "").trim();
-      req("date_of_birth", "Date of birth (My Profile)", !!dob);
+      miss("date_of_birth", "Add your date of birth in My Profile", !!dob);
       if (dob && !isValidPujariDob(dob)) {
-        errors.date_of_birth = "Pujari must be at least 18 years old (date cannot be in the future)";
+        errors.date_of_birth = "You must be at least 18 years old (date cannot be in the future)";
       }
       const parsed = parsePhoneParts(p.mobile_number || user?.phone || "");
       const phoneErr = validatePhoneNational(parsed.countryCode, parsed.national);
       if (phoneErr) errors.mobile_number = phoneErr;
-      req("gotra", "Gotra (My Profile)", !!String(p.gotra || "").trim());
-      req("pravara", "Pravara (My Profile)", !!String(p.pravara || "").trim());
+      miss("gotra", "Add Gotra in My Profile", !!String(p.gotra || "").trim());
+      miss("pravara", "Add Pravara in My Profile", !!String(p.pravara || "").trim());
     }
     if (current === 2) {
       const addrErrs = validateAddress({
@@ -165,19 +169,19 @@ export default function PujariOnboardingPage() {
         pincode: p.pincode,
       });
       Object.assign(errors, addrErrs);
-      req("latitude", "Map pin (Address)", p.latitude != null && p.longitude != null);
+      miss("latitude", "Pin your location on the Address page", p.latitude != null && p.longitude != null);
     }
     if (current === 3) {
       const quals: string[] = p.qualifications || [];
-      req("qualifications", "Qualifications (My Profile)", quals.length > 0);
-      req("qualification_year", "Qualification year (My Profile)", !!p.qualification_year);
-      req("sampradaya", "Sampradaya (My Profile)", !!String(p.sampradaya || "").trim());
+      miss("qualifications", "Select qualifications in My Profile", quals.length > 0);
+      miss("qualification_year", "Add qualification year in My Profile", !!p.qualification_year);
+      miss("sampradaya", "Select sampradaya in My Profile", !!String(p.sampradaya || "").trim());
     }
     if (current === 4) {
       try {
         const docs = await api<any[]>("/pujari/documents");
         const hasAadhaar = docs.some((d) => d.document_type === "identity");
-        req("identity", "Aadhaar upload", hasAadhaar);
+        miss("identity", "Upload Aadhaar under My Documents", hasAadhaar);
         // Re-read flag from server (checkbox saves licence_type on the profile)
         let licenceType = String(p.licence_type || "").toLowerCase();
         try {
@@ -188,29 +192,33 @@ export default function PujariOnboardingPage() {
         }
         if (licenceType === "driving_licence" || licenceType === "cab_commercial") {
           const hasDl = docs.some((d) => d.document_type === "driving_licence");
-          req("driving_licence", "Driving Licence upload", hasDl);
+          miss("driving_licence", "Upload driving licence under My Documents", hasDl);
         }
       } catch {
         errors.identity = "Could not verify documents — upload Aadhaar and try again";
       }
     }
     if (current === 5) {
-      req("service_radius_km", "Service radius (Availability)", !!p.service_radius_km);
-      req("bank_holder_name", "Bank details (Bank / Settlement)", !!String(p.bank_holder_name || "").trim());
-      req("bank_ifsc", "Bank IFSC", !!String(p.bank_ifsc || "").trim());
-      req(
+      miss("service_radius_km", "Set service radius under Availability", !!p.service_radius_km);
+      miss("bank_holder_name", "Add bank details under Bank / Settlement", !!String(p.bank_holder_name || "").trim());
+      miss("bank_ifsc", "Add IFSC under Bank / Settlement", !!String(p.bank_ifsc || "").trim());
+      miss(
         "bank_account_number",
-        "Bank account number",
+        "Add account number under Bank / Settlement",
         !!String(p.bank_account_number || "").replace(/\D/g, ""),
       );
     }
     if (current === 6) {
-      req("consent", "Final submission consent", consent);
+      miss("consent", "Accept final submission consent below", consent);
     }
 
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      toast.error("Please fill the required fields marked in red");
+      toast.error(
+        current === 1
+          ? "Open My Profile, complete the checklist, save, then tap Refresh checklist"
+          : "Complete the highlighted items, then try Save & Continue again",
+      );
       return false;
     }
     return true;
@@ -371,6 +379,11 @@ export default function PujariOnboardingPage() {
           {step === 1 && (
             <section className="space-y-4">
               <h2 className="text-xl">My Profile</h2>
+              <p className="text-sm text-muted-foreground rounded-md border border-border bg-secondary/30 px-3 py-2">
+                You do not enter details on this page. Open <strong>My Profile</strong>, fill what is missing, tap{" "}
+                <strong>Save</strong>, return here, then <strong>Refresh checklist</strong> and{" "}
+                <strong>Save &amp; Continue</strong>.
+              </p>
               <ErrorSummary />
               <GateCard
                 title="Personal &amp; professional details"
@@ -379,12 +392,28 @@ export default function PujariOnboardingPage() {
                 linkLabel="Open My Profile"
               >
                 <ul className="space-y-1">
-                  <ChecklistItem ok={!!profile.profile_photo_path} label="Profile photo" />
-                  <ChecklistItem ok={nameOk} label="Name (first & last)" />
-                  <ChecklistItem ok={dobOk} label="Date of birth" />
-                  <ChecklistItem ok={phoneOk} label="Mobile number" />
-                  <ChecklistItem ok={!!String(profile.gotra || "").trim()} label="Gotra" />
-                  <ChecklistItem ok={!!String(profile.pravara || "").trim()} label="Pravara" />
+                  <ChecklistItem
+                    ok={!!profile.profile_photo_path}
+                    highlight={!!fieldErrors.profile_photo_path}
+                    label="Profile photo"
+                  />
+                  <ChecklistItem
+                    ok={nameOk}
+                    highlight={!!(fieldErrors.first_name || fieldErrors.last_name)}
+                    label="Name (first & last, min 3 letters each)"
+                  />
+                  <ChecklistItem ok={dobOk} highlight={!!fieldErrors.date_of_birth} label="Date of birth" />
+                  <ChecklistItem ok={phoneOk} highlight={!!fieldErrors.mobile_number} label="Mobile number" />
+                  <ChecklistItem
+                    ok={!!String(profile.gotra || "").trim()}
+                    highlight={!!fieldErrors.gotra}
+                    label="Gotra"
+                  />
+                  <ChecklistItem
+                    ok={!!String(profile.pravara || "").trim()}
+                    highlight={!!fieldErrors.pravara}
+                    label="Pravara"
+                  />
                 </ul>
               </GateCard>
               <Button type="button" size="sm" variant="ghost" onClick={() => void refreshProfile()}>

@@ -95,17 +95,25 @@ def pujari_has_schedule_conflict(
     *,
     exclude_booking_id: str | None = None,
 ) -> bool:
-    """True if proposed puja overlaps any confirmed/in_progress window (± buffer)."""
-    proposed = blocked_interval(db, booking_date, start_time, end_time, service_id)
+    """True if proposed puja overlaps a confirmed/in_progress puja (with one buffer between them).
+
+    Example: 10:00–12:00 confirmed with 4h buffer → next puja may start at 16:00 (not 20:00).
+    """
+    buf = timedelta(hours=pujari_schedule_buffer_hours(db))
+    p_start = _combine(booking_date, start_time)
+    p_end = booking_end_datetime(db, booking_date, start_time, end_time, service_id)
     for existing in _blocking_bookings(db, pujari_id, exclude_booking_id):
-        ex = blocked_interval(
+        if existing["booking_date"] != booking_date:
+            continue
+        e_start = _combine(existing["booking_date"], existing["start_time"])
+        e_end = booking_end_datetime(
             db,
             existing["booking_date"],
             existing["start_time"],
             existing.get("end_time"),
             existing.get("service_id"),
         )
-        if _intervals_overlap(proposed, ex):
+        if p_start < e_end + buf and e_start < p_end + buf:
             return True
     return False
 

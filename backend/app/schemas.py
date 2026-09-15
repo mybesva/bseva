@@ -8,6 +8,9 @@ from pydantic import BaseModel, EmailStr, Field
 class RegisterIn(BaseModel):
     account_type: Literal["customer", "pujari"]
     name: str = Field(min_length=2, max_length=120)
+    first_name: Optional[str] = Field(default=None, max_length=120)
+    middle_name: Optional[str] = Field(default=None, max_length=120)
+    last_name: Optional[str] = Field(default=None, max_length=120)
     email: EmailStr
     phone: str = Field(min_length=10, max_length=15)
     password: str = Field(min_length=8, max_length=128)

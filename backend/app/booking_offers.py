@@ -100,6 +100,37 @@ def eligible_pujaris_for_booking(
     return out
 
 
+def refresh_offers_for_open_bookings(
+    db: Session,
+    *,
+    booking_date: date | None = None,
+    customer_id: str | None = None,
+) -> list[str]:
+    """Re-run offer invites after schedule changes (e.g. another puja was just accepted).
+
+    Inserts new rows only (ON CONFLICT DO NOTHING). Returns newly notified pujari ids.
+    """
+    ensure_offers_table(db)
+    q = """
+        SELECT id FROM bookings
+        WHERE pujari_id IS NULL
+          AND payment_status = 'paid'
+          AND status IN ('pending', 'pending_acceptance')
+    """
+    params: dict = {}
+    if booking_date is not None:
+        q += " AND booking_date = :d"
+        params["d"] = booking_date
+    if customer_id is not None:
+        q += " AND customer_id = CAST(:cid AS uuid)"
+        params["cid"] = customer_id
+    ids = [str(r[0]) for r in db.execute(text(q), params).all()]
+    invited: list[str] = []
+    for bid in ids:
+        invited.extend(create_offers_for_booking(db, bid))
+    return invited
+
+
 def create_offers_for_booking(db: Session, booking_id: str) -> list[str]:
     """Invite all eligible nearby pujaris. Returns list of notified pujari ids."""
     ensure_offers_table(db)

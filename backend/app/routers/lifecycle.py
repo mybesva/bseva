@@ -210,6 +210,28 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
         )
     write_audit(db, str(user["id"]), "booking_accept", "booking", booking_id)
 
+    try:
+        from app.booking_offers import notify_pujaris_new_offer, refresh_offers_for_open_bookings
+
+        new_pujari_ids = refresh_offers_for_open_bookings(
+            db,
+            booking_date=b["booking_date"],
+            customer_id=str(b["customer_id"]),
+        )
+        if new_pujari_ids:
+            svc = db.execute(
+                text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"),
+                {"id": str(b["service_id"])},
+            ).scalar()
+            notify_pujaris_new_offer(
+                db,
+                pujari_ids=list(dict.fromkeys(new_pujari_ids)),
+                booking_number=str(b.get("booking_number") or booking_id[:8]),
+                service_name=str(svc or "Puja"),
+            )
+    except Exception:
+        pass
+
     meet_info: dict = {}
     if str(b.get("mode") or "") == "virtual":
         try:

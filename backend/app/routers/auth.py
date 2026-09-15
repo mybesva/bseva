@@ -215,19 +215,48 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
     ).first()
     if exists:
         raise HTTPException(409, "An account with this email or phone already exists")
+    from app.name_parts import compose_display_name, split_display_name, validate_name_parts
+
+    reg_first = (body.first_name or "").strip()
+    reg_middle = (body.middle_name or "").strip()
+    reg_last = (body.last_name or "").strip()
+    display_name = body.name.strip()
+    if body.account_type == "pujari" and (reg_first or reg_last):
+        reg_first, reg_middle, reg_last = validate_name_parts(
+            first=reg_first or None,
+            middle=reg_middle or None,
+            last=reg_last or None,
+            require_last=True,
+            min_last_length=3,
+        )
+        display_name = compose_display_name(reg_first, reg_middle, reg_last)
+    elif body.account_type == "pujari":
+        cf, cm, cl = split_display_name(display_name)
+        reg_first, reg_middle, reg_last = validate_name_parts(
+            first=cf or None,
+            middle=cm or None,
+            last=cl or None,
+            require_last=True,
+            min_last_length=3,
+        )
+        display_name = compose_display_name(reg_first, reg_middle, reg_last)
+
     user_id = str(uuid4())
     db.execute(
         text(
             """
-            INSERT INTO users (id, name, email, phone, password_hash, role, preferred_language, calendar_preference, phone_verified,
+            INSERT INTO users (id, name, first_name, middle_name, last_name, email, phone, password_hash, role, preferred_language, calendar_preference, phone_verified,
               registration_consent, registration_consent_at, terms_version, privacy_version)
-            VALUES (CAST(:id AS uuid), :name, :email, :phone, :pw, :role, :lang, :cal, TRUE,
+            VALUES (CAST(:id AS uuid), :name, :fn, :mn, :ln, :email, :phone, :pw, :role, :lang, :cal, TRUE,
               TRUE, NOW(), :tv, :pv)
             """
         ),
         {
             "id": user_id,
-            "name": body.name,
+            "name": display_name,
+            "fn": reg_first or None,
+            "mn": reg_middle or None,
+            "ln": reg_last or None,
             "email": str(body.email),
             "phone": body.phone,
             "pw": hash_password(body.password),
@@ -276,15 +305,22 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
             text(
                 """
                 INSERT INTO pujari_profiles
-                  (user_id, requested_level, verification_status, location_label, address, address_line1, address_line2,
+                  (user_id, full_name, first_name, middle_name, last_name, mobile_number,
+                   requested_level, verification_status, location_label, address, address_line1, address_line2,
                    city, district, state, pincode, country, latitude, longitude, backup_phone,
                    joining_fee_status, joining_fee_paise)
-                VALUES (CAST(:id AS uuid), :lvl, 'pending', :loc, :addr, :a1, :a2, :city, :district, :state, :pin, :country, :lat, :lng, :backup,
+                VALUES (CAST(:id AS uuid), :full_name, :fn, :mn, :ln, :mobile,
+                        :lvl, 'pending', :loc, :addr, :a1, :a2, :city, :district, :state, :pin, :country, :lat, :lng, :backup,
                         :jfs, :jfa)
                 """
             ),
             {
                 "id": user_id,
+                "full_name": display_name,
+                "fn": reg_first or None,
+                "mn": reg_middle or None,
+                "ln": reg_last or None,
+                "mobile": body.phone,
                 "lvl": body.requested_level or 1,
                 "loc": body.location,
                 "addr": body.address,

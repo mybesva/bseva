@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useSearch } from "wouter";
 import { PujariPortal } from "@/components/RolePortals";
 import SignaturePad from "@/components/SignaturePad";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ const QUALS = [
 
 const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
 
-function ProfileForm() {
+function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
   const { t } = useI18n();
   const [profile, setProfile] = useState<any>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -182,6 +183,18 @@ function ProfileForm() {
 
   return (
     <form className="space-y-8" onSubmit={save} noValidate>
+      {setupBanner ? (
+        <div className="rounded-md border border-primary/30 bg-orange-50/60 px-3 py-3 text-sm space-y-2">
+          <p className="font-medium text-foreground">Welcome — complete your profile once here</p>
+          <p className="text-muted-foreground">
+            Add photo, date of birth, Gotra, Pravara, qualifications, and the rest below, then tap Save. After that,
+            open <strong>Complete Profile</strong> in the menu to finish onboarding steps (address, documents, bank).
+          </p>
+          <Button type="button" size="sm" variant="outline" asChild>
+            <Link href="/pujari/onboarding">Go to Complete Profile</Link>
+          </Button>
+        </div>
+      ) : null}
       <ErrorSummary />
       <div>
         <div className="flex justify-between text-sm mb-1">
@@ -545,6 +558,9 @@ function ProfileForm() {
 export default function PujariProfilePage() {
   const { t } = useI18n();
   const { user } = useAuth();
+  const search = useSearch();
+  const fromRegister =
+    (search.startsWith("?") ? search.slice(1) : search).includes("from=register");
   return (
     <PujariPortal>
       <Card className="max-w-3xl">
@@ -555,7 +571,7 @@ export default function PujariProfilePage() {
           ) : null}
         </CardHeader>
         <CardContent>
-          <ProfileForm />
+          <ProfileForm setupBanner={fromRegister} />
         </CardContent>
       </Card>
     </PujariPortal>

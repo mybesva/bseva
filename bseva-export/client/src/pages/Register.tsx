@@ -18,6 +18,8 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
 import BSevaLogo from "@/components/BSevaLogo";
 
 import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
+import PersonNameFields from "@/components/PersonNameFields";
+import { composeDisplayName, validatePersonNameParts, type PersonNameParts } from "@/lib/personName";
 import { toE164, validatePhoneNational } from "@/lib/phone";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,6 +44,12 @@ export default function Register() {
   // Role comes from URL / header navigation — no in-form Customer↔Pujari switcher
   const accountType: "customer" | "pujari" = roleHint === "pujari" ? "pujari" : "customer";
   const [name, setName] = useState("");
+  const [pujariName, setPujariName] = useState<PersonNameParts>({
+    first_name: "",
+    middle_name: "",
+    last_name: "",
+  });
+  const [nameErrors, setNameErrors] = useState<Partial<Record<keyof PersonNameParts, string>>>({});
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
   const [phone, setPhone] = useState("");
@@ -184,6 +192,16 @@ export default function Register() {
       toast.error("Please confirm you are not a robot");
       return;
     }
+    if (accountType === "pujari") {
+      const nErrs = validatePersonNameParts(pujariName, { minLastLength: 3 });
+      if (Object.keys(nErrs).length) {
+        setNameErrors(nErrs);
+        toast.error(Object.values(nErrs)[0]);
+        return;
+      }
+      setNameErrors({});
+    }
+
     setPending(true);
     try {
       let captcha_token: string | undefined;
@@ -199,9 +217,24 @@ export default function Register() {
         }
       }
       const phoneE164 = toE164(countryCode, phoneDigits);
+      const displayName =
+        accountType === "pujari"
+          ? composeDisplayName({
+              first_name: pujariName.first_name.trim(),
+              middle_name: pujariName.middle_name.trim(),
+              last_name: pujariName.last_name.trim(),
+            })
+          : name.trim();
       await registerApi({
         account_type: accountType,
-        name: name.trim(),
+        name: displayName,
+        ...(accountType === "pujari"
+          ? {
+              first_name: pujariName.first_name.trim(),
+              middle_name: pujariName.middle_name.trim() || undefined,
+              last_name: pujariName.last_name.trim(),
+            }
+          : {}),
         email: emailNorm,
         phone: phoneE164,
         password,
@@ -216,11 +249,15 @@ export default function Register() {
         captcha_token,
       });
       setLang(language);
-      toast.success(`Welcome, ${name.trim()}. You can add your address after signing in.`);
+      toast.success(
+        accountType === "pujari"
+          ? `Welcome, ${displayName}. Complete your profile details next.`
+          : `Welcome, ${displayName}. You can add your address after signing in.`,
+      );
       if (returnUrl && accountType === "customer") {
         setLocation(returnUrl);
       } else {
-        setLocation(accountType === "pujari" ? "/pujari/onboarding" : "/customer/address");
+        setLocation(accountType === "pujari" ? "/pujari/profile?from=register" : "/customer/address");
       }
     } catch (err: any) {
       toast.error(err.message || "Registration failed");
@@ -250,21 +287,35 @@ export default function Register() {
           </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={onSubmit} autoComplete="off" noValidate>
-              <p className="text-sm rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-foreground">
-                Registering as <strong>{accountType === "pujari" ? "Pujari" : "Customer"}</strong>. Use{" "}
-                <strong>Customer</strong> / <strong>Pujaris</strong> in the header to switch.
-              </p>
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Full name</Label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    autoComplete="off"
-                    name="bseva-reg-name"
-                  />
-                </div>
+                {accountType === "pujari" ? (
+                  <div className="md:col-span-2">
+                    <PersonNameFields
+                      lastNameMinLength={3}
+                      value={pujariName}
+                      onChange={(next) => {
+                        setPujariName(next);
+                        setNameErrors({});
+                      }}
+                      errors={nameErrors}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      First and last name (min 3 letters each) are saved to your profile. Photo, Gotra, and other
+                      details are added on the next screen — not repeated here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="md:col-span-2 space-y-2">
+                    <Label>Full name</Label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      autoComplete="off"
+                      name="bseva-reg-name"
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <Input
