@@ -34,18 +34,13 @@ function CustomerDashboardContent() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const { canBook, checking, status, refresh } = useServiceAvailability();
+  const { canBook, checking, status } = useServiceAvailability();
   const [calPref, setCalPref] = useState<"north" | "south" | "lunar">("north");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujas, setPujas] = useState<any[]>([]);
   const [panchang, setPanchang] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
-
-  useEffect(() => {
-    // Soft refresh: reuse result from login / provider if still fresh (avoids a second GPS wait).
-    void refresh();
-  }, [refresh]);
 
   useEffect(() => {
     const pref = (user?.calendar_preference as "north" | "south" | "lunar") || "north";

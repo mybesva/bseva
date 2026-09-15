@@ -32,15 +32,10 @@ export default function Book() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { config: publicConfig } = usePublicConfig();
-  const { canBook, checking, status, refresh } = useServiceAvailability();
+  const { canBook, checking, status } = useServiceAvailability();
   const [pujaType, setPujaType] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const inCustomerPortal = user?.role === "customer";
-
-  useEffect(() => {
-    // Soft: skip if provider already resolved after login.
-    void refresh();
-  }, [refresh]);
 
   useEffect(() => {
     if (authLoading) return;
