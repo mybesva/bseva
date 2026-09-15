@@ -21,6 +21,7 @@ from app.routers import (
     ops,
     promos,
     pujari,
+    reports,
     support,
     wallet,
 )
@@ -55,6 +56,7 @@ app.include_router(pujari.router, prefix="/api/v1")
 app.include_router(lifecycle.router, prefix="/api/v1")
 app.include_router(consultations.router, prefix="/api/v1")
 app.include_router(ops.router, prefix="/api/v1")
+app.include_router(reports.router, prefix="/api/v1")
 app.include_router(promos.router, prefix="/api/v1")
 app.include_router(support.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")

@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -19,159 +21,295 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  BarChart3, 
-  Users, 
+import {
+  BarChart3,
+  Users,
   UserCog,
   Church,
   Sparkles,
   Package,
   Calendar,
   CreditCard,
-  TrendingUp,
-  TrendingDown,
   Download,
-  RefreshCw,
+  FileBarChart,
   ArrowUpRight,
   ArrowDownRight,
   IndianRupee,
   Star,
   Clock,
   MapPin,
-  AlertTriangle,
-  Loader2
+  Loader2,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { api, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
+import { toast } from "sonner";
+
+type RangeKey = "today" | "last_7_days" | "last_30_days" | "last_90_days" | "this_year" | "custom";
+
+type Report = {
+  period: { from: string; to: string; label: string; range: string };
+  overview: {
+    revenue_paise: number;
+    revenue_change_pct: number | null;
+    bookings: number;
+    bookings_change_pct: number | null;
+    cancelled: number;
+    completed: number;
+    confirmed: number;
+    active_pujaris: number;
+    serving_pujaris: number;
+    avg_rating: number | null;
+    repeat_rate: number;
+    trend: { date: string; total: number; cancelled: number; completed: number; confirmed: number }[];
+    payment_methods: { method: string; amount_paise: number; count: number; percentage: number }[];
+    top_services: { id: string; name: string; bookings: number; revenue: number; avg_duration: number }[];
+  };
+  pujaris: { id: string; name: string; bookings: number; rating: number; earnings: number; availability_status: string }[];
+  customers: {
+    total_customers: number;
+    new_registrations: number;
+    total_bookings: number;
+    booked_customers: number;
+    repeat_rate: number;
+    avg_rating: number | null;
+    top: { id: string; name: string; email: string; bookings: number; spent_paise: number }[];
+  };
+  temples: { name: string; city: string; bookings: number; revenue: number }[];
+  modes: { name: string; bookings: number; revenue: number }[];
+  services: { id: string; name: string; bookings: number; revenue: number; avg_duration: number }[];
+  samagri: { id: string; name: string; unit: string; consumed: number; bookings: number; status: string }[];
+  samagri_bookings: number;
+  payments: {
+    gmv: number;
+    commissions: number;
+    priest_payouts: number;
+    pending_settlements: number;
+    refunds: number;
+    by_method: { method: string; amount_paise: number; count: number; percentage: number }[];
+  };
+};
+
+function Change({ value }: { value: number | null | undefined }) {
+  if (value == null || Number.isNaN(value)) return null;
+  const up = value >= 0;
+  const Icon = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <div className={`flex items-center mt-1 text-sm ${up ? "text-green-600" : "text-red-600"}`}>
+      <Icon className="w-4 h-4" />
+      <span>
+        {up ? "+" : ""}
+        {value}% vs previous period
+      </span>
+    </div>
+  );
+}
+
+function Empty({ text }: { text: string }) {
+  return <p className="text-sm text-muted-foreground py-8 text-center">{text}</p>;
+}
+
+function isoDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function csvEscape(v: unknown) {
+  const s = String(v ?? "");
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const body = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([body], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Reports() {
-  const [dateRange, setDateRange] = useState("last_30_days");
+  const [range, setRange] = useState<RangeKey>("last_30_days");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  const [report, setReport] = useState<Report | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch real data from API
-  const { data: pujariData, isLoading: pujariLoading, refetch: refetchPujari } = 
-    trpc.admin.getPujariAnalytics.useQuery({ dateRange });
-  
-  const { data: customerData, isLoading: customerLoading, refetch: refetchCustomer } = 
-    trpc.admin.getCustomerAnalytics.useQuery({ dateRange });
-  
-  const { data: templeData, isLoading: templeLoading, refetch: refetchTemple } = 
-    trpc.admin.getTempleAnalytics.useQuery({ dateRange });
-  
-  const { data: serviceData, isLoading: serviceLoading, refetch: refetchService } = 
-    trpc.admin.getServiceAnalytics.useQuery({ dateRange });
-  
-  const { data: samagriData, isLoading: samagriLoading, refetch: refetchSamagri } = 
-    trpc.admin.getSamagriAnalytics.useQuery();
-  
-  const { data: bookingData, isLoading: bookingLoading, refetch: refetchBooking } = 
-    trpc.admin.getBookingAnalytics.useQuery({ dateRange });
-  
-  const { data: paymentData, isLoading: paymentLoading, refetch: refetchPayment } = 
-    trpc.admin.getPaymentAnalytics.useQuery({ dateRange });
+  const generate = useCallback(
+    async (opts?: { range?: RangeKey; from?: string; to?: string }) => {
+      const r = opts?.range ?? range;
+      const from = opts?.from ?? customFrom;
+      const to = opts?.to ?? customTo;
+      if (r === "custom" && (!from || !to)) {
+        toast.error("Choose a from and to date");
+        return;
+      }
+      setLoading(true);
+      try {
+        const qs = new URLSearchParams({ range: r });
+        if (r === "custom") {
+          qs.set("from", from);
+          qs.set("to", to);
+        }
+        const data = await api<Report>(`/admin/reports?${qs.toString()}`);
+        setReport(data);
+      } catch (e: any) {
+        toast.error(e.message || "Could not generate report");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [range, customFrom, customTo]
+  );
 
-  const isLoading = pujariLoading || customerLoading || templeLoading || 
-                    serviceLoading || samagriLoading || bookingLoading || paymentLoading;
+  useEffect(() => {
+    if (range === "custom") return;
+    void generate({ range });
+  }, [range]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleRefresh = () => {
-    refetchPujari();
-    refetchCustomer();
-    refetchTemple();
-    refetchService();
-    refetchSamagri();
-    refetchBooking();
-    refetchPayment();
+  function exportTab() {
+    if (!report) {
+      toast.error("Generate a report first");
+      return;
+    }
+    const p = report.period;
+    const stamp = `${p.from}_to_${p.to}`;
+    if (activeTab === "pujari") {
+      downloadCsv(`BSeva_pujari_${stamp}.csv`, [
+        ["Pujari", "Bookings", "Rating", "Earnings (₹)", "Status"],
+        ...report.pujaris.map((r) => [r.name, r.bookings, r.rating, Number(r.earnings || 0) / 100, r.availability_status]),
+      ]);
+    } else if (activeTab === "customer") {
+      downloadCsv(`BSeva_customers_${stamp}.csv`, [
+        ["Customer", "Email", "Bookings", "Spent (₹)"],
+        ...report.customers.top.map((r) => [r.name, r.email, r.bookings, Number(r.spent_paise || 0) / 100]),
+      ]);
+    } else if (activeTab === "temple") {
+      downloadCsv(`BSeva_locations_${stamp}.csv`, [
+        ["Location", "Mode", "Bookings", "Revenue (₹)"],
+        ...report.temples.map((r) => [r.name, r.city, r.bookings, Number(r.revenue || 0) / 100]),
+      ]);
+    } else if (activeTab === "service") {
+      downloadCsv(`BSeva_services_${stamp}.csv`, [
+        ["Service", "Bookings", "Revenue (₹)", "Duration (min)"],
+        ...report.services.map((r) => [r.name, r.bookings, Number(r.revenue || 0) / 100, r.avg_duration]),
+      ]);
+    } else if (activeTab === "samagri") {
+      downloadCsv(`BSeva_samagri_${stamp}.csv`, [
+        ["Item", "Used on bookings", "Line items", "Unit", "Status"],
+        ...report.samagri.map((r) => [r.name, r.bookings, r.consumed, r.unit, r.status]),
+      ]);
+    } else if (activeTab === "payment") {
+      downloadCsv(`BSeva_payments_${stamp}.csv`, [
+        ["Method", "Count", "Amount (₹)", "Share %"],
+        ...report.payments.by_method.map((r) => [r.method, r.count, Number(r.amount_paise || 0) / 100, r.percentage]),
+      ]);
+    } else {
+      downloadCsv(`BSeva_overview_${stamp}.csv`, [
+        ["Metric", "Value"],
+        ["Period", p.label],
+        ["Revenue (₹)", Number(report.overview.revenue_paise || 0) / 100],
+        ["Bookings", report.overview.bookings],
+        ["Completed", report.overview.completed],
+        ["Cancelled", report.overview.cancelled],
+        ["Active pujaris", report.overview.active_pujaris],
+        ["Repeat rate %", report.overview.repeat_rate],
+        [],
+        ["Date", "Bookings", "Completed", "Cancelled"],
+        ...report.overview.trend.map((d) => [d.date, d.total, d.completed, d.cancelled]),
+      ]);
+    }
+    toast.success("Report exported");
+  }
+
+  const ov = report?.overview;
+  const maxTrend = Math.max(1, ...(ov?.trend || []).map((d) => Number(d.total || 0)));
+  const statusColor: Record<string, string> = {
+    available: "bg-green-100 text-green-700",
+    busy: "bg-yellow-100 text-yellow-700",
+    unavailable: "bg-red-100 text-red-700",
+    OK: "bg-green-100 text-green-700",
+    Inactive: "bg-gray-100 text-gray-700",
   };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount / 100); // Convert from paise to rupees
-  };
-
-  const formatCurrencyRupees = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const getStockStatus = (status: string) => {
-    const colors: Record<string, string> = {
-      OK: "bg-green-100 text-green-700",
-      Low: "bg-yellow-100 text-yellow-700",
-      Critical: "bg-red-100 text-red-700",
-    };
-    return colors[status] || colors.OK;
-  };
-
-  const getAvailabilityColor = (status: string) => {
-    const colors: Record<string, string> = {
-      available: "bg-green-100 text-green-700",
-      busy: "bg-yellow-100 text-yellow-700",
-      unavailable: "bg-red-100 text-red-700",
-    };
-    return colors[status?.toLowerCase()] || colors.available;
-  };
-
-  // Default values for when data is loading
-  const pujariAnalytics = pujariData || [];
-  const customerAnalytics = customerData || { totalCustomers: 0, newRegistrations: 0, totalBookings: 0, repeatRate: 0 };
-  const templeAnalytics = templeData || [];
-  const serviceAnalytics = serviceData || [];
-  const samagriAnalytics = samagriData || [];
-  const bookingAnalytics = bookingData || { daily: [], monthly: { total: 0, confirmed: 0, cancelled: 0, pending: 0 } };
-  const paymentAnalytics = paymentData || { gmv: 0, commissions: 0, priestPayouts: 0, pendingSettlements: 0, refunds: 0, byMethod: [] };
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-4">
           <div>
             <h1 className="text-h1 text-foreground">Analytics & Reports</h1>
-            <p className="text-gray-600 mt-1">Comprehensive business intelligence dashboard</p>
+            <p className="text-muted-foreground mt-1">
+              {report
+                ? `${report.period.label} (${formatDisplayDate(report.period.from)} – ${formatDisplayDate(report.period.to)})`
+                : "Live figures from bookings, payments, and settlements."}
+            </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="last_7_days">Last 7 Days</SelectItem>
-                <SelectItem value="last_30_days">Last 30 Days</SelectItem>
-                <SelectItem value="last_90_days">Last 90 Days</SelectItem>
-                <SelectItem value="this_year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Period</Label>
+              <Select
+                value={range}
+                onValueChange={(v) => {
+                  const next = v as RangeKey;
+                  if (next === "custom" && (!customFrom || !customTo)) {
+                    const to = new Date();
+                    const from = new Date();
+                    from.setDate(from.getDate() - 29);
+                    setCustomFrom(isoDate(from));
+                    setCustomTo(isoDate(to));
+                  }
+                  setRange(next);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="last_7_days">Last 7 Days</SelectItem>
+                  <SelectItem value="last_30_days">Last 30 Days</SelectItem>
+                  <SelectItem value="last_90_days">Last 90 Days</SelectItem>
+                  <SelectItem value="this_year">This Year</SelectItem>
+                  <SelectItem value="custom">Custom dates</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {range === "custom" && (
+              <>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">From</Label>
+                  <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-40" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">To</Label>
+                  <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-40" />
+                </div>
+              </>
+            )}
+            <Button onClick={() => void generate()} disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileBarChart className="w-4 h-4 mr-2" />}
+              Generate report
             </Button>
-            <Button className="bg-primary hover:bg-primary/90">
+            <Button variant="outline" onClick={exportTab} disabled={!report || loading}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
           </div>
         </div>
 
-        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Total Revenue</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {paymentLoading ? "..." : formatCurrency(paymentAnalytics.gmv)}
-                  </p>
-                  <div className="flex items-center mt-1 text-green-600 text-sm">
-                    <ArrowUpRight className="w-4 h-4" />
-                    <span>vs last period</span>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Total Revenue</p>
+                  <p className="text-2xl font-bold">{loading && !report ? "…" : rupees(ov?.revenue_paise || 0)}</p>
+                  <Change value={ov?.revenue_change_pct} />
                 </div>
                 <div className="p-3 bg-green-100 rounded-full">
                   <IndianRupee className="w-6 h-6 text-green-600" />
@@ -179,19 +317,13 @@ export default function Reports() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Total Bookings</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {bookingLoading ? "..." : bookingAnalytics.monthly.total}
-                  </p>
-                  <div className="flex items-center mt-1 text-green-600 text-sm">
-                    <ArrowUpRight className="w-4 h-4" />
-                    <span>vs last period</span>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Total Bookings</p>
+                  <p className="text-2xl font-bold">{loading && !report ? "…" : ov?.bookings ?? 0}</p>
+                  <Change value={ov?.bookings_change_pct} />
                 </div>
                 <div className="p-3 bg-blue-100 rounded-full">
                   <Calendar className="w-6 h-6 text-blue-600" />
@@ -199,19 +331,13 @@ export default function Reports() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Active Pujaris</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {pujariLoading ? "..." : pujariAnalytics.length}
-                  </p>
-                  <div className="flex items-center mt-1 text-green-600 text-sm">
-                    <ArrowUpRight className="w-4 h-4" />
-                    <span>this period</span>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Active Pujaris</p>
+                  <p className="text-2xl font-bold">{loading && !report ? "…" : ov?.active_pujaris ?? 0}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{ov?.serving_pujaris ?? 0} served in this period</p>
                 </div>
                 <div className="p-3 bg-purple-100 rounded-full">
                   <UserCog className="w-6 h-6 text-purple-600" />
@@ -219,16 +345,15 @@ export default function Reports() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Customer Satisfaction</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {customerLoading ? "..." : `${customerAnalytics.repeatRate}%`}
+                  <p className="text-sm text-muted-foreground">Customer Satisfaction</p>
+                  <p className="text-2xl font-bold">
+                    {loading && !report ? "…" : ov?.avg_rating != null ? `${ov.avg_rating}★` : "—"}
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">Repeat rate</p>
+                  <p className="text-sm text-muted-foreground mt-1">Repeat rate {ov?.repeat_rate ?? 0}%</p>
                 </div>
                 <div className="p-3 bg-yellow-100 rounded-full">
                   <Star className="w-6 h-6 text-yellow-600" />
@@ -238,7 +363,6 @@ export default function Reports() {
           </Card>
         </div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-7 w-full max-w-4xl">
             <TabsTrigger value="overview" className="flex items-center gap-1">
@@ -271,28 +395,29 @@ export default function Reports() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Booking Trend */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Booking Trend (Last 7 Days)</CardTitle>
+                  <CardTitle className="text-lg">Booking trend</CardTitle>
+                  <CardDescription>Bookings created in the selected period</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {bookingLoading ? (
-                    <div className="flex items-center justify-center h-48">
-                      <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                  {loading && !report ? (
+                    <div className="flex justify-center h-48 items-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                     </div>
+                  ) : !ov?.trend.length ? (
+                    <Empty text="No bookings in this period." />
                   ) : (
-                    <div className="space-y-3">
-                      {bookingAnalytics.daily.map((day: any, index: number) => (
-                        <div key={index} className="flex items-center gap-4">
-                          <span className="w-20 text-sm text-gray-500">{formatDisplayDate(day.date)}</span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                            <div 
-                              className="h-full bg-primary rounded-full flex items-center justify-end pr-2"
-                              style={{ width: `${Math.min((day.total / 50) * 100, 100)}%` }}
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                      {ov.trend.map((day) => (
+                        <div key={day.date} className="flex items-center gap-4">
+                          <span className="w-24 text-sm text-muted-foreground">{formatDisplayDate(day.date)}</span>
+                          <div className="flex-1 bg-muted rounded-full h-6 overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full flex items-center justify-end pr-2 min-w-[1.5rem]"
+                              style={{ width: `${Math.max(8, (Number(day.total) / maxTrend) * 100)}%` }}
                             >
                               <span className="text-xs text-white font-medium">{day.total}</span>
                             </div>
@@ -303,32 +428,29 @@ export default function Reports() {
                   )}
                 </CardContent>
               </Card>
-
-              {/* Payment Methods */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Payment Methods</CardTitle>
+                  <CardTitle className="text-lg">Payment methods</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {paymentLoading ? (
-                    <div className="flex items-center justify-center h-48">
-                      <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                  {loading && !report ? (
+                    <div className="flex justify-center h-48 items-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                     </div>
+                  ) : !ov?.payment_methods.length ? (
+                    <Empty text="No payments in this period." />
                   ) : (
                     <div className="space-y-4">
-                      {paymentAnalytics.byMethod.map((method: any, index: number) => (
-                        <div key={index} className="space-y-2">
+                      {ov.payment_methods.map((method) => (
+                        <div key={method.method} className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="font-medium">{method.method || 'Other'}</span>
-                            <span className="text-gray-500">
-                              {formatCurrency(method.amount)} ({method.percentage}%)
+                            <span className="font-medium">{method.method}</span>
+                            <span className="text-muted-foreground">
+                              {rupees(method.amount_paise)} ({method.percentage}%)
                             </span>
                           </div>
-                          <div className="w-full bg-gray-100 rounded-full h-2">
-                            <div 
-                              className="h-full bg-sidebar rounded-full"
-                              style={{ width: `${method.percentage}%` }}
-                            />
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div className="h-full bg-sidebar rounded-full" style={{ width: `${method.percentage}%` }} />
                           </div>
                         </div>
                       ))}
@@ -337,17 +459,13 @@ export default function Reports() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Top Services */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Top Performing Services</CardTitle>
+                <CardTitle className="text-lg">Top performing services</CardTitle>
               </CardHeader>
               <CardContent>
-                {serviceLoading ? (
-                  <div className="flex items-center justify-center h-32">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
+                {!ov?.top_services.length ? (
+                  <Empty text="No service bookings in this period." />
                 ) : (
                   <Table>
                     <TableHeader>
@@ -355,16 +473,16 @@ export default function Reports() {
                         <TableHead>Service</TableHead>
                         <TableHead className="text-right">Bookings</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">Avg Duration</TableHead>
+                        <TableHead className="text-right">Avg duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {serviceAnalytics.slice(0, 5).map((service: any) => (
+                      {ov.top_services.map((service) => (
                         <TableRow key={service.id}>
                           <TableCell className="font-medium">{service.name}</TableCell>
                           <TableCell className="text-right">{service.bookings}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(service.revenue)}</TableCell>
-                          <TableCell className="text-right">{service.avgDuration} min</TableCell>
+                          <TableCell className="text-right">{rupees(service.revenue)}</TableCell>
+                          <TableCell className="text-right">{service.avg_duration} min</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -374,18 +492,15 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          {/* Pujari Tab */}
           <TabsContent value="pujari" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Pujari Performance Analytics</CardTitle>
-                <CardDescription>Detailed performance metrics for all pujaris</CardDescription>
+                <CardTitle className="text-lg">Pujari performance</CardTitle>
+                <CardDescription>Approved pujaris who had bookings in this period</CardDescription>
               </CardHeader>
               <CardContent>
-                {pujariLoading ? (
-                  <div className="flex items-center justify-center h-48">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
+                {!report?.pujaris.length ? (
+                  <Empty text="No pujari bookings in this period." />
                 ) : (
                   <Table>
                     <TableHeader>
@@ -398,20 +513,20 @@ export default function Reports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pujariAnalytics.map((pujari: any) => (
+                      {report.pujaris.map((pujari) => (
                         <TableRow key={pujari.id}>
-                          <TableCell className="font-medium">{pujari.name || `Pujari #${pujari.id}`}</TableCell>
+                          <TableCell className="font-medium">{pujari.name}</TableCell>
                           <TableCell className="text-right">{pujari.bookings}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                              {Number(pujari.rating).toFixed(1)}
+                              {Number(pujari.rating || 0).toFixed(1)}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">{formatCurrencyRupees(Number(pujari.earnings))}</TableCell>
+                          <TableCell className="text-right">{rupees(Number(pujari.earnings || 0))}</TableCell>
                           <TableCell>
-                            <Badge className={getAvailabilityColor(pujari.availabilityStatus)}>
-                              {pujari.availabilityStatus || 'Available'}
+                            <Badge className={statusColor[pujari.availability_status] || statusColor.available}>
+                              {pujari.availability_status || "available"}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -423,78 +538,57 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          {/* Customer Tab */}
           <TabsContent value="customer" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">Total Customers</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {customerLoading ? "..." : customerAnalytics.totalCustomers}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Total customers</p>
+                  <p className="text-2xl font-bold">{report?.customers.total_customers ?? 0}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">New Registrations</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {customerLoading ? "..." : customerAnalytics.newRegistrations}
-                  </p>
+                  <p className="text-sm text-muted-foreground">New in period</p>
+                  <p className="text-2xl font-bold">{report?.customers.new_registrations ?? 0}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">Total Bookings</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {customerLoading ? "..." : customerAnalytics.totalBookings}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Bookings</p>
+                  <p className="text-2xl font-bold">{report?.customers.total_bookings ?? 0}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">Repeat Rate</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {customerLoading ? "..." : `${customerAnalytics.repeatRate}%`}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Repeat rate</p>
+                  <p className="text-2xl font-bold">{report?.customers.repeat_rate ?? 0}%</p>
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          {/* Temple Tab */}
-          <TabsContent value="temple" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Temple Analytics</CardTitle>
-                <CardDescription>Booking and revenue by temple location</CardDescription>
+                <CardTitle className="text-lg">Top customers</CardTitle>
               </CardHeader>
               <CardContent>
-                {templeLoading ? (
-                  <div className="flex items-center justify-center h-48">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
+                {!report?.customers.top.length ? (
+                  <Empty text="No customer bookings in this period." />
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Temple</TableHead>
-                        <TableHead>City</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead className="text-right">Bookings</TableHead>
-                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">Spent</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {templeAnalytics.map((temple: any) => (
-                        <TableRow key={temple.id}>
-                          <TableCell className="font-medium">{temple.name}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4 text-gray-400" />
-                              {temple.city}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">{temple.bookings}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(temple.revenue)}</TableCell>
+                      {report.customers.top.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium">{c.name}</TableCell>
+                          <TableCell className="text-muted-foreground">{c.email}</TableCell>
+                          <TableCell className="text-right">{c.bookings}</TableCell>
+                          <TableCell className="text-right">{rupees(c.spent_paise)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -504,18 +598,83 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          {/* Service Tab */}
+          <TabsContent value="temple" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">By service mode</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!report?.modes.length ? (
+                  <Empty text="No bookings in this period." />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Mode</TableHead>
+                        <TableHead className="text-right">Bookings</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.modes.map((m) => (
+                        <TableRow key={m.name}>
+                          <TableCell className="font-medium capitalize">{m.name.replace("_", " ")}</TableCell>
+                          <TableCell className="text-right">{m.bookings}</TableCell>
+                          <TableCell className="text-right">{rupees(m.revenue)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Locations</CardTitle>
+                <CardDescription>Grouped from booking addresses in this period</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!report?.temples.length ? (
+                  <Empty text="No location data in this period." />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Mode</TableHead>
+                        <TableHead className="text-right">Bookings</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.temples.map((temple) => (
+                        <TableRow key={temple.name}>
+                          <TableCell className="font-medium">{temple.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 capitalize">
+                              <MapPin className="w-4 h-4 text-muted-foreground" />
+                              {String(temple.city || "").replace("_", " ")}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">{temple.bookings}</TableCell>
+                          <TableCell className="text-right">{rupees(temple.revenue)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="service" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Service/Puja Analytics</CardTitle>
-                <CardDescription>Performance metrics by service type</CardDescription>
+                <CardTitle className="text-lg">Service / puja analytics</CardTitle>
               </CardHeader>
               <CardContent>
-                {serviceLoading ? (
-                  <div className="flex items-center justify-center h-48">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
+                {!report?.services.length ? (
+                  <Empty text="No service bookings in this period." />
                 ) : (
                   <Table>
                     <TableHeader>
@@ -523,19 +682,19 @@ export default function Reports() {
                         <TableHead>Service</TableHead>
                         <TableHead className="text-right">Bookings</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">Avg Duration</TableHead>
+                        <TableHead className="text-right">Avg duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {serviceAnalytics.map((service: any) => (
+                      {report.services.map((service) => (
                         <TableRow key={service.id}>
                           <TableCell className="font-medium">{service.name}</TableCell>
                           <TableCell className="text-right">{service.bookings}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(service.revenue)}</TableCell>
+                          <TableCell className="text-right">{rupees(service.revenue)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Clock className="w-4 h-4 text-gray-400" />
-                              {service.avgDuration} min
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              {service.avg_duration} min
                             </div>
                           </TableCell>
                         </TableRow>
@@ -547,41 +706,37 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          {/* Samagri Tab */}
           <TabsContent value="samagri" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Samagri Inventory Analytics</CardTitle>
-                <CardDescription>Stock levels and consumption tracking</CardDescription>
+                <CardTitle className="text-lg">Samagri usage</CardTitle>
+                <CardDescription>
+                  {report?.samagri_bookings ?? 0} bookings in this period included a samagri kit
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {samagriLoading ? (
-                  <div className="flex items-center justify-center h-48">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
+                {!report?.samagri.length ? (
+                  <Empty text="No samagri items on file yet." />
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Item</TableHead>
-                        <TableHead className="text-right">Stock</TableHead>
-                        <TableHead className="text-right">Consumed</TableHead>
-                        <TableHead className="text-right">Reorder Level</TableHead>
+                        <TableHead className="text-right">Bookings used</TableHead>
+                        <TableHead className="text-right">Times listed</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {samagriAnalytics.map((item: any) => (
+                      {report.samagri.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="text-right">{item.stock} {item.unit}</TableCell>
-                          <TableCell className="text-right">{item.consumed} {item.unit}</TableCell>
-                          <TableCell className="text-right">{item.reorderLevel} {item.unit}</TableCell>
+                          <TableCell className="font-medium">
+                            {item.name} <span className="text-muted-foreground text-xs">({item.unit})</span>
+                          </TableCell>
+                          <TableCell className="text-right">{item.bookings}</TableCell>
+                          <TableCell className="text-right">{item.consumed}</TableCell>
                           <TableCell>
-                            <Badge className={getStockStatus(item.status)}>
-                              {item.status === 'Critical' && <AlertTriangle className="w-3 h-3 mr-1" />}
-                              {item.status}
-                            </Badge>
+                            <Badge className={statusColor[item.status] || statusColor.OK}>{item.status}</Badge>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -592,72 +747,58 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          {/* Payment Tab */}
           <TabsContent value="payment" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">GMV</p>
-                  <p className="text-xl font-bold text-foreground">
-                    {paymentLoading ? "..." : formatCurrency(paymentAnalytics.gmv)}
-                  </p>
+                  <p className="text-sm text-muted-foreground">GMV</p>
+                  <p className="text-xl font-bold">{rupees(report?.payments.gmv || 0)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">Commissions</p>
-                  <p className="text-xl font-bold text-green-600">
-                    {paymentLoading ? "..." : formatCurrency(paymentAnalytics.commissions)}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Platform fee</p>
+                  <p className="text-xl font-bold text-green-600">{rupees(report?.payments.commissions || 0)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">Priest Payouts</p>
-                  <p className="text-xl font-bold text-foreground">
-                    {paymentLoading ? "..." : formatCurrency(paymentAnalytics.priestPayouts)}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Pujari payouts</p>
+                  <p className="text-xl font-bold">{rupees(report?.payments.priest_payouts || 0)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">Pending</p>
-                  <p className="text-xl font-bold text-yellow-600">
-                    {paymentLoading ? "..." : formatCurrency(paymentAnalytics.pendingSettlements)}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Pending settle</p>
+                  <p className="text-xl font-bold text-yellow-600">{rupees(report?.payments.pending_settlements || 0)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-gray-500">Refunds</p>
-                  <p className="text-xl font-bold text-red-600">
-                    {paymentLoading ? "..." : formatCurrency(paymentAnalytics.refunds)}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Refunds</p>
+                  <p className="text-xl font-bold text-red-600">{rupees(report?.payments.refunds || 0)}</p>
                 </CardContent>
               </Card>
             </div>
-
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Payment Method Breakdown</CardTitle>
+                <CardTitle className="text-lg">Payment method breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                {paymentLoading ? (
-                  <div className="flex items-center justify-center h-32">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
+                {!report?.payments.by_method.length ? (
+                  <Empty text="No payments in this period." />
                 ) : (
                   <div className="space-y-4">
-                    {paymentAnalytics.byMethod.map((method: any, index: number) => (
-                      <div key={index} className="space-y-2">
+                    {report.payments.by_method.map((method) => (
+                      <div key={method.method} className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="font-medium">{method.method || 'Other'}</span>
-                          <span className="text-gray-500">
-                            {formatCurrency(method.amount)} ({method.percentage}%)
+                          <span className="font-medium">{method.method}</span>
+                          <span className="text-muted-foreground">
+                            {rupees(method.amount_paise)} ({method.percentage}%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-3">
-                          <div 
+                        <div className="w-full bg-muted rounded-full h-3">
+                          <div
                             className="h-full bg-gradient-to-r from-sidebar to-primary rounded-full"
                             style={{ width: `${method.percentage}%` }}
                           />

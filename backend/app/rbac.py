@@ -48,6 +48,7 @@ DEFAULT_ADMIN_PERMISSIONS = [
     "view_bookings",
     "manage_bookings",
     "manage_support",
+    "view_reports",
 ]
 
 
