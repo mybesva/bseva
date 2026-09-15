@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PujariPortal } from "@/components/RolePortals";
+import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,6 +48,8 @@ function statusBadge(status: OfferService["status"], checked: boolean) {
 }
 
 export default function PujariServicesPage() {
+  const { active: onboardingActive } = usePujariOnboardingGate("services");
+  const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
   const [data, setData] = useState<OffersPayload | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
@@ -161,10 +164,10 @@ export default function PujariServicesPage() {
     });
   }
 
-  async function save() {
-    if (newSelectionCount === 0) {
-      toast.message("Select at least one new puja to submit");
-      return;
+  async function persistServiceSelection(): Promise<boolean> {
+    if (selected.size === 0) {
+      toast.error("Select at least one puja service");
+      return false;
     }
     setSaving(true);
     try {
@@ -174,16 +177,28 @@ export default function PujariServicesPage() {
       });
       setData(out);
       setSelected(new Set(out.services.filter((s) => s.selected || s.locked).map((s) => s.id)));
-      toast.success(
-        out.pending_count > 0
-          ? "Submitted for admin approval — selected pujas are locked until Admin decides"
-          : "Saved"
-      );
+      if (!onboardingActive) {
+        toast.success(
+          out.pending_count > 0
+            ? "Submitted for admin approval — selected pujas are locked until Admin decides"
+            : "Saved",
+        );
+      }
+      return true;
     } catch (err: any) {
       toast.error(err.message || "Could not save");
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function save() {
+    if (newSelectionCount === 0) {
+      toast.message("Select at least one new puja to submit");
+      return;
+    }
+    await persistServiceSelection();
   }
 
   if (loading && !data) {
@@ -243,18 +258,20 @@ export default function PujariServicesPage() {
                 )}
               </p>
             </div>
-            <Button
-              type="button"
-              className="shrink-0 w-full sm:w-auto"
-              disabled={saving || newSelectionCount === 0}
-              onClick={() => void save()}
-            >
-              {saving
-                ? "Submitting…"
-                : newSelectionCount > 0
-                  ? `Submit ${newSelectionCount} for review`
-                  : "Submit pujas for review"}
-            </Button>
+            {!onboardingActive ? (
+              <Button
+                type="button"
+                className="shrink-0 w-full sm:w-auto"
+                disabled={saving || newSelectionCount === 0}
+                onClick={() => void save()}
+              >
+                {saving
+                  ? "Submitting…"
+                  : newSelectionCount > 0
+                    ? `Submit ${newSelectionCount} for review`
+                    : "Submit pujas for review"}
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -262,6 +279,9 @@ export default function PujariServicesPage() {
           {data.note ||
             "All BSeva catalog pujas are listed by section. Select new ones and submit for approval. Locked selections cannot be edited — only Admin can remove access."}
         </p>
+        {walkthroughErrors.services ? (
+          <p className="text-sm text-red-600 font-medium">{walkthroughErrors.services}</p>
+        ) : null}
 
         <Input
           value={q}
@@ -334,6 +354,14 @@ export default function PujariServicesPage() {
             ))
           )}
         </div>
+
+        <PujariOnboardingWalkthrough
+          page="services"
+          saving={saving}
+          fieldErrors={walkthroughErrors}
+          onFieldErrors={setWalkthroughErrors}
+          beforeContinue={persistServiceSelection}
+        />
       </div>
     </PujariPortal>
   );

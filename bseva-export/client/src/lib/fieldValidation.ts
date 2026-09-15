@@ -1,5 +1,11 @@
 /** Shared client-side validators mirroring backend/app/validation_rules.py */
 
+import { validatePersonNameParts } from "@/lib/personName";
+import { validatePhoneNational } from "@/lib/phone";
+
+export const PUJARI_QUALIFICATION_YEAR_MIN = 1950;
+export const PUJARI_EXPERIENCE_MAX = 80;
+
 const MOBILE_RE = /^(?:\+?91[-\s]?|0)?([6-9]\d{9})$/;
 const PIN_RE = /^\d{6}$/;
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
@@ -87,6 +93,106 @@ export function validateBank(v: {
   } else if (!/^\d{4}$/.test(String(v.last4 || "").trim())) {
     errors.last4 = "Enter exactly 4 account digits";
   }
+  return errors;
+}
+
+export function validateQualificationYear(
+  raw: unknown,
+  yearNow = new Date().getFullYear(),
+): string | undefined {
+  if (raw === "" || raw == null) return "Qualification year is required";
+  const y = Number(raw);
+  if (!Number.isFinite(y) || !Number.isInteger(y)) return "Enter a valid year";
+  if (y < PUJARI_QUALIFICATION_YEAR_MIN) {
+    return `Year must be ${PUJARI_QUALIFICATION_YEAR_MIN} or later`;
+  }
+  if (y > yearNow) return "Qualification year cannot be in the future";
+  return undefined;
+}
+
+export function validateExperienceYears(raw: unknown): string | undefined {
+  if (raw === "" || raw == null || (typeof raw === "string" && !String(raw).trim())) {
+    return "Years of experience is required";
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return "Enter a valid number of years";
+  if (n < 0) return "Experience cannot be negative";
+  if (n > PUJARI_EXPERIENCE_MAX) return `Experience cannot exceed ${PUJARI_EXPERIENCE_MAX} years`;
+  return undefined;
+}
+
+export function validatePujariLanguages(langs: string[] | undefined): string | undefined {
+  if (!langs?.length) return "Select at least one language";
+  return undefined;
+}
+
+export type PujariProfileFormInput = {
+  profile_photo_path?: string | null;
+  hasPhotoUrl?: boolean;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  countryCode?: string;
+  phoneNational?: string;
+  gotra?: string;
+  pravara?: string;
+  qualifications?: string[];
+  qualification_year?: unknown;
+  sampradaya?: string;
+  experience_years?: unknown;
+  languages?: string[];
+};
+
+export function validatePujariProfileForm(
+  input: PujariProfileFormInput,
+  opts?: { minLastLength?: number; yearNow?: number },
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const yearNow = opts?.yearNow ?? new Date().getFullYear();
+
+  if (!input.profile_photo_path && !input.hasPhotoUrl) {
+    errors.profile_photo_path = "Profile photo is required";
+  }
+
+  Object.assign(
+    errors,
+    validatePersonNameParts(
+      {
+        first_name: String(input.first_name ?? ""),
+        middle_name: String(input.middle_name ?? ""),
+        last_name: String(input.last_name ?? ""),
+      },
+      { minLastLength: opts?.minLastLength ?? 3 },
+    ),
+  );
+
+  const dob = String(input.date_of_birth || "").trim();
+  if (!dob) errors.date_of_birth = "Date of birth is required";
+  else if (!isValidPujariDob(dob)) {
+    errors.date_of_birth = "You must be at least 18 years old (date cannot be in the future)";
+  }
+
+  const phoneErr = validatePhoneNational(input.countryCode || "+91", input.phoneNational || "");
+  if (phoneErr) errors.mobile_number = phoneErr;
+
+  if (!String(input.gotra || "").trim()) errors.gotra = "Gotra is required";
+  if (!String(input.pravara || "").trim()) errors.pravara = "Pravara is required";
+
+  const quals = input.qualifications || [];
+  if (quals.length === 0) errors.qualifications = "Select at least one qualification";
+
+  const qyErr = validateQualificationYear(input.qualification_year, yearNow);
+  if (qyErr) errors.qualification_year = qyErr;
+
+  if (!String(input.sampradaya || "").trim()) errors.sampradaya = "Sampradaya is required";
+
+  const expErr = validateExperienceYears(input.experience_years);
+  if (expErr) errors.experience_years = expErr;
+
+  const langErr = validatePujariLanguages(input.languages);
+  if (langErr) errors.languages = langErr;
+
   return errors;
 }
 

@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { PujariPortal } from "@/components/RolePortals";
+import PujariOnboardingWalkthrough from "@/components/PujariOnboardingWalkthrough";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/i18n/I18nProvider";
 import PriestOnboardingPanel from "@/components/PriestOnboardingPanel";
 
 export default function PujariDocumentsPage() {
   const { t } = useI18n();
+  const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
 
   return (
     <PujariPortal>
@@ -22,6 +25,11 @@ export default function PujariDocumentsPage() {
           </CardContent>
         </Card>
         <PriestOnboardingPanel />
+        <PujariOnboardingWalkthrough
+          page="documents"
+          fieldErrors={walkthroughErrors}
+          onFieldErrors={setWalkthroughErrors}
+        />
       </div>
     </PujariPortal>
   );

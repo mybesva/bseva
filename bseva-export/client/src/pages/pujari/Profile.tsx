@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useSearch } from "wouter";
+import { useSearch } from "wouter";
+import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { PujariPortal } from "@/components/RolePortals";
 import SignaturePad from "@/components/SignaturePad";
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { api, pujariMediaUrl, uploadPujariAsset } from "@/lib/api";
-import { parsePhoneParts, toE164, validatePhoneNational } from "@/lib/phone";
+import { parsePhoneParts, toE164 } from "@/lib/phone";
 import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import PersonNameFields from "@/components/PersonNameFields";
-import { isValidPujariDob } from "@/lib/fieldValidation";
-import { splitDisplayName, validatePersonNameParts, type PersonNameParts } from "@/lib/personName";
+import {
+  PUJARI_EXPERIENCE_MAX,
+  PUJARI_QUALIFICATION_YEAR_MIN,
+  validatePujariProfileForm,
+} from "@/lib/fieldValidation";
+import { cn } from "@/lib/utils";
+import { splitDisplayName, type PersonNameParts } from "@/lib/personName";
+
+function RequiredMark() {
+  return <span className="text-red-600 font-semibold"> *</span>;
+}
 
 const QUALS = [
   { id: "panchadasha", key: "pujari.q1" },
@@ -28,6 +38,8 @@ const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil",
 
 function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
   const { t } = useI18n();
+  const { active: onboardingActive } = usePujariOnboardingGate("profile");
+  const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
   const [profile, setProfile] = useState<any>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [signUrl, setSignUrl] = useState<string | null>(null);
@@ -55,6 +67,13 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#professional") {
+      document.getElementById("professional")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [profile]);
 
   function setField(key: string, value: unknown) {
     setProfile((prev: any) => ({ ...prev, [key]: value }));
@@ -92,77 +111,94 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
   }
 
   function validateForm(): Record<string, string> {
-    const errors: Record<string, string> = {};
-    if (!profile?.profile_photo_path && !photoUrl) {
-      errors.profile_photo_path = "Profile photo is required";
-    }
-    Object.assign(errors, validatePersonNameParts(collectNameParts(), { minLastLength: 3 }));
-    const dob = String(profile.date_of_birth || "").trim();
-    if (!dob) errors.date_of_birth = "Date of birth is required";
-    else if (!isValidPujariDob(dob)) {
-      errors.date_of_birth = "You must be at least 18 years old (date cannot be in the future)";
-    }
-    const phoneErr = validatePhoneNational(countryCode, phoneNational);
-    if (phoneErr) errors.mobile_number = phoneErr;
-    if (!String(profile.gotra || "").trim()) errors.gotra = "Gotra is required";
-    if (!String(profile.pravara || "").trim()) errors.pravara = "Pravara is required";
-    const quals: string[] = profile.qualifications || [];
-    if (quals.length === 0) errors.qualifications = "Select at least one qualification";
-    if (!profile.qualification_year) errors.qualification_year = "Qualification year is required";
-    if (!String(profile.sampradaya || "").trim()) errors.sampradaya = "Sampradaya is required";
-    return errors;
+    const parts = collectNameParts();
+    return validatePujariProfileForm(
+      {
+        profile_photo_path: profile?.profile_photo_path,
+        hasPhotoUrl: !!photoUrl,
+        ...parts,
+        date_of_birth: profile?.date_of_birth,
+        countryCode,
+        phoneNational,
+        gotra: profile?.gotra,
+        pravara: profile?.pravara,
+        qualifications: profile?.qualifications || [],
+        qualification_year: profile?.qualification_year,
+        sampradaya: profile?.sampradaya,
+        experience_years: profile?.experience_years,
+        languages: profile?.languages || [],
+      },
+      { minLastLength: 3, yearNow },
+    );
   }
 
-  async function save(e?: React.FormEvent) {
+  function buildProfilePatchBody(): Record<string, unknown> {
+    const present = sameAddr ? profile.permanent_address : profile.present_address;
+    const nameParts: PersonNameParts = {
+      first_name: String(profile.first_name ?? "").trim() || splitDisplayName(profile.full_name).first_name,
+      middle_name: String(profile.middle_name ?? "").trim(),
+      last_name: String(profile.last_name ?? "").trim() || splitDisplayName(profile.full_name).last_name,
+    };
+    const body: Record<string, unknown> = {
+      first_name: nameParts.first_name.trim(),
+      middle_name: nameParts.middle_name.trim() || null,
+      last_name: nameParts.last_name.trim(),
+      father_name: profile.father_name ?? null,
+      gotra: String(profile.gotra || "").trim() || null,
+      pravara: String(profile.pravara || "").trim() || null,
+      date_of_birth: String(profile.date_of_birth || "").trim().slice(0, 10) || null,
+      native_place: profile.native_place ?? null,
+      permanent_address: profile.permanent_address ?? null,
+      present_address: present ?? null,
+      experience_years: profile.experience_years ? Number(profile.experience_years) : null,
+      qualifications: profile.qualifications || [],
+      qualification_year: profile.qualification_year ? Number(profile.qualification_year) : null,
+      sampradaya: profile.sampradaya || null,
+      languages: profile.languages || [],
+      website_publication_consent: !!profile.website_publication_consent,
+    };
+    if (phoneNational.trim()) {
+      const mobile = toE164(countryCode, phoneNational);
+      body.mobile_number = mobile;
+      body.whatsapp_number = sameWa ? mobile : profile.whatsapp_number ?? null;
+    } else if (!sameWa && profile.whatsapp_number) {
+      body.whatsapp_number = profile.whatsapp_number;
+    }
+    return body;
+  }
+
+  /** Saves whatever is on the form — used during onboarding before step validation. */
+  async function persistProfileDraft(): Promise<boolean> {
+    if (!profile) return false;
+    setSaving(true);
+    try {
+      await api("/pujari/profile", {
+        method: "PATCH",
+        body: JSON.stringify(buildProfilePatchBody()),
+      });
+      await load();
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || "Could not save");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function save(e?: React.FormEvent): Promise<boolean> {
     e?.preventDefault();
-    if (!profile) return;
+    if (!profile) return false;
     const errors = validateForm();
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
       toast.error("Please fill the required fields marked in red");
-      return;
+      return false;
     }
-    setSaving(true);
-    try {
-      const mobile = toE164(countryCode, phoneNational);
-      const present = sameAddr ? profile.permanent_address : profile.present_address;
-      const wa = sameWa ? mobile : profile.whatsapp_number;
-      const nameParts: PersonNameParts = {
-        first_name: String(profile.first_name ?? "").trim() || splitDisplayName(profile.full_name).first_name,
-        middle_name: String(profile.middle_name ?? "").trim(),
-        last_name: String(profile.last_name ?? "").trim() || splitDisplayName(profile.full_name).last_name,
-      };
-      await api("/pujari/profile", {
-        method: "PATCH",
-        body: JSON.stringify({
-          first_name: nameParts.first_name.trim(),
-          middle_name: nameParts.middle_name.trim() || null,
-          last_name: nameParts.last_name.trim(),
-          father_name: profile.father_name,
-          gotra: String(profile.gotra || "").trim(),
-          pravara: String(profile.pravara || "").trim(),
-          date_of_birth: profile.date_of_birth || null,
-          native_place: profile.native_place,
-          permanent_address: profile.permanent_address,
-          present_address: present,
-          mobile_number: mobile,
-          whatsapp_number: wa,
-          experience_years: profile.experience_years ? Number(profile.experience_years) : null,
-          qualifications: profile.qualifications || [],
-          qualification_year: profile.qualification_year ? Number(profile.qualification_year) : null,
-          sampradaya: profile.sampradaya || null,
-          languages: profile.languages || [],
-          website_publication_consent: !!profile.website_publication_consent,
-        }),
-      });
-      setFieldErrors({});
-      toast.success(t("common.save"));
-      await load();
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSaving(false);
-    }
+    if (!(await persistProfileDraft())) return false;
+    setFieldErrors({});
+    toast.success(t("common.save"));
+    return true;
   }
 
   if (!profile) return <p className="text-muted-foreground">{t("common.loading")}</p>;
@@ -182,17 +218,20 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
     (profile.verification_status === "approved" && (!!profile.profile_submitted_at || pct >= 100));
 
   return (
-    <form className="space-y-8" onSubmit={save} noValidate>
-      {setupBanner ? (
-        <div className="rounded-md border border-primary/30 bg-orange-50/60 px-3 py-3 text-sm space-y-2">
-          <p className="font-medium text-foreground">Welcome — complete your profile once here</p>
+    <form
+      className="space-y-8"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (onboardingActive) return;
+        void save(e);
+      }}
+      noValidate
+    >
+      {setupBanner && !onboardingActive ? (
+        <div className="rounded-md border border-primary/30 bg-orange-50/60 px-3 py-3 text-sm">
           <p className="text-muted-foreground">
-            Add photo, date of birth, Gotra, Pravara, qualifications, and the rest below, then tap Save. After that,
-            open <strong>Complete Profile</strong> in the menu to finish onboarding steps (address, documents, bank).
+            Fill in your details below. Use <strong>Save &amp; next</strong> at the bottom when this step is complete.
           </p>
-          <Button type="button" size="sm" variant="outline" asChild>
-            <Link href="/pujari/onboarding">Go to Complete Profile</Link>
-          </Button>
         </div>
       ) : null}
       <ErrorSummary />
@@ -224,7 +263,10 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
       <section className="space-y-4">
         <h2 className="text-xl">{t("pujari.personal")}</h2>
         <div>
-          <Label className={fieldErrors.profile_photo_path ? "text-red-600" : undefined}>{t("pujari.photo")}</Label>
+          <Label className={fieldErrors.profile_photo_path ? "text-red-600" : undefined}>
+            {t("pujari.photo")}
+            <RequiredMark />
+          </Label>
           {photoUrl && <img src={photoUrl} alt="" className="mt-2 h-28 w-28 object-cover rounded-md border" />}
           <div className="flex gap-2 mt-2">
             <label className="text-sm">
@@ -311,7 +353,10 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             <Input value={profile.father_name || ""} onChange={(e) => setField("father_name", e.target.value)} />
           </div>
           <div>
-            <Label className={fieldErrors.date_of_birth ? "text-red-600" : undefined}>{t("pujari.dob")} *</Label>
+            <Label className={fieldErrors.date_of_birth ? "text-red-600" : undefined}>
+              {t("pujari.dob")}
+              <RequiredMark />
+            </Label>
             <Input
               type="date"
               className={errClass("date_of_birth")}
@@ -350,9 +395,19 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
           />
         </div>
 
-        <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
+        <div
+          className={cn(
+            "rounded-lg border-2 p-4 space-y-3",
+            fieldErrors.gotra || fieldErrors.pravara
+              ? "border-red-500 bg-red-50/40"
+              : "border-primary/30 bg-orange-50/50",
+          )}
+        >
           <div>
-            <h3 className="font-semibold text-foreground">Gotra &amp; Pravara *</h3>
+            <h3 className={cn("font-semibold text-foreground", (fieldErrors.gotra || fieldErrors.pravara) && "text-red-600")}>
+              Gotra &amp; Pravara
+              <RequiredMark />
+            </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Enter your family Gotra and Pravara (rishi lineage). Both are required for verification.
             </p>
@@ -360,7 +415,8 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="pujari-gotra" className={fieldErrors.gotra ? "text-red-600" : undefined}>
-                {t("pujari.gotra")} *
+                {t("pujari.gotra")}
+                <RequiredMark />
               </Label>
               <Input
                 id="pujari-gotra"
@@ -381,7 +437,8 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             </div>
             <div>
               <Label htmlFor="pujari-pravara" className={fieldErrors.pravara ? "text-red-600" : undefined}>
-                {t("pujari.pravara")} *
+                {t("pujari.pravara")}
+                <RequiredMark />
               </Label>
               <Input
                 id="pujari-pravara"
@@ -440,10 +497,20 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
       </section>
 
       <section
-        className={`space-y-3 rounded-md p-2 ${fieldErrors.qualifications ? "border border-red-500" : ""}`}
+        id="professional"
+        className={cn(
+          "space-y-3 rounded-md p-2",
+          (fieldErrors.qualifications || fieldErrors.qualification_year) && "border border-red-500 bg-red-50/30",
+        )}
       >
-        <h2 className={`text-xl ${fieldErrors.qualifications ? "text-red-600" : ""}`}>
-          {t("pujari.qualification")} *
+        <h2
+          className={cn(
+            "text-xl",
+            (fieldErrors.qualifications || fieldErrors.qualification_year) && "text-red-600",
+          )}
+        >
+          {t("pujari.qualification")}
+          <RequiredMark />
         </h2>
         {QUALS.map((q) => (
           <label key={q.id} className="flex items-center gap-2 text-sm">
@@ -452,6 +519,14 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
               onCheckedChange={(v) => {
                 const next = v ? [...quals, q.id] : quals.filter((x) => x !== q.id);
                 setField("qualifications", next);
+                if (next.length) {
+                  setFieldErrors((prev) => {
+                    if (!prev.qualifications) return prev;
+                    const copy = { ...prev };
+                    delete copy.qualifications;
+                    return copy;
+                  });
+                }
               }}
             />
             {t(q.key)}
@@ -462,16 +537,21 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
         ) : null}
         <div className="max-w-xs">
           <Label className={fieldErrors.qualification_year ? "text-red-600" : undefined}>
-            {t("pujari.year")} *
+            {t("pujari.year")}
+            <RequiredMark />
           </Label>
           <Input
             type="number"
-            min={1950}
+            min={PUJARI_QUALIFICATION_YEAR_MIN}
             max={yearNow}
             className={errClass("qualification_year")}
             value={profile.qualification_year || ""}
             onChange={(e) => setField("qualification_year", e.target.value)}
+            placeholder={String(yearNow)}
           />
+          <p className="text-xs text-muted-foreground">
+            Enter a year from {PUJARI_QUALIFICATION_YEAR_MIN} to {yearNow}
+          </p>
           {fieldErrors.qualification_year ? (
             <p className="text-xs text-red-600 mt-1">{fieldErrors.qualification_year}</p>
           ) : null}
@@ -479,9 +559,12 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
       </section>
 
       <section
-        className={`space-y-3 rounded-md p-2 ${fieldErrors.sampradaya ? "border border-red-500" : ""}`}
+        className={cn("space-y-3 rounded-md p-2", fieldErrors.sampradaya && "border border-red-500 bg-red-50/30")}
       >
-        <h2 className={`text-xl ${fieldErrors.sampradaya ? "text-red-600" : ""}`}>{t("pujari.sampradaya")} *</h2>
+        <h2 className={cn("text-xl", fieldErrors.sampradaya && "text-red-600")}>
+          {t("pujari.sampradaya")}
+          <RequiredMark />
+        </h2>
         {(["smartha", "madhwa", "vaishnava"] as const).map((s) => (
           <label key={s} className="flex items-center gap-2 text-sm">
             <input
@@ -496,31 +579,75 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
         {fieldErrors.sampradaya ? <p className="text-xs text-red-600">{fieldErrors.sampradaya}</p> : null}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl">Experience &amp; languages</h2>
-        <p className="text-sm text-muted-foreground">
-          Years of experience and languages are saved here only — not on a separate page.
-        </p>
+      <section
+        className={cn(
+          "space-y-3 rounded-md p-2",
+          (fieldErrors.experience_years || fieldErrors.languages) && "border border-red-500 bg-red-50/30",
+        )}
+      >
+        <h2
+          className={cn(
+            "text-xl",
+            (fieldErrors.experience_years || fieldErrors.languages) && "text-red-600",
+          )}
+        >
+          Experience &amp; languages
+          <RequiredMark />
+        </h2>
         <div className="max-w-xs">
-          <Label>Years of experience</Label>
+          <Label className={fieldErrors.experience_years ? "text-red-600" : undefined}>
+            Years of experience
+            <RequiredMark />
+          </Label>
           <Input
             type="number"
             min={0}
-            max={80}
+            max={PUJARI_EXPERIENCE_MAX}
+            className={errClass("experience_years")}
             value={profile.experience_years ?? ""}
             onChange={(e) => setField("experience_years", e.target.value)}
+            placeholder="e.g. 5"
           />
+          {fieldErrors.experience_years ? (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.experience_years}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">0–{PUJARI_EXPERIENCE_MAX} years</p>
+          )}
         </div>
         <div className="space-y-2">
-          <Label>Languages</Label>
-          <div className="flex flex-wrap gap-3">
+          <Label className={fieldErrors.languages ? "text-red-600" : undefined}>
+            Languages
+            <RequiredMark />
+          </Label>
+          <div
+            className={cn(
+              "flex flex-wrap gap-3 rounded-md p-2",
+              fieldErrors.languages && "border border-red-400",
+            )}
+          >
             {LANG_OPTS.map((l) => (
               <label key={l} className="flex items-center gap-2 text-sm">
-                <Checkbox checked={langs.includes(l)} onCheckedChange={(v) => toggleLanguage(l, !!v)} />
+                <Checkbox
+                  checked={langs.includes(l)}
+                  onCheckedChange={(v) => {
+                    toggleLanguage(l, !!v);
+                    if (v) {
+                      setFieldErrors((prev) => {
+                        if (!prev.languages) return prev;
+                        const copy = { ...prev };
+                        delete copy.languages;
+                        return copy;
+                      });
+                    }
+                  }}
+                />
                 {l}
               </label>
             ))}
           </div>
+          {fieldErrors.languages ? (
+            <p className="text-xs text-red-600">{fieldErrors.languages}</p>
+          ) : null}
         </div>
       </section>
 
@@ -548,9 +675,22 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
         />
       </section>
 
-      <Button type="submit" disabled={saving}>
-        {t("common.save")}
-      </Button>
+      {!onboardingActive ? (
+        <Button type="submit" disabled={saving}>
+          {t("common.save")}
+        </Button>
+      ) : null}
+
+      <PujariOnboardingWalkthrough
+        page="profile"
+        saving={saving}
+        fieldErrors={walkthroughErrors}
+        onFieldErrors={(errs) => {
+          setWalkthroughErrors(errs);
+          setFieldErrors(errs);
+        }}
+        beforeContinue={persistProfileDraft}
+      />
     </form>
   );
 }

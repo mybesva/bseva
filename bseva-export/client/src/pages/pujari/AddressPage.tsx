@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PujariPortal } from "@/components/RolePortals";
 import AddressFields, { type AddressValue } from "@/components/AddressFields";
+import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
@@ -21,9 +22,11 @@ const empty: AddressValue = {
 };
 
 export default function PujariAddressPage() {
+  const { active: onboardingActive } = usePujariOnboardingGate("address");
   const [value, setValue] = useState<AddressValue>(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     api<any>("/pujari/profile")
@@ -45,13 +48,7 @@ export default function PujariAddressPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validateAddress(value);
-    if (Object.keys(errs).length) {
-      toast.error(Object.values(errs)[0]);
-      return;
-    }
+  async function persistAddressDraft(): Promise<boolean> {
     setSaving(true);
     try {
       await api("/pujari/profile", {
@@ -63,12 +60,30 @@ export default function PujariAddressPage() {
             .join(", "),
         }),
       });
-      toast.success("Address saved");
+      return true;
     } catch (err: any) {
       toast.error(err.message);
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveAddress(): Promise<boolean> {
+    const errs = validateAddress(value);
+    if (Object.keys(errs).length) {
+      toast.error(Object.values(errs)[0]);
+      return false;
+    }
+    if (!(await persistAddressDraft())) return false;
+    toast.success("Address saved");
+    return true;
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (onboardingActive) return;
+    await saveAddress();
   }
 
   return (
@@ -83,9 +98,18 @@ export default function PujariAddressPage() {
           ) : (
             <form className="space-y-6" onSubmit={save}>
               <AddressFields value={value} onChange={setValue} />
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
+              {!onboardingActive ? (
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              ) : null}
+              <PujariOnboardingWalkthrough
+                page="address"
+                saving={saving}
+                fieldErrors={walkthroughErrors}
+                onFieldErrors={setWalkthroughErrors}
+                beforeContinue={persistAddressDraft}
+              />
             </form>
           )}
         </CardContent>

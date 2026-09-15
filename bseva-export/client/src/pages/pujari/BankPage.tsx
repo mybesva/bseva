@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { api } from "@/lib/api";
 import { validateBank } from "@/lib/fieldValidation";
 import { toast } from "sonner";
@@ -18,12 +19,14 @@ type BankDraft = {
 const empty: BankDraft = { holder: "", ifsc: "", accountNumber: "", accountConfirm: "" };
 
 export default function PujariBankPage() {
+  const { active: onboardingActive } = usePujariOnboardingGate("bank");
   const [draft, setDraft] = useState<BankDraft>(empty);
   const [baseline, setBaseline] = useState<BankDraft>(empty);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     api<any>("/pujari/profile")
@@ -37,11 +40,14 @@ export default function PujariBankPage() {
         };
         setDraft(next);
         setBaseline(next);
-        setEditing(false);
+        const hasBank = !!(next.holder.trim() && next.ifsc.trim() && acct);
+        setEditing(!hasBank);
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const inputsEnabled = onboardingActive || editing;
 
   const dirty = useMemo(
     () =>
@@ -62,9 +68,12 @@ export default function PujariBankPage() {
     setEditing(false);
   }
 
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editing || !dirty) return;
+  async function persistBankDraft(): Promise<boolean> {
+    const digits = draft.accountNumber.replace(/\D/g, "");
+    if (!draft.holder.trim() && !draft.ifsc.trim() && !digits) return true;
+    if (!draft.holder.trim() || !draft.ifsc.trim() || !digits || draft.accountConfirm.replace(/\D/g, "") !== digits) {
+      return true;
+    }
     const errs = validateBank({
       holder: draft.holder,
       ifsc: draft.ifsc,
@@ -74,7 +83,7 @@ export default function PujariBankPage() {
     setErrors(errs);
     if (Object.keys(errs).length) {
       toast.error("Please fill all mandatory bank fields correctly");
-      return;
+      return false;
     }
     setSaving(true);
     try {
@@ -97,14 +106,50 @@ export default function PujariBankPage() {
       };
       setDraft(saved);
       setBaseline(saved);
-      setEditing(false);
+      setEditing(onboardingActive);
       setErrors({});
-      toast.success("Bank details saved");
+      if (!onboardingActive) toast.success("Bank details saved");
+      return true;
     } catch (err: any) {
       toast.error(err.message || "Could not save bank details");
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function persistBank(): Promise<boolean> {
+    if (!editing) {
+      const hasBank =
+        baseline.holder.trim() &&
+        baseline.ifsc.trim() &&
+        baseline.accountNumber.replace(/\D/g, "");
+      if (!hasBank) {
+        toast.error("Enter bank details below");
+        return false;
+      }
+      return true;
+    }
+    if (!dirty) return true;
+    const errs = validateBank({
+      holder: draft.holder,
+      ifsc: draft.ifsc,
+      accountNumber: draft.accountNumber,
+      accountConfirm: draft.accountConfirm,
+    });
+    setErrors(errs);
+    if (Object.keys(errs).length) {
+      toast.error("Please fill all mandatory bank fields correctly");
+      return false;
+    }
+    return persistBankDraft();
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (onboardingActive) return;
+    if (!(await persistBank())) return;
+    toast.success("Bank details saved");
   }
 
   return (
@@ -123,7 +168,7 @@ export default function PujariBankPage() {
                 <Input
                   value={draft.holder}
                   onChange={(e) => setField("holder", e.target.value)}
-                  disabled={!editing}
+                  disabled={!inputsEnabled}
                   required
                 />
                 {errors.holder && <p className="text-sm text-destructive">{errors.holder}</p>}
@@ -134,7 +179,7 @@ export default function PujariBankPage() {
                   value={draft.ifsc}
                   onChange={(e) => setField("ifsc", e.target.value.toUpperCase())}
                   maxLength={11}
-                  disabled={!editing}
+                  disabled={!inputsEnabled}
                   required
                 />
                 {errors.ifsc && <p className="text-sm text-destructive">{errors.ifsc}</p>}
@@ -146,7 +191,7 @@ export default function PujariBankPage() {
                   onChange={(e) => setField("accountNumber", e.target.value.replace(/\D/g, "").slice(0, 18))}
                   inputMode="numeric"
                   autoComplete="off"
-                  disabled={!editing}
+                  disabled={!inputsEnabled}
                   required
                 />
                 {errors.accountNumber && <p className="text-sm text-destructive">{errors.accountNumber}</p>}
@@ -158,27 +203,44 @@ export default function PujariBankPage() {
                   onChange={(e) => setField("accountConfirm", e.target.value.replace(/\D/g, "").slice(0, 18))}
                   inputMode="numeric"
                   autoComplete="off"
-                  disabled={!editing}
+                  disabled={!inputsEnabled}
                   required
                 />
                 {errors.accountConfirm && (
                   <p className="text-sm text-destructive">{errors.accountConfirm}</p>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {!editing ? (
-                  <Button type="button" variant="outline" onClick={() => setEditing(true)}>
-                    Edit
+              {!onboardingActive ? (
+                <div className="flex flex-wrap gap-2">
+                  {!editing ? (
+                    <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+                      Edit
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
+                      Cancel
+                    </Button>
+                  )}
+                  <Button type="submit" disabled={saving || !editing || !dirty}>
+                    {saving ? "Saving…" : "Save"}
                   </Button>
-                ) : (
-                  <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
-                    Cancel
-                  </Button>
-                )}
-                <Button type="submit" disabled={saving || !editing || !dirty}>
-                  {saving ? "Saving…" : "Save"}
-                </Button>
-              </div>
+                </div>
+              ) : null}
+              <PujariOnboardingWalkthrough
+                page="bank"
+                saving={saving}
+                fieldErrors={walkthroughErrors}
+                onFieldErrors={(errs) => {
+                  setWalkthroughErrors(errs);
+                  setErrors({
+                    holder: errs.bank_holder_name,
+                    ifsc: errs.bank_ifsc,
+                    accountNumber: errs.bank_account_number,
+                    accountConfirm: errs.bank_account_number,
+                  });
+                }}
+                beforeContinue={persistBankDraft}
+              />
             </form>
           )}
         </CardContent>

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { api } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,7 @@ function LegendSwatch({
 }
 
 export default function PujariAvailabilityPage() {
+  const { active: onboardingActive } = usePujariOnboardingGate("availability");
   const [available, setAvailable] = useState(true);
   const [radius, setRadius] = useState("");
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
@@ -77,6 +79,7 @@ export default function PujariAvailabilityPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [blockBusy, setBlockBusy] = useState(false);
+  const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
 
   async function loadBlocks() {
     try {
@@ -110,23 +113,33 @@ export default function PujariAvailabilityPage() {
     return blocks.find((b) => isSameDay(parseISO(b.blocked_date), selectedDate)) || null;
   }, [blocks, selectedDate]);
 
-  async function saveSettings(e: React.FormEvent) {
-    e.preventDefault();
+  async function persistAvailabilityDraft(): Promise<boolean> {
     setSaving(true);
     try {
       await api("/pujari/profile", {
         method: "PATCH",
         body: JSON.stringify({
           available,
-          service_radius_km: radius ? Number(radius) : null,
+          service_radius_km: radius && Number(radius) > 0 ? Number(radius) : null,
         }),
       });
-      toast.success("Availability settings saved");
+      return true;
     } catch (err: any) {
       toast.error(err.message);
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveSettings(e: React.FormEvent) {
+    e.preventDefault();
+    if (onboardingActive) return;
+    if (!radius || Number(radius) <= 0) {
+      toast.error("Enter your service radius (km)");
+      return;
+    }
+    if (await persistAvailabilityDraft()) toast.success("Availability settings saved");
   }
 
   function closeDialog() {
@@ -274,13 +287,22 @@ export default function PujariAvailabilityPage() {
                     <p className="text-xs text-muted-foreground">Maximum distance you are willing to travel for bookings.</p>
                   </div>
 
-                  <Button
-                    type="submit"
-                    disabled={saving}
-                    className="w-full sm:w-auto min-w-[140px] bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
-                  >
-                    {saving ? "Saving…" : "Save settings"}
-                  </Button>
+                  {!onboardingActive ? (
+                    <Button
+                      type="submit"
+                      disabled={saving}
+                      className="w-full sm:w-auto min-w-[140px] bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
+                    >
+                      {saving ? "Saving…" : "Save settings"}
+                    </Button>
+                  ) : null}
+                  <PujariOnboardingWalkthrough
+                    page="availability"
+                    saving={saving}
+                    fieldErrors={walkthroughErrors}
+                    onFieldErrors={setWalkthroughErrors}
+                    beforeContinue={persistAvailabilityDraft}
+                  />
                 </form>
               )}
             </CardContent>
