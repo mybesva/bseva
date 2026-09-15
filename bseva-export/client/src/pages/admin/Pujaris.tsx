@@ -20,11 +20,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { usePujariLevels } from "@/hooks/usePujariLevels";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const emptyForm = { name: "", email: "", phone: "", password: "", requested_level: 2, location: "" };
 
@@ -41,6 +49,26 @@ function parseList(v: unknown): string[] {
   return [];
 }
 
+function verificationBadgeClass(status: string) {
+  switch (status) {
+    case "approved":
+      return "bg-emerald-50 text-emerald-900 border-emerald-200";
+    case "pending":
+    case "under_review":
+      return "bg-amber-50 text-amber-900 border-amber-200";
+    case "correction_required":
+      return "bg-orange-50 text-orange-900 border-orange-200";
+    case "rejected":
+      return "bg-red-50 text-red-900 border-red-200";
+    default:
+      return "bg-secondary text-secondary-foreground";
+  }
+}
+
+function formatVerificationStatus(status: string) {
+  return (status || "—").replace(/_/g, " ");
+}
+
 function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; title: string }[]; onChanged: () => Promise<void> }) {
   const [, setLocation] = useLocation();
   const [level, setLevel] = useState(Number(u.approved_level || u.requested_level || 1));
@@ -51,26 +79,48 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
     setLevel(Number(u.approved_level || u.requested_level || 1));
   }, [u.approved_level, u.requested_level]);
 
-  async function saveLevel() {
+  async function saveLevel(next: number) {
+    setLevel(next);
+    const approved = Number(u.approved_level);
+    if (Number.isFinite(approved) && next === approved) return;
     setSaving(true);
     try {
       await api(`/admin/pujaris/${u.id}/level`, {
         method: "POST",
-        body: JSON.stringify({ approved_level: level }),
+        body: JSON.stringify({ approved_level: next }),
       });
-      toast.success(`${u.name}: approved level ${level}`);
+      toast.success(`Level ${next} saved`);
       await onChanged();
     } catch (e: any) {
       toast.error(e.message);
+      setLevel(Number(u.approved_level || u.requested_level || 1));
     } finally {
       setSaving(false);
     }
   }
 
+  async function setVerification(status: string) {
+    try {
+      await api(`/admin/pujaris/${u.id}/verify`, {
+        method: "POST",
+        body: JSON.stringify({ verification_status: status, approved_level: level }),
+      });
+      toast.success(formatVerificationStatus(status));
+      await onChanged();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
+  const verifiedCount = u.verified_service_count ?? 0;
+  const appliedCount = u.applied_service_count ?? 0;
+  const pendingServices = u.pending_service_review_count ?? 0;
+  const openServices = () => setLocation(adminPath(`/pujaris/${u.id}#services`));
+
   return (
-    <TableRow>
+    <TableRow className="align-top">
       <TableCell className="font-mono text-xs whitespace-nowrap">{u.public_id || "—"}</TableCell>
-      <TableCell>
+      <TableCell className="min-w-[140px]">
         <button
           type="button"
           className="text-left font-medium text-primary hover:underline"
@@ -82,158 +132,140 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
           {u.profile_completion_percentage != null ? `${u.profile_completion_percentage}% profile` : ""}
         </div>
       </TableCell>
-      <TableCell>{u.email}</TableCell>
-      <TableCell>
-        <div className="flex flex-col gap-2 min-w-[220px]">
-          <span className="text-xs text-muted-foreground">Requested: {u.requested_level ??"—"}</span>
-          <div className="flex items-center gap-2">
-            <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              value={level}
-              onChange={(e) => setLevel(Number(e.target.value))}
-            >
-              {levels.map((l) => (
-                <option key={l.level} value={l.level}>
-                  Level {l.level} — {l.title}
-                </option>
-              ))}
-            </select>
-            <Button size="sm" variant="secondary" disabled={saving || level === Number(u.approved_level)} onClick={saveLevel}>
-              Save level
-            </Button>
-          </div>
-        </div>
+      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={u.email}>
+        {u.email}
       </TableCell>
       <TableCell>
-        <div className="min-w-[160px] space-y-1">
-          <span className="text-sm">
-            {u.experience_years == null || u.experience_years === "" ? "—" : `${u.experience_years} yrs`}
-          </span>
-          {specializations.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {specializations.slice(0, 3).map((s) => (
-                <Badge key={s} variant="secondary" className="font-normal">
-                  {s}
-                </Badge>
+        <div className="space-y-1 min-w-[200px] max-w-[240px]">
+          <p className="text-[11px] text-muted-foreground">Requested level {u.requested_level ?? "—"}</p>
+          <Select value={String(level)} onValueChange={(v) => void saveLevel(Number(v))} disabled={saving}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Level" />
+            </SelectTrigger>
+            <SelectContent>
+              {levels.map((l) => (
+                <SelectItem key={l.level} value={String(l.level)} className="text-xs">
+                  Level {l.level} — {l.title}
+                </SelectItem>
               ))}
-              {specializations.length > 3 && (
-                <span className="text-xs text-muted-foreground">+{specializations.length - 3}</span>
-              )}
-            </div>
+            </SelectContent>
+          </Select>
+          {saving ? <p className="text-[11px] text-muted-foreground">Saving…</p> : null}
+        </div>
+      </TableCell>
+      <TableCell className="text-sm whitespace-nowrap">
+        {u.experience_years == null || u.experience_years === "" ? (
+          "—"
+        ) : (
+          <span title={specializations.join(", ") || undefined}>
+            {u.experience_years} yrs
+            {specializations.length > 0 ? (
+              <span className="block text-xs text-muted-foreground truncate max-w-[120px]">
+                {specializations.slice(0, 2).join(", ")}
+                {specializations.length > 2 ? ` +${specializations.length - 2}` : ""}
+              </span>
+            ) : null}
+          </span>
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-col gap-2 min-w-[130px]">
+          <div className="text-xs leading-relaxed">
+            <span className="font-medium text-foreground">{verifiedCount}</span>
+            <span className="text-muted-foreground"> verified</span>
+            <span className="text-muted-foreground"> · {appliedCount} applied</span>
+          </div>
+          {pendingServices > 0 ? (
+            <Button size="sm" className="h-8 w-fit" type="button" onClick={openServices}>
+              Review ({pendingServices})
+            </Button>
+          ) : (
+            <button
+              type="button"
+              className="text-xs text-primary font-medium hover:underline w-fit text-left"
+              onClick={openServices}
+            >
+              Open services
+            </button>
           )}
         </div>
       </TableCell>
-      <TableCell><Badge>{u.verification_status}</Badge></TableCell>
-      <TableCell><Badge variant={u.blocked ? "destructive" : "secondary"}>{u.blocked ? "Blocked" : "Active"}</Badge></TableCell>
-      <TableCell className="space-x-2 whitespace-nowrap">
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setLocation(adminPath(`/pujaris/${u.id}`))}
-        >
-          Profile
-        </Button>
-        <Button
-          size="sm"
-          onClick={async () => {
-            await api(`/admin/pujaris/${u.id}/verify`, {
-              method: "POST",
-              body: JSON.stringify({ verification_status: "approved", approved_level: level }),
-            });
-            toast.success("Approved");
-            await onChanged();
-          }}
-        >
-          Approve
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={async () => {
-            await api(`/admin/pujaris/${u.id}/verify`, {
-              method: "POST",
-              body: JSON.stringify({ verification_status: "correction_required", approved_level: level }),
-            });
-            toast.success("Marked correction required");
-            await onChanged();
-          }}
-        >
-          Correction
-        </Button>
-        <Button
-          size="sm"
+      <TableCell>
+        <Badge
           variant="outline"
-          onClick={async () => {
-            await api(`/admin/pujaris/${u.id}/verify`, {
-              method: "POST",
-              body: JSON.stringify({ verification_status: "rejected", approved_level: level }),
-            });
-            toast.success("Rejected");
-            await onChanged();
-          }}
+          className={cn("capitalize font-normal whitespace-nowrap", verificationBadgeClass(u.verification_status))}
         >
-          Reject
-        </Button>
-        {u.is_head_pujari || u.role === "head_pujari" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              await api(`/admin/pujaris/${u.id}/head`, {
-                method: "POST",
-                body: JSON.stringify({ is_head_pujari: false, scope_cities: [] }),
-              });
-              toast.success("Removed Head Pujari");
-              await onChanged();
-            }}
-          >
-            Unhead
+          {formatVerificationStatus(u.verification_status)}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={u.blocked ? "destructive" : "outline"} className="font-normal">
+          {u.blocked ? "Blocked" : "Active"}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right whitespace-nowrap">
+        <div className="inline-flex items-center gap-1">
+          <Button size="sm" variant="outline" onClick={() => setLocation(adminPath(`/pujaris/${u.id}`))}>
+            Profile
           </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              await api(`/admin/pujaris/${u.id}/head`, {
-                method: "POST",
-                body: JSON.stringify({ is_head_pujari: true, scope_cities: [] }),
-              });
-              toast.success("Marked Head Pujari");
-              await onChanged();
-            }}
-          >
-            Make Head
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={async () => {
-            await api(`/admin/users/${u.id}/block`, { method: "POST", body: JSON.stringify({ blocked: !u.blocked, reason: "Admin action" }) });
-            await onChanged();
-          }}
-        >
-          {u.blocked ? "Unblock" : "Block"}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={async () => {
-            if (!confirm(`Suspend (block) ${u.name}? Prefer this over permanent delete.`)) return;
-            try {
-              await api(`/admin/users/${u.id}/block`, {
-                method: "POST",
-                body: JSON.stringify({ blocked: true, reason: "Admin suspended account" }),
-              });
-              toast.success("Account suspended (blocked)");
-              await onChanged();
-            } catch (e: any) {
-              toast.error(e.message);
-            }
-          }}
-        >
-          Suspend
-        </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="secondary" className="gap-1 px-2">
+                Actions
+                <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => void setVerification("approved")}>Approve profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void setVerification("correction_required")}>
+                Request correction
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void setVerification("rejected")}>Reject profile</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={openServices}>Review services</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {u.is_head_pujari || u.role === "head_pujari" ? (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    await api(`/admin/pujaris/${u.id}/head`, {
+                      method: "POST",
+                      body: JSON.stringify({ is_head_pujari: false, scope_cities: [] }),
+                    });
+                    toast.success("Removed Head Pujari");
+                    await onChanged();
+                  }}
+                >
+                  Remove head pujari
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    await api(`/admin/pujaris/${u.id}/head`, {
+                      method: "POST",
+                      body: JSON.stringify({ is_head_pujari: true, scope_cities: [] }),
+                    });
+                    toast.success("Marked Head Pujari");
+                    await onChanged();
+                  }}
+                >
+                  Make head pujari
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={async () => {
+                  await api(`/admin/users/${u.id}/block`, {
+                    method: "POST",
+                    body: JSON.stringify({ blocked: !u.blocked, reason: "Admin action" }),
+                  });
+                  toast.success(u.blocked ? "Unblocked" : "Blocked");
+                  await onChanged();
+                }}
+              >
+                {u.blocked ? "Unblock account" : "Block account"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -451,17 +483,19 @@ export default function PujarisPage() {
         </DialogContent>
       </Dialog>
 
+      <div className="rounded-lg border bg-card/80 overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>ID</TableHead>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[100px]">ID</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Level</TableHead>
+            <TableHead className="max-w-[200px]">Email</TableHead>
+            <TableHead className="min-w-[200px]">Approved level</TableHead>
             <TableHead>Experience</TableHead>
+            <TableHead className="min-w-[130px]">Services</TableHead>
             <TableHead>Verification</TableHead>
             <TableHead>Account</TableHead>
-            <TableHead></TableHead>
+            <TableHead className="text-right min-w-[160px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -470,6 +504,7 @@ export default function PujarisPage() {
           ))}
         </TableBody>
       </Table>
+      </div>
       {rows.length === 0 && (
         <p className="text-sm text-muted-foreground mt-4">No pujaris match this filter.</p>
       )}

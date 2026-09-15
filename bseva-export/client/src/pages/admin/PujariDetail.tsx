@@ -65,6 +65,59 @@ function fmtDate(v: unknown) {
   return formatDisplayDateTime(String(v));
 }
 
+type ServiceRow = { id: string; name?: string; dakshina_paise?: number };
+
+function ServiceBucket({
+  title,
+  subtitle,
+  accent,
+  empty,
+  items,
+  verifiedDraft,
+  onToggleVerify,
+}: {
+  title: string;
+  subtitle: string;
+  accent: string;
+  empty: string;
+  items: ServiceRow[];
+  verifiedDraft: Set<string>;
+  onToggleVerify: (serviceId: string, verified: boolean) => void;
+}) {
+  return (
+    <div className={`rounded-lg border p-3 flex flex-col min-h-[200px] ${accent}`}>
+      <div className="mb-2">
+        <p className="text-sm font-semibold text-foreground">
+          {title} ({items.length})
+        </p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+      <ul className="flex-1 max-h-52 overflow-y-auto rounded-md border bg-background/80 divide-y text-sm">
+        {items.length === 0 ? (
+          <li className="px-3 py-4 text-muted-foreground italic text-center">{empty}</li>
+        ) : (
+          items.map((s) => (
+            <li key={s.id} className="px-2 py-2 flex items-start gap-2">
+              <Checkbox
+                className="mt-0.5 shrink-0"
+                checked={verifiedDraft.has(s.id)}
+                onCheckedChange={(v) => onToggleVerify(s.id, Boolean(v))}
+                aria-label={`Verify ${s.name}`}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="font-medium block truncate">{s.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  Dakshina ₹{((s.dakshina_paise || 0) / 100).toLocaleString("en-IN")}
+                </span>
+              </span>
+            </li>
+          ))
+        )}
+      </ul>
+    </div>
+  );
+}
+
 export default function PujariDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id || "";
@@ -86,6 +139,8 @@ export default function PujariDetailPage() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [serviceOffers, setServiceOffers] = useState<any>(null);
   const [offersBusy, setOffersBusy] = useState(false);
+  const [verifiedDraft, setVerifiedDraft] = useState<Set<string>>(new Set());
+  const [serviceQ, setServiceQ] = useState("");
 
   async function load() {
     if (!id) return;
@@ -107,8 +162,10 @@ export default function PujariDetailPage() {
       try {
         const offers = await api<any>(`/admin/pujaris/${id}/service-offers`);
         setServiceOffers(offers);
+        setVerifiedDraft(new Set(offers.verified_service_ids || []));
       } catch {
         setServiceOffers(null);
+        setVerifiedDraft(new Set());
       }
     } catch (e: any) {
       toast.error(e.message);
@@ -124,6 +181,13 @@ export default function PujariDetailPage() {
   useEffect(() => {
     if (new URLSearchParams(search).get("edit") === "1") setEditing(true);
   }, [search]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#services") {
+      document.getElementById("pujari-services")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [serviceOffers, loading]);
 
   function setField(key: string, value: unknown) {
     setDraft((prev: any) => ({ ...prev, [key]: value }));
@@ -340,6 +404,159 @@ export default function PujariDetailPage() {
       </div>
 
       <div className="space-y-6">
+        <Card id="pujari-services">
+          <CardHeader>
+            <CardTitle className="text-base">Admin verified services</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Only services in the Verified column (first) are used for bookings. Review in the three columns, then save.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!serviceOffers ? (
+              <p className="text-sm text-muted-foreground">No service data yet.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{verifiedDraft.size}</span> verified for bookings
+                    {(serviceOffers.pending_review_services || []).length > 0 ? (
+                      <>
+                        {" · "}
+                        <span className="text-amber-800">{serviceOffers.pending_review_services.length} pending review</span>
+                      </>
+                    ) : null}
+                  </p>
+                  <Button
+                    size="sm"
+                    disabled={offersBusy}
+                    onClick={async () => {
+                        setOffersBusy(true);
+                        try {
+                          const out = await api(`/admin/pujaris/${id}/verified-services`, {
+                            method: "PUT",
+                            body: JSON.stringify({ service_ids: Array.from(verifiedDraft) }),
+                          });
+                          setServiceOffers(out);
+                          setVerifiedDraft(new Set(out.verified_service_ids || []));
+                          toast.success("Verified services saved");
+                          await load();
+                        } catch (e: any) {
+                          toast.error(e.message);
+                        } finally {
+                          setOffersBusy(false);
+                        }
+                    }}
+                  >
+                    {offersBusy ? "Saving…" : "Save"}
+                  </Button>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <ServiceBucket
+                    title="Verified"
+                    subtitle="Used for booking assignment — uncheck to remove"
+                    accent="border-emerald-500/40 bg-emerald-50/30"
+                    empty="None verified yet — check items in Pending or All applied"
+                    items={(serviceOffers.services || []).filter((s: any) => verifiedDraft.has(s.id))}
+                    verifiedDraft={verifiedDraft}
+                    onToggleVerify={(sid, on) => {
+                      setVerifiedDraft((prev) => {
+                        const next = new Set(prev);
+                        if (on) next.add(sid);
+                        else next.delete(sid);
+                        return next;
+                      });
+                    }}
+                  />
+                  <ServiceBucket
+                    title="Pending review"
+                    subtitle="Pujari applied — not verified yet"
+                    accent="border-amber-400/60 bg-amber-50/40"
+                    empty="No new applications"
+                    items={serviceOffers.pending_review_services || []}
+                    verifiedDraft={verifiedDraft}
+                    onToggleVerify={(sid, on) => {
+                      setVerifiedDraft((prev) => {
+                        const next = new Set(prev);
+                        if (on) next.add(sid);
+                        else next.delete(sid);
+                        return next;
+                      });
+                    }}
+                  />
+                  <ServiceBucket
+                    title="All applied"
+                    subtitle="Everything the pujari requested"
+                    accent="border-border bg-secondary/20"
+                    empty="No applications"
+                    items={serviceOffers.applied_services || []}
+                    verifiedDraft={verifiedDraft}
+                    onToggleVerify={(sid, on) => {
+                      setVerifiedDraft((prev) => {
+                        const next = new Set(prev);
+                        if (on) next.add(sid);
+                        else next.delete(sid);
+                        return next;
+                      });
+                    }}
+                  />
+                </div>
+
+                <div className="border-t pt-4 space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Optional: verify a catalog service the pujari did not apply for (search, then add).
+                  </p>
+                  <Input
+                    value={serviceQ}
+                    onChange={(e) => setServiceQ(e.target.value)}
+                    placeholder="Search catalog…"
+                    className="max-w-md"
+                  />
+                  {serviceQ.trim().length >= 2 ? (
+                    <ul className="max-h-40 overflow-y-auto rounded-md border divide-y text-sm">
+                      {(serviceOffers.services || [])
+                        .filter((s: any) => {
+                          if (verifiedDraft.has(s.id)) return false;
+                          const needle = serviceQ.trim().toLowerCase();
+                          return String(s.name || "").toLowerCase().includes(needle);
+                        })
+                        .slice(0, 12)
+                        .map((s: any) => (
+                          <li key={s.id} className="px-3 py-2 flex items-center justify-between gap-2">
+                            <span className="min-w-0 truncate">
+                              <span className="font-medium">{s.name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ₹{((s.dakshina_paise || 0) / 100).toLocaleString("en-IN")}
+                              </span>
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              type="button"
+                              onClick={() => {
+                                setVerifiedDraft((prev) => new Set(prev).add(s.id));
+                                toast.message(`Added to verified — click Save when done`);
+                              }}
+                            >
+                              Add to verified
+                            </Button>
+                          </li>
+                        ))}
+                      {(serviceOffers.services || []).filter((s: any) => {
+                        if (verifiedDraft.has(s.id)) return false;
+                        const needle = serviceQ.trim().toLowerCase();
+                        return String(s.name || "").toLowerCase().includes(needle);
+                      }).length === 0 ? (
+                        <li className="px-3 py-3 text-muted-foreground italic">No matching catalog services</li>
+                      ) : null}
+                    </ul>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Basic</CardTitle>
@@ -596,106 +813,6 @@ export default function PujariDetailPage() {
                 <Field label="Languages">{listDisplay(p.languages)}</Field>
                 <Field label="Specializations">{listDisplay(p.specializations)}</Field>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Services &amp; Dakshina requests</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!serviceOffers ? (
-              <p className="text-sm text-muted-foreground">No service offer data yet.</p>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Approved: {serviceOffers.approved_count ?? 0} · Pending: {serviceOffers.pending_count ?? 0}
-                </p>
-                <div className="max-h-64 overflow-y-auto divide-y rounded-md border">
-                  {(serviceOffers.services || [])
-                    .filter((s: any) => s.status && s.status !== "none")
-                    .map((s: any) => (
-                      <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">{s.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {String(s.status).replace(/_/g, " ")}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <p className="text-primary font-medium whitespace-nowrap">
-                            Dakshina ₹{((s.dakshina_paise || 0) / 100).toLocaleString("en-IN")}
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive border-destructive/40"
-                            disabled={offersBusy}
-                            onClick={async () => {
-                              if (!confirm(`Remove access to ${s.name}? The pujari will lose this service.`)) return;
-                              setOffersBusy(true);
-                              try {
-                                const out = await api(`/admin/pujaris/${id}/service-offers/${s.id}`, {
-                                  method: "DELETE",
-                                });
-                                setServiceOffers(out);
-                                toast.success("Service access removed");
-                                await load();
-                              } catch (e: any) {
-                                toast.error(e.message);
-                              } finally {
-                                setOffersBusy(false);
-                              }
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    disabled={offersBusy || !(serviceOffers.pending_count > 0)}
-                    onClick={async () => {
-                      setOffersBusy(true);
-                      try {
-                        const out = await api(`/admin/pujaris/${id}/service-offers/approve`, { method: "POST" });
-                        setServiceOffers(out);
-                        toast.success("Service changes approved");
-                        await load();
-                      } catch (e: any) {
-                        toast.error(e.message);
-                      } finally {
-                        setOffersBusy(false);
-                      }
-                    }}
-                  >
-                    Approve pending
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    disabled={offersBusy || !(serviceOffers.pending_count > 0)}
-                    onClick={async () => {
-                      setOffersBusy(true);
-                      try {
-                        const out = await api(`/admin/pujaris/${id}/service-offers/reject`, { method: "POST" });
-                        setServiceOffers(out);
-                        toast.success("Pending changes rejected");
-                      } catch (e: any) {
-                        toast.error(e.message);
-                      } finally {
-                        setOffersBusy(false);
-                      }
-                    }}
-                  >
-                    Reject pending
-                  </Button>
-                </div>
-              </>
             )}
           </CardContent>
         </Card>

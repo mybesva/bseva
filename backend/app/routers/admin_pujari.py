@@ -20,7 +20,7 @@ from app.geo import haversine_km
 from app.platform_config import get_setting
 from app.profile_utils import parse_json_list, pujari_completion
 from app.rbac import require_any_permission, require_permission
-from app.schemas import BookingAssignIn, JoiningFeeWaiveIn, PujariProfileIn
+from app.schemas import BookingAssignIn, JoiningFeeWaiveIn, PujariProfileIn, PujariVerifiedServicesIn
 from app.storage import content_type_for, file_response, upload_bytes
 
 router = APIRouter(prefix="/admin", tags=["admin-pujari"])
@@ -518,6 +518,10 @@ def assign_pujari_to_booking(
         raise HTTPException(400, "Pujari profile is incomplete")
     if int(pujari["approved_level"] or 0) < int(b["required_level"] or 1):
         raise HTTPException(400, "Pujari level is below service requirement")
+    from app.pujari_services import pujari_has_verified_service
+
+    if not pujari_has_verified_service(db, body.pujari_id, str(b["service_id"])):
+        raise HTTPException(400, "This service is not in the pujari's Admin Verified Services list")
     conflict = pujari_has_schedule_conflict(
         db,
         body.pujari_id,
@@ -679,10 +683,25 @@ def admin_get_service_offers(
     admin=Depends(require_any_permission("view_pujaris", "edit_pujaris")),
     db: Session = Depends(get_db),
 ):
-    from app.pujari_services import get_offers_payload
+    from app.pujari_services import get_admin_services_payload
 
     _load_admin_pujari(db, pujari_id)
-    return get_offers_payload(db, pujari_id)
+    return get_admin_services_payload(db, pujari_id)
+
+
+@router.put("/pujaris/{pujari_id}/verified-services")
+def admin_save_verified_services(
+    pujari_id: str,
+    body: PujariVerifiedServicesIn,
+    admin=Depends(require_permission("edit_pujaris")),
+    db: Session = Depends(get_db),
+):
+    from app.pujari_services import save_verified_services
+
+    _load_admin_pujari(db, pujari_id)
+    out = save_verified_services(db, pujari_id, body.service_ids, str(admin["id"]))
+    write_audit(db, str(admin["id"]), "pujari_verified_services_saved", "pujari", pujari_id)
+    return out
 
 
 @router.post("/pujaris/{pujari_id}/service-offers/approve")

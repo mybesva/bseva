@@ -96,6 +96,35 @@ _STMTS = [
     "CREATE INDEX IF NOT EXISTS idx_pujari_service_offers_pujari ON pujari_service_offers (pujari_id)",
     "CREATE INDEX IF NOT EXISTS idx_pujari_service_offers_status ON pujari_service_offers (status)",
     """
+    CREATE TABLE IF NOT EXISTS pujari_service_applications (
+      pujari_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (pujari_id, service_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS pujari_verified_services (
+      pujari_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      verified_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      verified_by UUID REFERENCES users(id),
+      PRIMARY KEY (pujari_id, service_id)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_pujari_service_applications_pujari ON pujari_service_applications (pujari_id)",
+    "CREATE INDEX IF NOT EXISTS idx_pujari_verified_services_pujari ON pujari_verified_services (pujari_id)",
+    """
+    UPDATE services
+    SET
+      standard_price_paise = 500000,
+      main_puja_price_paise = 500000
+    WHERE COALESCE(standard_price_paise, 0) = 0
+      AND COALESCE(main_puja_price_paise, 0) = 0
+      AND COALESCE(premium_price_paise, 0) = 0
+      AND COALESCE(basic_price_paise, 0) = 0
+    """,
+    """
     CREATE TABLE IF NOT EXISTS pujari_roles (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       level INTEGER NOT NULL UNIQUE,

@@ -360,6 +360,15 @@ class BookingAssignIn(BaseModel):
 
 
 class PujariServiceOffersIn(BaseModel):
-    """Desired catalog services the pujari wants to offer (admin must approve)."""
+    """Bulk apply for catalog services (add-only)."""
+    service_ids: list[str] = Field(default_factory=list)
+
+
+class PujariServiceApplyIn(BaseModel):
+    service_id: str
+
+
+class PujariVerifiedServicesIn(BaseModel):
+    """Admin/Head Pujari: official verified service list used for booking matching."""
     service_ids: list[str] = Field(default_factory=list)
 

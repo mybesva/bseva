@@ -17,6 +17,7 @@ from app.schemas import (
     PujariBlockDateIn,
     PujariProfileIn,
     PujariProfileSubmitIn,
+    PujariServiceApplyIn,
     PujariServiceOffersIn,
 )
 from app.profile_utils import (
@@ -809,3 +810,14 @@ def put_service_offers(
     from app.pujari_services import submit_service_selection
 
     return submit_service_selection(db, str(user["id"]), body.service_ids)
+
+
+@router.post("/service-offers/apply")
+def post_service_apply(
+    body: PujariServiceApplyIn,
+    user=Depends(require_roles("pujari", "head_pujari")),
+    db: Session = Depends(get_db),
+):
+    from app.pujari_services import apply_for_service
+
+    return apply_for_service(db, str(user["id"]), body.service_id)

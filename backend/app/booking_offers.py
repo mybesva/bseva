@@ -95,6 +95,11 @@ def eligible_pujaris_for_booking(
             db, str(r["id"]), booking_date, start_time, end_time, service_id
         ):
             continue
+        if service_id:
+            from app.pujari_services import pujari_has_verified_service
+
+            if not pujari_has_verified_service(db, str(r["id"]), str(service_id)):
+                continue
         out.append((str(r["id"]), round(dist, 2)))
     out.sort(key=lambda x: x[1])
     return out

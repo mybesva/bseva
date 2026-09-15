@@ -160,15 +160,14 @@ export async function validateOnboardingStep(
     const from = opts.from;
     if (from === "services") {
       try {
-        const offers = await api<{ services: { selected?: boolean; status?: string }[] }>(
+        const offers = await api<{ services: { applied?: boolean }[]; applied_count?: number }>(
           "/pujari/service-offers",
         );
-        const hasService = (offers.services || []).some(
-          (s) => s.selected || s.status === "pending" || s.status === "approved",
-        );
-        miss("services", "Select at least one puja service from the catalog", hasService);
+        const hasService =
+          (offers.applied_count ?? 0) > 0 || (offers.services || []).some((s) => s.applied);
+        miss("services", "Apply for at least one puja service from the catalog", hasService);
       } catch {
-        errors.services = "Could not verify service selections — try again";
+        errors.services = "Could not verify service applications — try again";
       }
     }
     if (from === "availability") {

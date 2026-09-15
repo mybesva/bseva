@@ -360,8 +360,11 @@ def list_pujaris(
             LIMIT :lim OFFSET :off
             """
     rows = db.execute(text(sql), params).mappings().all()
+    from app.pujari_services import enrich_pujari_rows_with_service_counts
+
+    items = enrich_pujari_rows_with_service_counts(db, [row_dict(r) for r in rows])
     return {
-        "items": [row_dict(r) for r in rows],
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,

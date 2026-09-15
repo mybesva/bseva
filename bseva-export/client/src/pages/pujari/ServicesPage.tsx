@@ -3,22 +3,19 @@ import { PujariPortal } from "@/components/RolePortals";
 import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { api, rupees } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type OfferService = {
+type CatalogService = {
   id: string;
   name: string;
   slug: string;
   short_description?: string | null;
   catalog_price_paise: number;
   dakshina_paise: number;
-  status: "none" | "pending" | "approved" | "rejected" | "pending_removal";
-  selected: boolean;
-  locked?: boolean;
+  applied: boolean;
   section_slugs?: string[];
   categories?: { slug?: string; name?: string }[];
 };
@@ -27,34 +24,19 @@ type Section = { slug: string; name: string };
 
 type OffersPayload = {
   share_percent: number;
-  services: OfferService[];
+  services: CatalogService[];
   sections?: Section[];
-  pending_count: number;
-  approved_count: number;
+  applied_count: number;
   note?: string;
 };
-
-function statusBadge(status: OfferService["status"], checked: boolean) {
-  if (status === "rejected") {
-    return <span className="text-xs font-medium text-red-600">Rejected — you can request again</span>;
-  }
-  if (status === "pending_removal") {
-    return <span className="text-xs font-medium text-amber-700">Removal pending</span>;
-  }
-  if (checked || status === "pending" || status === "approved") {
-    return <span className="text-xs font-medium text-primary">Selected</span>;
-  }
-  return null;
-}
 
 export default function PujariServicesPage() {
   const { active: onboardingActive } = usePujariOnboardingGate("services");
   const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
   const [data, setData] = useState<OffersPayload | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [section, setSection] = useState("all");
-  const [saving, setSaving] = useState(false);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -64,7 +46,6 @@ export default function PujariServicesPage() {
     try {
       const out = await api<OffersPayload>("/pujari/service-offers");
       setData(out);
-      setSelected(new Set(out.services.filter((s) => s.selected || s.locked).map((s) => s.id)));
       setSection("all");
     } catch (e: any) {
       const msg = e?.message || "Could not load services";
@@ -78,6 +59,31 @@ export default function PujariServicesPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  async function applyForService(serviceId: string) {
+    setApplyingId(serviceId);
+    try {
+      const out = await api<OffersPayload>("/pujari/service-offers/apply", {
+        method: "POST",
+        body: JSON.stringify({ service_id: serviceId }),
+      });
+      setData(out);
+      if (!onboardingActive) toast.success("Applied");
+    } catch (err: any) {
+      toast.error(err.message || "Could not apply");
+    } finally {
+      setApplyingId(null);
+    }
+  }
+
+  async function persistServiceSelection(): Promise<boolean> {
+    const count = data?.applied_count ?? data?.services.filter((s) => s.applied).length ?? 0;
+    if (count === 0) {
+      toast.error("Apply for at least one puja service");
+      return false;
+    }
+    return true;
+  }
 
   const sections = useMemo(() => {
     const fromApi = data?.sections || [{ slug: "all", name: "All" }];
@@ -109,8 +115,8 @@ export default function PujariServicesPage() {
       const title = sections.find((s) => s.slug === section)?.name || section;
       return [{ slug: section, name: title, items: filtered }];
     }
-    const bySlug = new Map<string, { slug: string; name: string; items: OfferService[] }>();
-    const uncategorized: OfferService[] = [];
+    const bySlug = new Map<string, { slug: string; name: string; items: CatalogService[] }>();
+    const uncategorized: CatalogService[] = [];
     for (const s of filtered) {
       const cats = s.categories || [];
       if (!cats.length) {
@@ -125,7 +131,7 @@ export default function PujariServicesPage() {
         if (!bucket.items.some((x) => x.id === s.id)) bucket.items.push(s);
       }
     }
-    const ordered: { slug: string; name: string; items: OfferService[] }[] = [];
+    const ordered: { slug: string; name: string; items: CatalogService[] }[] = [];
     for (const sec of sections) {
       if (sec.slug === "all") continue;
       const bucket = bySlug.get(sec.slug);
@@ -140,66 +146,6 @@ export default function PujariServicesPage() {
     }
     return ordered.length ? ordered : [{ slug: "all", name: "All pujas", items: filtered }];
   }, [filtered, section, sections]);
-
-  const lockedIds = useMemo(
-    () => new Set((data?.services || []).filter((s) => s.locked).map((s) => s.id)),
-    [data]
-  );
-
-  const newSelectionCount = useMemo(() => {
-    let n = 0;
-    for (const id of selected) {
-      if (!lockedIds.has(id)) n += 1;
-    }
-    return n;
-  }, [selected, lockedIds]);
-
-  function toggle(id: string, on: boolean) {
-    if (lockedIds.has(id)) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  async function persistServiceSelection(): Promise<boolean> {
-    if (selected.size === 0) {
-      toast.error("Select at least one puja service");
-      return false;
-    }
-    setSaving(true);
-    try {
-      const out = await api<OffersPayload>("/pujari/service-offers", {
-        method: "PUT",
-        body: JSON.stringify({ service_ids: Array.from(selected) }),
-      });
-      setData(out);
-      setSelected(new Set(out.services.filter((s) => s.selected || s.locked).map((s) => s.id)));
-      if (!onboardingActive) {
-        toast.success(
-          out.pending_count > 0
-            ? "Submitted for admin approval — selected pujas are locked until Admin decides"
-            : "Saved",
-        );
-      }
-      return true;
-    } catch (err: any) {
-      toast.error(err.message || "Could not save");
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function save() {
-    if (newSelectionCount === 0) {
-      toast.message("Select at least one new puja to submit");
-      return;
-    }
-    await persistServiceSelection();
-  }
 
   if (loading && !data) {
     return (
@@ -235,50 +181,23 @@ export default function PujariServicesPage() {
     );
   }
 
+  const appliedCount = data.applied_count ?? data.services.filter((s) => s.applied).length;
+
   return (
     <PujariPortal>
       <div className="w-full max-w-none space-y-6">
-        {/* Stays under portal nav while scrolling the catalog */}
         <div className="sticky top-14 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">
-                Services &amp; Dakshina
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                {newSelectionCount > 0 ? (
-                  <span className="font-medium text-foreground">
-                    {newSelectionCount} new puja{newSelectionCount === 1 ? "" : "s"} ready to submit
-                  </span>
-                ) : (
-                  <>
-                    Catalog: {data.services.length} · Approved: {data.approved_count} · Pending:{" "}
-                    {data.pending_count}
-                  </>
-                )}
-              </p>
-            </div>
-            {!onboardingActive ? (
-              <Button
-                type="button"
-                className="shrink-0 w-full sm:w-auto"
-                disabled={saving || newSelectionCount === 0}
-                onClick={() => void save()}
-              >
-                {saving
-                  ? "Submitting…"
-                  : newSelectionCount > 0
-                    ? `Submit ${newSelectionCount} for review`
-                    : "Submit pujas for review"}
-              </Button>
-            ) : null}
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">Services &amp; Dakshina</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              {appliedCount > 0
+                ? `${appliedCount} service${appliedCount === 1 ? "" : "s"} applied`
+                : `${data.services.length} catalog pujas — tap Apply for each service you can perform`}
+            </p>
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
-          {data.note ||
-            "All BSeva catalog pujas are listed by section. Select new ones and submit for approval. Locked selections cannot be edited — only Admin can remove access."}
-        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">{data.note}</p>
         {walkthroughErrors.services ? (
           <p className="text-sm text-red-600 font-medium">{walkthroughErrors.services}</p>
         ) : null}
@@ -315,40 +234,35 @@ export default function PujariServicesPage() {
                   <span className="ml-2 text-sm font-normal text-muted-foreground">({group.items.length})</span>
                 </h2>
                 <div className="divide-y rounded-md border border-border bg-background/80">
-                  {group.items.map((s) => {
-                    const locked = !!s.locked;
-                    const checked = selected.has(s.id) || locked;
-                    return (
-                      <label
-                        key={`${group.slug}-${s.id}`}
-                        className={cn(
-                          "flex items-start gap-3 p-4",
-                          locked
-                            ? "bg-muted/30 cursor-not-allowed opacity-90"
-                            : "hover:bg-muted/40 cursor-pointer"
-                        )}
-                      >
-                        <Checkbox
-                          className="mt-1"
-                          checked={checked}
-                          disabled={locked}
-                          onCheckedChange={(v) => toggle(s.id, !!v)}
-                        />
-                        <div className="flex-1 min-w-0 space-y-0.5">
-                          <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <p className="font-medium text-foreground">{s.name}</p>
-                            <p className="text-sm font-semibold text-primary">
-                              Dakshina {rupees(s.dakshina_paise)}
-                            </p>
-                          </div>
-                          {s.short_description ? (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{s.short_description}</p>
-                          ) : null}
-                          {statusBadge(s.status, checked)}
+                  {group.items.map((s) => (
+                    <div
+                      key={`${group.slug}-${s.id}`}
+                      className="flex flex-col sm:flex-row sm:items-start gap-3 p-4"
+                    >
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <p className="font-medium text-foreground">{s.name}</p>
+                          <p className="text-sm font-semibold text-primary">Dakshina {rupees(s.dakshina_paise)}</p>
                         </div>
-                      </label>
-                    );
-                  })}
+                        {s.short_description ? (
+                          <p className="text-xs text-muted-foreground line-clamp-2">{s.short_description}</p>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={s.applied ? "secondary" : "default"}
+                        disabled={s.applied || applyingId === s.id}
+                        className={cn(
+                          "shrink-0 w-full sm:w-auto min-w-[100px]",
+                          s.applied && "bg-muted text-muted-foreground border border-border",
+                        )}
+                        onClick={() => void applyForService(s.id)}
+                      >
+                        {s.applied ? "Applied" : applyingId === s.id ? "Applying…" : "Apply"}
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </section>
             ))
@@ -357,7 +271,7 @@ export default function PujariServicesPage() {
 
         <PujariOnboardingWalkthrough
           page="services"
-          saving={saving}
+          saving={!!applyingId}
           fieldErrors={walkthroughErrors}
           onFieldErrors={setWalkthroughErrors}
           beforeContinue={persistServiceSelection}

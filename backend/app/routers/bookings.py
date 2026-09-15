@@ -454,6 +454,10 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             raise HTTPException(400, "This pujari is not available on the selected date")
         if not pujari["approved_level"] or int(pujari["approved_level"]) < int(svc["required_level"]):
             raise HTTPException(400, "Pujari is not eligible for this service")
+        from app.pujari_services import pujari_has_verified_service
+
+        if not pujari_has_verified_service(db, str(body.pujari_id), str(body.service_id)):
+            raise HTTPException(400, "This pujari is not verified for this service")
         if slot_conflict(
             db, str(body.pujari_id), body.booking_date, start, end, str(body.service_id)
         ):
