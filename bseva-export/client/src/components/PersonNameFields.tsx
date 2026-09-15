@@ -19,22 +19,31 @@ export default function PersonNameFields({ value, onChange, errors, disabled }: 
           First name <span className="text-destructive">*</span>
         </Label>
         <Input
+          name="bseva_first_name"
           value={value.first_name}
           onChange={(e) => set("first_name", e.target.value)}
           minLength={3}
           required
           disabled={disabled}
           autoComplete="given-name"
+          autoCorrect="off"
         />
         {errors?.first_name ? <p className="text-xs text-destructive">{errors.first_name}</p> : null}
       </div>
       <div className="space-y-2">
         <Label>Middle name</Label>
         <Input
+          name="bseva_middle_name"
           value={value.middle_name}
           onChange={(e) => set("middle_name", e.target.value)}
           disabled={disabled}
-          autoComplete="additional-name"
+          autoComplete="off"
+          autoCorrect="off"
+          readOnly
+          onFocus={(e) => e.currentTarget.removeAttribute("readonly")}
+          data-1p-ignore
+          data-lpignore="true"
+          aria-label="Middle name (optional)"
         />
       </div>
       <div className="space-y-2">
@@ -42,11 +51,13 @@ export default function PersonNameFields({ value, onChange, errors, disabled }: 
           Last name <span className="text-destructive">*</span>
         </Label>
         <Input
+          name="bseva_last_name"
           value={value.last_name}
           onChange={(e) => set("last_name", e.target.value)}
           required
           disabled={disabled}
           autoComplete="family-name"
+          autoCorrect="off"
         />
         {errors?.last_name ? <p className="text-xs text-destructive">{errors.last_name}</p> : null}
       </div>

@@ -73,16 +73,13 @@ export default function AngikaraPage() {
                 <div className="text-sm text-muted-foreground mb-1">{t("pujari.signature")}</div>
                 {sign ? <img src={sign} alt="" className="h-16 border bg-white" /> :"—"}
               </div>
+              <p className="text-sm text-muted-foreground print:hidden">
+                All fields below come from My Profile. Edit there, then return here to submit or print.
+              </p>
               <div className="flex flex-wrap gap-2 print:hidden pt-4">
                 <Link href="/pujari/profile">
                   <Button variant="outline">{t("pujari.profile.edit")}</Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  onClick={() => api("/pujari/profile", { method: "PATCH", body: JSON.stringify({}) }).then(() => toast.success(t("common.save")))}
-                >
-                  {t("common.save")}
-                </Button>
                 <Button
                   disabled={locked}
                   onClick={async () => {

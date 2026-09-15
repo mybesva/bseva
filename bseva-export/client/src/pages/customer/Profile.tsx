@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CustomerPortal } from "@/components/RolePortals";
 import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,28 @@ export default function CustomerProfilePage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const nameFormDirty = useRef(false);
+  const syncedUserId = useRef<string | null>(null);
+
+  function namePartsFromUser(u: typeof user): PersonNameParts {
+    const row = u as {
+      first_name?: string;
+      middle_name?: string;
+      last_name?: string;
+      name?: string;
+    } | null;
+    if (!row) return { first_name: "", middle_name: "", last_name: "" };
+    const hasStructured =
+      row.first_name != null || row.middle_name != null || row.last_name != null;
+    if (hasStructured) {
+      return {
+        first_name: String(row.first_name ?? ""),
+        middle_name: String(row.middle_name ?? ""),
+        last_name: String(row.last_name ?? ""),
+      };
+    }
+    return splitDisplayName(row.name);
+  }
 
   async function loadPhoto() {
     const token = getToken();
@@ -65,17 +87,18 @@ export default function CustomerProfilePage() {
   }
 
   useEffect(() => {
-    const u = user as { first_name?: string; middle_name?: string; last_name?: string; name?: string } | null;
-    if (u?.first_name || u?.last_name) {
-      setNameParts({
-        first_name: u.first_name || "",
-        middle_name: u.middle_name || "",
-        last_name: u.last_name || "",
-      });
-    } else {
-      setNameParts(splitDisplayName(u?.name));
-    }
-  }, [user?.name, (user as { first_name?: string })?.first_name, (user as { last_name?: string })?.last_name]);
+    if (!user?.id) return;
+    if (nameFormDirty.current && syncedUserId.current === user.id) return;
+    setNameParts(namePartsFromUser(user));
+    syncedUserId.current = user.id;
+    nameFormDirty.current = false;
+  }, [
+    user?.id,
+    user?.name,
+    (user as { first_name?: string })?.first_name,
+    (user as { middle_name?: string })?.middle_name,
+    (user as { last_name?: string })?.last_name,
+  ]);
 
   useEffect(() => {
     const pref = user?.preferred_language as Lang | undefined;
@@ -137,6 +160,7 @@ export default function CustomerProfilePage() {
         /* profile row may not exist yet */
       }
       setLang(language);
+      nameFormDirty.current = false;
       await refresh();
       toast.success("Profile details updated");
     } catch (err: any) {
@@ -177,7 +201,7 @@ export default function CustomerProfilePage() {
           <CardTitle className="">My Profile</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-6" onSubmit={save}>
+          <form className="space-y-6" onSubmit={save} autoComplete="off">
             {user?.public_id ? (
               <div className="space-y-1">
                 <Label>Customer ID</Label>
@@ -210,6 +234,7 @@ export default function CustomerProfilePage() {
             <PersonNameFields
               value={nameParts}
               onChange={(next) => {
+                nameFormDirty.current = true;
                 setNameParts(next);
                 setNameErrors({});
               }}

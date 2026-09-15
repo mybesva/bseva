@@ -1,36 +1,52 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { PujariPortal } from "@/components/RolePortals";
-import AddressFields, { type AddressValue } from "@/components/AddressFields";
 import PriestOnboardingPanel from "@/components/PriestOnboardingPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { api, pujariMediaUrl, rupees, uploadPujariAsset } from "@/lib/api";
-import { isValidPujariDob, validateAddress, validateBank } from "@/lib/fieldValidation";
-import { parsePhoneParts, toE164, validatePhoneNational } from "@/lib/phone";
-import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
+import { api, rupees } from "@/lib/api";
+import { isValidPujariDob, validateAddress } from "@/lib/fieldValidation";
+import { parsePhoneParts, validatePhoneNational } from "@/lib/phone";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
-import PersonNameFields from "@/components/PersonNameFields";
 import { splitDisplayName, validatePersonNameParts } from "@/lib/personName";
 
-const QUALS = [
-  { id: "panchadasha", key: "pujari.q1" },
-  { id: "kriya_kovida", key: "pujari.q2" },
-  { id: "vidya_visharada", key: "pujari.q3" },
-];
+function ChecklistItem({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <li className={`text-sm flex gap-2 ${ok ? "text-emerald-700" : "text-muted-foreground"}`}>
+      <span aria-hidden>{ok ? "✓" : "○"}</span>
+      <span>{label}</span>
+    </li>
+  );
+}
 
-const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
-
-function csvToList(s: string) {
-  return s
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
+function GateCard({
+  title,
+  description,
+  href,
+  linkLabel,
+  children,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  linkLabel: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-secondary/20 p-4 space-y-3">
+      <div>
+        <h3 className="font-semibold text-foreground">{title}</h3>
+        <p className="text-sm text-muted-foreground mt-1">{description}</p>
+      </div>
+      {children}
+      <Button type="button" size="sm" variant="outline" asChild>
+        <Link href={href}>{linkLabel}</Link>
+      </Button>
+    </div>
+  );
 }
 
 export default function PujariOnboardingPage() {
@@ -39,16 +55,22 @@ export default function PujariOnboardingPage() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<any>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [langCustom, setLangCustom] = useState("");
   const [payingFee, setPayingFee] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [countryCode, setCountryCode] = useState("+91");
-  const [phoneNational, setPhoneNational] = useState("");
-  const [bankConfirm, setBankConfirm] = useState("");
+
+  function mergeProfileRow(p: any) {
+    const fullName = String(p.full_name || user?.name || "").replace(/\s+Reddy\s*$/i, "").trim() || user?.name || "";
+    const split = splitDisplayName(fullName);
+    return {
+      ...p,
+      full_name: fullName,
+      first_name: p.first_name ?? split.first_name,
+      middle_name: p.middle_name ?? split.middle_name,
+      last_name: p.last_name ?? split.last_name,
+    };
+  }
 
   async function load() {
     const p = await api<any>("/pujari/profile");
@@ -56,44 +78,26 @@ export default function PujariOnboardingPage() {
       setLocation("/pujari");
       return;
     }
-    const parsed = parsePhoneParts(p.mobile_number || user?.phone || "");
-    setCountryCode(parsed.countryCode);
-    setPhoneNational(parsed.national);
-    const fullName = String(p.full_name || user?.name || "").replace(/\s+Reddy\s*$/i, "").trim() || user?.name || "";
-    const split = splitDisplayName(fullName);
-    setProfile({
-      ...p,
-      full_name: fullName,
-      first_name: p.first_name ?? split.first_name,
-      middle_name: p.middle_name ?? split.middle_name,
-      last_name: p.last_name ?? split.last_name,
-      mobile_number: parsed.national || p.mobile_number,
-    });
-    const acct = String(p.bank_account_number || "").replace(/\D/g, "");
-    setBankConfirm(acct);
+    setProfile(mergeProfileRow(p));
     const s = Number(p.onboarding_step || 1);
     setStep(Math.min(6, Math.max(1, s)));
     setConsent(!!p.final_submission_consent);
-    if (p.profile_photo_path) setPhotoUrl(await pujariMediaUrl("photo"));
-    else setPhotoUrl(null);
   }
 
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
   }, []);
 
-  function setField(key: string, value: unknown) {
-    setProfile((prev: any) => ({ ...prev, [key]: value }));
-    setFieldErrors((prev) => {
-      if (!prev[key]) return prev;
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  }
-
-  function errClass(key: string) {
-    return fieldErrors[key] ? "border-red-500 focus-visible:ring-red-500" : "";
+  async function refreshProfile(): Promise<any | null> {
+    try {
+      const p = await api<any>("/pujari/profile");
+      const merged = mergeProfileRow(p);
+      setProfile(merged);
+      return merged;
+    } catch (e: any) {
+      toast.error(e.message || "Could not refresh profile");
+      return null;
+    }
   }
 
   function Err({ name }: { name: string }) {
@@ -115,51 +119,56 @@ export default function PujariOnboardingPage() {
   }
 
   async function validateStep(current: number): Promise<boolean> {
-    if (!profile) return false;
+    let p = profile;
+    if (current <= 5) {
+      const merged = await refreshProfile();
+      if (!merged) return false;
+      p = merged;
+    } else if (!p) {
+      return false;
+    }
     const errors: Record<string, string> = {};
     const req = (key: string, label: string, ok: boolean) => {
       if (!ok) errors[key] = `${label} is required`;
     };
 
     if (current === 1) {
-      req("profile_photo_path", "Profile photo", !!profile.profile_photo_path || !!photoUrl);
+      req("profile_photo_path", "Profile photo (My Profile)", !!p.profile_photo_path);
       Object.assign(
         errors,
         validatePersonNameParts({
-          first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
-          middle_name: String(profile.middle_name ?? ""),
-          last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
+          first_name: String(p.first_name ?? splitDisplayName(p.full_name).first_name),
+          middle_name: String(p.middle_name ?? ""),
+          last_name: String(p.last_name ?? splitDisplayName(p.full_name).last_name),
         }),
       );
-      const dob = String(profile.date_of_birth || "").trim();
-      req("date_of_birth", "Date of birth", !!dob);
+      const dob = String(p.date_of_birth || "").trim();
+      req("date_of_birth", "Date of birth (My Profile)", !!dob);
       if (dob && !isValidPujariDob(dob)) {
         errors.date_of_birth = "Pujari must be at least 18 years old (date cannot be in the future)";
       }
-      const phoneErr = validatePhoneNational(countryCode, phoneNational);
+      const parsed = parsePhoneParts(p.mobile_number || user?.phone || "");
+      const phoneErr = validatePhoneNational(parsed.countryCode, parsed.national);
       if (phoneErr) errors.mobile_number = phoneErr;
-      req("gotra", "Gotra", !!String(profile.gotra || "").trim());
-      req("pravara", "Pravara", !!String(profile.pravara || "").trim());
+      req("gotra", "Gotra (My Profile)", !!String(p.gotra || "").trim());
+      req("pravara", "Pravara (My Profile)", !!String(p.pravara || "").trim());
     }
     if (current === 2) {
       const addrErrs = validateAddress({
-        address_line1: profile.address_line1,
-        city: profile.city,
-        district: profile.district,
-        state: profile.state,
-        pincode: profile.pincode,
+        address_line1: p.address_line1,
+        city: p.city,
+        district: p.district,
+        state: p.state,
+        pincode: p.pincode,
       });
       Object.assign(errors, addrErrs);
-      req("latitude", "Map location", profile.latitude != null && profile.longitude != null);
+      req("latitude", "Map pin (Address)", p.latitude != null && p.longitude != null);
     }
     if (current === 3) {
-      const quals: string[] = profile.qualifications || [];
-      req("qualifications", "At least one qualification", quals.length > 0);
-      req("qualification_year", "Qualification year", !!profile.qualification_year);
-      req("sampradaya", "Sampradaya", !!String(profile.sampradaya || "").trim());
-      req("experience_years", "Experience (years)", profile.experience_years != null && profile.experience_years !== "");
-      const langs = [...(profile.languages || []), ...csvToList(langCustom)];
-      req("languages", "At least one language", langs.length > 0);
+      const quals: string[] = p.qualifications || [];
+      req("qualifications", "Qualifications (My Profile)", quals.length > 0);
+      req("qualification_year", "Qualification year (My Profile)", !!p.qualification_year);
+      req("sampradaya", "Sampradaya (My Profile)", !!String(p.sampradaya || "").trim());
     }
     if (current === 4) {
       try {
@@ -167,7 +176,7 @@ export default function PujariOnboardingPage() {
         const hasAadhaar = docs.some((d) => d.document_type === "identity");
         req("identity", "Aadhaar upload", hasAadhaar);
         // Re-read flag from server (checkbox saves licence_type on the profile)
-        let licenceType = String(profile.licence_type || "").toLowerCase();
+        let licenceType = String(p.licence_type || "").toLowerCase();
         try {
           const fresh = await api<any>("/pujari/profile");
           licenceType = String(fresh.licence_type || "").toLowerCase();
@@ -183,17 +192,14 @@ export default function PujariOnboardingPage() {
       }
     }
     if (current === 5) {
-      req("service_radius_km", "Service radius", !!profile.service_radius_km);
-      const bankErrs = validateBank({
-        holder: profile.bank_holder_name,
-        ifsc: profile.bank_ifsc,
-        accountNumber: profile.bank_account_number,
-        accountConfirm: bankConfirm,
-      });
-      if (bankErrs.holder) errors.bank_holder_name = bankErrs.holder;
-      if (bankErrs.ifsc) errors.bank_ifsc = bankErrs.ifsc;
-      if (bankErrs.accountNumber) errors.bank_account_number = bankErrs.accountNumber;
-      if (bankErrs.accountConfirm) errors.bank_account_confirm = bankErrs.accountConfirm;
+      req("service_radius_km", "Service radius (Availability)", !!p.service_radius_km);
+      req("bank_holder_name", "Bank details (Bank / Settlement)", !!String(p.bank_holder_name || "").trim());
+      req("bank_ifsc", "Bank IFSC", !!String(p.bank_ifsc || "").trim());
+      req(
+        "bank_account_number",
+        "Bank account number",
+        !!String(p.bank_account_number || "").replace(/\D/g, ""),
+      );
     }
     if (current === 6) {
       req("consent", "Final submission consent", consent);
@@ -205,11 +211,6 @@ export default function PujariOnboardingPage() {
       return false;
     }
     return true;
-  }
-
-  function toggleList(key: "languages", item: string, on: boolean) {
-    const cur: string[] = profile?.[key] || [];
-    setField(key, on ? Array.from(new Set([...cur, item])) : cur.filter((x) => x !== item));
   }
 
   async function saveStep(nextStep: number, extra: Record<string, unknown> = {}) {
@@ -236,70 +237,8 @@ export default function PujariOnboardingPage() {
   async function saveAndContinue() {
     if (!profile) return;
     if (!(await validateStep(step))) return;
-    if (step === 1) {
-      const mobile = toE164(countryCode, phoneNational);
-      await saveStep(2, {
-        first_name: String(profile.first_name || "").trim(),
-        middle_name: String(profile.middle_name || "").trim() || null,
-        last_name: String(profile.last_name || "").trim(),
-        date_of_birth: profile.date_of_birth || null,
-        mobile_number: mobile,
-        gotra: String(profile.gotra || "").trim(),
-        pravara: String(profile.pravara || "").trim(),
-      });
-      return;
-    }
-    if (step === 2) {
-      await saveStep(3, {
-        address_line1: profile.address_line1,
-        address_line2: profile.address_line2,
-        city: profile.city,
-        district: profile.district,
-        state: profile.state,
-        pincode: profile.pincode,
-        country: profile.country || "India",
-        location_label: profile.location_label,
-        latitude: profile.latitude,
-        longitude: profile.longitude,
-        present_address: [
-          profile.address_line1,
-          profile.address_line2,
-          profile.city,
-          profile.district,
-          profile.state,
-          profile.pincode,
-        ]
-          .filter(Boolean)
-          .join(", "),
-      });
-      return;
-    }
-    if (step === 3) {
-      const langs = [...(profile.languages || []), ...csvToList(langCustom)];
-      await saveStep(4, {
-        experience_years: profile.experience_years ? Number(profile.experience_years) : null,
-        qualifications: profile.qualifications || [],
-        qualification_year: profile.qualification_year ? Number(profile.qualification_year) : null,
-        sampradaya: profile.sampradaya || null,
-        languages: Array.from(new Set(langs)),
-      });
-      return;
-    }
-    if (step === 4) {
-      await saveStep(5, {});
-      return;
-    }
-    if (step === 5) {
-      const digits = String(profile.bank_account_number || "").replace(/\D/g, "");
-      await saveStep(6, {
-        available: !!profile.available,
-        service_radius_km: profile.service_radius_km ? Number(profile.service_radius_km) : null,
-        bank_account_number: digits || null,
-        bank_account_confirm: bankConfirm.replace(/\D/g, "") || null,
-        bank_account_last4: digits ? digits.slice(-4) : null,
-        bank_ifsc: profile.bank_ifsc || null,
-        bank_holder_name: profile.bank_holder_name || null,
-      });
+    if (step >= 1 && step <= 5) {
+      await saveStep(step + 1, {});
     }
   }
 
@@ -353,20 +292,17 @@ export default function PujariOnboardingPage() {
   }
 
   const quals: string[] = profile.qualifications || [];
-  const langs: string[] = profile.languages || [];
-  const yearNow = new Date().getFullYear();
-  const addressValue: AddressValue = {
-    address_line1: profile.address_line1 || "",
-    address_line2: profile.address_line2 || "",
-    city: profile.city || "",
-    district: profile.district || "",
-    state: profile.state || "",
-    pincode: profile.pincode || "",
-    country: profile.country || "India",
-    location_label: profile.location_label || "",
-    latitude: profile.latitude ?? null,
-    longitude: profile.longitude ?? null,
-  };
+  const nameOk =
+    Object.keys(
+      validatePersonNameParts({
+        first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
+        middle_name: String(profile.middle_name ?? ""),
+        last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
+      }),
+    ).length === 0;
+  const parsedPhone = parsePhoneParts(profile.mobile_number || user?.phone || "");
+  const phoneOk = !validatePhoneNational(parsedPhone.countryCode, parsedPhone.national);
+  const dobOk = !!String(profile.date_of_birth || "").trim() && isValidPujariDob(String(profile.date_of_birth));
 
   const feeStatus = String(profile.joining_fee_status || "not_required");
   const feeAmount = Number(profile.joining_fee_paise || 0);
@@ -399,7 +335,10 @@ export default function PujariOnboardingPage() {
       <Card className="max-w-3xl">
         <CardHeader>
           <CardTitle className="">Complete onboarding</CardTitle>
-          <p className="text-sm text-muted-foreground">Step {step} of 6 — fill required fields before Save & Continue</p>
+          <p className="text-sm text-muted-foreground">
+            Step {step} of 6 — update details in My Profile and linked pages (no duplicate forms here). Refresh, then
+            Save &amp; Continue.
+          </p>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <span
@@ -425,298 +364,84 @@ export default function PujariOnboardingPage() {
         <CardContent className="space-y-6">
           {step === 1 && (
             <section className="space-y-4">
-              <h2 className="text-xl">Personal details</h2>
+              <h2 className="text-xl">My Profile</h2>
               <ErrorSummary />
-              <div>
-                <Label className={fieldErrors.profile_photo_path ? "text-red-600" : undefined}>
-                  {t("pujari.photo")}
-                </Label>
-                {photoUrl && <img src={photoUrl} alt="" className="mt-2 h-28 w-28 object-cover rounded-md border" />}
-                <label className="inline-block mt-2">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                    className="hidden"
-                    disabled={uploadingPhoto}
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      e.target.value = "";
-                      if (!f) return;
-                      setUploadingPhoto(true);
-                      try {
-                        const updated = await uploadPujariAsset("photo", f);
-                        toast.success("Photo saved");
-                        if (updated?.profile_photo_path) {
-                          setProfile((prev: any) => ({ ...prev, ...updated }));
-                        }
-                        setFieldErrors((prev) => {
-                          const next = { ...prev };
-                          delete next.profile_photo_path;
-                          return next;
-                        });
-                        const url = await pujariMediaUrl("photo");
-                        setPhotoUrl(url);
-                      } catch (err: any) {
-                        toast.error(err.message || "Photo upload failed");
-                        setFieldErrors((prev) => ({
-                          ...prev,
-                          profile_photo_path: err.message || "Photo upload failed",
-                        }));
-                      } finally {
-                        setUploadingPhoto(false);
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    asChild
-                    disabled={uploadingPhoto}
-                    className={fieldErrors.profile_photo_path ? "border-red-500 text-red-600" : undefined}
-                  >
-                    <span>
-                      {uploadingPhoto
-                        ? "Uploading…"
-                        : photoUrl
-                          ? t("pujari.photo.replace")
-                          : t("pujari.photo")}
-                    </span>
-                  </Button>
-                </label>
-                <p className="text-xs text-muted-foreground mt-1">JPG, PNG or WebP · max 8 MB</p>
-                <Err name="profile_photo_path" />
-              </div>
-              <PersonNameFields
-                value={{
-                  first_name: profile.first_name ?? splitDisplayName(profile.full_name).first_name,
-                  middle_name: profile.middle_name ?? splitDisplayName(profile.full_name).middle_name,
-                  last_name: profile.last_name ?? splitDisplayName(profile.full_name).last_name,
-                }}
-                onChange={(next) => {
-                  setProfile((prev: any) => ({
-                    ...prev,
-                    ...next,
-                    full_name: [next.first_name, next.middle_name, next.last_name].filter(Boolean).join(" "),
-                  }));
-                  setFieldErrors((e) => {
-                    const copy = { ...e };
-                    delete copy.first_name;
-                    delete copy.last_name;
-                    return copy;
-                  });
-                }}
-                errors={{
-                  first_name: fieldErrors.first_name,
-                  last_name: fieldErrors.last_name,
-                }}
-              />
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label className={fieldErrors.date_of_birth ? "text-red-600" : undefined}>{t("pujari.dob")} *</Label>
-                  <Input
-                    className={errClass("date_of_birth")}
-                    type="date"
-                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().slice(0, 10)}
-                    value={(profile.date_of_birth || "").slice(0, 10)}
-                    onChange={(e) => setField("date_of_birth", e.target.value)}
-                  />
-                  <Err name="date_of_birth" />
-                </div>
-                <PhoneWithCountryCode
-                  id="onboarding-mobile"
-                  label={t("pujari.mobile")}
-                  required
-                  countryCode={countryCode}
-                  national={phoneNational}
-                  error={fieldErrors.mobile_number}
-                  onCountryCodeChange={(code) => {
-                    setCountryCode(code);
-                    setPhoneNational((prev) => prev.slice(0, code === "+91" ? 10 : 12));
-                    setFieldErrors((prev) => {
-                      if (!prev.mobile_number) return prev;
-                      const next = { ...prev };
-                      delete next.mobile_number;
-                      return next;
-                    });
-                  }}
-                  onNationalChange={(digits) => {
-                    setPhoneNational(digits);
-                    setField("mobile_number", digits);
-                  }}
-                />
-                <div className="md:col-span-2">
-                  <Label>Email</Label>
-                  <Input value={user?.email || ""} readOnly disabled />
-                </div>
-              </div>
-
-              <div className="rounded-lg border-2 border-primary/30 bg-orange-50/50 p-4 space-y-3">
-                <div>
-                  <h3 className="font-semibold text-foreground">Gotra &amp; Pravara *</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Enter your family Gotra and Pravara (rishi lineage). Both are required.
-                  </p>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label
-                      htmlFor="onboarding-gotra"
-                      className={fieldErrors.gotra ? "text-red-600" : undefined}
-                    >
-                      {t("pujari.gotra")} *
-                    </Label>
-                    <Input
-                      id="onboarding-gotra"
-                      className={errClass("gotra")}
-                      value={profile.gotra || ""}
-                      onChange={(e) => setField("gotra", e.target.value)}
-                      placeholder="e.g. Bharadwaja"
-                      required
-                    />
-                    <Err name="gotra" />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="onboarding-pravara"
-                      className={fieldErrors.pravara ? "text-red-600" : undefined}
-                    >
-                      {t("pujari.pravara")} *
-                    </Label>
-                    <Input
-                      id="onboarding-pravara"
-                      className={errClass("pravara")}
-                      value={profile.pravara ?? ""}
-                      onChange={(e) => setField("pravara", e.target.value)}
-                      placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
-                      required
-                    />
-                    <Err name="pravara" />
-                  </div>
-                </div>
-              </div>
+              <GateCard
+                title="Personal details &amp; Angikara fields"
+                description="Photo, name, date of birth, phone, Gotra, Pravara, addresses, qualifications, experience, and signature are saved only in My Profile. Angikara Patram reads from there — it is not required to finish onboarding."
+                href="/pujari/profile"
+                linkLabel="Open My Profile"
+              >
+                <ul className="space-y-1">
+                  <ChecklistItem ok={!!profile.profile_photo_path} label="Profile photo" />
+                  <ChecklistItem ok={nameOk} label="Name (first & last)" />
+                  <ChecklistItem ok={dobOk} label="Date of birth" />
+                  <ChecklistItem ok={phoneOk} label="Mobile number" />
+                  <ChecklistItem ok={!!String(profile.gotra || "").trim()} label="Gotra" />
+                  <ChecklistItem ok={!!String(profile.pravara || "").trim()} label="Pravara" />
+                </ul>
+              </GateCard>
+              <Button type="button" size="sm" variant="ghost" onClick={() => void refreshProfile()}>
+                Refresh checklist
+              </Button>
             </section>
           )}
 
           {step === 2 && (
             <section className="space-y-4">
-              <h2 className="text-xl">Address</h2>
+              <h2 className="text-xl">Service address</h2>
               <ErrorSummary />
-              <AddressFields
-                value={addressValue}
-                onChange={(next) => {
-                  setProfile((prev: any) => ({ ...prev, ...next }));
-                  setFieldErrors((prev) => {
-                    const nextErr = { ...prev };
-                    for (const k of Object.keys(next)) delete nextErr[k];
-                    if (next.latitude != null) delete nextErr.latitude;
-                    return nextErr;
-                  });
-                }}
-              />
+              <GateCard
+                title="Address &amp; map pin"
+                description="Set your service location and map pin on the Address page. This is used for nearby booking offers."
+                href="/pujari/address"
+                linkLabel="Open Address"
+              >
+                <ul className="space-y-1">
+                  <ChecklistItem ok={!!String(profile.address_line1 || "").trim()} label="Address line" />
+                  <ChecklistItem ok={!!String(profile.city || "").trim()} label="City" />
+                  <ChecklistItem ok={!!String(profile.pincode || "").trim()} label="Pincode" />
+                  <ChecklistItem
+                    ok={profile.latitude != null && profile.longitude != null}
+                    label="Map location pinned"
+                  />
+                </ul>
+              </GateCard>
+              <Button type="button" size="sm" variant="ghost" onClick={() => void refreshProfile()}>
+                Refresh checklist
+              </Button>
             </section>
           )}
 
           {step === 3 && (
-            <section className="space-y-6">
+            <section className="space-y-4">
               <h2 className="text-xl">Professional details</h2>
               <ErrorSummary />
-              <div className="max-w-xs">
-                <Label className={fieldErrors.experience_years ? "text-red-600" : undefined}>
-                  Years of experience *
-                </Label>
-                <Input
-                  className={errClass("experience_years")}
-                  type="number"
-                  min={0}
-                  max={80}
-                  value={profile.experience_years ?? ""}
-                  onChange={(e) => setField("experience_years", e.target.value)}
-                />
-                <Err name="experience_years" />
-              </div>
-              <div className={`space-y-3 rounded-md p-2 ${fieldErrors.qualifications ? "border border-red-500" : ""}`}>
-                <h3 className={`font-medium ${fieldErrors.qualifications ? "text-red-600" : ""}`}>
-                  {t("pujari.qualification")} *
-                </h3>
-                {QUALS.map((q) => (
-                  <label key={q.id} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={quals.includes(q.id)}
-                      onCheckedChange={(v) => {
-                        const next = v ? [...quals, q.id] : quals.filter((x) => x !== q.id);
-                        setField("qualifications", next);
-                      }}
-                    />
-                    {t(q.key)}
-                  </label>
-                ))}
-                <Err name="qualifications" />
-                <div className="max-w-xs">
-                  <Label className={fieldErrors.qualification_year ? "text-red-600" : undefined}>
-                    {t("pujari.year")} *
-                  </Label>
-                  <Input
-                    className={errClass("qualification_year")}
-                    type="number"
-                    min={1950}
-                    max={yearNow}
-                    value={profile.qualification_year || ""}
-                    onChange={(e) => setField("qualification_year", e.target.value)}
-                  />
-                  <Err name="qualification_year" />
-                </div>
-              </div>
-              <div className={`space-y-3 rounded-md p-2 ${fieldErrors.sampradaya ? "border border-red-500" : ""}`}>
-                <h3 className={`font-medium ${fieldErrors.sampradaya ? "text-red-600" : ""}`}>
-                  {t("pujari.sampradaya")} *
-                </h3>
-                {(["smartha", "madhwa", "vaishnava"] as const).map((s) => (
-                  <label key={s} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="sampradaya"
-                      checked={profile.sampradaya === s}
-                      onChange={() => setField("sampradaya", s)}
-                    />
-                    {t(`pujari.${s}`)}
-                  </label>
-                ))}
-                <Err name="sampradaya" />
-              </div>
-              <div className={`space-y-2 rounded-md p-2 ${fieldErrors.languages ? "border border-red-500" : ""}`}>
-                <Label className={fieldErrors.languages ? "text-red-600" : undefined}>Languages *</Label>
-                <div className="flex flex-wrap gap-3">
-                  {LANG_OPTS.map((l) => (
-                    <label key={l} className="flex items-center gap-2 text-sm">
-                      <Checkbox checked={langs.includes(l)} onCheckedChange={(v) => toggleList("languages", l, !!v)} />
-                      {l}
-                    </label>
-                  ))}
-                </div>
-                <Input
-                  placeholder="Other languages (comma-separated)"
-                  value={langCustom}
-                  onChange={(e) => {
-                    setLangCustom(e.target.value);
-                    setFieldErrors((prev) => {
-                      if (!prev.languages) return prev;
-                      const next = { ...prev };
-                      delete next.languages;
-                      return next;
-                    });
-                  }}
-                />
-                <Err name="languages" />
-              </div>
+              <GateCard
+                title="Qualifications &amp; experience"
+                description="Qualifications, sampradaya, years of experience, and languages are edited in My Profile — not on a separate onboarding form."
+                href="/pujari/profile"
+                linkLabel="Open My Profile"
+              >
+                <ul className="space-y-1">
+                  <ChecklistItem ok={quals.length > 0} label="At least one qualification" />
+                  <ChecklistItem ok={!!profile.qualification_year} label="Qualification year" />
+                  <ChecklistItem ok={!!String(profile.sampradaya || "").trim()} label="Sampradaya" />
+                </ul>
+              </GateCard>
               <div className="rounded-lg border border-primary/20 bg-orange-50/40 p-4 text-sm space-y-2">
                 <p className="font-medium text-foreground">Services &amp; Dakshina</p>
                 <p className="text-muted-foreground">
-                  After onboarding, open the <Link href="/pujari/services" className="text-primary underline">Services</Link>{" "}
-                  tab to choose from all BSeva catalog pujas. Selections need Admin approval before they go live — you
-                  cannot add custom pujas.
+                  After onboarding, open{" "}
+                  <Link href="/pujari/services" className="text-primary underline">
+                    Services
+                  </Link>{" "}
+                  to choose catalog pujas (Admin approval required).
                 </p>
               </div>
+              <Button type="button" size="sm" variant="ghost" onClick={() => void refreshProfile()}>
+                Refresh checklist
+              </Button>
             </section>
           )}
 
@@ -725,96 +450,48 @@ export default function PujariOnboardingPage() {
               <h2 className="text-xl">Documents</h2>
               <ErrorSummary />
               <PriestOnboardingPanel />
-              <p className="text-sm">
-                After uploading documents, complete{" "}
+              <p className="text-sm text-muted-foreground">
+                Angikara Patram is optional during onboarding. When you are ready, preview and submit it from{" "}
                 <Link href="/pujari/angikara" className="text-primary underline">
                   Angikara Patram
-                </Link>
-                .
+                </Link>{" "}
+                (data comes from My Profile).
               </p>
             </section>
           )}
 
           {step === 5 && (
             <section className="space-y-4">
-              <h2 className="text-xl">Availability & bank</h2>
+              <h2 className="text-xl">Availability &amp; bank</h2>
               <ErrorSummary />
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={!!profile.available} onCheckedChange={(v) => setField("available", !!v)} />
-                Available for new bookings
-              </label>
-              <div className="max-w-xs">
-                <Label className={fieldErrors.service_radius_km ? "text-red-600" : undefined}>
-                  Service radius (km) *
-                </Label>
-                <Input
-                  className={errClass("service_radius_km")}
-                  type="number"
-                  min={1}
-                  step="0.1"
-                  value={profile.service_radius_km ?? ""}
-                  onChange={(e) => setField("service_radius_km", e.target.value)}
-                />
-                <Err name="service_radius_km" />
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label className={fieldErrors.bank_holder_name ? "text-red-600" : undefined}>
-                    Account holder name *
-                  </Label>
-                  <Input
-                    className={errClass("bank_holder_name")}
-                    value={profile.bank_holder_name || ""}
-                    onChange={(e) => setField("bank_holder_name", e.target.value)}
+              <GateCard
+                title="Availability"
+                description="Turn on availability and set your service radius (km)."
+                href="/pujari/availability"
+                linkLabel="Open Availability"
+              >
+                <ul className="space-y-1">
+                  <ChecklistItem ok={!!profile.service_radius_km} label="Service radius set" />
+                </ul>
+              </GateCard>
+              <GateCard
+                title="Bank account"
+                description="Settlement account details are saved on the Bank page."
+                href="/pujari/bank"
+                linkLabel="Open Bank / Settlement"
+              >
+                <ul className="space-y-1">
+                  <ChecklistItem ok={!!String(profile.bank_holder_name || "").trim()} label="Account holder name" />
+                  <ChecklistItem ok={!!String(profile.bank_ifsc || "").trim()} label="IFSC" />
+                  <ChecklistItem
+                    ok={!!String(profile.bank_account_number || "").replace(/\D/g, "")}
+                    label="Account number"
                   />
-                  <Err name="bank_holder_name" />
-                </div>
-                <div>
-                  <Label className={fieldErrors.bank_ifsc ? "text-red-600" : undefined}>IFSC *</Label>
-                  <Input
-                    className={errClass("bank_ifsc")}
-                    value={profile.bank_ifsc || ""}
-                    onChange={(e) => setField("bank_ifsc", e.target.value)}
-                  />
-                  <Err name="bank_ifsc" />
-                </div>
-                <div>
-                  <Label className={fieldErrors.bank_account_number ? "text-red-600" : undefined}>
-                    Account number *
-                  </Label>
-                  <Input
-                    className={errClass("bank_account_number")}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={profile.bank_account_number || ""}
-                    onChange={(e) =>
-                      setField("bank_account_number", e.target.value.replace(/\D/g, "").slice(0, 18))
-                    }
-                  />
-                  <Err name="bank_account_number" />
-                </div>
-                <div>
-                  <Label className={fieldErrors.bank_account_confirm ? "text-red-600" : undefined}>
-                    Confirm account number *
-                  </Label>
-                  <Input
-                    className={errClass("bank_account_confirm")}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={bankConfirm}
-                    onChange={(e) => {
-                      setBankConfirm(e.target.value.replace(/\D/g, "").slice(0, 18));
-                      setFieldErrors((prev) => {
-                        if (!prev.bank_account_confirm) return prev;
-                        const next = { ...prev };
-                        delete next.bank_account_confirm;
-                        return next;
-                      });
-                    }}
-                  />
-                  <Err name="bank_account_confirm" />
-                </div>
-              </div>
+                </ul>
+              </GateCard>
+              <Button type="button" size="sm" variant="ghost" onClick={() => void refreshProfile()}>
+                Refresh checklist
+              </Button>
             </section>
           )}
 
@@ -827,8 +504,7 @@ export default function PujariOnboardingPage() {
                   <span className="text-muted-foreground">Name:</span> {profile.full_name ||"—"}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Phone:</span>{" "}
-                  {phoneNational ? toE164(countryCode, phoneNational) : "—"}
+                  <span className="text-muted-foreground">Phone:</span> {profile.mobile_number || user?.phone || "—"}
                 </p>
                 <p>
                   <span className="text-muted-foreground">City:</span> {profile.city ||"—"}

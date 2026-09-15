@@ -23,6 +23,8 @@ const QUALS = [
   { id: "vidya_visharada", key: "pujari.q3" },
 ];
 
+const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
+
 function ProfileForm() {
   const { t } = useI18n();
   const [profile, setProfile] = useState<any>(null);
@@ -101,9 +103,11 @@ function ProfileForm() {
           present_address: present,
           mobile_number: mobile,
           whatsapp_number: wa,
+          experience_years: profile.experience_years ? Number(profile.experience_years) : null,
           qualifications: profile.qualifications || [],
           qualification_year: profile.qualification_year ? Number(profile.qualification_year) : null,
           sampradaya: profile.sampradaya || null,
+          languages: profile.languages || [],
           website_publication_consent: !!profile.website_publication_consent,
         }),
       });
@@ -119,7 +123,15 @@ function ProfileForm() {
   if (!profile) return <p className="text-muted-foreground">{t("common.loading")}</p>;
   const pct = Number(profile.profile_completion_percentage || 0);
   const quals: string[] = profile.qualifications || [];
+  const langs: string[] = profile.languages || [];
   const yearNow = new Date().getFullYear();
+
+  function toggleLanguage(item: string, on: boolean) {
+    setField(
+      "languages",
+      on ? Array.from(new Set([...langs, item])) : langs.filter((x) => x !== item),
+    );
+  }
   const isVerified =
     profile.profile_status === "verified" ||
     (profile.verification_status === "approved" && (!!profile.profile_submitted_at || pct >= 100));
@@ -385,6 +397,34 @@ function ProfileForm() {
             {t(`pujari.${s}`)}
           </label>
         ))}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl">Experience &amp; languages</h2>
+        <p className="text-sm text-muted-foreground">
+          Saved here once — onboarding and Angikara Patram use this information; we do not ask again elsewhere.
+        </p>
+        <div className="max-w-xs">
+          <Label>Years of experience</Label>
+          <Input
+            type="number"
+            min={0}
+            max={80}
+            value={profile.experience_years ?? ""}
+            onChange={(e) => setField("experience_years", e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Languages</Label>
+          <div className="flex flex-wrap gap-3">
+            {LANG_OPTS.map((l) => (
+              <label key={l} className="flex items-center gap-2 text-sm">
+                <Checkbox checked={langs.includes(l)} onCheckedChange={(v) => toggleLanguage(l, !!v)} />
+                {l}
+              </label>
+            ))}
+          </div>
+        </div>
       </section>
 
       <label className="flex items-start gap-2 text-sm">
