@@ -7,6 +7,8 @@ interface ServiceCardProps {
   description: string;
   image: string;
   icon?: React.ReactNode;
+  /** e.g. "Starting from ₹3,740" — shown for every bookable puja when set */
+  startingFrom?: string | null;
   comingSoon?: boolean;
   /** Area / location gate — service is listed but booking CTAs disabled */
   bookingDisabled?: boolean;
@@ -18,6 +20,7 @@ export default function ServiceCard({
   description,
   image,
   icon,
+  startingFrom,
   comingSoon,
   bookingDisabled,
   bookingDisabledLabel,
@@ -64,6 +67,9 @@ export default function ServiceCard({
       </CardHeader>
 
       <CardContent className="flex-1 px-4 sm:px-6 min-w-0 overflow-hidden">
+        {startingFrom && !comingSoon ? (
+          <p className="text-primary font-semibold text-sm mb-2">{startingFrom}</p>
+        ) : null}
         <p className="text-muted-foreground text-sm leading-relaxed break-words [overflow-wrap:anywhere]">
           {description}
         </p>

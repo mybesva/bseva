@@ -259,6 +259,13 @@ export default function PujariBookingsPage() {
                         <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
                           <Sparkles size={16} className="text-primary shrink-0" />
                           <span className="truncate">{row.pujaType.name}</span>
+                          {row.booking.offerInvited ? (
+                            <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-[10px] uppercase tracking-wide">
+                              {row.booking.offerDistanceKm != null
+                                ? `Open · ${row.booking.offerDistanceKm} km`
+                                : "Open request"}
+                            </Badge>
+                          ) : null}
                           {row.booking.samagriRequested ? (
                             <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[10px] uppercase tracking-wide">
                               Samagri Selected

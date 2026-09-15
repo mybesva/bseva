@@ -1,3 +1,4 @@
+import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
@@ -29,6 +30,7 @@ export default function ScrollToTop() {
   }, []);
 
   useEffect(() => {
+    releaseStaleUiLocks();
     resetScroll();
     // Re-apply after paint / late layout (images, fonts) so we don't stay at prior offset
     const t0 = window.setTimeout(resetScroll, 0);

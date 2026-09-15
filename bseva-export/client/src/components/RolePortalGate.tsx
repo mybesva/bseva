@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Layout from "@/components/Layout";
+import MarketingLayout from "@/components/MarketingLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -75,11 +75,11 @@ export default function RolePortalGate({
 
   if (loading) {
     return (
-      <Layout>
+      <MarketingLayout>
         <div className="container py-16">
           <Skeleton className="h-48 w-full" />
         </div>
-      </Layout>
+      </MarketingLayout>
     );
   }
 
@@ -87,7 +87,7 @@ export default function RolePortalGate({
 
   if (user && user.role !== expected && !(expected === "pujari" && user.role === "head_pujari")) {
     return (
-      <Layout>
+      <MarketingLayout>
         <div className="container py-16 max-w-md">
           <Card>
             <CardContent className="pt-6 space-y-4 text-center">
@@ -100,7 +100,7 @@ export default function RolePortalGate({
             </CardContent>
           </Card>
         </div>
-      </Layout>
+      </MarketingLayout>
     );
   }
 
@@ -137,7 +137,7 @@ export default function RolePortalGate({
   const Icon = copy.Icon;
 
   return (
-    <Layout>
+    <MarketingLayout>
       <div className="container py-12 max-w-md">
         <Card>
           <CardHeader className="space-y-3">
@@ -153,7 +153,7 @@ export default function RolePortalGate({
             <CardDescription>{copy.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-3" onSubmit={onLogin} autoComplete="off">
+            <form key={expected} className="space-y-3" onSubmit={onLogin} autoComplete="off">
               <div className="space-y-2">
                 <Label>Email or phone</Label>
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
@@ -189,6 +189,6 @@ export default function RolePortalGate({
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </MarketingLayout>
   );
 }

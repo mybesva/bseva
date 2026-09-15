@@ -507,9 +507,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     number = f"BSV-{datetime.utcnow().strftime('%y%m%d')}-{booking_id[:8].upper()}"
     meeting = None
     public_invite = None
-    initial_status = "pending_acceptance" if has_pujari else "pending"
+    initial_status = "pending_acceptance"
     needs_reassignment = not has_pujari
-    # Paid bookings: with pujari → await accept; without → admin assigns pujari first
+    # Paid bookings: with pujari → that pujari accepts; without → broadcast offers within 10 km
     db.execute(
         text(
             """
@@ -837,7 +837,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             apply_referral_code(db, str(user["id"]), body.referral_code)
         except Exception:
             pass
+    invited_pujari_ids: list[str] = []
     try:
+        from app.booking_offers import create_offers_for_booking, notify_pujaris_new_offer
         from app.routers.notifications import create_notification, notify_ops_staff
 
         if has_pujari:
@@ -847,16 +849,25 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                 title="New booking request",
                 body=f"New booking {number} awaiting your acceptance.",
                 category="booking",
-                link="/pujari",
+                link="/pujari/bookings",
             )
         else:
-            notify_ops_staff(
-                db,
-                title="Booking needs pujari assignment",
-                body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date}. Assign a pujari in Admin → Bookings.",
-                category="booking",
-                link="/admin/bookings?status=needs_reassignment",
-            )
+            invited_pujari_ids = create_offers_for_booking(db, booking_id)
+            if invited_pujari_ids:
+                notify_pujaris_new_offer(
+                    db,
+                    pujari_ids=invited_pujari_ids,
+                    booking_number=number,
+                    service_name=str(svc.get("name") or "Puja"),
+                )
+            else:
+                notify_ops_staff(
+                    db,
+                    title="Booking needs pujari assignment",
+                    body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date}. No eligible pujari in range — assign manually.",
+                    category="booking",
+                    link="/admin/bookings?status=needs_reassignment",
+                )
     except Exception:
         pass
     db.commit()
@@ -868,6 +879,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         "public_invite_url": public_invite,
         "status": initial_status,
         "awaiting_pujari_assignment": not has_pujari,
+        "offers_sent": len(invited_pujari_ids) if not has_pujari else 0,
         "recurring_series_id": series_id,
         "recurring_next_dates": next_dates,
         "breakdown": {
@@ -916,26 +928,53 @@ def list_bookings(
         ).mappings().all()
         items = [row_dict(r) for r in rows]
     elif user["role"] in ("pujari", "head_pujari"):
+        from app.booking_offers import ensure_offers_table
+
+        ensure_offers_table(db)
+        pid = user["id"]
         total = int(
             db.execute(
-                text("SELECT COUNT(*) FROM bookings WHERE pujari_id = :id"),
-                {"id": user["id"]},
+                text(
+                    """
+                    SELECT COUNT(DISTINCT b.id)
+                    FROM bookings b
+                    LEFT JOIN booking_pujari_offers o
+                      ON o.booking_id = b.id AND o.pujari_id = CAST(:id AS uuid) AND o.status = 'invited'
+                    WHERE b.pujari_id = CAST(:id AS uuid)
+                       OR (
+                         b.pujari_id IS NULL
+                         AND o.id IS NOT NULL
+                         AND b.status IN ('pending', 'pending_acceptance')
+                         AND b.payment_status = 'paid'
+                       )
+                    """
+                ),
+                {"id": pid},
             ).scalar()
             or 0
         )
         rows = db.execute(
             text(
                 """
-                SELECT b.*, cu.name AS customer_name, s.name AS service_name
+                SELECT b.*, cu.name AS customer_name, s.name AS service_name,
+                       o.status AS offer_status, o.distance_km AS offer_distance_km
                 FROM bookings b
                 JOIN users cu ON cu.id = b.customer_id
                 JOIN services s ON s.id = b.service_id
-                WHERE b.pujari_id = :id
+                LEFT JOIN booking_pujari_offers o
+                  ON o.booking_id = b.id AND o.pujari_id = CAST(:id AS uuid) AND o.status = 'invited'
+                WHERE b.pujari_id = CAST(:id AS uuid)
+                   OR (
+                     b.pujari_id IS NULL
+                     AND o.id IS NOT NULL
+                     AND b.status IN ('pending', 'pending_acceptance')
+                     AND b.payment_status = 'paid'
+                   )
                 ORDER BY b.created_at DESC
                 LIMIT :lim OFFSET :off
                 """
             ),
-            {"id": user["id"], "lim": limit, "off": offset},
+            {"id": pid, "lim": limit, "off": offset},
         ).mappings().all()
         items = [booking_for_role(db, dict(r), user) for r in rows]
     else:

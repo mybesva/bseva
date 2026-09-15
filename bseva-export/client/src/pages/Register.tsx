@@ -15,6 +15,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import BSevaLogo from "@/components/BSevaLogo";
 
 import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { toE164, validatePhoneNational } from "@/lib/phone";
@@ -231,10 +232,13 @@ export default function Register() {
   const loginHref = accountType === "pujari" ? "/login?role=pujari" : "/login?role=customer";
 
   return (
-    <Layout>
+    <Layout publicOnly>
       <div className="min-h-[70vh] py-12 px-4">
         <Card className="w-full max-w-lg mx-auto border-border shadow-lg">
           <CardHeader>
+            <div className="flex justify-center mb-2">
+              <BSevaLogo size="md" />
+            </div>
             <CardTitle className="text-2xl">
               {accountType === "pujari" ? "Create your Pujari account" : "Create your Customer account"}
             </CardTitle>

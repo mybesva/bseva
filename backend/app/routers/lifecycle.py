@@ -135,13 +135,44 @@ def booking_preparation(booking_id: str, user=Depends(current_user), db: Session
 def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
     if not body.terms_accepted:
         raise HTTPException(400, "Terms must be accepted")
-    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    b = db.execute(
+        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid) FOR UPDATE"),
+        {"id": booking_id},
+    ).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    if str(b["pujari_id"]) != str(user["id"]):
+    pid = str(user["id"])
+    from app.booking_offers import pujari_invited_offer, withdraw_open_offers
+
+    assigned = b.get("pujari_id") and str(b["pujari_id"]) == pid
+    offer = None if assigned else pujari_invited_offer(db, booking_id, pid)
+    if not assigned and not offer:
         raise HTTPException(403, "Not allowed")
+    if not assigned and b.get("pujari_id"):
+        raise HTTPException(409, "Another pujari already accepted this booking")
     if b["status"] not in ("pending", "pending_acceptance", "confirmed"):
         raise HTTPException(400, "Booking cannot be accepted in current status")
+    if not assigned:
+        db.execute(
+            text(
+                """
+                UPDATE bookings SET
+                  pujari_id = CAST(:pid AS uuid),
+                  needs_reassignment = FALSE,
+                  rejection_reason = NULL
+                WHERE id = CAST(:id AS uuid) AND pujari_id IS NULL
+                """
+            ),
+            {"pid": pid, "id": booking_id},
+        )
+        chk = db.execute(
+            text("SELECT pujari_id FROM bookings WHERE id = CAST(:id AS uuid)"),
+            {"id": booking_id},
+        ).scalar()
+        if str(chk) != pid:
+            raise HTTPException(409, "Another pujari already accepted this booking")
+        withdraw_open_offers(db, booking_id, except_pujari_id=pid, mark_accepted_for=pid)
+        b = {**dict(b), "pujari_id": pid}
     db.execute(
         text(
             """
@@ -257,8 +288,41 @@ def reject_booking(
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    if str(b["pujari_id"]) != str(user["id"]):
-        raise HTTPException(403, "Not allowed")
+    pid = str(user["id"])
+    from app.booking_offers import count_invited_offers, reject_offer
+
+    assigned = b.get("pujari_id") and str(b["pujari_id"]) == pid
+    if not assigned:
+        if b.get("pujari_id"):
+            raise HTTPException(403, "Not allowed")
+        if not reject_offer(db, booking_id, pid, reason):
+            raise HTTPException(403, "Not allowed")
+        write_audit(db, pid, f"booking_offer_reject:{reason or 'no_reason'}", "booking", booking_id)
+        remaining = count_invited_offers(db, booking_id)
+        if remaining == 0:
+            db.execute(
+                text(
+                    """
+                    UPDATE bookings SET needs_reassignment = TRUE
+                    WHERE id = CAST(:id AS uuid) AND pujari_id IS NULL
+                    """
+                ),
+                {"id": booking_id},
+            )
+            try:
+                from app.routers.notifications import notify_ops_staff
+
+                notify_ops_staff(
+                    db,
+                    title="Booking needs pujari assignment",
+                    body=f"{b.get('booking_number') or booking_id[:8]} — all nearby pujaris declined.",
+                    category="ops",
+                    link="/admin/bookings?status=needs_reassignment",
+                )
+            except Exception:
+                pass
+        db.commit()
+        return {"ok": True, "status": "offer_rejected", "invites_remaining": remaining}
     if b["status"] not in ("pending", "pending_acceptance"):
         raise HTTPException(400, "Only pending bookings can be rejected")
     set_booking_status(db, booking_id, "rejected", actor_id=str(user["id"]))

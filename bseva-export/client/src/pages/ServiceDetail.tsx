@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
-import { api, rupees } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
 import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
+import { formatStartingFrom } from "@/lib/servicePricing";
 
 type Svc = {
   id: string;
@@ -46,6 +47,7 @@ type Svc = {
   alankaram_available?: boolean;
   food_available?: boolean;
   standard_price_paise?: number | null;
+  premium_price_paise?: number | null;
   main_puja_price_paise?: number | null;
   samagri_price_paise?: number | null;
   alankaram_price_paise?: number | null;
@@ -211,12 +213,8 @@ export default function ServiceDetail() {
                 <Meta label="Homa / Havan" value={svc.homa_included ? "Included option" : "As configured"} />
                 <Meta label="Languages" value={(svc.languages || ["en"]).join(", ").toUpperCase()} />
                 <Meta
-                  label="Main price"
-                  value={
-                    svc.bookable && svc.standard_price_paise != null
-                      ? rupees(svc.standard_price_paise)
-                      : "Set by Admin"
-                  }
+                  label="Price"
+                  value={formatStartingFrom(svc) || (svc.bookable ? "Set by Admin" : "Coming soon")}
                 />
               </div>
 

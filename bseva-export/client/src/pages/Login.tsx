@@ -11,6 +11,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
 import { safeReturnUrl } from "@/const";
+import BSevaLogo from "@/components/BSevaLogo";
 
 export default function Login() {
   const [location, setLocation] = useLocation();
@@ -35,6 +36,11 @@ export default function Login() {
     if (!loading && user) goAfterLogin(user.role);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
+
+  useEffect(() => {
+    setIdentifier("");
+    setPassword("");
+  }, [roleHint]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,15 +68,18 @@ export default function Login() {
   const portalLabel = roleHint ? `${roleHint.charAt(0).toUpperCase()}${roleHint.slice(1)} Login` : "Login to BSeva";
 
   return (
-    <Layout>
+    <Layout publicOnly>
       <div className="min-h-[70vh] flex items-center justify-center py-16 px-4 bg-gradient-to-b from-secondary/30 to-background">
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader>
+            <div className="flex justify-center mb-2">
+              <BSevaLogo size="md" />
+            </div>
             <CardTitle className="text-2xl text-foreground">{portalLabel}</CardTitle>
             <CardDescription>Use your registered email or phone and password.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={onSubmit} autoComplete="off">
+            <form key={roleHint || "default"} className="space-y-4" onSubmit={onSubmit} autoComplete="off">
               <div className="space-y-2">
                 <Label htmlFor="identifier">Email or Phone</Label>
                 <Input

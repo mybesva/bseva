@@ -1,7 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import Layout from "@/components/Layout";
-import { CustomerPortal } from "@/components/RolePortals";
 import BookingWizard from "@/components/BookingWizard";
 import MuhurtaConsultationBook from "@/components/MuhurtaConsultationBook";
 import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
@@ -16,15 +15,6 @@ import {
   COMING_SOON_TITLE,
 } from "@/lib/serviceAvailabilityMessages";
 import { Loader2 } from "lucide-react";
-
-function BookShell({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  // Logged-in customers book inside the Customer portal (no public site headers).
-  if (user?.role === "customer") {
-    return <CustomerPortal>{children}</CustomerPortal>;
-  }
-  return <Layout>{children}</Layout>;
-}
 
 export default function Book() {
   const params = useParams();
@@ -53,11 +43,11 @@ export default function Book() {
 
   if (authLoading || isLoading) {
     return (
-      <BookShell>
+      <Layout>
         <div className="min-h-[40vh] flex items-center justify-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
-      </BookShell>
+      </Layout>
     );
   }
 
@@ -67,7 +57,7 @@ export default function Book() {
 
   if (!pujaType) {
     return (
-      <BookShell>
+      <Layout>
         <div className="min-h-[40vh] flex items-center justify-center">
           <div className="text-center space-y-4">
             <h1 className="text-h1 text-foreground mb-2">Service Not Found</h1>
@@ -77,7 +67,7 @@ export default function Book() {
             </Button>
           </div>
         </div>
-      </BookShell>
+      </Layout>
     );
   }
 
@@ -90,7 +80,7 @@ export default function Book() {
   const blockBooking = user?.role === "customer" && (!canBook || checking);
 
   return (
-    <BookShell>
+    <Layout>
       {inCustomerPortal ? (
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{pujaType.name}</h1>
@@ -161,6 +151,6 @@ export default function Book() {
           />
         </div>
       )}
-    </BookShell>
+    </Layout>
   );
 }

@@ -12,6 +12,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
 import { serviceImageUrl } from "@/lib/serviceImage";
+import { formatStartingFrom } from "@/lib/servicePricing";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
 import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
@@ -26,6 +27,7 @@ type Svc = {
   short_description?: string;
   description?: string;
   standard_price_paise?: number | null;
+  premium_price_paise?: number | null;
   bookable?: boolean;
   active?: boolean;
   image_url?: string | null;
@@ -169,17 +171,18 @@ export default function Services() {
                     {list.map((s, i) => {
                       const Icon = ICONS[i % ICONS.length];
                       const img = serviceImageUrl(s);
+                      const starting = formatStartingFrom(s);
                       const desc =
                         s.short_description ||
                         s.description ||
-                        (s.bookable && s.standard_price_paise != null
-                          ? `From ₹${(s.standard_price_paise / 100).toLocaleString("en-IN")}`
-                          : "Pricing set by Admin soon");
+                        starting ||
+                        (s.bookable ? "Pricing set by Admin soon" : "Coming soon");
                       return (
                         <div key={s.id} onClick={() => openService(s.slug, s.bookable)} className="cursor-pointer">
                           <ServiceCard
                             title={s.name}
                             description={desc}
+                            startingFrom={starting}
                             image={img}
                             icon={<Icon size={24} />}
                             comingSoon={!s.bookable}

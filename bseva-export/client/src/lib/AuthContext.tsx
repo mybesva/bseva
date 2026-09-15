@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getToken, logoutApi, meApi, type AuthUser } from "@/lib/api";
+import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 
 type AuthState = {
   user: AuthUser | null;
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     logoutApi();
     setUser(null);
+    releaseStaleUiLocks();
   }, []);
 
   const value = useMemo(

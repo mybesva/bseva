@@ -12,6 +12,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { api, dashboardPath } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { serviceImageUrl } from "@/lib/serviceImage";
+import { formatStartingFrom } from "@/lib/servicePricing";
 import {
   Select,
   SelectContent,
@@ -213,12 +214,12 @@ export default function Home() {
               {popular.map((s, i) => {
                 const Icon = ICONS[i % ICONS.length];
                 const img = serviceImageUrl(s);
+                const starting = formatStartingFrom(s);
                 const desc =
                   s.short_description ||
                   s.description ||
-                  (s.bookable && s.standard_price_paise != null
-                    ? `From ₹${(s.standard_price_paise / 100).toLocaleString("en-IN")}`
-                    : "Available soon");
+                  starting ||
+                  (s.bookable ? "Available soon" : "Coming soon");
                 return (
                   <div
                     key={s.id}
@@ -228,6 +229,7 @@ export default function Home() {
                     <ServiceCard
                       title={s.name}
                       description={desc}
+                      startingFrom={starting}
                       image={img}
                       icon={<Icon size={24} />}
                       comingSoon={!s.bookable}

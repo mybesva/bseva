@@ -571,6 +571,12 @@ def assign_pujari_to_booking(
         ),
         {"pid": body.pujari_id, "hist": json.dumps(hist), "id": booking_id},
     )
+    try:
+        from app.booking_offers import withdraw_open_offers
+
+        withdraw_open_offers(db, booking_id, except_pujari_id=body.pujari_id)
+    except Exception:
+        pass
     # New assignee must accept again
     if b["status"] in ("rejected", "confirmed"):
         set_booking_status(db, booking_id, "pending_acceptance", actor_id=str(admin["id"]))

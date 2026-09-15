@@ -12,6 +12,7 @@ import {
   BOOKING_UNAVAILABLE_HINT,
 } from "@/lib/serviceAvailabilityMessages";
 import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
+import { formatStartingFrom } from "@/lib/servicePricing";
 import { Calendar, MapPin, Clock, Sparkles, CreditCard, ArrowRight, PlayCircle, Video } from "lucide-react";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
@@ -296,9 +297,10 @@ function CustomerDashboardContent() {
                     )}
                     <div className="text-sm font-medium text-foreground">
                       {rec.service_name}
-                      {rec.standard_price_paise
-                        ? ` · From ₹${(rec.standard_price_paise / 100).toLocaleString("en-IN")}`
-                        : ""}
+                      {(() => {
+                        const line = formatStartingFrom(rec);
+                        return line ? ` · ${line}` : "";
+                      })()}
                     </div>
                     <Button
                       className="w-full bg-primary hover:bg-primary/90 font-bold"
@@ -342,9 +344,9 @@ function CustomerDashboardContent() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground line-clamp-2">{puja.description}</p>
-                  <div className="text-sm font-medium text-foreground">
-                    From ₹{((puja.standard_price_paise || 0) / 100).toLocaleString("en-IN")}
-                  </div>
+                  {formatStartingFrom(puja) ? (
+                    <div className="text-sm font-semibold text-primary">{formatStartingFrom(puja)}</div>
+                  ) : null}
                   <Button
                     className="w-full bg-primary hover:bg-primary/90 font-bold"
                     disabled={!canBook || checking}

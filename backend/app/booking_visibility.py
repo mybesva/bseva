@@ -101,32 +101,51 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
         _attach_invite_urls(data, reveal_meet=within_window)
         return data
 
-    if role in ("pujari", "head_pujari") and str(data.get("pujari_id")) == str(user.get("id")):
-        full = within_window or data.get("status") in ("in_progress", "completed", "cancelled")
-        data["details_level"] = "full" if full else "basic"
-        data["pujari_details_visible"] = True
-        # Privacy: never expose customer full name to pujari — first name / initials only
-        raw_name = str(data.get("customer_name") or "").strip()
-        if raw_name:
-            parts = [p for p in raw_name.split() if p]
-            if len(parts) == 1:
-                data["customer_name"] = parts[0][0].upper() + "." if parts[0] else "Customer"
-            else:
-                data["customer_name"] = f"{parts[0]} {parts[-1][0].upper()}."
-            data["customer_display_name"] = data["customer_name"]
-        data.pop("customer_email", None)
-        if not full:
-            for k in (
-                "address",
-                "customer_phone",
-                "latitude",
-                "longitude",
+    if role in ("pujari", "head_pujari"):
+        assigned = data.get("pujari_id") and str(data.get("pujari_id")) == str(user.get("id"))
+        invited = False
+        if not assigned:
+            from app.booking_offers import pujari_invited_offer
+
+            offer = pujari_invited_offer(db, str(data.get("id")), str(user.get("id")))
+            if offer and data.get("pujari_id") is None and data.get("status") in (
+                "pending",
+                "pending_acceptance",
             ):
-                data.pop(k, None)
-            if data.get("location_label"):
-                parts = str(data["location_label"]).split(",")
-                data["location_label"] = parts[-1].strip() if parts else data["location_label"]
-                data["location_area"] = data["location_label"]
-        _attach_invite_urls(data, reveal_meet=full)
-        return data
+                invited = True
+                data["offer_status"] = offer.get("status")
+                data["offer_distance_km"] = offer.get("distance_km")
+                data["pujari_offer_invited"] = True
+            elif data.get("offer_status") == "invited" and data.get("pujari_id") is None:
+                invited = True
+                data["pujari_offer_invited"] = True
+        if assigned or invited:
+            full = within_window or data.get("status") in ("in_progress", "completed", "cancelled")
+            data["details_level"] = "full" if full else "basic"
+            data["pujari_details_visible"] = True
+            raw_name = str(data.get("customer_name") or "").strip()
+            if raw_name:
+                parts = [p for p in raw_name.split() if p]
+                if len(parts) == 1:
+                    data["customer_name"] = parts[0][0].upper() + "." if parts[0] else "Customer"
+                else:
+                    data["customer_name"] = f"{parts[0]} {parts[-1][0].upper()}."
+                data["customer_display_name"] = data["customer_name"]
+            data.pop("customer_email", None)
+            if not full:
+                for k in (
+                    "address",
+                    "customer_phone",
+                    "latitude",
+                    "longitude",
+                ):
+                    data.pop(k, None)
+                if data.get("location_label"):
+                    parts = str(data["location_label"]).split(",")
+                    data["location_label"] = parts[-1].strip() if parts else data["location_label"]
+                    data["location_area"] = data["location_label"]
+            if invited:
+                data["pujari_accept_required"] = True
+            _attach_invite_urls(data, reveal_meet=full)
+            return data
     raise PermissionError("Not allowed")

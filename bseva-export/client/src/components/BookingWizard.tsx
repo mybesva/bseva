@@ -82,6 +82,22 @@ type Tier = "basic" | "standard" | "premium";
 type ServiceMode = "physical" | "virtual";
 type CalendarType = "north" | "south" | "lunar";
 
+type Step2FieldErrors = Partial<
+  Record<"bookingDate" | "address" | "doorNumber" | "locationText" | "mapLocation" | "city", string>
+>;
+
+function RequiredMark() {
+  return (
+    <span className="text-destructive font-semibold ml-0.5" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
+function fieldHasError(errors: Step2FieldErrors, key: keyof Step2FieldErrors) {
+  return Boolean(errors[key]);
+}
+
 function addonListPaise(
   selected: boolean,
   quoteCharge: number | undefined,
@@ -208,6 +224,7 @@ export default function BookingWizard({
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [extraDate, setExtraDate] = useState<Date | undefined>();
   const [extraDatePickerOpen, setExtraDatePickerOpen] = useState(false);
+  const [step2Errors, setStep2Errors] = useState<Step2FieldErrors>({});
   const { config: publicConfig } = usePublicConfig();
   const settings = {
     virtualPujaEnabled: publicConfig.virtual_puja_enabled ? "true" : "false",
@@ -460,7 +477,7 @@ export default function BookingWizard({
                     {samagriListPaise > 0 ? formatPlusPrice(samagriListPaise) : "—"}
                   </p>
                   {includeSamagri && samagriListPaise > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1">Added to booking total</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Included in total booking</p>
                   )}
                 </div>
               </div>
@@ -537,7 +554,7 @@ export default function BookingWizard({
                     Prasadam / food arrangement for this puja (when offered)
                   </p>
                   {includeFood && foodPrice > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1 text-right">Added to booking total</p>
+                    <p className="text-[11px] text-muted-foreground mt-1 text-right">Included in total booking</p>
                   )}
                 </div>
               </label>
@@ -554,8 +571,8 @@ export default function BookingWizard({
               <AlertDialogDescription className="space-y-2 text-left">
                 <span className="block">
                   {(addonConfirm === "food" ? foodPrice : samagriListPaise) > 0
-                    ? `${formatPlusPrice(addonConfirm === "food" ? foodPrice : samagriListPaise)} will be added to your booking total.`
-                    : "This will be added to your booking total."}
+                    ? `${formatPlusPrice(addonConfirm === "food" ? foodPrice : samagriListPaise)} included in total booking.`
+                    : "Included in total booking."}
                 </span>
                 <span className="block text-muted-foreground">
                   {addonConfirm === "food"
@@ -592,10 +609,16 @@ export default function BookingWizard({
     },
   };
 
-  const availableTiers = (Object.keys(tierDetails) as Tier[]).filter((key) => {
-    if (key === "basic") return Number(basePrices.basic || 0) > 0;
-    return Number(basePrices[key] || 0) > 0;
-  });
+  /** Book Standard and Premium only (no Basic tier in customer flow). */
+  const availableTiers = (["standard", "premium"] as Tier[]).filter(
+    (key) => Number(basePrices[key] || 0) > 0
+  );
+
+  useEffect(() => {
+    if (availableTiers.length && !availableTiers.includes(tier)) {
+      setTier(availableTiers.includes("standard") ? "standard" : availableTiers[0]);
+    }
+  }, [availableTiers.join(","), tier]);
 
   const steps = [
     { number: 1, title: t("booking.package") },
@@ -627,17 +650,40 @@ export default function BookingWizard({
     [quote, basePrices, tier, settings, includeSamagri, includeAlankaram, includeFood, addonPrices],
   );
 
-  const canProceed = () => {
-    if (currentStep === 1) return !!tier && !!serviceMode;
-    if (currentStep === 2) {
+  function validateStep2(): boolean {
+    const err: Step2FieldErrors = {};
+    if (!bookingDate) err.bookingDate = "Select a booking date";
+    if (!city.trim()) err.city = "Enter city";
+    if (addressMode === "saved") {
       const addr = composedServiceAddress();
-      if (addressMode === "new") {
-        return !!(bookingDate && doorNumber.trim() && locationText.trim() && city.trim() && lat != null && lng != null);
-      }
-      return !!(bookingDate && addr && city.trim());
+      if (!savedAddress || !addr.trim()) err.address = "Choose a saved address or add a new one";
+      if (lat == null || lng == null) err.mapLocation = "Address must include map location";
+    } else {
+      if (!doorNumber.trim()) err.doorNumber = "Enter door / flat / house number";
+      if (!locationText.trim()) err.locationText = "Enter street / area";
+      if (lat == null || lng == null) err.mapLocation = "Set the pin on the map";
+    }
+    setStep2Errors(err);
+    if (Object.keys(err).length > 0) {
+      toast.error("Please complete all required fields highlighted below.");
+      return false;
     }
     return true;
-  };
+  }
+
+  function handleNextStep() {
+    if (currentStep === 1) {
+      if (!tier || !serviceMode) {
+        toast.error("Please select a package and puja mode.");
+        return;
+      }
+    }
+    if (currentStep === 2 && !validateStep2()) return;
+    setStep2Errors({});
+    setCurrentStep((s) => (s + 1) as BookingStep);
+  }
+
+  const inputErrorClass = "border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive";
 
   const handleSubmit = async () => {
     if (!bookingDate) {
@@ -715,7 +761,9 @@ export default function BookingWizard({
       });
       toast.success(
         result.awaiting_pujari_assignment
-          ? "Booking confirmed — our team will assign a pujari and notify you."
+          ? Number((result as { offers_sent?: number }).offers_sent || 0) > 0
+            ? "Booking confirmed — nearby pujaris have been notified to accept."
+            : "Booking confirmed — our team will assign a pujari shortly."
           : "Booking confirmed and paid from wallet",
       );
       setLocation(`/booking/${result.id || result.booking_number}`);
@@ -756,7 +804,7 @@ export default function BookingWizard({
       {currentStep === 1 && (
         <div className="space-y-6">
           <h3 className="text-xl font-semibold text-foreground">{t("booking.package")}</h3>
-          <RadioGroup value={tier} onValueChange={(v) => setTier(v as Tier)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <RadioGroup value={tier} onValueChange={(v) => setTier(v as Tier)} className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
             {availableTiers.map((key) => (
               <Label
                 key={key}
@@ -850,10 +898,20 @@ export default function BookingWizard({
           </div>
 
           <div className="space-y-2">
-            <Label>Select Date *</Label>
+            <Label>
+              Select Date
+              <RequiredMark />
+            </Label>
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start", !bookingDate && "text-muted-foreground")}>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start",
+                    !bookingDate && "text-muted-foreground",
+                    fieldHasError(step2Errors, "bookingDate") && inputErrorClass,
+                  )}
+                >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {bookingDate ? formatDisplayDate(bookingDate) : "Select date"}
                 </Button>
@@ -864,13 +922,19 @@ export default function BookingWizard({
                   selected={bookingDate}
                   onSelect={(date) => {
                     setBookingDate(date);
-                    if (date) setDatePickerOpen(false);
+                    if (date) {
+                      setDatePickerOpen(false);
+                      setStep2Errors((e) => ({ ...e, bookingDate: undefined }));
+                    }
                   }}
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
+            {step2Errors.bookingDate && (
+              <p className="text-xs text-destructive">{step2Errors.bookingDate}</p>
+            )}
             {panchang && (
               <Card className="border-orange-200 bg-primary/5">
                 <CardContent className="p-4 text-sm space-y-1">
@@ -896,7 +960,10 @@ export default function BookingWizard({
           </div>
 
           <div className="space-y-3">
-            <Label>Address *</Label>
+            <Label>
+              Address
+              <RequiredMark />
+            </Label>
             {savedAddressLoading ? (
               <p className="text-sm text-muted-foreground">Loading saved address…</p>
             ) : (
@@ -905,9 +972,12 @@ export default function BookingWizard({
                 onValueChange={(v) => {
                   if (v === "saved") applySavedAddress();
                   else startNewAddress();
+                  setStep2Errors((e) => ({ ...e, address: undefined, mapLocation: undefined }));
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  className={cn(fieldHasError(step2Errors, "address") && inputErrorClass)}
+                >
                   <SelectValue placeholder="Select address" />
                 </SelectTrigger>
                 <SelectContent>
@@ -922,9 +992,15 @@ export default function BookingWizard({
                 </SelectContent>
               </Select>
             )}
+            {step2Errors.address && <p className="text-xs text-destructive">{step2Errors.address}</p>}
 
             {addressMode === "saved" && savedAddress ? (
-              <div className="rounded-md border border-border bg-muted/20 p-3 text-sm space-y-1">
+              <div
+                className={cn(
+                  "rounded-md border border-border bg-muted/20 p-3 text-sm space-y-1",
+                  fieldHasError(step2Errors, "mapLocation") && "border-destructive ring-1 ring-destructive/30",
+                )}
+              >
                 <p className="font-medium text-foreground">{savedAddress.label}</p>
                 {savedAddress.city ? (
                   <p className="text-muted-foreground">City: {savedAddress.city}</p>
@@ -938,23 +1014,45 @@ export default function BookingWizard({
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">New address for this booking</p>
                 <div className="space-y-2">
-                  <Label htmlFor="booking-door">Door / flat / house no. *</Label>
+                  <Label htmlFor="booking-door">
+                    Door / flat / house no.
+                    <RequiredMark />
+                  </Label>
                   <Input
                     id="booking-door"
                     value={doorNumber}
-                    onChange={(e) => setDoorNumber(e.target.value)}
+                    onChange={(e) => {
+                      setDoorNumber(e.target.value);
+                      if (e.target.value.trim()) setStep2Errors((er) => ({ ...er, doorNumber: undefined }));
+                    }}
                     placeholder="e.g. Flat 302, Door 12-A"
+                    aria-invalid={fieldHasError(step2Errors, "doorNumber")}
+                    className={cn(fieldHasError(step2Errors, "doorNumber") && inputErrorClass)}
                   />
+                  {step2Errors.doorNumber && (
+                    <p className="text-xs text-destructive">{step2Errors.doorNumber}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="booking-street">Street / area *</Label>
+                  <Label htmlFor="booking-street">
+                    Street / area
+                    <RequiredMark />
+                  </Label>
                   <Textarea
                     id="booking-street"
                     value={locationText}
-                    onChange={(e) => setLocationText(e.target.value)}
+                    onChange={(e) => {
+                      setLocationText(e.target.value);
+                      if (e.target.value.trim()) setStep2Errors((er) => ({ ...er, locationText: undefined }));
+                    }}
                     placeholder="Street, colony, area"
                     rows={3}
+                    aria-invalid={fieldHasError(step2Errors, "locationText")}
+                    className={cn(fieldHasError(step2Errors, "locationText") && inputErrorClass)}
                   />
+                  {step2Errors.locationText && (
+                    <p className="text-xs text-destructive">{step2Errors.locationText}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="booking-landmark">Landmark (optional)</Label>
@@ -965,6 +1063,12 @@ export default function BookingWizard({
                     placeholder="Near temple / society gate"
                   />
                 </div>
+                <div
+                  className={cn(
+                    fieldHasError(step2Errors, "mapLocation") &&
+                      "rounded-lg ring-1 ring-destructive/40 p-0.5",
+                  )}
+                >
                 <MapLocationPicker
                   value={
                     {
@@ -990,8 +1094,15 @@ export default function BookingWizard({
                     if (street) setLocationText(street);
                     if (v.city?.trim()) setCity(v.city.trim());
                     setGeoError(null);
+                    if (v.latitude != null && v.longitude != null) {
+                      setStep2Errors((er) => ({ ...er, mapLocation: undefined }));
+                    }
                   }}
                 />
+                </div>
+                {step2Errors.mapLocation && (
+                  <p className="text-xs text-destructive">{step2Errors.mapLocation}</p>
+                )}
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <MapPin size={12} /> Drag the pin or tap the map to set the exact location for the pujari
                   {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
@@ -1001,8 +1112,21 @@ export default function BookingWizard({
             )}
 
             <div className="space-y-2">
-              <Label>City *</Label>
-              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
+              <Label>
+                City
+                <RequiredMark />
+              </Label>
+              <Input
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                  if (e.target.value.trim()) setStep2Errors((er) => ({ ...er, city: undefined }));
+                }}
+                placeholder="City"
+                aria-invalid={fieldHasError(step2Errors, "city")}
+                className={cn(fieldHasError(step2Errors, "city") && inputErrorClass)}
+              />
+              {step2Errors.city && <p className="text-xs text-destructive">{step2Errors.city}</p>}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1211,14 +1335,20 @@ export default function BookingWizard({
       )}
 
       <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={() => setCurrentStep((s) => (s - 1) as BookingStep)} disabled={currentStep === 1}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setStep2Errors({});
+            setCurrentStep((s) => (s - 1) as BookingStep);
+          }}
+          disabled={currentStep === 1}
+        >
           <ChevronLeft className="w-4 h-4 mr-1" /> {t("common.back")}
         </Button>
         {currentStep < 4 ? (
           <Button
             className="bg-primary hover:bg-primary/90"
-            disabled={!canProceed()}
-            onClick={() => setCurrentStep((s) => (s + 1) as BookingStep)}
+            onClick={handleNextStep}
           >
             {t("common.next")} <ChevronRight className="w-4 h-4 ml-1" />
           </Button>

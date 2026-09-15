@@ -26,10 +26,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { api, apiBase, getToken, pujariMediaUrl } from "@/lib/api";
+import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 import RolePortalGate from "@/components/RolePortalGate";
 import PujariProfileGate from "@/components/PujariProfileGate";
 import ThemeToggle from "@/components/ThemeToggle";
 import SeasonalPopup from "@/components/SeasonalPopup";
+import BSevaLogo from "@/components/BSevaLogo";
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number }> };
 
@@ -93,8 +95,14 @@ function PortalShell({
 
   async function handleLogout() {
     await logout();
+    releaseStaleUiLocks();
     setLocation("/");
   }
+
+  useEffect(() => {
+    setOpen(false);
+    releaseStaleUiLocks();
+  }, [location]);
 
   useLayoutEffect(() => {
     const el = navRef.current;
@@ -177,9 +185,11 @@ function PortalShell({
             <Menu size={22} />
           </Button>
           <Link href="/">
-            <a className="font-brand font-bold text-foreground">BSeva</a>
+            <a className="flex items-center shrink-0">
+              <BSevaLogo size="sm" />
+            </a>
           </Link>
-          <span className="text-sm text-muted-foreground capitalize ml-1">{role} portal</span>
+          <span className="text-sm text-muted-foreground capitalize">{role} portal</span>
           <ThemeToggle className="ml-auto shrink-0" />
           <Button
             variant="outline"

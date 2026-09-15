@@ -341,7 +341,7 @@ _FOUNDATION_STMTS = [
     """
     DO $$ BEGIN
       ALTER TABLE users ADD CONSTRAINT users_role_check
-        CHECK (role IN ('customer', 'pujari', 'admin', 'super_admin'));
+        CHECK (role IN ('customer', 'pujari', 'head_pujari', 'admin', 'super_admin'));
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$
     """,
@@ -736,6 +736,12 @@ def ensure_schema(*, quiet: bool = False) -> None:
             run_batch("phase6", list(_PHASE6_STMTS))
         except Exception as e:
             log(f"  ! phase6 skipped: {e}")
+        try:
+            from app.phase7_booking_offers_migrate import _PHASE7_STMTS
+
+            run_batch("phase7", list(_PHASE7_STMTS))
+        except Exception as e:
+            log(f"  ! phase7 skipped: {e}")
         # Backfill main_puja_price from standard when null
         err = _exec_safe(
             conn,
