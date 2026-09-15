@@ -56,6 +56,11 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { friendlyBookingError, isServiceAreaUnavailableError, COMING_SOON_TITLE, COMING_SOON_BODY } from "@/lib/serviceAvailabilityMessages";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { isDeathRelatedService } from "@/lib/serviceCategories";
+import {
+  bookingLeadHint,
+  earliestBookingInstant,
+  isCalendarDayDisabled,
+} from "@/lib/bookingLeadTime";
 
 interface BookingWizardProps {
   serviceId: string;
@@ -75,6 +80,8 @@ interface BookingWizardProps {
     alankaramAvailable?: boolean;
     foodAvailable?: boolean;
   };
+  /** Minimum hours before puja start (from service; default 48 = 2 days). */
+  bookingLeadHours?: number;
 }
 
 type BookingStep = 1 | 2 | 3 | 4;
@@ -175,6 +182,7 @@ export default function BookingWizard({
   serviceCategories,
   basePrices,
   addonPrices,
+  bookingLeadHours = 48,
 }: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
@@ -230,6 +238,12 @@ export default function BookingWizard({
     virtualPujaEnabled: publicConfig.virtual_puja_enabled ? "true" : "false",
     gstPercent: "18",
   };
+
+  useEffect(() => {
+    if (bookingDate && isCalendarDayDisabled(bookingDate, bookingLeadHours)) {
+      setBookingDate(undefined);
+    }
+  }, [bookingLeadHours, bookingDate]);
 
   useEffect(() => {
     if (!bookingDate) {
@@ -650,9 +664,30 @@ export default function BookingWizard({
     [quote, basePrices, tier, settings, includeSamagri, includeAlankaram, includeFood, addonPrices],
   );
 
+  function selectedBookingStart(): Date | null {
+    if (!bookingDate) return null;
+    const d = new Date(bookingDate);
+    const t = (bookingTime || "").trim();
+    const m = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (m) {
+      d.setHours(Number(m[1]), Number(m[2]), Number(m[3] || 0), 0);
+    } else {
+      d.setHours(23, 59, 59, 999);
+    }
+    return d;
+  }
+
   function validateStep2(): boolean {
     const err: Step2FieldErrors = {};
     if (!bookingDate) err.bookingDate = "Select a booking date";
+    else if (isCalendarDayDisabled(bookingDate, bookingLeadHours)) {
+      err.bookingDate = bookingLeadHint(bookingLeadHours);
+    } else {
+      const start = selectedBookingStart();
+      if (start && start < earliestBookingInstant(bookingLeadHours)) {
+        err.bookingDate = bookingLeadHint(bookingLeadHours);
+      }
+    }
     if (!city.trim()) err.city = "Enter city";
     if (addressMode === "saved") {
       const addr = composedServiceAddress();
@@ -927,11 +962,12 @@ export default function BookingWizard({
                       setStep2Errors((e) => ({ ...e, bookingDate: undefined }));
                     }
                   }}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  disabled={(date) => isCalendarDayDisabled(date, bookingLeadHours)}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
+            <p className="text-xs text-muted-foreground">{bookingLeadHint(bookingLeadHours)}</p>
             {step2Errors.bookingDate && (
               <p className="text-xs text-destructive">{step2Errors.bookingDate}</p>
             )}
@@ -1179,7 +1215,7 @@ export default function BookingWizard({
                         setExtraDate(date);
                         if (date) setExtraDatePickerOpen(false);
                       }}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      disabled={(date) => isCalendarDayDisabled(date, bookingLeadHours)}
                       initialFocus
                     />
                   </PopoverContent>

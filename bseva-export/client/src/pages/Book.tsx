@@ -134,6 +134,9 @@ export default function Book() {
             serviceId={pujaType.id}
             pujaName={pujaType.name}
             serviceCategories={pujaType.categories}
+            bookingLeadHours={
+              pujaType.booking_lead_hours != null ? Number(pujaType.booking_lead_hours) : 48
+            }
             basePrices={{
               basic: pujaType.basic_price_paise || undefined,
               standard: pujaType.standard_price_paise,
