@@ -93,7 +93,7 @@ export default function TermsPage() {
           </div>
         )}
 
-        <p className="mt-12 text-xs text-muted-foreground">© BSeva. All rights reserved.</p>
+        <p className="mt-12 text-xs text-muted-foreground">© Bseva. All rights reserved.</p>
       </div>
     </Layout>
   );

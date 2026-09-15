@@ -35,6 +35,7 @@ type AvailablePujari = {
   location_label?: string | null;
   city?: string | null;
   distance_km?: number | null;
+  schedule_conflict?: boolean;
 };
 
 type AvailableResponse = {
@@ -124,13 +125,13 @@ export default function Bookings() {
     }
   }
 
-  async function assign(pujariId: string) {
+  async function assign(pujariId: string, forceAssign = false) {
     if (!reassignFor) return;
     setAssigningId(pujariId);
     try {
       await api(`/admin/bookings/${reassignFor.id}/assign`, {
         method: "POST",
-        body: JSON.stringify({ pujari_id: pujariId }),
+        body: JSON.stringify({ pujari_id: pujariId, force_assign: forceAssign }),
       });
       toast.success("Pujari assigned — waiting for them to accept");
       setReassignFor(null);
@@ -141,6 +142,19 @@ export default function Bookings() {
     } finally {
       setAssigningId(null);
     }
+  }
+
+  function requestAssign(p: AvailablePujari) {
+    if (p.schedule_conflict) {
+      const ok = window.confirm(
+        `${p.name} has a scheduling conflict with another confirmed booking (including the platform buffer time). ` +
+          "Assign anyway? The pujari may need to adjust their schedule."
+      );
+      if (!ok) return;
+      void assign(p.id, true);
+      return;
+    }
+    void assign(p.id, false);
   }
 
   async function applyNoShowPenalty(booking: any) {
@@ -303,7 +317,8 @@ export default function Bookings() {
             {!loadingAvailable && available && (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Level {available.required_level} or above, free at this time (availability filtered).
+                  Level {available.required_level} or above. Pujaris with a calendar block are hidden; those with a
+                  schedule conflict are shown with a warning — you can override.
                   {available.booking_has_coordinates
                     ? ` Default option: within ${available.primary_ring_km ?? 10} km. Farther available pujaris are listed below as fallback.`
                     : " This booking has no coordinates — distances unavailable; showing all eligible pujaris."}
@@ -327,6 +342,9 @@ export default function Bookings() {
                             <span className="font-medium">{p.name}</span>
                             <Badge variant="outline">Level {p.approved_level ?? "—"}</Badge>
                             {isCurrent && <Badge variant="secondary">Currently assigned</Badge>}
+                            {p.schedule_conflict && (
+                              <Badge variant="destructive">Schedule conflict</Badge>
+                            )}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {p.distance_km != null
@@ -350,9 +368,13 @@ export default function Bookings() {
                         <Button
                           size="sm"
                           disabled={isCurrent || assigningId === p.id}
-                          onClick={() => void assign(p.id)}
+                          onClick={() => requestAssign(p)}
                         >
-                          {assigningId === p.id ? "Assigning…" : "Assign"}
+                          {assigningId === p.id
+                            ? "Assigning…"
+                            : p.schedule_conflict
+                              ? "Assign anyway"
+                              : "Assign"}
                         </Button>
                       </div>
                     );

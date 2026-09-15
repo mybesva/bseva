@@ -16,12 +16,12 @@ type BSevaLogoProps = {
   alt?: string;
 };
 
-/** One wordmark: B icon reads as “B” + “Seva” type → BSeva. */
+/** One wordmark: B icon + “seva” type → Bseva. */
 export default function BSevaLogo({
   size = "md",
   className,
   showTagline = false,
-  alt = "BSeva",
+  alt = "Bseva",
 }: BSevaLogoProps) {
   return (
     <div className={cn("inline-flex flex-col min-w-0", className)} aria-label={alt}>
@@ -38,7 +38,7 @@ export default function BSevaLogo({
           className="h-[1.2em] w-[1.2em] shrink-0 object-contain -mr-[0.16em] relative top-[0.01em]"
           decoding="async"
         />
-        <span className="font-bold text-primary tracking-tight whitespace-nowrap">Seva</span>
+        <span className="font-bold text-primary tracking-tight whitespace-nowrap">seva</span>
       </div>
       {showTagline ? (
         <span className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide mt-1 pl-[0.15em] hidden sm:block">

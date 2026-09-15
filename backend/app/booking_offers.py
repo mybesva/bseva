@@ -71,6 +71,7 @@ def eligible_pujaris_for_booking(
     booking_date: date,
     start_time: time,
     end_time: time,
+    service_id: str | None = None,
     radius_km: float = SERVICE_RADIUS_KM,
 ) -> list[tuple[str, float]]:
     """Return (pujari_user_id, distance_km) sorted nearest first."""
@@ -90,7 +91,9 @@ def eligible_pujaris_for_booking(
         effective = min(radius_km, float(r["service_radius_km"] or radius_km))
         if dist > effective:
             continue
-        if not pujari_free_for_slot(db, str(r["id"]), booking_date, start_time, end_time):
+        if not pujari_free_for_slot(
+            db, str(r["id"]), booking_date, start_time, end_time, service_id
+        ):
             continue
         out.append((str(r["id"]), round(dist, 2)))
     out.sort(key=lambda x: x[1])
@@ -129,6 +132,7 @@ def create_offers_for_booking(db: Session, booking_id: str) -> list[str]:
         booking_date=b["booking_date"],
         start_time=b["start_time"],
         end_time=b["end_time"],
+        service_id=str(b["service_id"]),
     )
     invited: list[str] = []
     for pid, dist in candidates:

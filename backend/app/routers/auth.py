@@ -59,10 +59,20 @@ def _verify_registration_otp(db: Session, body: RegisterIn) -> None:
 
 
 def _public(row: dict) -> dict:
+    from app.name_parts import split_display_name
+
+    f = (row.get("first_name") or "").strip()
+    m = (row.get("middle_name") or "").strip()
+    l = (row.get("last_name") or "").strip()
+    if not f and not l:
+        f, m, l = split_display_name(row.get("name"))
     return {
         "id": str(row["id"]),
         "public_id": row.get("public_id"),
         "name": row["name"],
+        "first_name": f or None,
+        "middle_name": m or None,
+        "last_name": l or None,
         "email": row["email"],
         "phone": row["phone"],
         "role": row["role"],
@@ -363,7 +373,32 @@ def me(user=Depends(current_user), db: Session = Depends(get_db)):
 
 @router.patch("/me")
 def patch_me(body: MePatchIn, user=Depends(current_user), db: Session = Depends(get_db)):
-    if body.name:
+    from app.name_parts import compose_display_name, split_display_name, validate_name_parts
+
+    if body.first_name is not None or body.middle_name is not None or body.last_name is not None:
+        cur = db.execute(
+            text(
+                "SELECT first_name, middle_name, last_name, name FROM users WHERE id = CAST(:id AS uuid)"
+            ),
+            {"id": user["id"]},
+        ).mappings().first()
+        cf, cm, cl = split_display_name((cur or {}).get("name"))
+        f = body.first_name if body.first_name is not None else ((cur or {}).get("first_name") or cf)
+        m = body.middle_name if body.middle_name is not None else ((cur or {}).get("middle_name") or cm)
+        l = body.last_name if body.last_name is not None else ((cur or {}).get("last_name") or cl)
+        f, m, l = validate_name_parts(first=f, middle=m, last=l, require_last=True)
+        display = compose_display_name(f, m, l)
+        db.execute(
+            text(
+                """
+                UPDATE users SET
+                  first_name = :f, middle_name = :m, last_name = :l, name = :n, updated_at = NOW()
+                WHERE id = CAST(:id AS uuid)
+                """
+            ),
+            {"f": f, "m": m or None, "l": l, "n": display, "id": user["id"]},
+        )
+    elif body.name:
         db.execute(text("UPDATE users SET name = :v WHERE id = CAST(:id AS uuid)"), {"v": body.name, "id": user["id"]})
     if body.preferred_language:
         db.execute(text("UPDATE users SET preferred_language = :v WHERE id = CAST(:id AS uuid)"), {"v": body.preferred_language, "id": user["id"]})

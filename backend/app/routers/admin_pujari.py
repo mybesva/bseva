@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session
 from app.audit import write_audit
 from app.booking_state import set_booking_status
 from app.db import get_db
-from app.domain import row_dict, slot_conflict
+from app.domain import row_dict
+from app.pujari_schedule import pujari_has_schedule_conflict
 from app.geo import haversine_km
 from app.platform_config import get_setting
 from app.profile_utils import parse_json_list, pujari_completion
@@ -57,32 +58,6 @@ def _load_admin_pujari(db: Session, pujari_id: str) -> dict:
     out["profile_complete"] = bool(out.get("profile_complete")) or pct >= 100
     out["profile_incomplete"] = not out["profile_complete"]
     return out
-
-
-def _booking_conflict_excluding(
-    db: Session, pujari_id: str, booking_date, start, end, exclude_booking_id: str
-) -> bool:
-    row = db.execute(
-        text(
-            """
-            SELECT 1 FROM bookings
-            WHERE pujari_id = CAST(:pid AS uuid)
-              AND booking_date = :d
-              AND id <> CAST(:bid AS uuid)
-              AND status IN ('pending', 'pending_acceptance', 'confirmed', 'in_progress')
-              AND start_time < :end_t AND end_time > :start_t
-            LIMIT 1
-            """
-        ),
-        {
-            "pid": pujari_id,
-            "d": booking_date,
-            "bid": exclude_booking_id,
-            "start_t": start,
-            "end_t": end,
-        },
-    ).first()
-    return row is not None
 
 
 @router.get("/pujaris/{pujari_id}")
@@ -411,9 +386,16 @@ def available_pujaris_for_booking(
     has_coords = booking_lat is not None and booking_lng is not None
 
     eligible = []
+    service_id = str(b["service_id"])
     for r in rows:
-        conflict = _booking_conflict_excluding(
-            db, str(r["id"]), b["booking_date"], b["start_time"], b["end_time"], booking_id
+        schedule_conflict = pujari_has_schedule_conflict(
+            db,
+            str(r["id"]),
+            b["booking_date"],
+            b["start_time"],
+            b.get("end_time"),
+            service_id,
+            exclude_booking_id=booking_id,
         )
         blocked = db.execute(
             text(
@@ -433,10 +415,11 @@ def available_pujaris_for_booking(
                 "et": b["end_time"],
             },
         ).first()
-        if conflict or blocked:
+        if blocked:
             continue
         item = row_dict(r)
         item["eligible"] = True
+        item["schedule_conflict"] = schedule_conflict
         dist = None
         if has_coords and r.get("latitude") is not None and r.get("longitude") is not None:
             dist = round(
@@ -535,11 +518,21 @@ def assign_pujari_to_booking(
         raise HTTPException(400, "Pujari profile is incomplete")
     if int(pujari["approved_level"] or 0) < int(b["required_level"] or 1):
         raise HTTPException(400, "Pujari level is below service requirement")
-    if slot_conflict(db, body.pujari_id, b["booking_date"], b["start_time"], b["end_time"]):
-        if _booking_conflict_excluding(
-            db, body.pujari_id, b["booking_date"], b["start_time"], b["end_time"], booking_id
-        ):
-            raise HTTPException(400, "Pujari has a conflicting booking")
+    conflict = pujari_has_schedule_conflict(
+        db,
+        body.pujari_id,
+        b["booking_date"],
+        b["start_time"],
+        b.get("end_time"),
+        str(b["service_id"]),
+        exclude_booking_id=booking_id,
+    )
+    if conflict and not body.force_assign:
+        raise HTTPException(
+            409,
+            "This pujari has a scheduling conflict with another confirmed booking (including the required buffer). "
+            "Confirm override assignment to proceed anyway.",
+        )
     prev = str(b["pujari_id"]) if b.get("pujari_id") else None
     hist = b.get("assignment_history") or []
     if isinstance(hist, str):

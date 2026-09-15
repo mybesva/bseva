@@ -204,7 +204,7 @@ function PortalShell({
         <main className="flex-1 p-4 lg:p-8" data-scroll-reset>
           {children}
         </main>
-        <footer className="border-t py-4 text-center text-xs text-muted-foreground">© BSeva. All rights reserved.</footer>
+        <footer className="border-t py-4 text-center text-xs text-muted-foreground">© Bseva. All rights reserved.</footer>
       </div>
     </div>
   );

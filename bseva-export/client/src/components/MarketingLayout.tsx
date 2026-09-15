@@ -350,7 +350,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <div className="container border-t border-sidebar-border pt-6 text-center text-xs text-sidebar-foreground/50">
-          © BSeva. All rights reserved.
+          © Bseva. All rights reserved.
         </div>
       </footer>
     </div>

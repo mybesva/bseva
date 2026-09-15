@@ -14,6 +14,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import PersonNameFields from "@/components/PersonNameFields";
+import { splitDisplayName, validatePersonNameParts, type PersonNameParts } from "@/lib/personName";
 
 const QUALS = [
   { id: "panchadasha", key: "pujari.q1" },
@@ -63,6 +65,12 @@ function ProfileForm() {
     if (phoneErr) errors.mobile_number = phoneErr;
     if (!String(profile.gotra || "").trim()) errors.gotra = "Gotra is required";
     if (!String(profile.pravara || "").trim()) errors.pravara = "Pravara is required";
+    const nameParts: PersonNameParts = {
+      first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
+      middle_name: String(profile.middle_name ?? splitDisplayName(profile.full_name).middle_name),
+      last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
+    };
+    Object.assign(errors, validatePersonNameParts(nameParts));
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
       toast.error(Object.values(errors)[0]);
@@ -73,10 +81,17 @@ function ProfileForm() {
       const mobile = toE164(countryCode, phoneNational);
       const present = sameAddr ? profile.permanent_address : profile.present_address;
       const wa = sameWa ? mobile : profile.whatsapp_number;
+      const nameParts: PersonNameParts = {
+        first_name: String(profile.first_name ?? "").trim() || splitDisplayName(profile.full_name).first_name,
+        middle_name: String(profile.middle_name ?? "").trim(),
+        last_name: String(profile.last_name ?? "").trim() || splitDisplayName(profile.full_name).last_name,
+      };
       await api("/pujari/profile", {
         method: "PATCH",
         body: JSON.stringify({
-          full_name: profile.full_name,
+          first_name: nameParts.first_name.trim(),
+          middle_name: nameParts.middle_name.trim() || null,
+          last_name: nameParts.last_name.trim(),
           father_name: profile.father_name,
           gotra: String(profile.gotra || "").trim(),
           pravara: String(profile.pravara || "").trim(),
@@ -179,11 +194,33 @@ function ProfileForm() {
             )}
           </div>
         </div>
+        <PersonNameFields
+          value={{
+            first_name: profile.first_name ?? splitDisplayName(profile.full_name).first_name,
+            middle_name: profile.middle_name ?? splitDisplayName(profile.full_name).middle_name,
+            last_name: profile.last_name ?? splitDisplayName(profile.full_name).last_name,
+          }}
+          onChange={(next) => {
+            setProfile((prev: any) => ({
+              ...prev,
+              first_name: next.first_name,
+              middle_name: next.middle_name,
+              last_name: next.last_name,
+              full_name: [next.first_name, next.middle_name, next.last_name].filter(Boolean).join(" "),
+            }));
+            setFieldErrors((e) => {
+              const copy = { ...e };
+              delete copy.first_name;
+              delete copy.last_name;
+              return copy;
+            });
+          }}
+          errors={{
+            first_name: fieldErrors.first_name,
+            last_name: fieldErrors.last_name,
+          }}
+        />
         <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <Label>{t("pujari.fullName")} *</Label>
-            <Input value={profile.full_name || ""} onChange={(e) => setField("full_name", e.target.value)} required />
-          </div>
           <div>
             <Label>{t("pujari.fatherName")}</Label>
             <Input value={profile.father_name || ""} onChange={(e) => setField("father_name", e.target.value)} />

@@ -344,7 +344,9 @@ def nearby(
     available = []
     for p in pujaris:
         pid = p.get("id")
-        if pid and pujari_free_for_slot(db, str(pid), booking_date, start_t, end_t):
+        if pid and pujari_free_for_slot(
+            db, str(pid), booking_date, start_t, end_t, str(service_id) if service_id else None
+        ):
             available.append(p)
     return available
 
@@ -452,7 +454,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             raise HTTPException(400, "This pujari is not available on the selected date")
         if not pujari["approved_level"] or int(pujari["approved_level"]) < int(svc["required_level"]):
             raise HTTPException(400, "Pujari is not eligible for this service")
-        if slot_conflict(db, str(body.pujari_id), body.booking_date, start, end):
+        if slot_conflict(
+            db, str(body.pujari_id), body.booking_date, start, end, str(body.service_id)
+        ):
             raise HTTPException(409, "This time slot is already booked")
     else:
         if body.mode == "virtual":
@@ -754,7 +758,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                 c_gstp = float(child_bill["gstPercent"])
                 c_gsta = int(child_bill["gstAmount"])
                 c_total = int(child_bill["totalAmount"])
-                if slot_conflict(db, str(body.pujari_id), d, start, end):
+                if slot_conflict(db, str(body.pujari_id), d, start, end, str(body.service_id)):
                     skipped.append(d.isoformat())
                     continue
                 next_dates.append(d.isoformat())

@@ -64,6 +64,8 @@ _DEFAULTS: dict[str, Any] = {
     "default_samagri_kit_price_paise": 50000,
     # Admin reassignment distance rings (km)
     "assign_distance_rings_km": [10, 15, 20, 30],
+    # After puja end, pujari unavailable for this many hours (same before puja start)
+    "pujari_schedule_buffer_hours": 4,
 }
 
 

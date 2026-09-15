@@ -115,6 +115,12 @@ const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?
     type: "json",
     hint: "First number is the default nearby radius (e.g. 10). Reassign shows within that distance first, then other available pujaris farther away.",
   },
+  {
+    key: "pujari_schedule_buffer_hours",
+    label: "Pujari schedule buffer (hours)",
+    type: "number",
+    hint: "After each confirmed puja (start + service duration), and before the next puja start, the pujari is treated as unavailable for this many hours. Default 4.",
+  },
 ];
 
 const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: string; group: "customer" | "pujari" }[] = [

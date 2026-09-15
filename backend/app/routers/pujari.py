@@ -148,13 +148,30 @@ def _completion(row: dict) -> int:
 
 
 def _profile_out(row: dict, user: dict, angikara=None) -> dict:
+    from app.name_parts import compose_display_name, split_display_name
+
     d = row_dict(row)
     d["qualifications"] = _parse_quals(row.get("qualifications"))
     d["languages"] = parse_json_list(row.get("languages"))
     d["specializations"] = parse_json_list(row.get("specializations"))
-    d["full_name"] = d.get("full_name") or user.get("name")
+    f = (d.get("first_name") or user.get("first_name") or "").strip()
+    m = (d.get("middle_name") or user.get("middle_name") or "").strip()
+    l = (d.get("last_name") or user.get("last_name") or "").strip()
+    if not f and not l:
+        f, m, l = split_display_name(d.get("full_name") or user.get("name"))
+    d["first_name"] = f
+    d["middle_name"] = m
+    d["last_name"] = l
+    d["full_name"] = compose_display_name(f, m, l) or d.get("full_name") or user.get("name")
     d["mobile_number"] = d.get("mobile_number") or user.get("phone")
-    merged = {**row, "qualifications": d["qualifications"], "full_name": d["full_name"], "mobile_number": d["mobile_number"]}
+    merged = {
+        **row,
+        "qualifications": d["qualifications"],
+        "first_name": d["first_name"],
+        "last_name": d["last_name"],
+        "full_name": d["full_name"],
+        "mobile_number": d["mobile_number"],
+    }
     pct = _completion(merged)
     d["profile_completion_percentage"] = pct
     d["profile_complete"] = pct >= 100
@@ -284,12 +301,47 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
     quals = json.dumps(body.qualifications) if body.qualifications is not None else None
     langs = json.dumps(body.languages) if body.languages is not None else None
     specs = json.dumps(body.specializations) if body.specializations is not None else None
+
+    from app.name_parts import compose_display_name, split_display_name, validate_name_parts
+
+    resolved_full: str | None = None
+    resolved_first: str | None = None
+    resolved_middle: str | None = None
+    resolved_last: str | None = None
+    if (
+        body.first_name is not None
+        or body.middle_name is not None
+        or body.last_name is not None
+        or body.full_name is not None
+    ):
+        cur = db.execute(
+            text(
+                "SELECT first_name, middle_name, last_name, full_name FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"
+            ),
+            {"id": user["id"]},
+        ).mappings().first()
+        cf, cm, cl = split_display_name((cur or {}).get("full_name") or user.get("name"))
+        if body.first_name is not None or body.last_name is not None or body.middle_name is not None:
+            f = body.first_name if body.first_name is not None else ((cur or {}).get("first_name") or cf)
+            m = body.middle_name if body.middle_name is not None else ((cur or {}).get("middle_name") or cm)
+            l = body.last_name if body.last_name is not None else ((cur or {}).get("last_name") or cl)
+        else:
+            f, m, l = split_display_name(body.full_name or "")
+        f, m, l = validate_name_parts(first=f, middle=m, last=l, require_last=True)
+        resolved_full = compose_display_name(f, m, l)
+        resolved_first = f
+        resolved_middle = m or None
+        resolved_last = l
+
     # gender intentionally ignored (req #16) — column retained for historical rows only
     db.execute(
         text(
             """
             UPDATE pujari_profiles SET
               full_name = COALESCE(:full_name, full_name),
+              first_name = COALESCE(:first_name, first_name),
+              middle_name = COALESCE(:middle_name, middle_name),
+              last_name = COALESCE(:last_name, last_name),
               father_name = COALESCE(:father_name, father_name),
               gotra = COALESCE(:gotra, gotra),
               pravara = COALESCE(:pravara, pravara),
@@ -330,7 +382,10 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             """
         ),
         {
-            "full_name": body.full_name,
+            "full_name": resolved_full if resolved_full is not None else body.full_name,
+            "first_name": resolved_first,
+            "middle_name": resolved_middle,
+            "last_name": resolved_last,
             "father_name": body.father_name,
             "gotra": body.gotra,
             "pravara": body.pravara,
@@ -369,7 +424,28 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             "id": user["id"],
         },
     )
-    if body.full_name:
+    if resolved_full:
+        db.execute(
+            text(
+                """
+                UPDATE users SET
+                  name = :n,
+                  first_name = :f,
+                  middle_name = :m,
+                  last_name = :l,
+                  updated_at = NOW()
+                WHERE id = CAST(:id AS uuid)
+                """
+            ),
+            {
+                "n": resolved_full,
+                "f": resolved_first,
+                "m": resolved_middle,
+                "l": resolved_last,
+                "id": user["id"],
+            },
+        )
+    elif body.full_name:
         db.execute(text("UPDATE users SET name = :n WHERE id = CAST(:id AS uuid)"), {"n": body.full_name, "id": user["id"]})
     if mobile:
         db.execute(

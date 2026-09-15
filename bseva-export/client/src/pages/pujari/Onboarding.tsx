@@ -15,6 +15,8 @@ import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
+import PersonNameFields from "@/components/PersonNameFields";
+import { splitDisplayName, validatePersonNameParts } from "@/lib/personName";
 
 const QUALS = [
   { id: "panchadasha", key: "pujari.q1" },
@@ -58,7 +60,15 @@ export default function PujariOnboardingPage() {
     setCountryCode(parsed.countryCode);
     setPhoneNational(parsed.national);
     const fullName = String(p.full_name || user?.name || "").replace(/\s+Reddy\s*$/i, "").trim() || user?.name || "";
-    setProfile({ ...p, full_name: fullName, mobile_number: parsed.national || p.mobile_number });
+    const split = splitDisplayName(fullName);
+    setProfile({
+      ...p,
+      full_name: fullName,
+      first_name: p.first_name ?? split.first_name,
+      middle_name: p.middle_name ?? split.middle_name,
+      last_name: p.last_name ?? split.last_name,
+      mobile_number: parsed.national || p.mobile_number,
+    });
     const acct = String(p.bank_account_number || "").replace(/\D/g, "");
     setBankConfirm(acct);
     const s = Number(p.onboarding_step || 1);
@@ -113,7 +123,14 @@ export default function PujariOnboardingPage() {
 
     if (current === 1) {
       req("profile_photo_path", "Profile photo", !!profile.profile_photo_path || !!photoUrl);
-      req("full_name", "Full name", !!String(profile.full_name || "").trim());
+      Object.assign(
+        errors,
+        validatePersonNameParts({
+          first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
+          middle_name: String(profile.middle_name ?? ""),
+          last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
+        }),
+      );
       const dob = String(profile.date_of_birth || "").trim();
       req("date_of_birth", "Date of birth", !!dob);
       if (dob && !isValidPujariDob(dob)) {
@@ -222,7 +239,9 @@ export default function PujariOnboardingPage() {
     if (step === 1) {
       const mobile = toE164(countryCode, phoneNational);
       await saveStep(2, {
-        full_name: String(profile.full_name || "").trim(),
+        first_name: String(profile.first_name || "").trim(),
+        middle_name: String(profile.middle_name || "").trim() || null,
+        last_name: String(profile.last_name || "").trim(),
         date_of_birth: profile.date_of_birth || null,
         mobile_number: mobile,
         gotra: String(profile.gotra || "").trim(),
@@ -468,17 +487,31 @@ export default function PujariOnboardingPage() {
                 <p className="text-xs text-muted-foreground mt-1">JPG, PNG or WebP · max 8 MB</p>
                 <Err name="profile_photo_path" />
               </div>
+              <PersonNameFields
+                value={{
+                  first_name: profile.first_name ?? splitDisplayName(profile.full_name).first_name,
+                  middle_name: profile.middle_name ?? splitDisplayName(profile.full_name).middle_name,
+                  last_name: profile.last_name ?? splitDisplayName(profile.full_name).last_name,
+                }}
+                onChange={(next) => {
+                  setProfile((prev: any) => ({
+                    ...prev,
+                    ...next,
+                    full_name: [next.first_name, next.middle_name, next.last_name].filter(Boolean).join(" "),
+                  }));
+                  setFieldErrors((e) => {
+                    const copy = { ...e };
+                    delete copy.first_name;
+                    delete copy.last_name;
+                    return copy;
+                  });
+                }}
+                errors={{
+                  first_name: fieldErrors.first_name,
+                  last_name: fieldErrors.last_name,
+                }}
+              />
               <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label className={fieldErrors.full_name ? "text-red-600" : undefined}>{t("pujari.fullName")} *</Label>
-                  <Input
-                    className={errClass("full_name")}
-                    value={profile.full_name || ""}
-                    onChange={(e) => setField("full_name", e.target.value)}
-                    required
-                  />
-                  <Err name="full_name" />
-                </div>
                 <div>
                   <Label className={fieldErrors.date_of_birth ? "text-red-600" : undefined}>{t("pujari.dob")} *</Label>
                   <Input

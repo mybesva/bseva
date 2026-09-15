@@ -5,7 +5,8 @@ CURRENT_TERMS_VERSION = "2026-01"
 CURRENT_PRIVACY_VERSION = "2026-01"
 
 PUJARI_REQUIRED = (
-    "full_name",
+    "first_name",
+    "last_name",
     "mobile_number",
     "date_of_birth",
     "gotra",

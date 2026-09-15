@@ -119,29 +119,45 @@ def pujari_free_for_slot(
     booking_date: date,
     start: time,
     end: time,
+    service_id=None,
+    *,
+    exclude_booking_id: str | None = None,
 ) -> bool:
-    if pujari_blocked_on_slot(db, pujari_id, booking_date, start, end):
-        return False
-    if slot_conflict(db, pujari_id, booking_date, start, end):
-        return False
-    return True
+    from app.pujari_schedule import pujari_free_for_slot as _free
+
+    return _free(
+        db,
+        pujari_id,
+        booking_date,
+        start,
+        end,
+        service_id,
+        exclude_booking_id=exclude_booking_id,
+    )
 
 
-def slot_conflict(db: Session, pujari_id: str, booking_date: date, start: time, end: time) -> bool:
-    row = db.execute(
-        text(
-            """
-            SELECT 1 FROM bookings
-            WHERE pujari_id = CAST(:pid AS uuid)
-              AND booking_date = :d
-              AND status IN ('pending', 'pending_acceptance', 'confirmed', 'in_progress')
-              AND start_time < :end_t AND end_time > :start_t
-            LIMIT 1
-            """
-        ),
-        {"pid": pujari_id, "d": booking_date, "start_t": start, "end_t": end},
-    ).first()
-    return row is not None
+def slot_conflict(
+    db: Session,
+    pujari_id: str,
+    booking_date: date,
+    start: time,
+    end: time,
+    service_id=None,
+    *,
+    exclude_booking_id: str | None = None,
+) -> bool:
+    """True when pujari has a confirmed/in_progress booking conflicting with buffer rules."""
+    from app.pujari_schedule import pujari_has_schedule_conflict
+
+    return pujari_has_schedule_conflict(
+        db,
+        pujari_id,
+        booking_date,
+        start,
+        end,
+        service_id,
+        exclude_booking_id=exclude_booking_id,
+    )
 
 
 SERVICE_RADIUS_KM = 10.0

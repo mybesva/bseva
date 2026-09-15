@@ -36,6 +36,9 @@ class RegisterIn(BaseModel):
 
 class MePatchIn(BaseModel):
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
+    first_name: Optional[str] = Field(default=None, max_length=120)
+    middle_name: Optional[str] = Field(default=None, max_length=120)
+    last_name: Optional[str] = Field(default=None, max_length=120)
     preferred_language: Optional[Literal["en", "hi", "te"]] = None
     calendar_preference: Optional[Literal["north", "south", "lunar"]] = None
     phone: Optional[str] = Field(default=None, min_length=8, max_length=20)
@@ -238,6 +241,9 @@ class DocumentMetaIn(BaseModel):
 
 class PujariProfileIn(BaseModel):
     full_name: Optional[str] = None
+    first_name: Optional[str] = Field(default=None, max_length=120)
+    middle_name: Optional[str] = Field(default=None, max_length=120)
+    last_name: Optional[str] = Field(default=None, max_length=120)
     father_name: Optional[str] = None
     gotra: Optional[str] = None
     pravara: Optional[str] = None
@@ -347,6 +353,7 @@ class AdminCustomerUpdateIn(BaseModel):
 
 class BookingAssignIn(BaseModel):
     pujari_id: str
+    force_assign: bool = False
 
 
 class PujariServiceOffersIn(BaseModel):

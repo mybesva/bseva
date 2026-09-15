@@ -18,13 +18,24 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang } from "@/i18n/translations";
 import { toast } from "sonner";
+import PersonNameFields from "@/components/PersonNameFields";
+import {
+  splitDisplayName,
+  validatePersonNameParts,
+  type PersonNameParts,
+} from "@/lib/personName";
 
 const LANGS: Lang[] = ["en", "hi", "te"];
 
 export default function CustomerProfilePage() {
   const { user, refresh } = useAuth();
   const { setLang, labels } = useI18n();
-  const [name, setName] = useState("");
+  const [nameParts, setNameParts] = useState<PersonNameParts>({
+    first_name: "",
+    middle_name: "",
+    last_name: "",
+  });
+  const [nameErrors, setNameErrors] = useState<Partial<Record<keyof PersonNameParts, string>>>({});
   const [language, setLanguage] = useState<Lang>("en");
   const [countryCode, setCountryCode] = useState("+91");
   const [phoneNational, setPhoneNational] = useState("");
@@ -54,8 +65,17 @@ export default function CustomerProfilePage() {
   }
 
   useEffect(() => {
-    setName(user?.name || "");
-  }, [user?.name]);
+    const u = user as { first_name?: string; middle_name?: string; last_name?: string; name?: string } | null;
+    if (u?.first_name || u?.last_name) {
+      setNameParts({
+        first_name: u.first_name || "",
+        middle_name: u.middle_name || "",
+        last_name: u.last_name || "",
+      });
+    } else {
+      setNameParts(splitDisplayName(u?.name));
+    }
+  }, [user?.name, (user as { first_name?: string })?.first_name, (user as { last_name?: string })?.last_name]);
 
   useEffect(() => {
     const pref = user?.preferred_language as Lang | undefined;
@@ -87,12 +107,25 @@ export default function CustomerProfilePage() {
       return;
     }
     setPhoneError(undefined);
+    const nErrs = validatePersonNameParts(nameParts);
+    if (Object.keys(nErrs).length) {
+      setNameErrors(nErrs);
+      toast.error(Object.values(nErrs)[0]);
+      return;
+    }
+    setNameErrors({});
     setSaving(true);
     try {
       const phone = toE164(countryCode, phoneNational);
       await api("/auth/me", {
         method: "PATCH",
-        body: JSON.stringify({ name, preferred_language: language, phone }),
+        body: JSON.stringify({
+          first_name: nameParts.first_name.trim(),
+          middle_name: nameParts.middle_name.trim() || null,
+          last_name: nameParts.last_name.trim(),
+          preferred_language: language,
+          phone,
+        }),
       });
       // Mirror onto the customer profile record; not fatal if it is not set up yet.
       try {
@@ -174,10 +207,14 @@ export default function CustomerProfilePage() {
                 </Button>
               </label>
             </div>
-            <div className="space-y-2">
-              <Label>Full name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} minLength={2} required />
-            </div>
+            <PersonNameFields
+              value={nameParts}
+              onChange={(next) => {
+                setNameParts(next);
+                setNameErrors({});
+              }}
+              errors={nameErrors}
+            />
             <PhoneWithCountryCode
               id="customer-phone"
               label="Mobile number"

@@ -173,6 +173,24 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             raise HTTPException(409, "Another pujari already accepted this booking")
         withdraw_open_offers(db, booking_id, except_pujari_id=pid, mark_accepted_for=pid)
         b = {**dict(b), "pujari_id": pid}
+    from app.pujari_schedule import assert_pujari_available_for_booking
+
+    db.execute(
+        text("SELECT user_id FROM pujari_profiles WHERE user_id = CAST(:pid AS uuid) FOR UPDATE"),
+        {"pid": pid},
+    )
+    db.execute(
+        text(
+            """
+            SELECT id FROM bookings
+            WHERE pujari_id = CAST(:pid AS uuid)
+              AND status IN ('confirmed', 'in_progress')
+            FOR UPDATE
+            """
+        ),
+        {"pid": pid},
+    )
+    assert_pujari_available_for_booking(db, pid, dict(b), exclude_booking_id=booking_id)
     db.execute(
         text(
             """

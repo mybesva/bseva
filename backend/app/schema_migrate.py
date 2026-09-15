@@ -254,6 +254,12 @@ _FOUNDATION_STMTS = [
 
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS basic_price_paise INTEGER",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS booking_lead_hours INTEGER NOT NULL DEFAULT 48",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name TEXT",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT",
+    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS first_name TEXT",
+    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS middle_name TEXT",
+    "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS last_name TEXT",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS meeting_url TEXT",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS google_calendar_event_id TEXT",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS meeting_invite_token TEXT",
