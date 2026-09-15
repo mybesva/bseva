@@ -336,19 +336,65 @@ export default function BookingWizard({
     !deathRelated && Boolean(addonPrices?.alankaramAvailable) && alankaramPrice > 0;
   const showAlankaramComingSoon = !deathRelated && !alankaramOffered;
 
-  function formatAddonPrice(paise: number, selected: boolean): string {
-    if (paise <= 0) {
-      return selected ? "Price not set for this puja yet." : "Select to include in total";
-    }
-    const amt = `₹${(paise / 100).toLocaleString("en-IN")}`;
-    return selected
-      ? `${amt} will be inclusive in your booking total.`
-      : `${amt} · select to include in total`;
+  function formatInr(paise: number): string {
+    return `₹${(paise / 100).toLocaleString("en-IN")}`;
   }
 
-  function formatInclusiveLine(paise: number): string {
-    if (paise <= 0) return "Price not set for this puja";
-    return `₹${(paise / 100).toLocaleString("en-IN")} · inclusive in your booking total`;
+  function formatPlusPrice(paise: number): string {
+    if (paise <= 0) return "—";
+    return `+ ${formatInr(paise)}`;
+  }
+
+  function BookingTotalsSummary() {
+    const samagriAmt = includeSamagri ? Number(bill.samagri || 0) : 0;
+    const alankaramAmt = includeAlankaram ? Number(bill.alankaram || 0) : 0;
+    const foodAmt = includeFood ? Number(bill.foodPrasadam || bill.food || 0) : 0;
+    return (
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">Service ({tierDetails[tier].name})</span>
+          <span className="font-medium tabular-nums">{formatInr(bill.basePrice)}</span>
+        </div>
+        {includeSamagri && samagriAmt > 0 && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Samagri Kit</span>
+            <span className="font-medium tabular-nums">{formatInr(samagriAmt)}</span>
+          </div>
+        )}
+        {includeAlankaram && alankaramAmt > 0 && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Alankaram</span>
+            <span className="font-medium tabular-nums">{formatInr(alankaramAmt)}</span>
+          </div>
+        )}
+        {includeFood && foodAmt > 0 && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Food / Prasadam</span>
+            <span className="font-medium tabular-nums">{formatInr(foodAmt)}</span>
+          </div>
+        )}
+        {bill.peakFee > 0 && (
+          <div className="flex justify-between gap-4 text-orange-700">
+            <span>{t("booking.peakFee")}</span>
+            <span className="font-medium tabular-nums">{formatInr(bill.peakFee)}</span>
+          </div>
+        )}
+        <div className="flex justify-between gap-4 pt-1 border-t border-border">
+          <span className="text-muted-foreground">{t("booking.subtotal")}</span>
+          <span className="font-medium tabular-nums">{formatInr(bill.subtotal)}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">
+            {t("booking.gst")} ({bill.gstPercent}%)
+          </span>
+          <span className="font-medium tabular-nums">{formatInr(bill.gstAmount)}</span>
+        </div>
+        <div className="flex justify-between gap-4 font-semibold text-base border-t border-border pt-2">
+          <span>{t("booking.total")}</span>
+          <span className="text-primary tabular-nums">{formatInr(bill.totalAmount)}</span>
+        </div>
+      </div>
+    );
   }
 
   // Offer Samagri, Alankaram, and Food/Prasadam (when available) as customer opt-in.
@@ -372,26 +418,26 @@ export default function BookingWizard({
   function AddonOptionsCard() {
     return (
       <>
-        <Card className="border-dashed border-primary/50 bg-primary/5">
+        <Card className="border border-border/80 bg-card shadow-sm">
           <CardContent className="p-5 space-y-4">
             <div>
-              <p className="font-semibold text-foreground">
+              <p className="font-semibold text-foreground tracking-tight">
                 {alankaramOffered || showAlankaramComingSoon
-                  ? "Samagri & Alankaram (optional)"
-                  : "Samagri (optional)"}
+                  ? "Samagri & Alankaram (Optional)"
+                  : "Samagri (Optional)"}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Tick if you want these arranged for your puja. The charge is added to your booking payment now;
-                BSeva pays the pujari later. Leave unchecked if you will arrange yourself.
+              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                Add optional arrangements to your puja booking. Selected items will be included in your booking
+                total.
               </p>
             </div>
             {showSamagri && (
             <label
               className={cn(
-                "flex items-start gap-3 rounded-md p-3 cursor-pointer transition-colors",
+                "flex items-start gap-3 rounded-lg p-3.5 cursor-pointer transition-colors",
                 includeSamagri
                   ? "border-[3px] border-primary bg-primary/10 shadow-sm"
-                  : "border border-border bg-card hover:border-muted-foreground/40"
+                  : "border border-border bg-background hover:border-muted-foreground/40"
               )}
             >
               <Checkbox
@@ -399,21 +445,24 @@ export default function BookingWizard({
                 onCheckedChange={(v) => requestAddon("samagri", !!v)}
                 className="mt-0.5"
               />
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between gap-2 flex-wrap">
-                  <span className="font-medium">Samagri kit</span>
-                  <span
+              <div className="flex-1 min-w-0 flex justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground">Samagri Kit</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Puja materials arranged for you</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p
                     className={cn(
-                      "text-sm font-semibold shrink-0",
-                      includeSamagri ? "text-primary" : "text-muted-foreground"
+                      "text-sm font-semibold tabular-nums",
+                      includeSamagri ? "text-primary" : "text-foreground"
                     )}
                   >
-                    {formatAddonPrice(samagriPrice, includeSamagri)}
-                  </span>
+                    {samagriListPaise > 0 ? formatPlusPrice(samagriListPaise) : "—"}
+                  </p>
+                  {includeSamagri && samagriListPaise > 0 && (
+                    <p className="text-[11px] text-muted-foreground mt-1">Added to booking total</p>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Puja materials arranged for you — added to your booking payment when selected.
-                </p>
               </div>
             </label>
             )}
@@ -434,17 +483,12 @@ export default function BookingWizard({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2 flex-wrap">
                     <span className="font-medium">Alankaram</span>
-                    <span
-                      className={cn(
-                        "text-sm font-semibold shrink-0",
-                        includeAlankaram ? "text-primary" : "text-muted-foreground"
-                      )}
-                    >
-                      {formatAddonPrice(alankaramPrice, includeAlankaram)}
+                    <span className="text-sm font-semibold shrink-0 tabular-nums">
+                      {formatPlusPrice(alankaramPrice)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Flowers and decoration arranged for your puja — added to your booking payment when selected.
+                    Flowers and decoration arranged for your puja
                   </p>
                 </div>
               </label>
@@ -458,12 +502,12 @@ export default function BookingWizard({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2 flex-wrap">
                     <span className="font-medium text-muted-foreground">Alankaram</span>
-                    <span className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400 shrink-0">
-                      Coming Soon
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 shrink-0">
+                      COMING SOON
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Flowers and decoration will be available to add to your booking soon.
+                    Flowers and decoration services will be available soon.
                   </p>
                 </div>
               </div>
@@ -485,58 +529,18 @@ export default function BookingWizard({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2">
                     <span className="font-medium">Food / Prasadam</span>
-                    <span className="font-semibold text-primary shrink-0">
-                      {formatAddonPrice(foodPrice, includeFood)}
+                    <span className="font-semibold text-primary shrink-0 tabular-nums">
+                      {formatPlusPrice(foodPrice)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Prasadam / food arrangement for this puja (when offered) — charged in your booking total.
+                    Prasadam / food arrangement for this puja (when offered)
                   </p>
-                  {includeFood && (
-                    <p className="text-xs font-semibold text-primary mt-1">
-                      {formatAddonPrice(foodPrice, true)}
-                    </p>
+                  {includeFood && foodPrice > 0 && (
+                    <p className="text-[11px] text-muted-foreground mt-1 text-right">Added to booking total</p>
                   )}
                 </div>
               </label>
-            )}
-            {(includeSamagri || includeAlankaram || includeFood) && (
-              <div className="text-sm border-t pt-3 space-y-1">
-                {includeSamagri && (
-                  <div className="flex justify-between gap-2">
-                    <span>Samagri charge</span>
-                    <span className="text-right text-primary font-medium">
-                      {formatInclusiveLine(Number(bill.samagri || 0))}
-                    </span>
-                  </div>
-                )}
-                {includeAlankaram && (
-                  <div className="flex justify-between">
-                    <span>Alankaram charge</span>
-                    <span>
-                      {alankaramPrice > 0
-                        ? `₹${(alankaramPrice / 100).toLocaleString("en-IN")}`
-                        : "As priced"}
-                    </span>
-                  </div>
-                )}
-                {includeFood && (
-                  <div className="flex justify-between">
-                    <span>Food / Prasadam charge</span>
-                    <span>
-                      {foodPrice > 0
-                        ? `₹${(foodPrice / 100).toLocaleString("en-IN")}`
-                        : "As priced"}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between font-semibold">
-                  <span>Updated total</span>
-                  <span className="text-primary">
-                    ₹{(Number(bill.totalAmount || 0) / 100).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
             )}
           </CardContent>
         </Card>
@@ -549,9 +553,9 @@ export default function BookingWizard({
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2 text-left">
                 <span className="block">
-                  {(addonConfirm === "food" ? foodPrice : samagriPrice) > 0
-                    ? `₹${((addonConfirm === "food" ? foodPrice : samagriPrice) / 100).toLocaleString("en-IN")} will be inclusive in your booking total.`
-                    : "The charge will be added to your booking total."}
+                  {(addonConfirm === "food" ? foodPrice : samagriListPaise) > 0
+                    ? `${formatPlusPrice(addonConfirm === "food" ? foodPrice : samagriListPaise)} will be added to your booking total.`
+                    : "This will be added to your booking total."}
                 </span>
                 <span className="block text-muted-foreground">
                   {addonConfirm === "food"
@@ -1135,53 +1139,8 @@ export default function BookingWizard({
           <AddonOptionsCard />
 
           <Card>
-            <CardContent className="p-6 space-y-3 text-sm">
-              <div className="border-t-0 space-y-1">
-                <div className="flex justify-between">
-                  <span>Service ({tierDetails[tier].name})</span>
-                  <span>₹{(bill.basePrice / 100).toLocaleString("en-IN")}</span>
-                </div>
-                {(includeSamagri || Number(bill.samagri || 0) > 0) && (
-                  <div className="flex justify-between gap-2">
-                    <span>Samagri charge</span>
-                    <span className="text-primary font-medium">
-                      {formatInclusiveLine(Number(bill.samagri || 0))}
-                    </span>
-                  </div>
-                )}
-                {Number(bill.alankaram || 0) > 0 && (
-                  <div className="flex justify-between">
-                    <span>Alankaram charge</span>
-                    <span>₹{(bill.alankaram / 100).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(bill.foodPrasadam || bill.food || 0) > 0 && (
-                  <div className="flex justify-between">
-                    <span>Food / Prasadam</span>
-                    <span>₹{(Number(bill.foodPrasadam || bill.food) / 100).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {bill.peakFee > 0 && (
-                  <div className="flex justify-between text-orange-700">
-                    <span>{t("booking.peakFee")}</span>
-                    <span>₹{(bill.peakFee / 100).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span>{t("booking.subtotal")}</span>
-                  <span>₹{(bill.subtotal / 100).toLocaleString("en-IN")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>
-                    {t("booking.gst")} ({bill.gstPercent}%)
-                  </span>
-                  <span>₹{(bill.gstAmount / 100).toLocaleString("en-IN")}</span>
-                </div>
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>{t("booking.total")}</span>
-                  <span className="text-primary">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
-                </div>
-              </div>
+            <CardContent className="p-6">
+              <BookingTotalsSummary />
             </CardContent>
           </Card>
         </div>
@@ -1192,57 +1151,8 @@ export default function BookingWizard({
           <h3 className="text-xl font-semibold text-foreground">{t("booking.payment")}</h3>
 
           <Card>
-            <CardContent className="p-6 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Service ({tierDetails[tier].name})</span>
-                <span>₹{(bill.basePrice / 100).toLocaleString("en-IN")}</span>
-              </div>
-              {(includeSamagri || Number(bill.samagri || 0) > 0) && (
-                <div className="flex justify-between gap-2">
-                  <span>Samagri</span>
-                  <span className="text-primary font-medium">
-                    {formatInclusiveLine(Number(bill.samagri || 0))}
-                  </span>
-                </div>
-              )}
-              {(includeAlankaram || Number(bill.alankaram || 0) > 0) && (
-                <div className="flex justify-between">
-                  <span>Alankaram</span>
-                  <span>
-                    {Number(bill.alankaram || alankaramPrice || 0) > 0
-                      ? `₹${(Number(bill.alankaram || alankaramPrice) / 100).toLocaleString("en-IN")}`
-                      : "As priced"}
-                  </span>
-                </div>
-              )}
-              {(includeFood || Number(bill.foodPrasadam || bill.food || 0) > 0) && (
-                <div className="flex justify-between">
-                  <span>Food / Prasadam</span>
-                  <span>
-                    {Number(bill.foodPrasadam || bill.food || foodPrice || 0) > 0
-                      ? `₹${(Number(bill.foodPrasadam || bill.food || foodPrice) / 100).toLocaleString("en-IN")}`
-                      : "As priced"}
-                  </span>
-                </div>
-              )}
-              {bill.peakFee > 0 && (
-                <div className="flex justify-between text-orange-700">
-                  <span>{t("booking.peakFee")}</span>
-                  <span>₹{(bill.peakFee / 100).toLocaleString("en-IN")}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span>{t("booking.subtotal")}</span>
-                <span>₹{(bill.subtotal / 100).toLocaleString("en-IN")}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t("booking.gst")} ({bill.gstPercent}%)</span>
-                <span>₹{(bill.gstAmount / 100).toLocaleString("en-IN")}</span>
-              </div>
-              <div className="flex justify-between font-bold text-lg border-t pt-2">
-                <span>{t("booking.total")}</span>
-                <span className="text-primary">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
-              </div>
+            <CardContent className="p-6">
+              <BookingTotalsSummary />
             </CardContent>
           </Card>
 
