@@ -31,5 +31,9 @@ export function isServiceAreaUnavailableError(message: string | undefined | null
 
 export function friendlyBookingError(message: string | undefined | null): string {
   if (isServiceAreaUnavailableError(message)) return COMING_SOON_BODY;
-  return (message || "").trim();
+  const msg = (message || "").trim();
+  if (msg === "Service not found") {
+    return "This puja could not be booked. It may be inactive or removed — please pick another service or contact support.";
+  }
+  return msg;
 }

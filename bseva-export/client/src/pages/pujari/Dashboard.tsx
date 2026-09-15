@@ -35,7 +35,7 @@ import {
   Hourglass,
   TrendingUp,
   PlayCircle,
-  AlertCircle,
+  Inbox,
   Video,
 } from "lucide-react";
 import { format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
@@ -57,7 +57,7 @@ function PujariDashboardContent() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [detailIntent, setDetailIntent] = useState<"accept" | "reject" | null>(null);
-  const [listTab, setListTab] = useState("completed");
+  const [listTab, setListTab] = useState("upcoming");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujariProfile, setPujariProfile] = useState<any>(null);
@@ -425,26 +425,80 @@ function PujariDashboardContent() {
           </Card>
         )}
 
-        {!isLoading && pendingAcceptance.length > 0 && (
-          <Card className="border-2 border-orange-300 bg-orange-50/50 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-foreground flex items-center gap-2">
-                <AlertCircle className="text-orange-600" size={20} />
-                Pending acceptance ({pendingAcceptance.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {pendingAcceptance.slice(0, DASHBOARD_LIST_LIMIT).map((row) => (
-                <BookingListItem key={row.booking.id} row={row} showAcceptReject />
-              ))}
-              {pendingAcceptance.length > DASHBOARD_LIST_LIMIT && (
-                <Button variant="outline" size="sm" onClick={() => setLocation("/pujari/bookings?tab=upcoming&status=pending")}>
-                  More ({pendingAcceptance.length - DASHBOARD_LIST_LIMIT})
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        <Card
+          className={
+            !isLoading && pendingAcceptance.length > 0
+              ? "border border-primary/25 bg-primary/[0.04] shadow-sm"
+              : "border-border shadow-sm"
+          }
+        >
+          <CardHeader className="pb-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10 shrink-0">
+                <Inbox className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <CardTitle className="text-foreground text-lg leading-tight">
+                  New booking requests
+                </CardTitle>
+                <p className="text-sm text-muted-foreground font-normal">
+                  {isLoading
+                    ? "Loading requests…"
+                    : pendingAcceptance.length > 0
+                      ? "Accept or decline to confirm your schedule"
+                      : "Fresh customer bookings appear here first"}
+                </p>
+              </div>
+              {!isLoading && pendingAcceptance.length > 0 ? (
+                <Badge className="bg-primary/15 text-primary border-primary/20 shrink-0">
+                  {pendingAcceptance.length} new
+                </Badge>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {isLoading ? (
+              <div className="space-y-3 max-h-[26rem]">
+                <Skeleton className="h-[7.5rem] w-full rounded-lg" />
+                <Skeleton className="h-[7.5rem] w-full rounded-lg" />
+                <Skeleton className="h-[7.5rem] w-full rounded-lg" />
+              </div>
+            ) : pendingAcceptance.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-6 py-12 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <Inbox className="h-7 w-7 text-primary/70" />
+                </div>
+                <p className="text-base font-semibold text-foreground">No bookings available</p>
+                <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto leading-relaxed">
+                  You&apos;re all set for now. When a customer books a puja, the request will show
+                  here so you can review and accept it.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div
+                  className="max-h-[26rem] overflow-y-auto space-y-3 pr-1 overscroll-contain"
+                  aria-label="New booking requests list"
+                >
+                  {pendingAcceptance.map((row) => (
+                    <BookingListItem key={row.booking.id} row={row} showAcceptReject />
+                  ))}
+                </div>
+                {pendingAcceptance.length > 3 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-primary"
+                    onClick={() => setLocation("/pujari/bookings?tab=upcoming&status=pending")}
+                  >
+                    View all {pendingAcceptance.length} requests in Bookings
+                  </Button>
+                ) : null}
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {!isLoading && readyToStart.length > 0 && (
           <Card className="border border-blue-200 bg-blue-50/20">
@@ -515,6 +569,9 @@ function PujariDashboardContent() {
               <CardContent>
                 <Tabs value={listTab} onValueChange={setListTab}>
                   <TabsList className="bg-secondary/30 mb-4 h-auto flex flex-wrap justify-start gap-1">
+                    <TabsTrigger value="upcoming" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                      <Hourglass size={14} /> Upcoming ({upcoming.length})
+                    </TabsTrigger>
                     <TabsTrigger value="completed" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
                       <CheckCircle2 size={14} /> Completed ({completedOnly.length})
                     </TabsTrigger>
@@ -525,6 +582,35 @@ function PujariDashboardContent() {
                       Expired ({expiredOnly.length})
                     </TabsTrigger>
                   </TabsList>
+
+                  <TabsContent value="upcoming" className="space-y-3 mt-0">
+                    {isLoading && <Skeleton className="h-24 w-full" />}
+                    {!isLoading && upcoming.length === 0 && (
+                      <p className="text-sm text-muted-foreground py-6 text-center">
+                        No upcoming pujas scheduled. New requests appear under New booking requests
+                        above.
+                      </p>
+                    )}
+                    {upcoming.slice(0, DASHBOARD_LIST_LIMIT).map((row) => (
+                      <BookingListItem
+                        key={row.booking.id}
+                        row={row}
+                        showAcceptReject={
+                          ["pending", "pending_acceptance"].includes(row.booking.status) &&
+                          !isExpiredBooking(row, now)
+                        }
+                      />
+                    ))}
+                    {upcoming.length > DASHBOARD_LIST_LIMIT && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setLocation("/pujari/bookings?tab=upcoming")}
+                      >
+                        More ({upcoming.length - DASHBOARD_LIST_LIMIT})
+                      </Button>
+                    )}
+                  </TabsContent>
 
                   <TabsContent value="completed" className="space-y-3 mt-0">
                     {isLoading && <Skeleton className="h-24 w-full" />}

@@ -1,27 +1,50 @@
 import { cn } from "@/lib/utils";
 
-const SIZE_CLASS = {
-  xs: "h-7 max-w-[5.5rem]",
-  sm: "h-9 max-w-[7.5rem]",
-  md: "h-12 max-w-[9.5rem]",
-  lg: "h-20 max-w-[11rem]",
-  xl: "h-24 max-w-[14rem]",
+const WORD_SIZE = {
+  xs: "text-lg",
+  sm: "text-xl",
+  md: "text-2xl",
+  lg: "text-3xl",
+  xl: "text-4xl",
 } as const;
 
 type BSevaLogoProps = {
-  size?: keyof typeof SIZE_CLASS;
+  size?: keyof typeof WORD_SIZE;
   className?: string;
+  /** Show “Book, Believe, Bless” under the wordmark (marketing hero/footer). */
+  showTagline?: boolean;
   alt?: string;
 };
 
-/** Full BSeva wordmark (replaces text / stylized “B” branding). */
-export default function BSevaLogo({ size = "md", className, alt = "BSeva" }: BSevaLogoProps) {
+/** One wordmark: B icon reads as “B” + “Seva” type → BSeva. */
+export default function BSevaLogo({
+  size = "md",
+  className,
+  showTagline = false,
+  alt = "BSeva",
+}: BSevaLogoProps) {
   return (
-    <img
-      src="/bseva-logo-transparent.png"
-      alt={alt}
-      className={cn("w-auto object-contain object-left", SIZE_CLASS[size], className)}
-      decoding="async"
-    />
+    <div className={cn("inline-flex flex-col min-w-0", className)} aria-label={alt}>
+      <div
+        className={cn(
+          "inline-flex items-center leading-none",
+          WORD_SIZE[size],
+        )}
+      >
+        <img
+          src="/bseva-mark.png"
+          alt=""
+          aria-hidden
+          className="h-[1.2em] w-[1.2em] shrink-0 object-contain -mr-[0.16em] relative top-[0.01em]"
+          decoding="async"
+        />
+        <span className="font-bold text-primary tracking-tight whitespace-nowrap">Seva</span>
+      </div>
+      {showTagline ? (
+        <span className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide mt-1 pl-[0.15em] hidden sm:block">
+          Book, Believe, Bless
+        </span>
+      ) : null}
+    </div>
   );
 }

@@ -235,8 +235,9 @@ export default function PujariBookingsPage() {
 
           {loading && <Skeleton className="h-24 w-full" />}
           {!loading && rows.length === 0 && (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              No bookings assigned to you yet.
+            <p className="text-sm text-muted-foreground py-8 text-center max-w-md mx-auto leading-relaxed">
+              No bookings yet. New customer requests will appear here for you to review, accept, or
+              decline.
             </p>
           )}
           {!loading && rows.length > 0 && filtered.length === 0 && (

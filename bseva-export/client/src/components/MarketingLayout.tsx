@@ -192,7 +192,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="container flex h-20 items-center justify-between gap-4">
           <Link href="/">
             <a className="flex items-center shrink-0">
-              <BSevaLogo size="lg" className="md:h-24 md:max-w-[14rem]" />
+              <BSevaLogo size="lg" showTagline />
             </a>
           </Link>
 

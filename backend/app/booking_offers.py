@@ -183,18 +183,31 @@ def withdraw_open_offers(
             ),
             {"bid": booking_id, "pid": mark_accepted_for},
         )
-    db.execute(
-        text(
-            """
-            UPDATE booking_pujari_offers
-            SET status = 'withdrawn', responded_at = COALESCE(responded_at, NOW())
-            WHERE booking_id = CAST(:bid AS uuid)
-              AND status = 'invited'
-              AND (:except IS NULL OR pujari_id != CAST(:except AS uuid))
-            """
-        ),
-        {"bid": booking_id, "except": except_pujari_id},
-    )
+    if except_pujari_id:
+        db.execute(
+            text(
+                """
+                UPDATE booking_pujari_offers
+                SET status = 'withdrawn', responded_at = COALESCE(responded_at, NOW())
+                WHERE booking_id = CAST(:bid AS uuid)
+                  AND status = 'invited'
+                  AND pujari_id != CAST(:except AS uuid)
+                """
+            ),
+            {"bid": booking_id, "except": except_pujari_id},
+        )
+    else:
+        db.execute(
+            text(
+                """
+                UPDATE booking_pujari_offers
+                SET status = 'withdrawn', responded_at = COALESCE(responded_at, NOW())
+                WHERE booking_id = CAST(:bid AS uuid)
+                  AND status = 'invited'
+                """
+            ),
+            {"bid": booking_id},
+        )
 
 
 def reject_offer(db: Session, booking_id: str, pujari_id: str, reason: str | None) -> bool:

@@ -374,11 +374,13 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     if not body.terms_accepted:
         raise HTTPException(400, "Please accept the Terms & Conditions and Cancellation Policy")
     svc = db.execute(
-        text("SELECT * FROM services WHERE id = CAST(:id AS uuid) AND active = TRUE"),
+        text("SELECT * FROM services WHERE id = CAST(:id AS uuid)"),
         {"id": str(body.service_id)},
     ).mappings().first()
     if not svc:
         raise HTTPException(404, "Service not found")
+    if not svc.get("active"):
+        raise HTTPException(400, "This service is not available for booking")
     if svc.get("standard_price_paise") is None or svc.get("pricing_status") == "awaiting_pricing":
         raise HTTPException(400, "This service is not yet available for booking")
     if body.mode == "virtual" and not bool(get_setting(db, "virtual_puja_enabled", False)):

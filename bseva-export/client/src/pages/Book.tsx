@@ -78,6 +78,7 @@ export default function Book() {
     user?.role === "customer" && (pujaType.muhurta_consultation_enabled || pujaType.requires_muhurta);
 
   const blockBooking = user?.role === "customer" && (!canBook || checking);
+  const serviceNotBookable = pujaType.bookable === false;
 
   return (
     <Layout>
@@ -105,7 +106,20 @@ export default function Book() {
 
       {user?.role === "customer" ? <ServiceAvailabilityBanner /> : null}
 
-      {blockBooking ? (
+      {serviceNotBookable ? (
+        <div className="pb-8 max-w-2xl space-y-4">
+          <div className="rounded-xl border border-border bg-muted/30 px-5 py-5">
+            <h2 className="text-lg font-semibold text-foreground mb-2">Not open for booking yet</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              This puja is listed for information only. Choose another service from your dashboard or ask
+              admin to activate pricing for this puja.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => setLocation(inCustomerPortal ? "/customer" : "/services")}>
+            {inCustomerPortal ? "Back to dashboard" : "Browse services"}
+          </Button>
+        </div>
+      ) : blockBooking ? (
         <div className="pb-8 max-w-2xl space-y-4">
           {status === "unavailable" ? (
             <div className="rounded-xl border border-primary/25 bg-orange-50/80 dark:bg-orange-950/30 px-5 py-5">

@@ -164,7 +164,7 @@ function AdminShell({ children }: AdminLayoutProps) {
           <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border shrink-0">
             <Link href={opsBase}>
               <div className="flex items-center gap-2 min-w-0">
-                <BSevaLogo size="xs" className="h-8 max-w-[6.5rem]" />
+                <BSevaLogo size="xs" />
                 <span className="font-bold text-lg text-sidebar-foreground shrink-0">Admin</span>
               </div>
             </Link>
