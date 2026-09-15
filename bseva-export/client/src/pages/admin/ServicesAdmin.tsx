@@ -400,7 +400,7 @@ export default function ServicesAdmin() {
         online_nri_price_paise: form.online_nri_price_paise,
         standard_price_paise: form.standard_price_paise,
         premium_price_paise: form.premium_price_paise,
-        basic_price_paise: form.basic_price_paise,
+        basic_price_paise: null,
         main_puja_price_paise: form.main_puja_price_paise ?? form.standard_price_paise,
         samagri_price_paise: Math.max(0, Math.round(Number(form.samagri_price_paise) || 0)),
         alankaram_price_paise: Math.max(0, Math.round(Number(form.alankaram_price_paise) || 0)),
@@ -409,10 +409,7 @@ export default function ServicesAdmin() {
         duration_minutes: Math.max(15, Math.round(Number(form.duration_minutes) || 90)),
         required_level: Math.min(4, Math.max(1, Number(form.required_level) || 2)),
         pujaris_required: Math.min(20, Math.max(1, Math.round(Number(form.pujaris_required) || 1))),
-        basic_pujaris_required:
-          form.basic_pujaris_required != null && form.basic_pujaris_required !== ("" as unknown as number)
-            ? Math.min(20, Math.max(1, Math.round(Number(form.basic_pujaris_required))))
-            : null,
+        basic_pujaris_required: null,
         standard_pujaris_required:
           form.standard_pujaris_required != null && form.standard_pujaris_required !== ("" as unknown as number)
             ? Math.min(20, Math.max(1, Math.round(Number(form.standard_pujaris_required))))
@@ -1059,28 +1056,9 @@ export default function ServicesAdmin() {
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <p className="text-sm font-medium">Cost & pricing</p>
               <p className="text-xs text-muted-foreground">
-                Suggested packages: Basic ₹2,499 · Standard ₹3,499 · Premium ₹4,499 (override per service).
-                Standard and Premium are required before activating; Basic is optional.
+                Customer booking uses Standard and Premium only. Set both prices before activating this puja.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="service-basic">Basic price (₹)</Label>
-                  <Input
-                    id="service-basic"
-                    type="number"
-                    min={0}
-                    step={1}
-                    placeholder="Optional e.g. 2499"
-                    value={formatPriceInput(form.basic_price_paise)}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        basic_price_paise:
-                          e.target.value === "" ? null : Math.round(Number(e.target.value) * 100),
-                      })
-                    }
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="service-standard">Standard price (₹)</Label>
                   <Input
@@ -1118,9 +1096,10 @@ export default function ServicesAdmin() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-border/60">
+              <p className="text-sm font-medium pt-2 border-t border-border/60">Pujaris included (team size)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="puj-default">Default pujaris (fallback)</Label>
+                  <Label htmlFor="puj-default">Default (fallback)</Label>
                   <Input
                     id="puj-default"
                     type="number"
@@ -1129,23 +1108,7 @@ export default function ServicesAdmin() {
                     value={form.pujaris_required}
                     onChange={(e) => setForm({ ...form, pujaris_required: Number(e.target.value) || 1 })}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="puj-basic">Basic package</Label>
-                  <Input
-                    id="puj-basic"
-                    type="number"
-                    min={1}
-                    max={20}
-                    placeholder={`Use default (${form.pujaris_required})`}
-                    value={form.basic_pujaris_required ?? ""}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        basic_pujaris_required: e.target.value === "" ? null : Number(e.target.value) || 1,
-                      })
-                    }
-                  />
+                  <p className="text-[11px] text-muted-foreground">Used when Standard or Premium is left blank below.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="puj-standard">Standard package</Label>
@@ -1183,8 +1146,8 @@ export default function ServicesAdmin() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Shown to customers on package cards and to the assigned pujari before accept. Leave a package blank to
-                use the default count.
+                Shown on customer package cards and on the pujari booking before accept. Example: Premium = 3 means
+                “3 Pujaris included” for Premium bookings.
               </p>
             </div>
 
