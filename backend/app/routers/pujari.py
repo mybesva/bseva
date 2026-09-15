@@ -204,7 +204,7 @@ def apply_level(body: PujariApplyLevelIn, user=Depends(require_roles("pujari")),
 def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
     from app.validation_rules import (
         validate_address_fields,
-        validate_bank_fields,
+        validate_settlement_fields,
         validate_mobile_optional,
         validate_pujari_dob,
         phone_for_user_account,
@@ -238,29 +238,34 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
     db.commit()
     try:
         db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_account_number TEXT"))
+        db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_name TEXT"))
+        db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS upi_id TEXT"))
         db.commit()
     except Exception:
         db.rollback()
 
-    touching_bank = any(
+    touching_settlement = any(
         v is not None
         for v in (
+            body.upi_id,
             body.bank_holder_name,
+            body.bank_name,
             body.bank_ifsc,
             body.bank_account_last4,
             body.bank_account_number,
             body.bank_account_confirm,
         )
     )
-    bank = {}
-    if touching_bank:
-        bank = validate_bank_fields(
+    settlement: dict = {}
+    if touching_settlement:
+        settlement = validate_settlement_fields(
+            upi_id=body.upi_id,
             holder=body.bank_holder_name,
+            bank_name=body.bank_name,
             ifsc=body.bank_ifsc,
             last4=body.bank_account_last4,
             account_number=body.bank_account_number,
             account_confirm=body.bank_account_confirm,
-            require_all=True,
         )
 
     # Cannot advance past documents step without Aadhaar (identity)
@@ -375,6 +380,8 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
               bank_account_number = COALESCE(:bank_acct, bank_account_number),
               bank_ifsc = COALESCE(:ifsc, bank_ifsc),
               bank_holder_name = COALESCE(:holder, bank_holder_name),
+              bank_name = COALESCE(:bank_name, bank_name),
+              upi_id = COALESCE(:upi_id, upi_id),
               onboarding_step = COALESCE(:step, onboarding_step),
               licence_type = COALESCE(:licence_type, licence_type),
               licence_number = COALESCE(:licence_number, licence_number),
@@ -415,10 +422,12 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             "exp": body.experience_years,
             "avail": body.available,
             "radius": body.service_radius_km,
-            "bank4": bank.get("bank_account_last4", body.bank_account_last4),
-            "bank_acct": bank.get("bank_account_number", body.bank_account_number),
-            "ifsc": bank.get("bank_ifsc", body.bank_ifsc),
-            "holder": bank.get("bank_holder_name", body.bank_holder_name),
+            "bank4": settlement.get("bank_account_last4", body.bank_account_last4),
+            "bank_acct": settlement.get("bank_account_number", body.bank_account_number),
+            "ifsc": settlement.get("bank_ifsc", body.bank_ifsc),
+            "holder": settlement.get("bank_holder_name", body.bank_holder_name),
+            "bank_name": settlement.get("bank_name", body.bank_name),
+            "upi_id": settlement.get("upi_id", body.upi_id),
             "step": body.onboarding_step,
             "licence_type": body.licence_type,
             "licence_number": body.licence_number,

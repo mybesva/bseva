@@ -120,6 +120,8 @@ def patch_pujari_profile(
     if not exists:
         raise HTTPException(404, "Pujari not found")
     db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_account_number TEXT"))
+    db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_name TEXT"))
+    db.execute(text("ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS upi_id TEXT"))
     year = body.qualification_year
     if year is not None and year > date.today().year:
         raise HTTPException(400, "Qualification year cannot be in the future")
@@ -165,6 +167,8 @@ def patch_pujari_profile(
               bank_account_number = COALESCE(:bank_acct, bank_account_number),
               bank_ifsc = COALESCE(:ifsc, bank_ifsc),
               bank_holder_name = COALESCE(:holder, bank_holder_name),
+              bank_name = COALESCE(:bank_name, bank_name),
+              upi_id = COALESCE(:upi_id, upi_id),
               updated_at = NOW()
             WHERE user_id = CAST(:id AS uuid)
             """
@@ -203,6 +207,8 @@ def patch_pujari_profile(
             "bank_acct": body.bank_account_number,
             "ifsc": body.bank_ifsc,
             "holder": body.bank_holder_name,
+            "bank_name": body.bank_name,
+            "upi_id": body.upi_id,
             "id": pujari_id,
         },
     )

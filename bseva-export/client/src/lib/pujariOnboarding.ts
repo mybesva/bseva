@@ -174,12 +174,16 @@ export async function validateOnboardingStep(
       miss("service_radius_km", "Set service radius (km)", !!profile.service_radius_km);
     }
     if (from === "bank") {
-      miss("bank_holder_name", "Account holder name is required", !!String(profile.bank_holder_name || "").trim());
-      miss("bank_ifsc", "IFSC is required", !!String(profile.bank_ifsc || "").trim());
+      const hasUpi = !!String(profile.upi_id || "").trim();
+      const hasBank =
+        !!String(profile.bank_holder_name || "").trim() &&
+        !!String(profile.bank_name || "").trim() &&
+        !!String(profile.bank_ifsc || "").trim() &&
+        !!String(profile.bank_account_number || "").replace(/\D/g, "");
       miss(
-        "bank_account_number",
-        "Account number is required",
-        !!String(profile.bank_account_number || "").replace(/\D/g, ""),
+        "settlement",
+        "Add a UPI ID or complete bank account details",
+        hasUpi || hasBank,
       );
     }
   }

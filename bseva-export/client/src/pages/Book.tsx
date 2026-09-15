@@ -165,6 +165,14 @@ export default function Book() {
               alankaramAvailable: Boolean(pujaType.alankaram_available),
               foodAvailable: Boolean(pujaType.food_available),
             }}
+            pujariTeam={{
+              pujaris_required: pujaType.pujaris_required,
+              priests_min: pujaType.priests_min,
+              basic_pujaris_required: pujaType.basic_pujaris_required,
+              standard_pujaris_required: pujaType.standard_pujaris_required,
+              premium_pujaris_required: pujaType.premium_pujaris_required,
+              package_pujaris: pujaType.package_pujaris,
+            }}
           />
         </div>
       )}

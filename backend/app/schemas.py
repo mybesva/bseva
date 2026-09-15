@@ -208,6 +208,9 @@ class ServiceIn(BaseModel):
     requires_muhurta: Optional[bool] = False
     duration_minutes: int = 90
     pujaris_required: Optional[int] = Field(default=1, ge=1, le=20)
+    basic_pujaris_required: Optional[int] = Field(default=None, ge=1, le=20)
+    standard_pujaris_required: Optional[int] = Field(default=None, ge=1, le=20)
+    premium_pujaris_required: Optional[int] = Field(default=None, ge=1, le=20)
     virtual_available: bool = False
     # Minimum notice before booking start (hours). Common presets: 2=instant, 24=1 day, 48=2 days.
     booking_lead_hours: int = Field(default=48, ge=1, le=720)
@@ -281,6 +284,8 @@ class PujariProfileIn(BaseModel):
     bank_account_confirm: Optional[str] = Field(default=None, max_length=32)
     bank_ifsc: Optional[str] = Field(default=None, max_length=11)
     bank_holder_name: Optional[str] = Field(default=None, max_length=120)
+    bank_name: Optional[str] = Field(default=None, max_length=120)
+    upi_id: Optional[str] = Field(default=None, max_length=256)
     onboarding_step: Optional[int] = Field(default=None, ge=1, le=6)
     licence_type: Optional[Literal["driving_licence", "cab_commercial", "other", "none"]] = None
     licence_number: Optional[str] = Field(default=None, max_length=40)

@@ -35,6 +35,7 @@ import {
 import { Calendar as CalendarIcon, Clock, MapPin, Sparkles } from "lucide-react";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
+import { pujarisIncludedShort, pujariTeamAcceptNotice } from "@/lib/pujariTeam";
 
 type Segment = "all" | "upcoming" | "completed" | "cancelled" | "expired";
 type StatusFilter =
@@ -293,6 +294,17 @@ export default function PujariBookingsPage() {
                         <div className="text-sm font-medium text-primary mt-2">
                           Dakshina: {formatPaise(row.booking.priestAmount || 0)}
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {row.booking.pujarisIncludedLabel ||
+                            pujarisIncludedShort(row.booking.pujarisRequired || 1)}
+                        </p>
+                        {canAccept &&
+                        (row.booking.pujarisRequired || 1) > 1 &&
+                        pujariTeamAcceptNotice(row.booking.pujarisRequired || 1) ? (
+                          <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2">
+                            {pujariTeamAcceptNotice(row.booking.pujarisRequired || 1)}
+                          </p>
+                        ) : null}
                       </div>
                       <Badge className={statusBadgeClass(shown)}>{shown.replace(/_/g, " ")}</Badge>
                     </div>
@@ -351,6 +363,8 @@ export default function PujariBookingsPage() {
                 total_paise: selected.booking.totalAmount,
                 pujari_payable_paise: selected.booking.priestAmount,
                 customer_name: selected.customer.name || undefined,
+                pujaris_required: selected.booking.pujarisRequired,
+                pujaris_included_label: selected.booking.pujarisIncludedLabel,
               }}
               onUpdated={async (info) => {
                 await load();

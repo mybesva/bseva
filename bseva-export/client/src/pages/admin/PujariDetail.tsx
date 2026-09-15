@@ -859,9 +859,11 @@ export default function PujariDetailPage() {
             <Field label="Approved level">{profile.approved_level}</Field>
             <Field label="Verification">{profile.verification_status}</Field>
             <Field label="Onboarding step">{profile.onboarding_step}</Field>
-            {(p.bank_holder_name || p.bank_ifsc || p.bank_account_last4) && (
+            {(p.upi_id || p.bank_holder_name || p.bank_ifsc || p.bank_account_last4) && (
               <>
+                {p.upi_id ? <Field label="UPI ID">{p.upi_id}</Field> : null}
                 <Field label="Bank holder">{p.bank_holder_name}</Field>
+                <Field label="Bank name">{p.bank_name}</Field>
                 <Field label="IFSC">{p.bank_ifsc}</Field>
                 <Field label="Account number">
                   {p.bank_account_number

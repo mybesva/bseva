@@ -11,6 +11,7 @@ from app.validation_rules import (
     normalize_mobile,
     validate_address_fields,
     validate_bank_fields,
+    validate_settlement_fields,
     validate_cancel_reason,
     validate_pujari_dob,
     validate_support_text,
@@ -61,11 +62,19 @@ def test_address_rejects_junk_and_bad_pin():
     assert out["pincode"] == "500001"
 
 
+def test_settlement_upi_or_bank():
+    out = validate_settlement_fields(upi_id="ram.kumar@oksbi")
+    assert out["upi_id"] == "ram.kumar@oksbi"
+    with pytest.raises(HTTPException):
+        validate_settlement_fields(upi_id="", holder="", ifsc="")
+
+
 def test_bank_requires_all_fields():
     with pytest.raises(HTTPException):
         validate_bank_fields(holder="", ifsc="", account_number="", require_all=True)
     out = validate_bank_fields(
         holder="Ram Kumar",
+        bank_name="State Bank of India",
         ifsc="SBIN0001234",
         account_number="123456789012",
         account_confirm="123456789012",
@@ -77,6 +86,7 @@ def test_bank_requires_all_fields():
     with pytest.raises(HTTPException):
         validate_bank_fields(
             holder="Ram Kumar",
+            bank_name="State Bank of India",
             ifsc="SBIN0001234",
             account_number="123456789012",
             account_confirm="999999999999",

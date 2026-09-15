@@ -129,6 +129,12 @@ def enrich_service(
     if not include_inactive_meta and not data.get("active"):
         # still return for featured home cards
         pass
+    try:
+        from app.pujari_team import package_pujaris_map
+
+        data["package_pujaris"] = package_pujaris_map(data)
+    except Exception:
+        data["package_pujaris"] = {"basic": 1, "standard": 1, "premium": 1}
     return data
 
 

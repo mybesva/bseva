@@ -142,23 +142,79 @@ def validate_address_fields(
     return out
 
 
+_UPI_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{1,255}@[a-zA-Z0-9][a-zA-Z0-9.-]{1,63}$")
+
+
+def normalize_upi_id(raw: str | None) -> str | None:
+    s = (raw or "").strip().lower()
+    return s if s else None
+
+
+def validate_upi_id(raw: str | None) -> str:
+    s = normalize_upi_id(raw)
+    if not s:
+        raise HTTPException(400, "UPI ID is required")
+    if len(s) > 256 or not _UPI_RE.match(s):
+        raise HTTPException(400, "Enter a valid UPI ID (e.g. name@oksbi)")
+    return s
+
+
+def validate_settlement_fields(
+    *,
+    upi_id: str | None = None,
+    holder: str | None = None,
+    ifsc: str | None = None,
+    bank_name: str | None = None,
+    last4: str | None = None,
+    account_number: str | None = None,
+    account_confirm: str | None = None,
+) -> dict:
+    """Require at least one: valid UPI ID or complete bank account."""
+    upi_norm = normalize_upi_id(upi_id)
+    acct = re.sub(r"\D", "", (account_number or "").strip())
+    bank_touched = any(
+        bool((x or "").strip()) for x in (holder, bank_name, ifsc, acct, last4)
+    )
+    out: dict = {}
+    if upi_norm:
+        out["upi_id"] = validate_upi_id(upi_norm)
+    if bank_touched:
+        out.update(
+            validate_bank_fields(
+                holder=holder,
+                bank_name=bank_name,
+                ifsc=ifsc,
+                last4=last4,
+                account_number=account_number,
+                account_confirm=account_confirm,
+                require_all=True,
+            )
+        )
+    elif not out.get("upi_id"):
+        raise HTTPException(400, "Add a UPI ID or complete bank account details for settlement")
+    return out
+
+
 def validate_bank_fields(
     *,
     holder: str | None,
     ifsc: str | None,
+    bank_name: str | None = None,
     last4: str | None = None,
     account_number: str | None = None,
     account_confirm: str | None = None,
     require_all: bool = True,
 ) -> dict:
     h = (holder or "").strip()
+    bn = (bank_name or "").strip()
     i = (ifsc or "").strip().upper()
     acct = re.sub(r"\D", "", (account_number or "").strip())
     confirm = re.sub(r"\D", "", (account_confirm or "").strip()) if account_confirm is not None else None
     a4 = (last4 or "").strip()
-    if not require_all and not h and not i and not acct and not a4:
+    if not require_all and not h and not bn and not i and not acct and not a4:
         return {
             "bank_holder_name": None,
+            "bank_name": None,
             "bank_ifsc": None,
             "bank_account_last4": None,
             "bank_account_number": None,
@@ -167,6 +223,10 @@ def validate_bank_fields(
         raise HTTPException(400, "Account holder name is required")
     if len(h) < 2 or not _MEANINGFUL_RE.search(h):
         raise HTTPException(400, "Enter a valid account holder name")
+    if not bn:
+        raise HTTPException(400, "Bank name is required")
+    if len(bn) < 2 or not _MEANINGFUL_RE.search(bn):
+        raise HTTPException(400, "Enter a valid bank name")
     if not i:
         raise HTTPException(400, "IFSC is required")
     if not _IFSC_RE.match(i):
@@ -185,6 +245,7 @@ def validate_bank_fields(
         raise HTTPException(400, "Full account number is required")
     return {
         "bank_holder_name": h,
+        "bank_name": bn,
         "bank_ifsc": i,
         "bank_account_last4": a4,
         "bank_account_number": acct,

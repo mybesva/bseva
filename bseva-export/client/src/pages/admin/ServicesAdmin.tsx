@@ -97,6 +97,9 @@ const emptyForm = {
   requires_muhurta: false,
   duration_minutes: 90,
   pujaris_required: 1,
+  basic_pujaris_required: null as number | null,
+  standard_pujaris_required: null as number | null,
+  premium_pujaris_required: null as number | null,
   virtual_available: false,
   active: false,
   samagri_available: true,
@@ -273,6 +276,11 @@ export default function ServicesAdmin() {
       requires_muhurta: Boolean(s.requires_muhurta),
       duration_minutes: s.duration_minutes || 90,
       pujaris_required: s.pujaris_required || 1,
+      basic_pujaris_required: s.basic_pujaris_required != null ? Number(s.basic_pujaris_required) : null,
+      standard_pujaris_required:
+        s.standard_pujaris_required != null ? Number(s.standard_pujaris_required) : null,
+      premium_pujaris_required:
+        s.premium_pujaris_required != null ? Number(s.premium_pujaris_required) : null,
       virtual_available: s.virtual_available !== false,
       active: s.active !== false,
       samagri_available: s.samagri_available !== false,
@@ -401,6 +409,18 @@ export default function ServicesAdmin() {
         duration_minutes: Math.max(15, Math.round(Number(form.duration_minutes) || 90)),
         required_level: Math.min(4, Math.max(1, Number(form.required_level) || 2)),
         pujaris_required: Math.min(20, Math.max(1, Math.round(Number(form.pujaris_required) || 1))),
+        basic_pujaris_required:
+          form.basic_pujaris_required != null && form.basic_pujaris_required !== ("" as unknown as number)
+            ? Math.min(20, Math.max(1, Math.round(Number(form.basic_pujaris_required))))
+            : null,
+        standard_pujaris_required:
+          form.standard_pujaris_required != null && form.standard_pujaris_required !== ("" as unknown as number)
+            ? Math.min(20, Math.max(1, Math.round(Number(form.standard_pujaris_required))))
+            : null,
+        premium_pujaris_required:
+          form.premium_pujaris_required != null && form.premium_pujaris_required !== ("" as unknown as number)
+            ? Math.min(20, Math.max(1, Math.round(Number(form.premium_pujaris_required))))
+            : null,
         display_order: Math.round(Number(form.display_order) || 1000),
         homepage_rank:
           form.homepage_rank != null && form.homepage_rank !== ("" as unknown as number)
@@ -1098,6 +1118,74 @@ export default function ServicesAdmin() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-border/60">
+                <div className="space-y-2">
+                  <Label htmlFor="puj-default">Default pujaris (fallback)</Label>
+                  <Input
+                    id="puj-default"
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={form.pujaris_required}
+                    onChange={(e) => setForm({ ...form, pujaris_required: Number(e.target.value) || 1 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="puj-basic">Basic package</Label>
+                  <Input
+                    id="puj-basic"
+                    type="number"
+                    min={1}
+                    max={20}
+                    placeholder={`Use default (${form.pujaris_required})`}
+                    value={form.basic_pujaris_required ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        basic_pujaris_required: e.target.value === "" ? null : Number(e.target.value) || 1,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="puj-standard">Standard package</Label>
+                  <Input
+                    id="puj-standard"
+                    type="number"
+                    min={1}
+                    max={20}
+                    placeholder={`Use default (${form.pujaris_required})`}
+                    value={form.standard_pujaris_required ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        standard_pujaris_required: e.target.value === "" ? null : Number(e.target.value) || 1,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="puj-premium">Premium package</Label>
+                  <Input
+                    id="puj-premium"
+                    type="number"
+                    min={1}
+                    max={20}
+                    placeholder={`Use default (${form.pujaris_required})`}
+                    value={form.premium_pujaris_required ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        premium_pujaris_required: e.target.value === "" ? null : Number(e.target.value) || 1,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Shown to customers on package cards and to the assigned pujari before accept. Leave a package blank to
+                use the default count.
+              </p>
             </div>
 
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
@@ -1358,17 +1446,6 @@ export default function ServicesAdmin() {
                   value={form.duration_minutes}
                   onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })}
                   required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="service-pujaris">Pujaris required</Label>
-                <Input
-                  id="service-pujaris"
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={form.pujaris_required}
-                  onChange={(e) => setForm({ ...form, pujaris_required: Number(e.target.value) || 1 })}
                 />
               </div>
             </div>

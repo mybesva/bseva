@@ -24,6 +24,8 @@ export type PujariBookingRow = {
     samagriRequested?: boolean;
     offerInvited?: boolean;
     offerDistanceKm?: number | null;
+    pujarisRequired?: number;
+    pujarisIncludedLabel?: string;
   };
   pujaType: { name: string; estimatedDuration: number };
   customer: { name: string | null; email: string | null; phone: string | null };
@@ -60,6 +62,8 @@ export function mapApiBooking(b: any): PujariBookingRow {
       offerInvited: Boolean(b.pujari_offer_invited),
       offerDistanceKm:
         b.offer_distance_km != null ? Number(b.offer_distance_km) : null,
+      pujarisRequired: b.pujaris_required != null ? Number(b.pujaris_required) : 1,
+      pujarisIncludedLabel: b.pujaris_included_label || undefined,
     },
     pujaType: { name: b.service_name, estimatedDuration: 90 },
     customer: { name: b.customer_name, email: null, phone: null },

@@ -64,11 +64,18 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
     """Return role/time-appropriate booking representation."""
     data = row_dict(booking) if not isinstance(booking, dict) else dict(booking)
     role = user.get("role")
+
+    def _finish() -> dict:
+        from app.pujari_team import enrich_booking_pujari_team
+
+        enrich_booking_pujari_team(data)
+        return data
+
     if role in ("admin", "super_admin"):
         data["details_level"] = "full"
         data["pujari_details_visible"] = True
         _attach_invite_urls(data, reveal_meet=True)
-        return data
+        return _finish()
 
     bd = data.get("booking_date")
     st = data.get("start_time")
@@ -99,7 +106,7 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                 "Pujari details will be shared within 24 hours before your scheduled puja."
             )
         _attach_invite_urls(data, reveal_meet=within_window)
-        return data
+        return _finish()
 
     if role in ("pujari", "head_pujari"):
         assigned = data.get("pujari_id") and str(data.get("pujari_id")) == str(user.get("id"))
@@ -147,5 +154,5 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
             if invited:
                 data["pujari_accept_required"] = True
             _attach_invite_urls(data, reveal_meet=full)
-            return data
+            return _finish()
     raise PermissionError("Not allowed")

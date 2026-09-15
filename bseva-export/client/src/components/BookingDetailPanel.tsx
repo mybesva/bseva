@@ -24,6 +24,7 @@ import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { downloadSamagriListForBooking } from "@/lib/downloadSamagriList";
 import { Download } from "lucide-react";
+import { pujarisIncludedShort, pujariTeamAcceptNotice, pujariTeamPaymentNotice } from "@/lib/pujariTeam";
 
 export type BookingDetail = {
   id: string;
@@ -64,6 +65,11 @@ export type BookingDetail = {
   recurring_series_id?: string | null;
   rejection_reason?: string | null;
   needs_reassignment?: boolean;
+  pujaris_required?: number;
+  pujaris_included_label?: string;
+  pujari_team_customer_note?: string;
+  pujari_team_notice?: string | null;
+  pujari_payment_notice?: string | null;
 };
 
 function statusColor(status: string) {
@@ -193,6 +199,15 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const canStartOtp = viewerRole === "pujari" && status === "confirmed";
   const samagriSelected =
     Boolean(booking.samagri_requested) || Number(booking.samagri_charge_paise || 0) > 0;
+  const teamSize = Math.max(1, Number(booking.pujaris_required || 1));
+  const teamLabel = booking.pujaris_included_label || pujarisIncludedShort(teamSize);
+  const teamCustomerNote =
+    booking.pujari_team_customer_note ||
+    (teamSize > 1 ? `This package includes ${teamSize} Pujaris for your ritual.` : null);
+  const teamPujariNotice =
+    booking.pujari_team_notice || pujariTeamAcceptNotice(teamSize);
+  const teamPaymentNotice =
+    booking.pujari_payment_notice || pujariTeamPaymentNotice(teamSize);
 
   async function downloadSamagri() {
     try {
@@ -241,7 +256,23 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           <Badge className="bg-orange-100 text-orange-900 border-orange-200">Samagri Selected</Badge>
         )}
         {booking.needs_reassignment && <Badge variant="destructive">needs reassignment</Badge>}
+        <Badge variant="outline" className="font-normal">
+          {teamLabel}
+        </Badge>
       </div>
+
+      {teamCustomerNote && viewerRole === "customer" ? (
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+          {teamCustomerNote}
+        </div>
+      ) : null}
+
+      {viewerRole === "pujari" && teamPujariNotice ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-950 space-y-1">
+          <p className="font-semibold">{teamPujariNotice}</p>
+          {teamPaymentNotice ? <p className="text-xs leading-relaxed">{teamPaymentNotice}</p> : null}
+        </div>
+      ) : null}
 
       {booking.mode === "virtual" && (booking.meeting_url || booking.public_invite_url) && (
         <div className="rounded-lg border-2 border-blue-300 bg-blue-50 px-3 py-3 space-y-2">

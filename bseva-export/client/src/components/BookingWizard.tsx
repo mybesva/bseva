@@ -61,6 +61,12 @@ import {
   earliestBookingInstant,
   isCalendarDayDisabled,
 } from "@/lib/bookingLeadTime";
+import {
+  pujarisForPackage,
+  pujarisIncludedShort,
+  type PackageTier,
+  type ServicePujariConfig,
+} from "@/lib/pujariTeam";
 
 interface BookingWizardProps {
   serviceId: string;
@@ -82,6 +88,8 @@ interface BookingWizardProps {
   };
   /** Minimum hours before puja start (from service; default 48 = 2 days). */
   bookingLeadHours?: number;
+  /** Per-package pujari team size (from admin catalog). */
+  pujariTeam?: ServicePujariConfig | null;
 }
 
 type BookingStep = 1 | 2 | 3 | 4;
@@ -183,6 +191,7 @@ export default function BookingWizard({
   basePrices,
   addonPrices,
   bookingLeadHours = 48,
+  pujariTeam,
 }: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
@@ -382,6 +391,9 @@ export default function BookingWizard({
     const foodAmt = includeFood ? Number(bill.foodPrasadam || bill.food || 0) : 0;
     return (
       <div className="space-y-2 text-sm">
+        <p className="text-xs text-muted-foreground pb-2 border-b border-border/60">
+          {pujarisIncludedShort(selectedPujariCount)}
+        </p>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Service ({tierDetails[tier].name})</span>
           <span className="font-medium tabular-nums">{formatInr(bill.basePrice)}</span>
@@ -628,6 +640,9 @@ export default function BookingWizard({
     (key) => Number(basePrices[key] || 0) > 0
   );
 
+  const tierPujariCount = (key: Tier) => pujarisForPackage(pujariTeam, key as PackageTier);
+  const selectedPujariCount = tierPujariCount(tier);
+
   useEffect(() => {
     if (availableTiers.length && !availableTiers.includes(tier)) {
       setTier(availableTiers.includes("standard") ? "standard" : availableTiers[0]);
@@ -858,7 +873,10 @@ export default function BookingWizard({
                     ₹{(Number(basePrices[key] || 0) / 100).toLocaleString("en-IN")}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mb-3 w-full leading-relaxed">{tierDetails[key].description}</p>
+                <p className="text-sm text-muted-foreground mb-2 w-full leading-relaxed">{tierDetails[key].description}</p>
+                <p className="text-sm font-medium text-foreground mb-3 w-full">
+                  {pujarisIncludedShort(tierPujariCount(key))}
+                </p>
                 <ul className="text-xs text-muted-foreground space-y-1 w-full">
                   {tierDetails[key].features.map((f) => (
                     <li key={f} className="flex items-center gap-1">
@@ -1271,6 +1289,7 @@ export default function BookingWizard({
                     {tierDetails[tier].name} ·{" "}
                     {serviceMode === "virtual" ? t("booking.virtual") : t("booking.physical")}
                   </Badge>
+                  <p className="text-sm text-muted-foreground mt-2">{pujarisIncludedShort(selectedPujariCount)}</p>
                 </div>
               </div>
               <p>

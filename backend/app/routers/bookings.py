@@ -513,6 +513,10 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     if not wallet or wallet[0] < total:
         raise HTTPException(400, "Insufficient wallet balance")
 
+    from app.pujari_team import pujaris_required_for_package
+
+    team_size = pujaris_required_for_package(dict(svc), body.package_type)
+
     booking_id = str(uuid4())
     number = f"BSV-{datetime.utcnow().strftime('%y%m%d')}-{booking_id[:8].upper()}"
     meeting = None
@@ -531,13 +535,13 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
               gst_percent, gst_amount_paise, total_paise, terms_accepted, special_instructions,
               main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
               pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested,
-              needs_reassignment
+              needs_reassignment, pujaris_required
             ) VALUES (
               CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
               :d, :st, :et, :loc, :addr, :lat, :lng, :meet, :bstatus, 'paid', 'pending', 'not_applicable',
               :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, :instr,
               :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq,
-              :needs_reassign
+              :needs_reassign, :team
             )
             """
         ),
@@ -575,6 +579,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             "samreq": bool(body.include_samagri),
             "alanreq": bool(body.include_alankaram),
             "foodreq": bool(body.include_food),
+            "team": team_size,
         },
     )
     try:
@@ -778,13 +783,14 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                           base_price_paise, peak_fee_paise, platform_fee_paise, pujari_payable_paise,
                           gst_percent, gst_amount_paise, total_paise, terms_accepted, recurring_series_id,
                           main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
-                          pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested
+                          pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested,
+                          pujaris_required
                         ) VALUES (
                           CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
                           :d, :st, :et, :loc, :addr, :lat, :lng,
                           'pending', 'pending', 'not_applicable', 'not_applicable',
                           :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, CAST(:rs AS uuid),
-                          :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq
+                          :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq, :team
                         )
                         """
                     ),
@@ -819,6 +825,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                         "samreq": bool(body.include_samagri),
                         "alanreq": bool(body.include_alankaram),
                         "foodreq": bool(body.include_food),
+                        "team": team_size,
                     },
                 )
             if skipped:
@@ -937,6 +944,10 @@ def list_bookings(
             {"lim": limit, "off": offset},
         ).mappings().all()
         items = [row_dict(r) for r in rows]
+        from app.pujari_team import enrich_booking_pujari_team
+
+        for item in items:
+            enrich_booking_pujari_team(item)
     elif user["role"] in ("pujari", "head_pujari"):
         from app.booking_offers import ensure_offers_table
 

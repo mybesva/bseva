@@ -71,8 +71,16 @@ export function validateAddress(v: {
   return errors;
 }
 
+const UPI_ID_RE = /^[a-z0-9][a-z0-9._-]{1,255}@[a-z0-9][a-z0-9.-]{1,63}$/i;
+
+export function isValidUpiId(raw: string) {
+  const s = (raw || "").trim().toLowerCase();
+  return s.length > 0 && s.length <= 256 && UPI_ID_RE.test(s);
+}
+
 export function validateBank(v: {
   holder?: string;
+  bankName?: string;
   ifsc?: string;
   accountNumber?: string;
   accountConfirm?: string;
@@ -80,6 +88,7 @@ export function validateBank(v: {
 }): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!isMeaningfulText(v.holder || "", 2)) errors.holder = "Account holder name is required";
+  if (!isMeaningfulText(v.bankName || "", 2)) errors.bankName = "Bank name is required";
   if (!isValidIfsc(v.ifsc || "")) errors.ifsc = "Enter a valid IFSC (e.g. SBIN0001234)";
   const acct = String(v.accountNumber || "").replace(/\D/g, "");
   const confirm = String(v.accountConfirm || "").replace(/\D/g, "");
@@ -94,6 +103,78 @@ export function validateBank(v: {
     errors.last4 = "Enter exactly 4 account digits";
   }
   return errors;
+}
+
+export function bankDraftTouched(v: {
+  holder?: string;
+  bankName?: string;
+  ifsc?: string;
+  accountNumber?: string;
+}) {
+  return Boolean(
+    (v.holder || "").trim() ||
+      (v.bankName || "").trim() ||
+      (v.ifsc || "").trim() ||
+      String(v.accountNumber || "").replace(/\D/g, ""),
+  );
+}
+
+export function validateSettlement(v: {
+  upiId?: string;
+  holder?: string;
+  bankName?: string;
+  ifsc?: string;
+  accountNumber?: string;
+  accountConfirm?: string;
+}): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const upi = (v.upiId || "").trim().toLowerCase();
+  const bankOn = bankDraftTouched(v);
+
+  if (upi && !isValidUpiId(upi)) {
+    errors.upiId = "Enter a valid UPI ID (e.g. name@oksbi)";
+  }
+
+  if (bankOn) {
+    Object.assign(errors, validateBank(v));
+  }
+
+  if (!upi && !bankOn) {
+    errors.settlement = "Add a UPI ID or complete bank account details";
+    return errors;
+  }
+
+  if (!upi && bankOn && Object.keys(validateBank(v)).length) {
+    return errors;
+  }
+
+  if (upi && !bankOn) {
+    return errors.upiId ? errors : {};
+  }
+
+  return errors;
+}
+
+export function hasSettlementMethod(v: {
+  upiId?: string;
+  holder?: string;
+  bankName?: string;
+  ifsc?: string;
+  accountNumber?: string;
+  accountConfirm?: string;
+}) {
+  const upi = (v.upiId || "").trim();
+  if (upi && isValidUpiId(upi)) return true;
+  const acct = String(v.accountNumber || "").replace(/\D/g, "");
+  const confirm = String(v.accountConfirm || "").replace(/\D/g, "");
+  return (
+    isMeaningfulText(v.holder || "", 2) &&
+    isMeaningfulText(v.bankName || "", 2) &&
+    isValidIfsc(v.ifsc || "") &&
+    acct.length >= 9 &&
+    acct.length <= 18 &&
+    confirm === acct
+  );
 }
 
 export function validateQualificationYear(
