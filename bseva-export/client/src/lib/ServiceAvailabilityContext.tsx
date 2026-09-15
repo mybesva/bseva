@@ -13,6 +13,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import {
   clearStoredAvailability,
   isBrowserReload,
+  locationKey,
   readStoredAvailability,
   writeStoredAvailability,
 } from "@/lib/serviceAvailabilityStorage";
@@ -22,9 +23,12 @@ export type ServiceAvailabilityStatus =
   | "checking"
   | "available"
   | "unavailable"
+  | "no_address"
   | "permission_denied"
   | "unsupported"
   | "error";
+
+type Coords = { lat: number; lng: number; key: string };
 
 type ServiceAvailabilityState = {
   status: ServiceAvailabilityStatus;
@@ -32,27 +36,22 @@ type ServiceAvailabilityState = {
   canBook: boolean;
   checking: boolean;
   lastCheckedAt: number | null;
-  /** Manual retry only (permission denied / error banners). */
-  refresh: () => Promise<void>;
-};
-
-const GEO_OPTIONS: PositionOptions = {
-  enableHighAccuracy: false,
-  timeout: 8000,
-  maximumAge: 60_000,
+  /** Re-check using My Address, or explicit coords after save / new booking address. */
+  refresh: (opts?: { lat?: number; lng?: number }) => Promise<void>;
 };
 
 const ServiceAvailabilityContext = createContext<ServiceAvailabilityState | null>(null);
 
-function mapGeoError(err: GeolocationPositionError): ServiceAvailabilityStatus {
-  if (err.code === err.PERMISSION_DENIED) return "permission_denied";
-  return "error";
-}
-
-function getCurrentPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, GEO_OPTIONS);
-  });
+async function fetchProfileCoords(): Promise<Coords | null> {
+  const p = await api<{
+    latitude?: number | null;
+    longitude?: number | null;
+  }>("/customer/profile");
+  if (p.latitude == null || p.longitude == null) return null;
+  const lat = Number(p.latitude);
+  const lng = Number(p.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng, key: locationKey(lat, lng) };
 }
 
 export function ServiceAvailabilityProvider({ children }: { children: ReactNode }) {
@@ -64,53 +63,38 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
 
   const checkSeqRef = useRef(0);
-  /** In-memory guard: one automatic check per login until logout or F5. */
   const resolvedSessionRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
 
-  const persist = useCallback((userId: string, next: ServiceAvailabilityStatus) => {
+  const persist = useCallback((userId: string, next: ServiceAvailabilityStatus, key: string) => {
     const at = Date.now();
     setLastCheckedAt(at);
-    writeStoredAvailability({ userId, status: next, checkedAt: at });
+    writeStoredAvailability({ userId, status: next, checkedAt: at, locationKey: key });
     resolvedSessionRef.current = userId;
   }, []);
 
-  const runCheck = useCallback(
-    async (userId: string) => {
-      if (typeof navigator === "undefined" || !navigator.geolocation) {
-        setStatus("unsupported");
-        persist(userId, "unsupported");
-        return;
-      }
-
+  const runCheckAt = useCallback(
+    async (userId: string, coords: Coords, opts?: { silent?: boolean }) => {
       if (inFlightRef.current) return;
 
       const seq = ++checkSeqRef.current;
       inFlightRef.current = true;
-      setStatus("checking");
+      if (!opts?.silent) setStatus("checking");
 
       try {
-        const pos = await getCurrentPosition();
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
         const result = await api<{ service_available: boolean }>(
-          `/service-availability?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`
+          `/service-availability?lat=${encodeURIComponent(String(coords.lat))}&lng=${encodeURIComponent(String(coords.lng))}`
         );
 
         if (seq !== checkSeqRef.current) return;
 
         const next: ServiceAvailabilityStatus = result.service_available ? "available" : "unavailable";
         setStatus(next);
-        persist(userId, next);
-      } catch (e: unknown) {
+        persist(userId, next, coords.key);
+      } catch {
         if (seq !== checkSeqRef.current) return;
-        const next =
-          e && typeof e === "object" && "code" in e
-            ? mapGeoError(e as GeolocationPositionError)
-            : "error";
-        setStatus(next);
-        persist(userId, next);
+        setStatus("error");
+        persist(userId, "error", coords.key);
       } finally {
         if (seq === checkSeqRef.current) inFlightRef.current = false;
       }
@@ -118,13 +102,37 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
     [persist]
   );
 
-  const refresh = useCallback(async () => {
-    if (!customerId) return;
-    resolvedSessionRef.current = null;
-    await runCheck(customerId);
-  }, [customerId, runCheck]);
+  const refresh = useCallback(
+    async (opts?: { lat?: number; lng?: number }) => {
+      if (!customerId) return;
+      resolvedSessionRef.current = null;
 
-  // Automatic check: once after login, or again only on full browser refresh (F5).
+      let coords: Coords | null = null;
+      if (opts?.lat != null && opts?.lng != null) {
+        coords = { lat: opts.lat, lng: opts.lng, key: locationKey(opts.lat, opts.lng) };
+      } else {
+        try {
+          coords = await fetchProfileCoords();
+        } catch {
+          setStatus("error");
+          return;
+        }
+      }
+
+      if (!coords) {
+        setStatus("no_address");
+        setLastCheckedAt(Date.now());
+        clearStoredAvailability();
+        resolvedSessionRef.current = customerId;
+        return;
+      }
+
+      await runCheckAt(customerId, coords);
+    },
+    [customerId, runCheckAt]
+  );
+
+  // Once after login, or on F5 — uses logged-in customer's My Address pin only (not device GPS).
   useEffect(() => {
     if (authLoading) return;
 
@@ -138,20 +146,41 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
 
     if (resolvedSessionRef.current === customerId) return;
 
-    const reload = isBrowserReload();
+    let cancelled = false;
 
-    if (!reload) {
-      const cached = readStoredAvailability(customerId);
-      if (cached) {
+    void (async () => {
+      let coords: Coords | null = null;
+      try {
+        coords = await fetchProfileCoords();
+      } catch {
+        if (!cancelled) setStatus("error");
+        return;
+      }
+      if (cancelled) return;
+
+      if (!coords) {
+        setStatus("no_address");
+        setLastCheckedAt(Date.now());
+        resolvedSessionRef.current = customerId;
+        return;
+      }
+
+      const reload = isBrowserReload();
+      const cached = !reload ? readStoredAvailability(customerId) : null;
+      if (cached && cached.locationKey === coords.key) {
         setStatus(cached.status);
         setLastCheckedAt(cached.checkedAt);
         resolvedSessionRef.current = customerId;
         return;
       }
-    }
 
-    void runCheck(customerId);
-  }, [authLoading, isCustomer, customerId, runCheck]);
+      await runCheckAt(customerId, coords);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isCustomer, customerId, runCheckAt]);
 
   const value = useMemo<ServiceAvailabilityState>(() => {
     const checking = status === "checking";

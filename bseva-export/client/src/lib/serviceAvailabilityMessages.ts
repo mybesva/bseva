@@ -10,6 +10,11 @@ export const ENABLE_LOCATION_TITLE = "Enable Location to Check Service Availabil
 export const ENABLE_LOCATION_BODY =
   "Please allow location access so BSeva can check service availability in your area.";
 
+export const MY_ADDRESS_TITLE = "Set Your Service Address";
+
+export const MY_ADDRESS_BODY =
+  "Please save your address in My Address and set the pin on the map. BSeva uses that location to check if booking is available in your area.";
+
 export const AVAILABILITY_ERROR_TITLE = "Couldn't Check Service Availability";
 
 export const AVAILABILITY_ERROR_BODY =

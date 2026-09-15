@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { validateAddress } from "@/lib/fieldValidation";
+import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { toast } from "sonner";
 
 const empty: AddressValue = {
@@ -21,6 +22,7 @@ const empty: AddressValue = {
 };
 
 export default function CustomerAddressPage() {
+  const { refresh } = useServiceAvailability();
   const [value, setValue] = useState<AddressValue>(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,13 +55,18 @@ export default function CustomerAddressPage() {
       toast.error(Object.values(errs)[0]);
       return;
     }
+    if (value.latitude == null || value.longitude == null) {
+      toast.error("Please set your location on the map (search, current location, or drag the pin)");
+      return;
+    }
     setSaving(true);
     try {
       await api("/customer/profile", {
         method: "PATCH",
         body: JSON.stringify(value),
       });
-      toast.success("Address saved");
+      await refresh({ lat: value.latitude, lng: value.longitude });
+      toast.success("Address saved — service availability updated for this location");
     } catch (err: any) {
       toast.error(err.message || "Could not save address");
     } finally {
@@ -72,6 +79,9 @@ export default function CustomerAddressPage() {
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle className="">My Address</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            This is your default service location. Booking availability is checked using the map pin here.
+          </p>
         </CardHeader>
         <CardContent>
           {loading ? (

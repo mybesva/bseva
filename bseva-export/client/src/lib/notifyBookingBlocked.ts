@@ -5,6 +5,8 @@ import {
   COMING_SOON_TITLE,
   ENABLE_LOCATION_BODY,
   ENABLE_LOCATION_TITLE,
+  MY_ADDRESS_BODY,
+  MY_ADDRESS_TITLE,
 } from "@/lib/serviceAvailabilityMessages";
 import type { ServiceAvailabilityStatus } from "@/lib/ServiceAvailabilityContext";
 import { toast } from "sonner";
@@ -12,6 +14,10 @@ import { toast } from "sonner";
 export function notifyBookingBlocked(status: ServiceAvailabilityStatus) {
   if (status === "unavailable") {
     toast.message(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
+    return;
+  }
+  if (status === "no_address") {
+    toast.message(MY_ADDRESS_TITLE, { description: MY_ADDRESS_BODY });
     return;
   }
   if (status === "permission_denied" || status === "unsupported") {

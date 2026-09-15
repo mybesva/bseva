@@ -6,13 +6,28 @@ export type StoredAvailability = {
   userId: string;
   status: ServiceAvailabilityStatus;
   checkedAt: number;
+  /** Coords used for this result — invalidate when My Address pin changes. */
+  locationKey: string;
 };
+
+export function locationKey(lat: number, lng: number): string {
+  return `${lat.toFixed(4)},${lng.toFixed(4)}`;
+}
 
 export function isBrowserReload(): boolean {
   if (typeof performance === "undefined") return true;
   const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   return nav?.type === "reload";
 }
+
+const VALID: ServiceAvailabilityStatus[] = [
+  "available",
+  "unavailable",
+  "no_address",
+  "permission_denied",
+  "unsupported",
+  "error",
+];
 
 export function readStoredAvailability(userId: string | null): StoredAvailability | null {
   if (!userId || typeof sessionStorage === "undefined") return null;
@@ -21,15 +36,8 @@ export function readStoredAvailability(userId: string | null): StoredAvailabilit
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredAvailability;
     if (parsed.userId !== userId) return null;
-    if (
-      parsed.status !== "available" &&
-      parsed.status !== "unavailable" &&
-      parsed.status !== "permission_denied" &&
-      parsed.status !== "unsupported" &&
-      parsed.status !== "error"
-    ) {
-      return null;
-    }
+    if (!VALID.includes(parsed.status)) return null;
+    if (!parsed.locationKey) return null;
     return parsed;
   } catch {
     return null;

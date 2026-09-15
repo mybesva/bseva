@@ -54,6 +54,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { friendlyBookingError, isServiceAreaUnavailableError, COMING_SOON_TITLE, COMING_SOON_BODY } from "@/lib/serviceAvailabilityMessages";
+import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 
 interface BookingWizardProps {
   serviceId: string;
@@ -82,6 +83,7 @@ type CalendarType = "north" | "south" | "lunar";
 export default function BookingWizard({ serviceId, pujaName, basePrices, addonPrices }: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
+  const { refresh: refreshServiceAvailability } = useServiceAvailability();
   const { isAuthenticated, loading: authLoading, user } = useAuth();
   const { policies: legalPolicies } = useLegalPolicies([
     "booking_terms",
@@ -528,7 +530,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
     if (currentStep === 2) {
       const addr = composedServiceAddress();
       if (addressMode === "new") {
-        return !!(bookingDate && doorNumber.trim() && locationText.trim() && city.trim());
+        return !!(bookingDate && doorNumber.trim() && locationText.trim() && city.trim() && lat != null && lng != null);
       }
       return !!(bookingDate && addr && city.trim());
     }
@@ -541,11 +543,41 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
       return;
     }
     if (lat == null || lng == null) {
-      toast.error("Please set a service location with GPS coordinates before booking");
+      toast.error("Please set the service location on the map before booking");
       return;
     }
     try {
       setSubmitting(true);
+
+      if (addressMode === "new") {
+        const profile = await api<any>("/customer/profile").catch(() => ({}));
+        const label = `${composedServiceAddress()}${city ? `, ${city}` : ""}`;
+        await api("/customer/profile", {
+          method: "PATCH",
+          body: JSON.stringify({
+            address_line1: doorNumber.trim() || profile.address_line1,
+            address_line2: locationText.trim() || profile.address_line2,
+            city: city.trim() || profile.city,
+            district: profile.district,
+            state: profile.state,
+            pincode: profile.pincode,
+            country: profile.country || "India",
+            location_label: label,
+            latitude: lat,
+            longitude: lng,
+          }),
+        });
+        await refreshServiceAvailability({ lat, lng });
+      }
+
+      const avail = await api<{ service_available: boolean }>(
+        `/service-availability?lat=${lat}&lng=${lng}`
+      );
+      if (!avail.service_available) {
+        toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
+        return;
+      }
+
       // Resolve a pujari id only (no details shown to customer during booking).
       const nearby = await api<any[]>(
         `/pujaris/nearby?lat=${lat}&lng=${lng}&service_id=${serviceId}`,

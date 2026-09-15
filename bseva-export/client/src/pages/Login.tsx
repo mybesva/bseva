@@ -36,17 +36,6 @@ export default function Login() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
 
-  // Warm browser location cache on customer login so dashboard check is near-instant.
-  useEffect(() => {
-    if (roleHint && roleHint !== "customer") return;
-    if (typeof navigator === "undefined" || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      () => undefined,
-      () => undefined,
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 }
-    );
-  }, [roleHint]);
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);

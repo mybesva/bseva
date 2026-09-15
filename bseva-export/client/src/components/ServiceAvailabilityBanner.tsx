@@ -1,4 +1,5 @@
 import { MapPin, Loader2 } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import {
@@ -8,6 +9,8 @@ import {
   COMING_SOON_TITLE,
   ENABLE_LOCATION_BODY,
   ENABLE_LOCATION_TITLE,
+  MY_ADDRESS_BODY,
+  MY_ADDRESS_TITLE,
 } from "@/lib/serviceAvailabilityMessages";
 
 type Props = {
@@ -29,7 +32,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
         aria-live="polite"
       >
         <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-        <span>Checking service availability in your area…</span>
+        <span>Checking service availability for your saved address…</span>
       </div>
     );
   }
@@ -47,6 +50,31 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
             </h2>
             <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{COMING_SOON_BODY}</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "no_address") {
+    return (
+      <div className="mb-6 rounded-xl border border-[#1A2B4A]/20 dark:border-primary/30 bg-card shadow-sm px-5 py-5 md:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+          <div className="flex gap-3 md:gap-4 min-w-0">
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1A2B4A]/10 dark:bg-primary/15 text-[#1A2B4A] dark:text-primary">
+              <MapPin className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
+                {MY_ADDRESS_TITLE}
+              </h2>
+              <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{MY_ADDRESS_BODY}</p>
+            </div>
+          </div>
+          <Link href="/customer/address">
+            <Button type="button" className="shrink-0 bg-primary hover:bg-primary/90 font-semibold">
+              My Address
+            </Button>
+          </Link>
         </div>
       </div>
     );
