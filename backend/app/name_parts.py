@@ -27,12 +27,16 @@ def validate_name_parts(
     middle: str | None,
     last: str | None,
     require_last: bool = True,
+    min_last_length: int = 1,
 ) -> tuple[str, str, str]:
     f = (first or "").strip()
     m = (middle or "").strip()
     l = (last or "").strip()
     if len(f) < 3:
         raise HTTPException(400, "First name must be at least 3 characters")
-    if require_last and not l:
-        raise HTTPException(400, "Last name is required")
+    if require_last:
+        if not l:
+            raise HTTPException(400, "Last name is required")
+        if len(l) < max(1, min_last_length):
+            raise HTTPException(400, f"Last name must be at least {min_last_length} characters")
     return f, m, l

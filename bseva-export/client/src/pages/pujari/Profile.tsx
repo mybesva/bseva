@@ -13,8 +13,8 @@ import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { Link } from "wouter";
 import PersonNameFields from "@/components/PersonNameFields";
+import { isValidPujariDob } from "@/lib/fieldValidation";
 import { splitDisplayName, validatePersonNameParts, type PersonNameParts } from "@/lib/personName";
 
 const QUALS = [
@@ -57,25 +57,68 @@ function ProfileForm() {
 
   function setField(key: string, value: unknown) {
     setProfile((prev: any) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function errClass(key: string) {
+    return fieldErrors[key] ? "border-red-500 focus-visible:ring-red-500" : "";
+  }
+
+  function ErrorSummary() {
+    const msgs = Object.values(fieldErrors);
+    if (!msgs.length) return null;
+    return (
+      <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2 space-y-0.5">
+        <p className="font-semibold">Please fix the following:</p>
+        {msgs.map((msg) => (
+          <p key={msg}>• {msg}</p>
+        ))}
+      </div>
+    );
+  }
+
+  function collectNameParts(): PersonNameParts {
+    return {
+      first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
+      middle_name: String(profile.middle_name ?? splitDisplayName(profile.full_name).middle_name),
+      last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
+    };
+  }
+
+  function validateForm(): Record<string, string> {
+    const errors: Record<string, string> = {};
+    if (!profile?.profile_photo_path && !photoUrl) {
+      errors.profile_photo_path = "Profile photo is required";
+    }
+    Object.assign(errors, validatePersonNameParts(collectNameParts(), { minLastLength: 3 }));
+    const dob = String(profile.date_of_birth || "").trim();
+    if (!dob) errors.date_of_birth = "Date of birth is required";
+    else if (!isValidPujariDob(dob)) {
+      errors.date_of_birth = "You must be at least 18 years old (date cannot be in the future)";
+    }
+    const phoneErr = validatePhoneNational(countryCode, phoneNational);
+    if (phoneErr) errors.mobile_number = phoneErr;
+    if (!String(profile.gotra || "").trim()) errors.gotra = "Gotra is required";
+    if (!String(profile.pravara || "").trim()) errors.pravara = "Pravara is required";
+    const quals: string[] = profile.qualifications || [];
+    if (quals.length === 0) errors.qualifications = "Select at least one qualification";
+    if (!profile.qualification_year) errors.qualification_year = "Qualification year is required";
+    if (!String(profile.sampradaya || "").trim()) errors.sampradaya = "Sampradaya is required";
+    return errors;
   }
 
   async function save(e?: React.FormEvent) {
     e?.preventDefault();
     if (!profile) return;
-    const errors: Record<string, string> = {};
-    const phoneErr = validatePhoneNational(countryCode, phoneNational);
-    if (phoneErr) errors.mobile_number = phoneErr;
-    if (!String(profile.gotra || "").trim()) errors.gotra = "Gotra is required";
-    if (!String(profile.pravara || "").trim()) errors.pravara = "Pravara is required";
-    const nameParts: PersonNameParts = {
-      first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
-      middle_name: String(profile.middle_name ?? splitDisplayName(profile.full_name).middle_name),
-      last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
-    };
-    Object.assign(errors, validatePersonNameParts(nameParts));
+    const errors = validateForm();
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
-      toast.error(Object.values(errors)[0]);
+      toast.error("Please fill the required fields marked in red");
       return;
     }
     setSaving(true);
@@ -111,6 +154,7 @@ function ProfileForm() {
           website_publication_consent: !!profile.website_publication_consent,
         }),
       });
+      setFieldErrors({});
       toast.success(t("common.save"));
       await load();
     } catch (err: any) {
@@ -137,7 +181,8 @@ function ProfileForm() {
     (profile.verification_status === "approved" && (!!profile.profile_submitted_at || pct >= 100));
 
   return (
-    <form className="space-y-8" onSubmit={save}>
+    <form className="space-y-8" onSubmit={save} noValidate>
+      <ErrorSummary />
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span>{t("pujari.profile.completion")}</span>
@@ -166,7 +211,7 @@ function ProfileForm() {
       <section className="space-y-4">
         <h2 className="text-xl">{t("pujari.personal")}</h2>
         <div>
-          <Label>{t("pujari.photo")}</Label>
+          <Label className={fieldErrors.profile_photo_path ? "text-red-600" : undefined}>{t("pujari.photo")}</Label>
           {photoUrl && <img src={photoUrl} alt="" className="mt-2 h-28 w-28 object-cover rounded-md border" />}
           <div className="flex gap-2 mt-2">
             <label className="text-sm">
@@ -181,13 +226,24 @@ function ProfileForm() {
                   try {
                     await uploadPujariAsset("photo", f);
                     toast.success("Photo saved");
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.profile_photo_path;
+                      return next;
+                    });
                     await load();
                   } catch (err: any) {
                     toast.error(err.message);
                   }
                 }}
               />
-              <Button type="button" size="sm" variant="outline" asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                asChild
+                className={fieldErrors.profile_photo_path ? "border-red-500 text-red-600" : undefined}
+              >
                 <span>{photoUrl ? t("pujari.photo.replace") : t("pujari.photo")}</span>
               </Button>
             </label>
@@ -205,8 +261,12 @@ function ProfileForm() {
               </Button>
             )}
           </div>
+          {fieldErrors.profile_photo_path ? (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.profile_photo_path}</p>
+          ) : null}
         </div>
         <PersonNameFields
+          lastNameMinLength={3}
           value={{
             first_name: profile.first_name ?? splitDisplayName(profile.full_name).first_name,
             middle_name: profile.middle_name ?? splitDisplayName(profile.full_name).middle_name,
@@ -238,8 +298,16 @@ function ProfileForm() {
             <Input value={profile.father_name || ""} onChange={(e) => setField("father_name", e.target.value)} />
           </div>
           <div>
-            <Label>{t("pujari.dob")} *</Label>
-            <Input type="date" value={(profile.date_of_birth || "").slice(0, 10)} onChange={(e) => setField("date_of_birth", e.target.value)} />
+            <Label className={fieldErrors.date_of_birth ? "text-red-600" : undefined}>{t("pujari.dob")} *</Label>
+            <Input
+              type="date"
+              className={errClass("date_of_birth")}
+              value={(profile.date_of_birth || "").slice(0, 10)}
+              onChange={(e) => setField("date_of_birth", e.target.value)}
+            />
+            {fieldErrors.date_of_birth ? (
+              <p className="text-xs text-red-600 mt-1">{fieldErrors.date_of_birth}</p>
+            ) : null}
           </div>
           <PhoneWithCountryCode
             id="pujari-mobile"
@@ -273,7 +341,7 @@ function ProfileForm() {
           <div>
             <h3 className="font-semibold text-foreground">Gotra &amp; Pravara *</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Enter your family Gotra and Pravara (rishi lineage). Both are required and appear on Angikara Patram.
+              Enter your family Gotra and Pravara (rishi lineage). Both are required for verification.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
@@ -358,8 +426,12 @@ function ProfileForm() {
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl">{t("pujari.qualification")} *</h2>
+      <section
+        className={`space-y-3 rounded-md p-2 ${fieldErrors.qualifications ? "border border-red-500" : ""}`}
+      >
+        <h2 className={`text-xl ${fieldErrors.qualifications ? "text-red-600" : ""}`}>
+          {t("pujari.qualification")} *
+        </h2>
         {QUALS.map((q) => (
           <label key={q.id} className="flex items-center gap-2 text-sm">
             <Checkbox
@@ -372,20 +444,31 @@ function ProfileForm() {
             {t(q.key)}
           </label>
         ))}
+        {fieldErrors.qualifications ? (
+          <p className="text-xs text-red-600">{fieldErrors.qualifications}</p>
+        ) : null}
         <div className="max-w-xs">
-          <Label>{t("pujari.year")} *</Label>
+          <Label className={fieldErrors.qualification_year ? "text-red-600" : undefined}>
+            {t("pujari.year")} *
+          </Label>
           <Input
             type="number"
             min={1950}
             max={yearNow}
+            className={errClass("qualification_year")}
             value={profile.qualification_year || ""}
             onChange={(e) => setField("qualification_year", e.target.value)}
           />
+          {fieldErrors.qualification_year ? (
+            <p className="text-xs text-red-600 mt-1">{fieldErrors.qualification_year}</p>
+          ) : null}
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl">{t("pujari.sampradaya")} *</h2>
+      <section
+        className={`space-y-3 rounded-md p-2 ${fieldErrors.sampradaya ? "border border-red-500" : ""}`}
+      >
+        <h2 className={`text-xl ${fieldErrors.sampradaya ? "text-red-600" : ""}`}>{t("pujari.sampradaya")} *</h2>
         {(["smartha", "madhwa", "vaishnava"] as const).map((s) => (
           <label key={s} className="flex items-center gap-2 text-sm">
             <input
@@ -397,12 +480,13 @@ function ProfileForm() {
             {t(`pujari.${s}`)}
           </label>
         ))}
+        {fieldErrors.sampradaya ? <p className="text-xs text-red-600">{fieldErrors.sampradaya}</p> : null}
       </section>
 
       <section className="space-y-3">
         <h2 className="text-xl">Experience &amp; languages</h2>
         <p className="text-sm text-muted-foreground">
-          Saved here once — onboarding and Angikara Patram use this information; we do not ask again elsewhere.
+          Years of experience and languages are saved here only — not on a separate page.
         </p>
         <div className="max-w-xs">
           <Label>Years of experience</Label>
@@ -451,16 +535,9 @@ function ProfileForm() {
         />
       </section>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={saving}>
-          {t("common.save")}
-        </Button>
-        <Link href="/pujari/angikara">
-          <Button type="button" variant="outline">
-            {t("pujari.menu.angikara")}
-          </Button>
-        </Link>
-      </div>
+      <Button type="submit" disabled={saving}>
+        {t("common.save")}
+      </Button>
     </form>
   );
 }

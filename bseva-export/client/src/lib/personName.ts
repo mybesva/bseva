@@ -21,11 +21,18 @@ export function composeDisplayName(parts: PersonNameParts): string {
   return [parts.first_name, parts.middle_name, parts.last_name].map((p) => p.trim()).filter(Boolean).join(" ");
 }
 
-export function validatePersonNameParts(parts: PersonNameParts): Record<string, string> {
+export function validatePersonNameParts(
+  parts: PersonNameParts,
+  opts?: { minLastLength?: number },
+): Record<string, string> {
   const errors: Record<string, string> = {};
+  const minLast = opts?.minLastLength ?? 1;
   const first = parts.first_name.trim();
   const last = parts.last_name.trim();
   if (first.length < 3) errors.first_name = "First name must be at least 3 characters";
-  if (!last) errors.last_name = "Last name is required";
+  if (last.length < minLast) {
+    errors.last_name =
+      last.length === 0 ? "Last name is required" : `Last name must be at least ${minLast} characters`;
+  }
   return errors;
 }

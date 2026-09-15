@@ -1,7 +1,16 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { useEffect } from "react";
+import { Route, Switch, useLocation } from "wouter";
+
+function RedirectTo({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(to);
+  }, [setLocation, to]);
+  return null;
+}
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -32,7 +41,6 @@ import MyBookings from "./pages/MyBookings";
 import PujariDashboard from "./pages/pujari/Dashboard";
 import PujariProfilePage from "./pages/pujari/Profile";
 import PujariDocumentsPage from "./pages/pujari/Documents";
-import AngikaraPage from "./pages/pujari/Angikara";
 import PujariOnboarding from "./pages/pujari/Onboarding";
 import PujariAddressPage from "./pages/pujari/AddressPage";
 import PujariBankPage from "./pages/pujari/BankPage";
@@ -40,7 +48,6 @@ import PujariReferralPage from "./pages/pujari/ReferralPage";
 import PujariAvailabilityPage from "./pages/pujari/AvailabilityPage";
 import PujariServicesPage from "./pages/pujari/ServicesPage";
 import PujariBookingsPage from "./pages/pujari/BookingsPage";
-import PujariExperiencePage from "./pages/pujari/ExperiencePage";
 import PujariChangePasswordPage from "./pages/pujari/ChangePasswordPage";
 import PujariEarningsPage from "./pages/pujari/EarningsPage";
 import { CustomerTermsPage, PujariTermsPage } from "./pages/portal/TermsPage";
@@ -104,11 +111,11 @@ function Router() {
       <Route path="/pujari/head-ratings" component={HeadRatingsPage} />
       <Route path="/pujari/onboarding" component={PujariOnboarding} />
       <Route path="/pujari/profile" component={PujariProfilePage} />
+      <Route path="/pujari/angikara">{() => <RedirectTo to="/pujari/profile" />}</Route>
+      <Route path="/pujari/experience">{() => <RedirectTo to="/pujari/profile" />}</Route>
       <Route path="/pujari/address" component={PujariAddressPage} />
       <Route path="/pujari/documents" component={PujariDocumentsPage} />
-      <Route path="/pujari/angikara" component={AngikaraPage} />
       <Route path="/pujari/services" component={PujariServicesPage} />
-      <Route path="/pujari/experience" component={PujariExperiencePage} />
       <Route path="/pujari/availability" component={PujariAvailabilityPage} />
       <Route path="/pujari/bank" component={PujariBankPage} />
       <Route path="/pujari/earnings" component={PujariEarningsPage} />

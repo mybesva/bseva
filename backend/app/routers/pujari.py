@@ -327,7 +327,7 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             l = body.last_name if body.last_name is not None else ((cur or {}).get("last_name") or cl)
         else:
             f, m, l = split_display_name(body.full_name or "")
-        f, m, l = validate_name_parts(first=f, middle=m, last=l, require_last=True)
+        f, m, l = validate_name_parts(first=f, middle=m, last=l, require_last=True, min_last_length=3)
         resolved_full = compose_display_name(f, m, l)
         resolved_first = f
         resolved_middle = m or None

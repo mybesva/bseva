@@ -7,10 +7,19 @@ type Props = {
   onChange: (next: PersonNameParts) => void;
   errors?: Partial<Record<keyof PersonNameParts, string>>;
   disabled?: boolean;
+  /** When set (e.g. 3 for pujari), last name input enforces minimum length on save validation. */
+  lastNameMinLength?: number;
 };
 
-export default function PersonNameFields({ value, onChange, errors, disabled }: Props) {
+export default function PersonNameFields({
+  value,
+  onChange,
+  errors,
+  disabled,
+  lastNameMinLength,
+}: Props) {
   const set = (key: keyof PersonNameParts, v: string) => onChange({ ...value, [key]: v });
+  const inputErr = "border-destructive focus-visible:ring-destructive";
 
   return (
     <div className="grid gap-4 sm:grid-cols-3">
@@ -27,6 +36,7 @@ export default function PersonNameFields({ value, onChange, errors, disabled }: 
           disabled={disabled}
           autoComplete="given-name"
           autoCorrect="off"
+          className={errors?.first_name ? inputErr : undefined}
         />
         {errors?.first_name ? <p className="text-xs text-destructive">{errors.first_name}</p> : null}
       </div>
@@ -54,10 +64,12 @@ export default function PersonNameFields({ value, onChange, errors, disabled }: 
           name="bseva_last_name"
           value={value.last_name}
           onChange={(e) => set("last_name", e.target.value)}
+          minLength={lastNameMinLength}
           required
           disabled={disabled}
           autoComplete="family-name"
           autoCorrect="off"
+          className={errors?.last_name ? inputErr : undefined}
         />
         {errors?.last_name ? <p className="text-xs text-destructive">{errors.last_name}</p> : null}
       </div>

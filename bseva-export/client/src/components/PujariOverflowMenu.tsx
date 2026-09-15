@@ -52,11 +52,6 @@ export default function PujariOverflowMenu() {
             <a className="w-full">{t("pujari.menu.documents")}</a>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/pujari/angikara">
-            <a className="w-full">{t("pujari.menu.angikara")}</a>
-          </Link>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

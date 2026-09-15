@@ -136,11 +136,14 @@ export default function PujariOnboardingPage() {
       req("profile_photo_path", "Profile photo (My Profile)", !!p.profile_photo_path);
       Object.assign(
         errors,
-        validatePersonNameParts({
-          first_name: String(p.first_name ?? splitDisplayName(p.full_name).first_name),
-          middle_name: String(p.middle_name ?? ""),
-          last_name: String(p.last_name ?? splitDisplayName(p.full_name).last_name),
-        }),
+        validatePersonNameParts(
+          {
+            first_name: String(p.first_name ?? splitDisplayName(p.full_name).first_name),
+            middle_name: String(p.middle_name ?? ""),
+            last_name: String(p.last_name ?? splitDisplayName(p.full_name).last_name),
+          },
+          { minLastLength: 3 },
+        ),
       );
       const dob = String(p.date_of_birth || "").trim();
       req("date_of_birth", "Date of birth (My Profile)", !!dob);
@@ -294,11 +297,14 @@ export default function PujariOnboardingPage() {
   const quals: string[] = profile.qualifications || [];
   const nameOk =
     Object.keys(
-      validatePersonNameParts({
-        first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
-        middle_name: String(profile.middle_name ?? ""),
-        last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
-      }),
+      validatePersonNameParts(
+        {
+          first_name: String(profile.first_name ?? splitDisplayName(profile.full_name).first_name),
+          middle_name: String(profile.middle_name ?? ""),
+          last_name: String(profile.last_name ?? splitDisplayName(profile.full_name).last_name),
+        },
+        { minLastLength: 3 },
+      ),
     ).length === 0;
   const parsedPhone = parsePhoneParts(profile.mobile_number || user?.phone || "");
   const phoneOk = !validatePhoneNational(parsedPhone.countryCode, parsedPhone.national);
@@ -367,8 +373,8 @@ export default function PujariOnboardingPage() {
               <h2 className="text-xl">My Profile</h2>
               <ErrorSummary />
               <GateCard
-                title="Personal details &amp; Angikara fields"
-                description="Photo, name, date of birth, phone, Gotra, Pravara, addresses, qualifications, experience, and signature are saved only in My Profile. Angikara Patram reads from there — it is not required to finish onboarding."
+                title="Personal &amp; professional details"
+                description="Photo, name, date of birth, phone, Gotra, Pravara, qualifications, experience, languages, and signature are saved only in My Profile."
                 href="/pujari/profile"
                 linkLabel="Open My Profile"
               >
@@ -451,11 +457,11 @@ export default function PujariOnboardingPage() {
               <ErrorSummary />
               <PriestOnboardingPanel />
               <p className="text-sm text-muted-foreground">
-                Angikara Patram is optional during onboarding. When you are ready, preview and submit it from{" "}
-                <Link href="/pujari/angikara" className="text-primary underline">
-                  Angikara Patram
-                </Link>{" "}
-                (data comes from My Profile).
+                Profile details for verification live in{" "}
+                <Link href="/pujari/profile" className="text-primary underline">
+                  My Profile
+                </Link>
+                . Only KYC uploads are required here.
               </p>
             </section>
           )}
