@@ -55,7 +55,13 @@ export default function Register() {
   const [consent, setConsent] = useState(false);
   const [humanCheck, setHumanCheck] = useState(false);
   const [pending, setPending] = useState(false);
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode, setReferralCode] = useState(() => {
+    const fromUrl =
+      params.get("referral_code")?.trim() ||
+      params.get("ref")?.trim() ||
+      "";
+    return fromUrl;
+  });
   const [language, setLanguage] = useState<Lang>(lang);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string; otp?: string }>({});
 

@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
+import { downloadSamagriListForBooking } from "@/lib/downloadSamagriList";
+import { Download } from "lucide-react";
 
 export type BookingDetail = {
   id: string;
@@ -189,6 +191,20 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     ["pending", "pending_acceptance", "confirmed"].includes(status) &&
     (viewerRole === "customer" || (viewerRole === "pujari" && status === "confirmed"));
   const canStartOtp = viewerRole === "pujari" && status === "confirmed";
+  const samagriSelected =
+    Boolean(booking.samagri_requested) || Number(booking.samagri_charge_paise || 0) > 0;
+
+  async function downloadSamagri() {
+    try {
+      setBusy(true);
+      await downloadSamagriListForBooking(bookingId);
+      toast.success("Samagri list downloaded");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not download Samagri list");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function openCancelDialog() {
     setCancelReason("");
@@ -221,6 +237,9 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         <Badge className={statusColor(status)}>{status.replace(/_/g, " ")}</Badge>
         {booking.mode && <Badge variant="outline">{booking.mode}</Badge>}
         {booking.package_type && <Badge variant="secondary" className="capitalize">{booking.package_type}</Badge>}
+        {viewerRole === "pujari" && samagriSelected && (
+          <Badge className="bg-orange-100 text-orange-900 border-orange-200">Samagri Selected</Badge>
+        )}
         {booking.needs_reassignment && <Badge variant="destructive">needs reassignment</Badge>}
       </div>
 
@@ -458,6 +477,35 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
       {canAccept && (
         <div className="space-y-3 rounded-lg border border-primary/30 bg-orange-50/50 p-3">
+          {viewerRole === "pujari" && samagriSelected && (
+            <div className="space-y-3 rounded-md border border-orange-200 bg-white/80 p-3">
+              <p className="text-sm font-semibold text-foreground">
+                Samagri selected — review the list before accepting
+              </p>
+              {booking.preparation ? (
+                <PreparationChecklist
+                  preparation={booking.preparation}
+                  compact
+                  interactive={false}
+                  title="Samagri list for this booking"
+                />
+              ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
+                <ul className="list-disc pl-5 text-sm space-y-0.5">
+                  {booking.samagri.map((it, i) => (
+                    <li key={`${it.name}-${i}`}>{it.name}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Samagri details will appear here once confirmed for this puja.
+                </p>
+              )}
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void downloadSamagri()}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Samagri list
+              </Button>
+            </div>
+          )}
           <label className="flex items-start gap-2 text-sm">
             <Checkbox checked={termsAccepted} onCheckedChange={(v) => setTermsAccepted(!!v)} className="mt-0.5" />
             <span>I accept the booking terms and will perform this puja as scheduled.</span>
@@ -483,6 +531,24 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               Reject
             </Button>
           </div>
+        </div>
+      )}
+
+      {viewerRole === "pujari" && samagriSelected && !canAccept && (
+        <div className="space-y-2 rounded-lg border border-orange-200 bg-orange-50/40 p-3">
+          <p className="text-sm font-semibold text-foreground">Samagri list</p>
+          {booking.preparation ? (
+            <PreparationChecklist
+              preparation={booking.preparation}
+              compact
+              interactive={false}
+              title="Samagri for this booking"
+            />
+          ) : null}
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void downloadSamagri()}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Samagri list
+          </Button>
         </div>
       )}
 

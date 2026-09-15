@@ -46,6 +46,39 @@ def create_notification(
     return nid
 
 
+def notify_ops_staff(
+    db: Session,
+    *,
+    title: str,
+    body: str,
+    category: str = "ops",
+    link: str | None = None,
+) -> int:
+    """Notify admin + super_admin users (in-app)."""
+    rows = db.execute(
+        text(
+            """
+            SELECT id FROM users
+            WHERE role IN ('super_admin', 'admin')
+              AND COALESCE(blocked, FALSE) = FALSE
+            LIMIT 50
+            """
+        )
+    ).mappings().all()
+    n = 0
+    for r in rows:
+        create_notification(
+            db,
+            user_id=str(r["id"]),
+            title=title,
+            body=body,
+            category=category,
+            link=link,
+        )
+        n += 1
+    return n
+
+
 def notify_super_admins(
     db: Session,
     *,

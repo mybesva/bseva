@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api, rupees } from "@/lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
+import { Copy, Share2 } from "lucide-react";
+import { shareCustomerReferral } from "@/lib/customerReferralShare";
 
 export default function CustomerRewardsPage() {
   const { t } = useI18n();
@@ -33,17 +35,43 @@ export default function CustomerRewardsPage() {
             <CardTitle className="text-base">{t("rewards.yourCode")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-2xl font-semibold tracking-wide">{code || "…"}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-2xl font-semibold tracking-wide">{code || "…"}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                disabled={!code}
+                aria-label={t("rewards.copy")}
+                title={t("rewards.copy")}
+                onClick={() => {
+                  if (!code) return;
+                  void navigator.clipboard.writeText(code);
+                  toast.success(t("rewards.copied"));
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
             <Button
-              variant="outline"
+              type="button"
+              className="gap-2"
               disabled={!code}
               onClick={() => {
                 if (!code) return;
-                void navigator.clipboard.writeText(code);
-                toast.success(t("rewards.copied"));
+                void shareCustomerReferral(code)
+                  .then((how) => {
+                    if (how === "copied") toast.success(t("rewards.shareCopied"));
+                  })
+                  .catch((e: unknown) => {
+                    if (e instanceof Error && e.name === "AbortError") return;
+                    toast.error(e instanceof Error ? e.message : "Could not share");
+                  });
               }}
             >
-              {t("rewards.copy")}
+              <Share2 className="h-4 w-4" />
+              {t("rewards.share")}
             </Button>
             <p className="text-sm text-muted-foreground">{t("rewards.shareHint")}</p>
           </CardContent>

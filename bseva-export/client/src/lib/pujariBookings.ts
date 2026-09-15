@@ -21,6 +21,7 @@ export type PujariBookingRow = {
     specialInstructions: string | null;
     customerName: string | null;
     serviceName: string;
+    samagriRequested?: boolean;
   };
   pujaType: { name: string; estimatedDuration: number };
   customer: { name: string | null; email: string | null; phone: string | null };
@@ -53,6 +54,7 @@ export function mapApiBooking(b: any): PujariBookingRow {
       specialInstructions: null,
       customerName: b.customer_name,
       serviceName: b.service_name,
+      samagriRequested: Boolean(b.samagri_requested),
     },
     pujaType: { name: b.service_name, estimatedDuration: 90 },
     customer: { name: b.customer_name, email: null, phone: null },

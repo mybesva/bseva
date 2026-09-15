@@ -143,6 +143,7 @@ export default function Book() {
           <BookingWizard
             serviceId={pujaType.id}
             pujaName={pujaType.name}
+            serviceCategories={pujaType.categories}
             basePrices={{
               basic: pujaType.basic_price_paise || undefined,
               standard: pujaType.standard_price_paise,
@@ -152,7 +153,7 @@ export default function Book() {
               samagri: pujaType.samagri_price_paise,
               alankaram: pujaType.alankaram_price_paise,
               food: pujaType.food_price_paise,
-              samagriAvailable: pujaType.samagri_available !== false,
+              samagriAvailable: Boolean(pujaType.samagri_available),
               alankaramAvailable: Boolean(pujaType.alankaram_available),
               foodAvailable: Boolean(pujaType.food_available),
             }}

@@ -55,10 +55,12 @@ import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { friendlyBookingError, isServiceAreaUnavailableError, COMING_SOON_TITLE, COMING_SOON_BODY } from "@/lib/serviceAvailabilityMessages";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
+import { isDeathRelatedService } from "@/lib/serviceCategories";
 
 interface BookingWizardProps {
   serviceId: string;
   pujaName: string;
+  serviceCategories?: { slug?: string; name?: string }[];
   basePrices: {
     basic?: number;
     standard: number;
@@ -80,7 +82,13 @@ type Tier = "basic" | "standard" | "premium";
 type ServiceMode = "physical" | "virtual";
 type CalendarType = "north" | "south" | "lunar";
 
-export default function BookingWizard({ serviceId, pujaName, basePrices, addonPrices }: BookingWizardProps) {
+export default function BookingWizard({
+  serviceId,
+  pujaName,
+  serviceCategories,
+  basePrices,
+  addonPrices,
+}: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
   const { refresh: refreshServiceAvailability } = useServiceAvailability();
@@ -250,6 +258,19 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
   const alankaramPrice = Number(addonPrices?.alankaram || quote?.alankaramListPrice || 0);
   const foodPrice = Number(addonPrices?.food || quote?.foodListPrice || 0);
   const foodAvailable = Boolean(addonPrices?.foodAvailable);
+  const deathRelated = isDeathRelatedService(serviceCategories);
+  const showSamagri = Boolean(addonPrices?.samagriAvailable) && samagriPrice > 0;
+  const alankaramOffered =
+    !deathRelated && Boolean(addonPrices?.alankaramAvailable) && alankaramPrice > 0;
+  const showAlankaramComingSoon = !deathRelated && !alankaramOffered;
+
+  function formatAddonPrice(paise: number, selected: boolean): string {
+    if (paise <= 0) return selected ? "Included in your booking total." : "Select to include in total";
+    const amt = `₹${(paise / 100).toLocaleString("en-IN")}`;
+    return selected
+      ? `${amt} will be inclusive in your booking total.`
+      : `${amt} · select to include in total`;
+  }
 
   // Offer Samagri, Alankaram, and Food/Prasadam (when available) as customer opt-in.
   function requestAddon(kind: "samagri" | "alankaram" | "food", checked: boolean) {
@@ -275,12 +296,17 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
         <Card className="border-dashed border-primary/50 bg-primary/5">
           <CardContent className="p-5 space-y-4">
             <div>
-              <p className="font-semibold text-foreground">Samagri &amp; Alankaram (optional)</p>
+              <p className="font-semibold text-foreground">
+                {alankaramOffered || showAlankaramComingSoon
+                  ? "Samagri & Alankaram (optional)"
+                  : "Samagri (optional)"}
+              </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Tick if you want these arranged for your puja. The charge is added to your booking payment now;
                 BSeva pays the pujari later. Leave unchecked if you will arrange yourself.
               </p>
             </div>
+            {showSamagri && (
             <label
               className={cn(
                 "flex items-start gap-3 rounded-md p-3 cursor-pointer transition-colors",
@@ -295,56 +321,74 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                 className="mt-0.5"
               />
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between gap-2">
+                <div className="flex justify-between gap-2 flex-wrap">
                   <span className="font-medium">Samagri kit</span>
-                  <span className="font-semibold text-primary shrink-0">
-                    {samagriPrice > 0
-                      ? `₹${(samagriPrice / 100).toLocaleString("en-IN")}`
-                      : "Charge on booking"}
+                  <span
+                    className={cn(
+                      "text-sm font-semibold shrink-0",
+                      includeSamagri ? "text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    {formatAddonPrice(samagriPrice, includeSamagri)}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Puja materials arranged for you — charged in your booking total.
+                  Puja materials arranged for you — added to your booking payment when selected.
                 </p>
-                {includeSamagri && (
-                  <p className="text-xs font-semibold text-primary mt-1">
-                    Selected — added to your payment (paid to pujari later by BSeva).
-                  </p>
-                )}
               </div>
             </label>
-            <label
-              className={cn(
-                "flex items-start gap-3 rounded-md p-3 cursor-pointer transition-colors",
-                includeAlankaram
-                  ? "border-[3px] border-primary bg-primary/10 shadow-sm"
-                  : "border border-border bg-card hover:border-muted-foreground/40"
-              )}
-            >
-              <Checkbox
-                checked={includeAlankaram}
-                onCheckedChange={(v) => requestAddon("alankaram", !!v)}
-                className="mt-0.5"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between gap-2">
-                  <span className="font-medium">Alankaram</span>
-                  <span className="font-semibold text-primary shrink-0">
-                    {alankaramPrice > 0
-                      ? `₹${(alankaramPrice / 100).toLocaleString("en-IN")}`
-                      : "Charge on booking"}
-                  </span>
+            )}
+            {alankaramOffered && (
+              <label
+                className={cn(
+                  "flex items-start gap-3 rounded-md p-3 cursor-pointer transition-colors",
+                  includeAlankaram
+                    ? "border-[3px] border-primary bg-primary/10 shadow-sm"
+                    : "border border-border bg-card hover:border-muted-foreground/40"
+                )}
+              >
+                <Checkbox
+                  checked={includeAlankaram}
+                  onCheckedChange={(v) => requestAddon("alankaram", !!v)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between gap-2 flex-wrap">
+                    <span className="font-medium">Alankaram</span>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold shrink-0",
+                        includeAlankaram ? "text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      {formatAddonPrice(alankaramPrice, includeAlankaram)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Flowers and decoration arranged for your puja — added to your booking payment when selected.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Flowers / decoration arranged for you — charged in your booking total.
-                </p>
-                {includeAlankaram && (
-                  <p className="text-xs font-semibold text-primary mt-1">
-                    Selected — added to your payment (paid to pujari later by BSeva).
+              </label>
+            )}
+            {showAlankaramComingSoon && (
+              <div
+                className="flex items-start gap-3 rounded-md p-3 border border-dashed border-border bg-muted/30 opacity-80"
+                aria-disabled
+              >
+                <Checkbox checked={false} disabled className="mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between gap-2 flex-wrap">
+                    <span className="font-medium text-muted-foreground">Alankaram</span>
+                    <span className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400 shrink-0">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Flowers and decoration will be available to add to your booking soon.
                   </p>
-                )}
+                </div>
               </div>
-            </label>
+            )}
             {foodAvailable && (
               <label
                 className={cn(
@@ -363,9 +407,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   <div className="flex justify-between gap-2">
                     <span className="font-medium">Food / Prasadam</span>
                     <span className="font-semibold text-primary shrink-0">
-                      {foodPrice > 0
-                        ? `₹${(foodPrice / 100).toLocaleString("en-IN")}`
-                        : "Charge on booking"}
+                      {formatAddonPrice(foodPrice, includeFood)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -373,7 +415,7 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
                   </p>
                   {includeFood && (
                     <p className="text-xs font-semibold text-primary mt-1">
-                      Selected — added to your payment (paid to pujari later by BSeva).
+                      {formatAddonPrice(foodPrice, true)}
                     </p>
                   )}
                 </div>
@@ -426,28 +468,19 @@ export default function BookingWizard({ serviceId, pujaName, basePrices, addonPr
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {addonConfirm === "alankaram"
-                  ? "Add Alankaram charge"
-                  : addonConfirm === "food"
-                    ? "Add Food / Prasadam charge"
-                    : "Add Samagri charge"}
+                {addonConfirm === "food" ? "Add Food / Prasadam?" : "Add Samagri to your booking?"}
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2 text-left">
                 <span className="block">
-                  If you continue,{" "}
-                  <strong>
-                    {addonConfirm === "alankaram"
-                      ? "Alankaram (flowers / decoration)"
-                      : addonConfirm === "food"
-                        ? "Food / Prasadam"
-                        : "Samagri (puja materials)"}
-                  </strong>{" "}
-                  will be arranged and the charge will be added to your booking payment.
+                  {(addonConfirm === "food" ? foodPrice : samagriPrice) > 0
+                    ? `₹${((addonConfirm === "food" ? foodPrice : samagriPrice) / 100).toLocaleString("en-IN")} will be inclusive in your booking total.`
+                    : "The charge will be added to your booking total."}
                 </span>
-                <span className="block">
-                  You pay BSeva now. We settle this amount with the pujari later from our backend.
+                <span className="block text-muted-foreground">
+                  {addonConfirm === "food"
+                    ? "Food / Prasadam will be arranged as part of your booking."
+                    : "BSeva arranges puja materials; you pay now as part of your booking payment."}
                 </span>
-                <span className="block">Click OK to confirm, or Cancel to arrange it yourself.</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -265,9 +265,14 @@ function PujariDashboardContent() {
         <button type="button" onClick={() => openDetail(null)} className="w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-semibold text-foreground flex items-center gap-2">
+              <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
                 <Sparkles size={16} className="text-primary shrink-0" />
                 <span className="truncate">{row.pujaType.name}</span>
+                {row.booking.samagriRequested ? (
+                  <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[10px] uppercase tracking-wide">
+                    Samagri Selected
+                  </Badge>
+                ) : null}
               </div>
               <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
                 <span className="flex items-center gap-1">

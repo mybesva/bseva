@@ -23,7 +23,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
             text(
                 """
                 SELECT b.id, b.booking_number, b.pujari_id, b.customer_id, b.booking_date, b.start_time,
-                       s.name AS service_name
+                       b.samagri_requested, s.name AS service_name
                 FROM bookings b
                 JOIN services s ON s.id = b.service_id
                 WHERE b.status IN ('confirmed', 'pending_acceptance')
@@ -35,6 +35,10 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
             {"hrs": hours_ahead},
         ).mappings().all()
         for b in rows:
+            samagri = bool(b.get("samagri_requested"))
+            booking_num = b["booking_number"]
+            service_name = b.get("service_name") or "Puja"
+
             # Pujari in-app reminder
             if b.get("pujari_id"):
                 exists = session.execute(
@@ -42,32 +46,44 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         """
                         SELECT id FROM notifications
                         WHERE user_id = CAST(:uid AS uuid)
-                          AND category = 'booking_reminder'
+                          AND category IN ('booking_reminder', 'samagri_reminder')
                           AND body ILIKE :needle
                           AND created_at > NOW() - INTERVAL '36 hours'
                         LIMIT 1
                         """
                     ),
-                    {"uid": str(b["pujari_id"]), "needle": f"%{b['booking_number']}%"},
+                    {"uid": str(b["pujari_id"]), "needle": f"%{booking_num}%"},
                 ).first()
                 if exists:
                     skipped += 1
                 else:
+                    if samagri:
+                        title = "Samagri reminder — upcoming puja"
+                        body = (
+                            f"Booking {booking_num} ({service_name}): the customer selected Samagri. "
+                            f"Please review the Samagri list in your Bookings and arrange materials before the puja."
+                        )
+                        cat = "samagri_reminder"
+                    else:
+                        title = "Upcoming booking reminder"
+                        body = f"Reminder: {service_name} ({booking_num}) is within {hours_ahead} hours."
+                        cat = "booking_reminder"
                     session.execute(
                         text(
                             """
-                            INSERT INTO notifications (id, user_id, channel, title, body, category, is_read)
+                            INSERT INTO notifications (id, user_id, channel, title, body, category, is_read, link)
                             VALUES (
                               CAST(:id AS uuid), CAST(:uid AS uuid), 'in_app',
-                              :title, :body, 'booking_reminder', FALSE
+                              :title, :body, :cat, FALSE, '/pujari/bookings'
                             )
                             """
                         ),
                         {
                             "id": str(uuid4()),
                             "uid": str(b["pujari_id"]),
-                            "title": "Upcoming booking reminder",
-                            "body": f"Reminder: {b['service_name']} ({b['booking_number']}) is within {hours_ahead} hours.",
+                            "title": title,
+                            "body": body,
+                            "cat": cat,
                         },
                     )
                     created += 1
@@ -85,7 +101,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         LIMIT 1
                         """
                     ),
-                    {"uid": str(b["customer_id"]), "needle": f"%{b['booking_number']}%"},
+                    {"uid": str(b["customer_id"]), "needle": f"%{booking_num}%"},
                 ).first()
                 if not c_exists:
                     session.execute(
@@ -103,13 +119,49 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                             "uid": str(b["customer_id"]),
                             "title": "Puja tomorrow / coming soon",
                             "body": (
-                                f"Reminder: {b['service_name']} ({b['booking_number']}) starts within "
+                                f"Reminder: {service_name} ({booking_num}) starts within "
                                 f"{hours_ahead} hours. Your start OTP will appear in the app "
                                 f"15 minutes before the puja."
                             ),
                         },
                     )
                     created += 1
+
+            # Admin reminder: call pujari to confirm booking (+ Samagri if applicable)
+            try:
+                from app.routers.notifications import notify_ops_staff
+
+                admin_exists = session.execute(
+                    text(
+                        """
+                        SELECT id FROM notifications
+                        WHERE category = 'admin_pujari_call_reminder'
+                          AND body ILIKE :needle
+                          AND created_at > NOW() - INTERVAL '36 hours'
+                        LIMIT 1
+                        """
+                    ),
+                    {"needle": f"%{booking_num}%"},
+                ).first()
+                if not admin_exists:
+                    sam_bit = (
+                        " Customer selected Samagri — confirm Samagri arrangements with the pujari."
+                        if samagri
+                        else ""
+                    )
+                    notify_ops_staff(
+                        session,
+                        title="Call pujari — 24h booking confirmation",
+                        body=(
+                            f"Please call the assigned pujari for {service_name} ({booking_num}) "
+                            f"to confirm the booking and service details.{sam_bit}"
+                        ),
+                        category="admin_pujari_call_reminder",
+                        link="/admin/bookings",
+                    )
+                    created += 1
+            except Exception:
+                pass
 
             # Customer email reminder (best-effort)
             try:

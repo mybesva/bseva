@@ -420,6 +420,22 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     if body.mode == "virtual" and not svc["virtual_available"]:
         raise HTTPException(400, "This service is not available as a virtual puja")
 
+    from app.service_categories import service_is_death_related
+
+    if body.include_samagri:
+        if not svc.get("samagri_available"):
+            raise HTTPException(400, "Samagri is not offered for this service")
+        if int(svc.get("samagri_price_paise") or 0) <= 0:
+            raise HTTPException(400, "Samagri is not priced for this service")
+
+    if body.include_alankaram:
+        if service_is_death_related(db, str(body.service_id)):
+            raise HTTPException(400, "Alankaram is not available for this type of service")
+        if not svc.get("alankaram_available"):
+            raise HTTPException(400, "Alankaram is not offered for this service")
+        if int(svc.get("alankaram_price_paise") or 0) <= 0:
+            raise HTTPException(400, "Alankaram is not priced for this service")
+
     duration = int(svc["duration_minutes"] or 90)
     start = body.start_time
     end = (datetime.combine(body.booking_date, start) + timedelta(minutes=duration)).time()

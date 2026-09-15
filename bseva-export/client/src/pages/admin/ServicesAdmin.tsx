@@ -407,6 +407,8 @@ export default function ServicesAdmin() {
             ? Math.round(Number(form.homepage_rank))
             : null,
         pricing_status: pricingStatus,
+        samagri_available: Boolean(form.samagri_available),
+        alankaram_available: Boolean(form.alankaram_available),
         image_path: form.image_path.trim() || null,
         image_url: form.image_url.trim() || null,
         virtual_available: virtualFlagOn ? form.virtual_available : false,
@@ -1179,20 +1181,33 @@ export default function ServicesAdmin() {
               </div>
 
               <div className="rounded-md border bg-card p-3 space-y-3">
-                <label className="flex items-center gap-2 text-sm font-medium">
-                  <Checkbox
-                    checked={form.samagri_available}
-                    onCheckedChange={(v) => {
-                      const on = !!v;
-                      setForm({
-                        ...form,
-                        samagri_available: on,
-                        samagri_provider: on ? "reimbursable" : form.samagri_provider,
-                      });
-                    }}
-                  />
-                  Offer Samagri kit on booking
-                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                  <div className="space-y-2">
+                    <Label htmlFor="addon-samagri-enabled">Samagri on booking</Label>
+                    <Select
+                      value={form.samagri_available ? "yes" : "no"}
+                      onValueChange={(v) => {
+                        const on = v === "yes";
+                        setForm({
+                          ...form,
+                          samagri_available: on,
+                          samagri_provider: on ? "reimbursable" : form.samagri_provider,
+                        });
+                      }}
+                    >
+                      <SelectTrigger id="addon-samagri-enabled">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes — customer can add Samagri</SelectItem>
+                        <SelectItem value="no">No — hide on booking</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground pb-2">
+                    Item list: use the <span className="font-medium">Samagri</span> tab (edit service).
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                   <div className="space-y-2">
                     <Label htmlFor="addon-samagri-price">Samagri price (₹)</Label>
@@ -1224,20 +1239,31 @@ export default function ServicesAdmin() {
               </div>
 
               <div className="rounded-md border bg-card p-3 space-y-3">
-                <label className="flex items-center gap-2 text-sm font-medium">
-                  <Checkbox
-                    checked={form.alankaram_available}
-                    onCheckedChange={(v) => {
-                      const on = !!v;
+                <div className="space-y-2">
+                  <Label htmlFor="addon-alankaram-enabled">Alankaram on booking</Label>
+                  <Select
+                    value={form.alankaram_available ? "yes" : "no"}
+                    onValueChange={(v) => {
+                      const on = v === "yes";
                       setForm({
                         ...form,
                         alankaram_available: on,
                         alankaram_provider: on ? "reimbursable" : form.alankaram_provider,
                       });
                     }}
-                  />
-                  Offer Alankaram on booking
-                </label>
+                  >
+                    <SelectTrigger id="addon-alankaram-enabled">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes — customer can add Alankaram</SelectItem>
+                      <SelectItem value="no">No — hide / coming soon on booking</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Death-related pujas never show Alankaram to customers, even if Yes here.
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                   <div className="space-y-2">
                     <Label htmlFor="addon-alankaram-price">Alankaram price (₹)</Label>
@@ -1551,6 +1577,8 @@ export default function ServicesAdmin() {
               <TableHead>Name</TableHead>
               <TableHead>Categories</TableHead>
               <TableHead>Standard</TableHead>
+              <TableHead>Samagri</TableHead>
+              <TableHead>Alankaram</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Featured</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -1592,6 +1620,30 @@ export default function ServicesAdmin() {
                     </TableCell>
                     <TableCell>
                       {s.standard_price_paise != null ? rupees(s.standard_price_paise) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          s.samagri_available
+                            ? "border-emerald-600 text-emerald-700"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {s.samagri_available ? "Yes" : "No"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          s.alankaram_available
+                            ? "border-emerald-600 text-emerald-700"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {s.alankaram_available ? "Yes" : "No"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1.5 items-start">
