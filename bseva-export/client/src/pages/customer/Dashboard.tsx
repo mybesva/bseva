@@ -43,6 +43,7 @@ function CustomerDashboardContent() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
+    // Soft refresh: reuse result from login / provider if still fresh (avoids a second GPS wait).
     void refresh();
   }, [refresh]);
 

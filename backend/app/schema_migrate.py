@@ -26,6 +26,9 @@ _STMTS = [
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_version TEXT",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS public_id TEXT",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_id ON users (public_id) WHERE public_id IS NOT NULL",
+    # Speeds eligible-pujari lookup for 10 KM availability (status + coords filter)
+    "CREATE INDEX IF NOT EXISTS idx_pujari_profiles_eligible_geo ON pujari_profiles (verification_status, available, approved_level) WHERE latitude IS NOT NULL AND longitude IS NOT NULL",
+    "CREATE INDEX IF NOT EXISTS idx_pujari_profiles_lat_lng ON pujari_profiles (latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL",
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS address_line1 TEXT",
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS address_line2 TEXT",
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS district TEXT",

@@ -1,5 +1,6 @@
 from datetime import date, datetime, time
 from decimal import Decimal
+from math import cos, radians
 from uuid import UUID
 
 from sqlalchemy import text
@@ -136,7 +137,32 @@ def service_available_near(
     radius_km: float = SERVICE_RADIUS_KM,
 ) -> bool:
     """True if at least one eligible pujari is within radius_km of (lat, lng)."""
-    for r in _eligible_pujari_location_rows(db, required_level):
+    pad = (radius_km * 1.2) / 111.0
+    lng_pad = pad / max(0.2, abs(cos(radians(lat))))
+    rows = db.execute(
+        text(
+            """
+            SELECT p.latitude, p.longitude, p.service_radius_km
+            FROM pujari_profiles p
+            JOIN users u ON u.id = p.user_id
+            WHERE u.blocked = FALSE AND u.role IN ('pujari', 'head_pujari')
+              AND p.verification_status = 'approved'
+              AND p.approved_level IS NOT NULL AND p.approved_level >= :lvl
+              AND p.available = TRUE
+              AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
+              AND p.latitude BETWEEN :min_lat AND :max_lat
+              AND p.longitude BETWEEN :min_lng AND :max_lng
+            """
+        ),
+        {
+            "lvl": required_level,
+            "min_lat": lat - pad,
+            "max_lat": lat + pad,
+            "min_lng": lng - lng_pad,
+            "max_lng": lng + lng_pad,
+        },
+    ).mappings().all()
+    for r in rows:
         dist = haversine_km(lat, lng, float(r["latitude"]), float(r["longitude"]))
         effective = min(radius_km, float(r["service_radius_km"] or radius_km))
         if dist <= effective:

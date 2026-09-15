@@ -38,6 +38,7 @@ export default function Book() {
   const inCustomerPortal = user?.role === "customer";
 
   useEffect(() => {
+    // Soft: skip if provider already resolved after login.
     void refresh();
   }, [refresh]);
 

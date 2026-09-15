@@ -28,14 +28,21 @@ type ServiceAvailabilityState = {
   canBook: boolean;
   checking: boolean;
   lastCheckedAt: number | null;
-  refresh: () => Promise<void>;
+  /** Soft refresh skips if a recent successful check exists; force bypasses TTL. */
+  refresh: (opts?: { force?: boolean }) => Promise<void>;
 };
 
 const MOVE_THRESHOLD_KM = 0.5;
+/** Reuse a recent result instead of spinning GPS again (10 KM radius does not need meter precision). */
+const CHECK_TTL_MS = 90_000;
+/**
+ * Network/wifi location is enough for a 10 KM service radius.
+ * High-accuracy GPS often takes 5–15s and was the main UI delay.
+ */
 const GEO_OPTIONS: PositionOptions = {
-  enableHighAccuracy: true,
-  timeout: 15000,
-  maximumAge: 0,
+  enableHighAccuracy: false,
+  timeout: 8000,
+  maximumAge: 60_000,
 };
 
 const ServiceAvailabilityContext = createContext<ServiceAvailabilityState | null>(null);
@@ -57,63 +64,92 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
   const [status, setStatus] = useState<ServiceAvailabilityStatus>("idle");
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
   const lastCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastStatusRef = useRef<ServiceAvailabilityStatus>("idle");
   const watchIdRef = useRef<number | null>(null);
   const checkSeqRef = useRef(0);
+  const inFlightRef = useRef(false);
   const isCustomer = Boolean(isAuthenticated && user?.role === "customer");
 
-  const runCheck = useCallback(async (coords?: { lat: number; lng: number }) => {
-    if (!isCustomer) {
-      setStatus("idle");
-      return;
-    }
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setStatus("unsupported");
-      return;
-    }
+  useEffect(() => {
+    lastStatusRef.current = status;
+  }, [status]);
 
-    const seq = ++checkSeqRef.current;
-    setStatus("checking");
-
-    try {
-      let lat: number;
-      let lng: number;
-      if (coords) {
-        lat = coords.lat;
-        lng = coords.lng;
-      } else {
-        const pos = await getCurrentPosition();
-        lat = pos.coords.latitude;
-        lng = pos.coords.longitude;
-      }
-
-      const result = await api<{ service_available: boolean }>(
-        `/service-availability?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`
-      );
-
-      if (seq !== checkSeqRef.current) return;
-
-      lastCoordsRef.current = { lat, lng };
-      setLastCheckedAt(Date.now());
-      setStatus(result.service_available ? "available" : "unavailable");
-    } catch (e: unknown) {
-      if (seq !== checkSeqRef.current) return;
-      if (e && typeof e === "object" && "code" in e) {
-        setStatus(mapGeoError(e as GeolocationPositionError));
+  const runCheck = useCallback(
+    async (opts?: { coords?: { lat: number; lng: number }; force?: boolean }) => {
+      if (!isCustomer) {
+        setStatus("idle");
         return;
       }
-      setStatus("error");
-    }
-  }, [isCustomer]);
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        setStatus("unsupported");
+        return;
+      }
 
-  const refresh = useCallback(async () => {
-    await runCheck();
-  }, [runCheck]);
+      const now = Date.now();
+      if (
+        !opts?.force &&
+        !opts?.coords &&
+        lastCheckedAt != null &&
+        now - lastCheckedAt < CHECK_TTL_MS &&
+        (lastStatusRef.current === "available" || lastStatusRef.current === "unavailable")
+      ) {
+        return;
+      }
 
-  // Fresh check on login / when customer session is ready, and whenever dashboard remounts via provider.
+      if (inFlightRef.current && !opts?.force) return;
+
+      const seq = ++checkSeqRef.current;
+      inFlightRef.current = true;
+      setStatus("checking");
+
+      try {
+        let lat: number;
+        let lng: number;
+        if (opts?.coords) {
+          lat = opts.coords.lat;
+          lng = opts.coords.lng;
+        } else {
+          const pos = await getCurrentPosition();
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+        }
+
+        const result = await api<{ service_available: boolean }>(
+          `/service-availability?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`
+        );
+
+        if (seq !== checkSeqRef.current) return;
+
+        lastCoordsRef.current = { lat, lng };
+        setLastCheckedAt(Date.now());
+        setStatus(result.service_available ? "available" : "unavailable");
+      } catch (e: unknown) {
+        if (seq !== checkSeqRef.current) return;
+        if (e && typeof e === "object" && "code" in e) {
+          setStatus(mapGeoError(e as GeolocationPositionError));
+          return;
+        }
+        setStatus("error");
+      } finally {
+        if (seq === checkSeqRef.current) inFlightRef.current = false;
+      }
+    },
+    [isCustomer, lastCheckedAt]
+  );
+
+  const refresh = useCallback(
+    async (opts?: { force?: boolean }) => {
+      await runCheck({ force: opts?.force === true });
+    },
+    [runCheck]
+  );
+
+  // Start as soon as customer session is ready (covers login → dashboard).
   useEffect(() => {
     if (authLoading) return;
     if (!isCustomer) {
       setStatus("idle");
+      setLastCheckedAt(null);
       lastCoordsRef.current = null;
       if (watchIdRef.current != null && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -121,10 +157,10 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
       }
       return;
     }
-    void runCheck();
-  }, [authLoading, isCustomer, runCheck]);
+    void runCheck({ force: true });
+  }, [authLoading, isCustomer]); // eslint-disable-line react-hooks/exhaustive-deps -- only on session change
 
-  // Re-check when returning to the tab / page visibility.
+  // Soft re-check when returning to the tab (skip if recent).
   useEffect(() => {
     if (!isCustomer) return;
     const onVisible = () => {
@@ -145,17 +181,14 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const prev = lastCoordsRef.current;
-        if (
-          !prev ||
-          haversineKm(prev.lat, prev.lng, lat, lng) >= MOVE_THRESHOLD_KM
-        ) {
-          void runCheck({ lat, lng });
+        if (!prev || haversineKm(prev.lat, prev.lng, lat, lng) >= MOVE_THRESHOLD_KM) {
+          void runCheck({ coords: { lat, lng }, force: true });
         }
       },
       () => {
         /* permission / watch errors handled by explicit refresh */
       },
-      { ...GEO_OPTIONS, maximumAge: 30_000 }
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60_000 }
     );
     return () => {
       if (watchIdRef.current != null) {
