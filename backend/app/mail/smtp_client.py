@@ -33,6 +33,7 @@ def send_email(
     from_addr: str | None = None,
     from_name: str | None = None,
     reply_to: str | None = None,
+    attachments: list[tuple[str, bytes, str]] | None = None,
 ) -> dict[str, Any]:
     """Send email via Zoho SMTP or return queued stub when not configured."""
     cfg = load_smtp_config()
@@ -61,6 +62,15 @@ def send_email(
     msg.set_content(text_body or "")
     if html_body:
         msg.add_alternative(html_body, subtype="html")
+    for item in attachments or []:
+        filename, data, mime = item
+        maintype, _, subtype = (mime or "application/octet-stream").partition("/")
+        msg.add_attachment(
+            data,
+            maintype=maintype or "application",
+            subtype=subtype or "octet-stream",
+            filename=filename,
+        )
 
     last_error: str | None = None
     for attempt in range(1, MAX_ATTEMPTS + 1):

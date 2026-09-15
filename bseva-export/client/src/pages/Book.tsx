@@ -71,9 +71,7 @@ export default function Book() {
     );
   }
 
-  const muhurtaFee = Number(
-    pujaType.muhurta_fee_paise ?? publicConfig?.muhurta_consultation_fee_paise ?? 0
-  );
+  const muhurtaFee = Number(pujaType.muhurta_fee_paise || 0);
   const showMuhurta =
     user?.role === "customer" && (pujaType.muhurta_consultation_enabled || pujaType.requires_muhurta);
 

@@ -29,8 +29,29 @@ def _booking_start_dt(booking_date: Any, start: Any) -> datetime:
     return datetime.combine(d, _parse_start(start))
 
 
-def default_penalty_paise(db: Session) -> int:
-    return max(0, int(get_setting(db, "pujari_no_show_penalty_paise", 50000) or 0))
+def penalty_paise_for_booking(db: Session, booking: Any) -> int:
+    """No-show penalty is 100% of that puja's cost."""
+    for key in ("base_price_paise", "pujari_payable_paise"):
+        try:
+            value = int(booking.get(key) or 0)
+        except (TypeError, ValueError):
+            value = 0
+        if value > 0:
+            return value
+    sid = booking.get("service_id")
+    if not sid:
+        return 0
+    row = db.execute(
+        text(
+            """
+            SELECT COALESCE(main_puja_price_paise, standard_price_paise, 0)
+            FROM services
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"id": str(sid)},
+    ).first()
+    return max(0, int(row[0] or 0)) if row else 0
 
 
 def grace_hours(db: Session) -> float:
@@ -39,6 +60,88 @@ def grace_hours(db: Session) -> float:
 
 def penalty_enabled(db: Session) -> bool:
     return bool(get_setting(db, "pujari_no_show_penalty_enabled", True))
+
+
+def _block_settlement_for_no_show(db: Session, booking: Any, penalty_paise: int) -> None:
+    """Hold settlement for this booking equal to the no-show amount (do not auto-pay it)."""
+    if penalty_paise <= 0 or not booking.get("pujari_id"):
+        return
+    bid = str(booking["id"])
+    pid = str(booking["pujari_id"])
+    try:
+        with db.begin_nested():
+            db.execute(text("ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_paise INTEGER NOT NULL DEFAULT 0"))
+            db.execute(text("ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_reason TEXT"))
+    except Exception:
+        pass
+    existing = db.execute(
+        text("SELECT id, status FROM settlements WHERE booking_id = CAST(:id AS uuid)"),
+        {"id": bid},
+    ).mappings().first()
+    if existing:
+        if existing["status"] == "settled":
+            db.execute(
+                text(
+                    """
+                    UPDATE settlements SET blocked_paise = :amt, blocked_reason = 'pujari_no_show', updated_at = NOW()
+                    WHERE id = :id
+                    """
+                ),
+                {"amt": penalty_paise, "id": existing["id"]},
+            )
+        else:
+            db.execute(
+                text(
+                    """
+                    UPDATE settlements SET
+                      status = 'blocked',
+                      blocked_paise = :amt,
+                      blocked_reason = 'pujari_no_show',
+                      settlement_amount_paise = 0,
+                      pujari_payable_paise = 0,
+                      updated_at = NOW()
+                    WHERE id = :id AND status IN ('pending', 'eligible')
+                    """
+                ),
+                {"amt": penalty_paise, "id": existing["id"]},
+            )
+            db.execute(
+                text("UPDATE bookings SET settlement_status = 'blocked' WHERE id = CAST(:id AS uuid)"),
+                {"id": bid},
+            )
+        return
+    db.execute(
+        text(
+            """
+            INSERT INTO settlements (
+              booking_id, pujari_id, customer_payment_paise, base_puja_paise,
+              platform_fee_paise, gst_paise, pujari_payable_paise, settlement_amount_paise,
+              due_date, status, blocked_paise, blocked_reason
+            ) VALUES (
+              CAST(:bid AS uuid), CAST(:pid AS uuid), :pay, :base, 0, 0, 0, 0,
+              CURRENT_DATE, 'blocked', :amt, 'pujari_no_show'
+            )
+            ON CONFLICT (booking_id) DO UPDATE SET
+              status = 'blocked',
+              blocked_paise = EXCLUDED.blocked_paise,
+              blocked_reason = 'pujari_no_show',
+              settlement_amount_paise = 0,
+              pujari_payable_paise = 0,
+              updated_at = NOW()
+            """
+        ),
+        {
+            "bid": bid,
+            "pid": pid,
+            "pay": int(booking.get("total_paise") or 0),
+            "base": int(booking.get("base_price_paise") or penalty_paise),
+            "amt": penalty_paise,
+        },
+    )
+    db.execute(
+        text("UPDATE bookings SET settlement_status = 'blocked' WHERE id = CAST(:id AS uuid)"),
+        {"id": bid},
+    )
 
 
 def apply_no_show_to_booking(
@@ -65,7 +168,7 @@ def apply_no_show_to_booking(
         return {"ok": True, "skipped": True, "booking_id": bid, "penalty_paise": already_amt}
 
     enabled = penalty_enabled(db)
-    configured = default_penalty_paise(db)
+    configured = penalty_paise_for_booking(db, booking)
     amount = configured if amount_paise is None else max(0, int(amount_paise))
 
     if waive or not enabled or amount <= 0:
@@ -110,6 +213,7 @@ def apply_no_show_to_booking(
                 f"{'Auto ' if auto else ''}No-show penalty for booking {booking.get('booking_number') or bid}",
                 bid,
                 f"NOSHOW-{bid[:8]}-{uuid4().hex[:4]}",
+                allow_overdraft=True,
             )
         except ValueError as e:
             return {"ok": False, "error": str(e), "booking_id": bid}
@@ -123,6 +227,10 @@ def apply_no_show_to_booking(
         ),
         {"amt": amount, "id": bid},
     )
+    try:
+        _block_settlement_for_no_show(db, booking, amount)
+    except Exception:
+        pass
     write_audit(
         db,
         actor_id or "system",

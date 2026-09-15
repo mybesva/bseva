@@ -3,6 +3,8 @@ import { CustomerPortal } from "@/components/RolePortals";
 import AddressFields, { type AddressValue } from "@/components/AddressFields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { validateAddress } from "@/lib/fieldValidation";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
@@ -25,7 +27,7 @@ export default function CustomerAddressPage() {
   const { refresh } = useServiceAvailability();
   const [value, setValue] = useState<AddressValue>(empty);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [gstin, setGstin] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -43,6 +45,7 @@ export default function CustomerAddressPage() {
           latitude: p.latitude ?? null,
           longitude: p.longitude ?? null,
         });
+        setGstin(String(p.gstin || ""));
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
@@ -63,7 +66,7 @@ export default function CustomerAddressPage() {
     try {
       await api("/customer/profile", {
         method: "PATCH",
-        body: JSON.stringify(value),
+        body: JSON.stringify({ ...value, gstin: gstin.trim() || null }),
       });
       await refresh({ lat: value.latitude, lng: value.longitude });
       toast.success("Address saved — service availability updated for this location");
@@ -80,7 +83,8 @@ export default function CustomerAddressPage() {
         <CardHeader>
           <CardTitle className="">My Address</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            This is your default service location. Booking availability is checked using the map pin here.
+            This is your default service location and billing address for invoices. Booking availability is
+            checked using the map pin here.
           </p>
         </CardHeader>
         <CardContent>
@@ -89,6 +93,19 @@ export default function CustomerAddressPage() {
           ) : (
             <form className="space-y-6" onSubmit={save}>
               <AddressFields value={value} onChange={setValue} />
+              <div className="space-y-1">
+                <Label htmlFor="customer-gstin">GSTIN (optional)</Label>
+                <Input
+                  id="customer-gstin"
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                  placeholder="If you need GST on invoices"
+                  maxLength={15}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown on your tax invoice only if you provide a GSTIN. Used with this billing address.
+                </p>
+              </div>
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving…" : "Save address"}
               </Button>

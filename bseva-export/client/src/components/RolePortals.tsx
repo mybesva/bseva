@@ -325,7 +325,10 @@ export function PujariPortal({ children }: { children: ReactNode }) {
   return (
     <RolePortalGate role="priest">
       <PujariProfileGate>
-        <PujariShell>{children}</PujariShell>
+        <PujariShell>
+          <SeasonalPopup />
+          {children}
+        </PujariShell>
       </PujariProfileGate>
     </RolePortalGate>
   );

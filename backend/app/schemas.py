@@ -68,6 +68,7 @@ class AddressIn(BaseModel):
 class CustomerProfileIn(AddressIn):
     preferred_language: Optional[Literal["en", "hi", "te"]] = None
     calendar_preference: Optional[Literal["north", "south", "lunar"]] = None
+    gstin: Optional[str] = Field(default=None, max_length=15)
 
 
 class LoginIn(BaseModel):
@@ -203,6 +204,7 @@ class ServiceIn(BaseModel):
     samagri_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
     alankaram_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
     food_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
+    dakshina_share_percent: Optional[float] = Field(default=85, ge=0, le=100)
     muhurta_consultation_enabled: Optional[bool] = False
     muhurta_fee_paise: Optional[int] = None
     requires_muhurta: Optional[bool] = False

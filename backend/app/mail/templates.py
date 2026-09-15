@@ -328,7 +328,7 @@ def payment_confirmation_email(data: BookingEmailData, *, transaction_id: str = 
 
 
 def invoice_receipt_email(data: InvoiceEmailData) -> EmailContent:
-    subject = f"BSeva — Invoice / Receipt ({data.invoice_number})" + (" [TEST]" if data.test_mode else "")
+    subject = f"Your BSeva Invoice – {data.invoice_number}" + (" [TEST]" if data.test_mode else "")
     line_rows = [(label, format_inr_paise(amt)) for label, amt in data.lines]
     if data.tax_paise:
         line_rows.append(("Taxes / GST", format_inr_paise(data.tax_paise)))
@@ -336,7 +336,7 @@ def invoice_receipt_email(data: InvoiceEmailData) -> EmailContent:
         [
             ("Total paid", format_inr_paise(data.total_paid_paise)),
             ("Payment status", data.payment_status),
-            ("Invoice / receipt no.", data.invoice_number),
+            ("Invoice number", data.invoice_number),
             ("Booking ID", data.booking_number or data.booking_id),
             ("Customer", data.customer_name),
             ("Service", data.service_name),
@@ -347,14 +347,18 @@ def invoice_receipt_email(data: InvoiceEmailData) -> EmailContent:
         ]
     )
     body = (
-        heading("Invoice / Receipt")
+        heading("Your BSeva Invoice")
         + paragraph(_greet(data.customer_name, data.language))
-        + paragraph("Thank you for your payment. Your receipt is below.")
+        + paragraph(
+            f"Thank you for choosing BSeva, {data.customer_name or 'Ji'}. "
+            f"Payment for {data.service_name} is confirmed (booking {data.booking_number or data.booking_id}). "
+            f"Official invoice {data.invoice_number} for {format_inr_paise(data.total_paid_paise)} is attached as a PDF."
+        )
         + detail_rows(line_rows)
     )
     html = render_email(
         title=subject,
-        preheader=f"Receipt {data.invoice_number}",
+        preheader=f"Invoice {data.invoice_number}",
         body_html=body,
         cta_label="View Booking" if data.booking_id else None,
         cta_url=booking_url(data.booking_id) if data.booking_id else None,
@@ -365,10 +369,14 @@ def invoice_receipt_email(data: InvoiceEmailData) -> EmailContent:
         "[TEST]" if data.test_mode else "",
         _greet(data.customer_name, data.language),
         "",
-        "Invoice / Receipt",
+        "Invoice",
         f"Invoice: {data.invoice_number}",
         f"Booking: {data.booking_number or data.booking_id}",
-        f"Total paid: {format_inr_paise(data.total_paid_paise)}",
+        f"Service: {data.service_name}",
+        f"Amount paid: {format_inr_paise(data.total_paid_paise)}",
+        f"Service date: {data.booking_date}",
+        "",
+        "Thank you for choosing BSeva.",
         "",
         _closing(data.language),
     ]

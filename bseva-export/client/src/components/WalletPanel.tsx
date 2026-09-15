@@ -61,7 +61,10 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
           <div className="flex gap-2 items-end">
             <div className="space-y-1">
               <Label>Add money (₹)</Label>
-              <Input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-40" />
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                <Input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-40 pl-7" />
+              </div>
             </div>
             <Button
               onClick={async () => {

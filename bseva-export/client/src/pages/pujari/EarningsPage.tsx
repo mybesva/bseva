@@ -51,10 +51,10 @@ export default function PujariEarningsPage() {
     }
     const settled = settlements
       .filter((s) => s.status === "paid" || s.status === "settled")
-      .reduce((sum, s) => sum + Number(s.amount_paise || s.pujari_amount_paise || 0), 0);
+      .reduce((sum, s) => sum + Number(s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0), 0);
     const settlementPending = settlements
-      .filter((s) => s.status === "pending" || s.status === "held")
-      .reduce((sum, s) => sum + Number(s.amount_paise || s.pujari_amount_paise || 0), 0);
+      .filter((s) => s.status === "pending" || s.status === "held" || s.status === "eligible")
+      .reduce((sum, s) => sum + Number(s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0), 0);
     return { thisMonth, completed, pending, settled, settlementPending, rows: rows.slice(0, 40) };
   }, [bookings, settlements]);
 
@@ -135,13 +135,15 @@ export default function PujariEarningsPage() {
             {settlements.slice(0, 8).map((s) => (
               <div key={s.id} className="flex items-center justify-between border-t border-border pt-2">
                 <div>
-                  <p className="font-medium">{rupees(Number(s.amount_paise || s.pujari_amount_paise || 0))}</p>
+                  <p className="font-medium">
+                    {rupees(Number(s.status === "blocked" ? s.blocked_paise || 0 : s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0))}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {s.booking_number || s.booking_id?.slice?.(0, 8) || "Booking"}
                   </p>
                 </div>
                 <Badge variant="outline" className="capitalize">
-                  {s.status || "pending"}
+                  {s.status === "blocked" ? "Blocked · no-show" : s.status || "pending"}
                 </Badge>
               </div>
             ))}

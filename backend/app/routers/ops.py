@@ -541,6 +541,96 @@ def invoice_html(invoice_id: str, user=Depends(current_user), db: Session = Depe
     return HTMLResponse(render_invoice_html(db, dict(row)))
 
 
+@router.get("/invoices/{invoice_id}/pdf")
+def invoice_pdf(invoice_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    from fastapi.responses import Response
+    from app.invoice_docs import pdf_filename
+    from app.invoice_pdf import render_invoice_pdf
+
+    row = db.execute(
+        text("SELECT * FROM invoices WHERE id = CAST(:id AS uuid) OR invoice_number = :id"),
+        {"id": invoice_id},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Invoice not found")
+    if user["role"] not in ("admin", "super_admin") and str(row["user_id"]) != str(user["id"]):
+        raise HTTPException(403, "Not allowed")
+    try:
+        data = render_invoice_pdf(dict(row))
+    except Exception as e:
+        raise HTTPException(500, f"Could not generate PDF: {e}") from e
+    name = pdf_filename(str(row["invoice_number"]))
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+@router.post("/invoices/{invoice_id}/resend")
+def resend_invoice_email(invoice_id: str, user=Depends(require_permission("manage_bookings")), db: Session = Depends(get_db)):
+    from app.invoice_docs import email_customer_invoice
+
+    row = db.execute(
+        text("SELECT * FROM invoices WHERE id = CAST(:id AS uuid) OR invoice_number = :id"),
+        {"id": invoice_id},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Invoice not found")
+    if row["invoice_type"] != "customer":
+        raise HTTPException(400, "Only customer tax invoices can be emailed")
+    result = email_customer_invoice(db, booking_id=str(row["booking_id"]))
+    db.commit()
+    if not result.get("ok"):
+        raise HTTPException(400, result.get("error") or "Could not send invoice email")
+    return {"ok": True, "status": result.get("status"), "to": result.get("to")}
+
+
+@router.get("/admin/invoices")
+def admin_list_invoices(
+    q: str = "",
+    invoice_type: str = "customer",
+    user=Depends(require_permission("view_payments")),
+    db: Session = Depends(get_db),
+):
+    from app.invoice_docs import _ensure_invoice_schema
+
+    _ensure_invoice_schema(db)
+    params: dict = {"lim": 200}
+    where = ["1=1"]
+    if invoice_type and invoice_type != "all":
+        where.append("i.invoice_type = :typ")
+        params["typ"] = invoice_type
+    if q.strip():
+        where.append(
+            """
+            (
+              i.invoice_number ILIKE :q
+              OR CAST(i.booking_id AS text) ILIKE :q
+              OR COALESCE(b.booking_number, '') ILIKE :q
+              OR COALESCE(u.name, '') ILIKE :q
+              OR COALESCE(u.email, '') ILIKE :q
+            )
+            """
+        )
+        params["q"] = f"%{q.strip()}%"
+    rows = db.execute(
+        text(
+            f"""
+            SELECT i.*, b.booking_number, u.name AS customer_name, u.email AS customer_email
+            FROM invoices i
+            LEFT JOIN bookings b ON b.id = i.booking_id
+            LEFT JOIN users u ON u.id = i.user_id
+            WHERE {' AND '.join(where)}
+            ORDER BY i.created_at DESC
+            LIMIT :lim
+            """
+        ),
+        params,
+    ).mappings().all()
+    return [row_dict(r) for r in rows]
+
+
 class ReferralApplyIn(BaseModel):
     code: str = Field(default="", max_length=40)
     referral_code: str | None = Field(default=None, max_length=40)

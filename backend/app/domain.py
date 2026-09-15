@@ -42,49 +42,43 @@ def hours_until(booking_date: date, start: time) -> float:
 def cancel_policy(hours: float, db: Session | None = None, actor: str = "customer") -> dict:
     """Time-based cancel fees. `actor` is customer|pujari — each has admin-configurable %.
 
-    Defaults match legacy: >48h → 10% fee, 24–48h → 50% fee, <24h → not allowed.
+    Defaults: >48h → 10% fee, 24–48h → 50% fee, <24h → 100% fee (always allowed).
+    Pujari <24h is treated as a no-show (100% of that puja's cost).
     """
     prefix = "pujari" if actor == "pujari" else "customer"
     over_48 = 10
     mid = 50
+    late = 100
     min_hours = 24.0
     if db is not None:
         from app.platform_config import get_setting
 
         over_48 = int(get_setting(db, f"{prefix}_cancel_fee_over_48h_percent", over_48) or over_48)
         mid = int(get_setting(db, f"{prefix}_cancel_fee_24_48h_percent", mid) or mid)
+        late = int(get_setting(db, f"{prefix}_cancel_fee_under_24h_percent", late) or late)
         min_hours = float(get_setting(db, f"{prefix}_cancel_min_hours", min_hours) or min_hours)
     over_48 = max(0, min(100, over_48))
     mid = max(0, min(100, mid))
+    late = max(0, min(100, late))
     min_hours = max(0.0, min_hours)
     if hours > 48:
-        return {
-            "allowed": True,
-            "policy": ">48h",
-            "fee_percent": over_48,
-            "refund_percent": 100 - over_48,
-            "hours": round(hours, 1),
-            "min_hours": min_hours,
-            "actor": prefix,
-        }
-    if hours >= min_hours:
-        return {
-            "allowed": True,
-            "policy": f"{int(min_hours)}-48h",
-            "fee_percent": mid,
-            "refund_percent": 100 - mid,
-            "hours": round(hours, 1),
-            "min_hours": min_hours,
-            "actor": prefix,
-        }
+        fee = over_48
+        policy = ">48h"
+    elif hours >= min_hours:
+        fee = mid
+        policy = f"{int(min_hours)}-48h"
+    else:
+        fee = late
+        policy = f"<{int(min_hours)}h"
     return {
-        "allowed": False,
-        "policy": f"<{int(min_hours)}h",
-        "fee_percent": 0,
-        "refund_percent": 0,
+        "allowed": True,
+        "policy": policy,
+        "fee_percent": fee,
+        "refund_percent": 100 - fee,
         "hours": round(hours, 1),
         "min_hours": min_hours,
         "actor": prefix,
+        "late": hours < min_hours,
     }
 
 
@@ -274,7 +268,17 @@ def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, rad
     return out
 
 
-def apply_wallet(db: Session, user_id: str, delta_paise: int, tx_type: str, description: str, booking_id=None, reference=None) -> int:
+def apply_wallet(
+    db: Session,
+    user_id: str,
+    delta_paise: int,
+    tx_type: str,
+    description: str,
+    booking_id=None,
+    reference=None,
+    *,
+    allow_overdraft: bool = False,
+) -> int:
     w = db.execute(
         text("SELECT id, balance_paise, status FROM wallets WHERE user_id = CAST(:id AS uuid) FOR UPDATE"),
         {"id": user_id},
@@ -284,7 +288,7 @@ def apply_wallet(db: Session, user_id: str, delta_paise: int, tx_type: str, desc
     if w["status"] != "active":
         raise ValueError("Wallet frozen")
     new_bal = int(w["balance_paise"]) + int(delta_paise)
-    if new_bal < 0:
+    if new_bal < 0 and not allow_overdraft:
         raise ValueError("Insufficient wallet balance")
     db.execute(text("UPDATE wallets SET balance_paise = :b WHERE id = :id"), {"b": new_bal, "id": w["id"]})
     bid = UUID(str(booking_id)) if booking_id else None

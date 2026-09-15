@@ -86,16 +86,25 @@ RAHU = {
 }
 
 
+def _lunar_tithi_index(d: date) -> int:
+    epoch = date(2000, 1, 1)
+    lunar_day = (d - epoch).days % 30
+    return lunar_day % 15
+
+
+def is_festival_day(d: date) -> bool:
+    """Ekadashi and Purnima/Chaturdashi — festival tithis used for festival surge."""
+    return _lunar_tithi_index(d) in (10, 14)
+
+
 def panchang_for(d: date, calendar_type: str = "north") -> dict:
     epoch = date(2000, 1, 1)
     lunar_day = (d - epoch).days % 30
-    tithi_index = lunar_day % 15
+    tithi_index = _lunar_tithi_index(d)
     paksha = "Shukla Paksha" if lunar_day < 15 else "Krishna Paksha"
     months = SOUTH_MONTHS if calendar_type == "south" else NORTH_MONTHS
-    weekday = d.weekday()  # Mon=0
-    # Sunday index 6 in Python weekday... datetime.weekday Mon=0 Sun=6
     rahu_key = (d.weekday() + 1) % 7  # convert to Sun=0
-    is_peak = d.weekday() >= 5 or tithi_index in (10, 14)
+    is_peak = d.weekday() >= 5 or is_festival_day(d)
     return {
         "date": d.isoformat(),
         "calendarType": calendar_type,

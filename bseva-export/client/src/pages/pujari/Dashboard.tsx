@@ -1,5 +1,6 @@
 import { PujariPortal } from "@/components/RolePortals";
 import BookingDetailPanel from "@/components/BookingDetailPanel";
+import PromoBannerCarousel from "@/components/PromoBannerCarousel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -363,6 +364,7 @@ function PujariDashboardContent() {
           <p className="mt-1 text-sm text-muted-foreground font-mono">ID: {user.public_id}</p>
         ) : null}
       </section>
+      <PromoBannerCarousel />
 
       <div className="space-y-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

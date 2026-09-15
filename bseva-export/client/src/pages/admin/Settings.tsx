@@ -23,108 +23,140 @@ const emptyRoleForm = { title: "", summary: "", examplesText: "" };
 
 type SettingType = "string" | "number" | "boolean" | "json";
 
-const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?: boolean; hint?: string }[] = [
-  { key: "bseva_whatsapp_number", label: "WhatsApp number (digits, with country code)", type: "string" },
+type PlatformKey = {
+  key: string;
+  label: string;
+  type: SettingType;
+  group: string;
+  superOnly?: boolean;
+  hint?: string;
+  /** Stored as paise in the DB; edited and shown as rupees. */
+  money?: boolean;
+  multiline?: boolean;
+};
+
+const SETTING_GROUPS: { id: string; title: string; description?: string }[] = [
+  { id: "contact", title: "Contact", description: "How customers reach BSeva." },
+  { id: "features", title: "Features", description: "Platform feature flags." },
+  { id: "booking", title: "Booking & puja day", description: "When OTP, tracking, and full booking details become available." },
+  { id: "pricing", title: "Pricing & surge", description: "GST, peak-day fee, and date-based surcharges. Puja prices are set per service." },
+  { id: "pujari", title: "Pujari", description: "Settlement, joining fee, no-show, and assignment rules." },
+  { id: "email", title: "Email", description: "From-addresses used in outgoing mail." },
+    { id: "invoices", title: "Invoices", description: "Company, GST, numbering, SAC/HSN, and invoice notes. Used on new invoices only — issued invoices stay unchanged." },
+];
+
+const PLATFORM_KEYS: PlatformKey[] = [
+  { key: "bseva_whatsapp_number", label: "WhatsApp number (digits, with country code)", type: "string", group: "contact" },
   {
     key: "virtual_puja_enabled",
-    label: "Virtual Puja (feature flag)",
+    label: "Virtual Puja",
     type: "boolean",
+    group: "features",
     superOnly: true,
     hint: "When off, customers only see in-person booking. Super Admin only.",
   },
-  { key: "pujari_share_percent", label: "Dakshina % (pujari portion of main puja)", type: "number" },
-  { key: "pujari_settlement_days", label: "Settlement hold days (auto every N days ≈ 2 weeks)", type: "number" },
-  { key: "puja_start_otp_before_minutes", label: "OTP available minutes before start (default 15)", type: "number" },
-  { key: "pujari_location_tracking_before_minutes", label: "Pujari tracking visible minutes before start (default 15)", type: "number" },
-  { key: "pujari_full_booking_details_before_hours", label: "Full booking details before (hours)", type: "number" },
-  { key: "weekend_surge_percent", label: "Weekend surge %", type: "number" },
-  { key: "weekend_surge_paise", label: "Weekend surge fixed (paise)", type: "number" },
-  { key: "email_from_support", label: "Support email", type: "string" },
-  { key: "email_from_contact", label: "Contact email", type: "string" },
-  { key: "email_from_accounts", label: "Accounts email", type: "string" },
-  { key: "email_from_admin", label: "Admin email", type: "string" },
-  { key: "email_from_info", label: "Info email", type: "string" },
-  { key: "invoice_company_name", label: "Invoice company name", type: "string" },
-  { key: "invoice_gstin", label: "Invoice GSTIN (placeholder OK)", type: "string" },
-  { key: "invoice_company_address", label: "Invoice company address", type: "string" },
-  { key: "invoice_prefix_customer", label: "Customer invoice number prefix", type: "string" },
-  { key: "invoice_prefix_settlement", label: "Settlement invoice number prefix", type: "string" },
+  {
+    key: "registration_captcha_enabled",
+    label: "Registration CAPTCHA",
+    type: "boolean",
+    group: "features",
+    hint: "Requires VITE_RECAPTCHA_SITE_KEY + RECAPTCHA_SECRET_KEY env vars.",
+  },
+  { key: "puja_start_otp_before_minutes", label: "OTP available minutes before start", type: "number", group: "booking", hint: "Default 15." },
+  {
+    key: "pujari_location_tracking_before_minutes",
+    label: "Pujari tracking visible minutes before start",
+    type: "number",
+    group: "booking",
+    hint: "Default 15.",
+  },
+  {
+    key: "pujari_full_booking_details_before_hours",
+    label: "Full booking details before (hours)",
+    type: "number",
+    group: "booking",
+  },
+  { key: "weekend_surge_percent", label: "Weekend surge %", type: "number", group: "pricing", hint: "Percent added on Saturday and Sunday." },
+  {
+    key: "festival_surge_paise",
+    label: "Festival surge (₹)",
+    type: "number",
+    group: "pricing",
+    money: true,
+    hint: "Extra rupees added on festival days (Ekadashi, Purnima). Example: 200.",
+  },
+  { key: "pujari_settlement_days", label: "Settlement hold days", type: "number", group: "pujari", hint: "Auto-settle every N days (≈ 2 weeks)." },
   {
     key: "pujari_joining_fee_enabled",
     label: "Pujari joining fee",
     type: "boolean",
+    group: "pujari",
     hint: "When on, new pujaris are asked to pay the joining fee during onboarding.",
   },
-  { key: "pujari_joining_fee_paise", label: "Pujari joining fee (paise)", type: "number" },
   {
-    key: "muhurta_consultation_fee_paise",
-    label: "Muhurtham consultation fee (paise)",
+    key: "pujari_joining_fee_paise",
+    label: "Pujari joining fee (₹)",
     type: "number",
-    hint: "Default fee. Individual services can override this.",
+    group: "pujari",
+    money: true,
+    hint: "Amount in rupees. Example: 500.",
   },
   {
     key: "pujari_no_show_penalty_enabled",
     label: "Pujari no-show penalty",
     type: "boolean",
-    hint: "When on, admins can deduct a penalty from the pujari wallet for a no-show.",
-  },
-  { key: "pujari_no_show_penalty_paise", label: "Pujari no-show penalty (paise)", type: "number" },
-  {
-    key: "call_forwarding_enabled",
-    label: "Outside-hours call forwarding",
-    type: "boolean",
-    hint: "Config only — connect a telephony provider (e.g. Twilio) to activate real forwarding.",
-  },
-  { key: "call_forwarding_office_hours", label: "Office hours (HH:MM-HH:MM)", type: "string" },
-  { key: "call_forwarding_timezone", label: "Call forwarding timezone", type: "string" },
-  { key: "call_forwarding_primary_number", label: "Primary contact number", type: "string" },
-  { key: "call_forwarding_forward_to", label: "Forward-to number (after hours)", type: "string" },
-  {
-    key: "registration_captcha_enabled",
-    label: "Registration CAPTCHA",
-    type: "boolean",
-    hint: "Requires VITE_RECAPTCHA_SITE_KEY + RECAPTCHA_SECRET_KEY env vars.",
-  },
-  {
-    key: "default_package_basic_paise",
-    label: "Default Basic package (paise)",
-    type: "number",
-    hint: "Suggested ₹2,499 = 249900. Per-service Admin prices override this.",
-  },
-  {
-    key: "default_package_standard_paise",
-    label: "Default Standard package (paise)",
-    type: "number",
-    hint: "Suggested ₹3,499 = 349900.",
-  },
-  {
-    key: "default_package_premium_paise",
-    label: "Default Premium package (paise)",
-    type: "number",
-    hint: "Suggested ₹4,499 = 449900.",
-  },
-  {
-    key: "default_samagri_kit_price_paise",
-    label: "Default Samagri kit price (paise)",
-    type: "number",
-    hint: "Used when a puja has Samagri enabled but no per-puja price (₹500 = 50000). Override per puja in Services → Samagri.",
+    group: "pujari",
+    hint: "When on, 100% of that puja’s cost is deducted from the pujari wallet.",
   },
   {
     key: "assign_distance_rings_km",
     label: "Reassignment distance rings (km)",
     type: "json",
-    hint: "First number is the default nearby radius (e.g. 10). Reassign shows within that distance first, then other available pujaris farther away.",
+    group: "pujari",
+    hint: "First number is the default nearby radius (e.g. 10). Reassign shows within that distance first, then farther pujaris.",
   },
   {
     key: "pujari_schedule_buffer_hours",
     label: "Pujari schedule buffer (hours)",
     type: "number",
-    hint: "After each confirmed puja (start + service duration), and before the next puja start, the pujari is treated as unavailable for this many hours. Default 4.",
+    group: "pujari",
+    hint: "Unavailable this many hours after a confirmed puja ends, and before the next start. Default 4.",
   },
+  { key: "email_from_support", label: "Support email", type: "string", group: "email" },
+  { key: "email_from_contact", label: "Contact email", type: "string", group: "email" },
+  { key: "email_from_accounts", label: "Accounts email", type: "string", group: "email" },
+  { key: "email_from_admin", label: "Admin email", type: "string", group: "email" },
+  { key: "email_from_info", label: "Info email", type: "string", group: "email" },
+  { key: "invoice_brand_name", label: "Brand name", type: "string", group: "invoices" },
+  { key: "invoice_company_name", label: "Legal company name", type: "string", group: "invoices" },
+  {
+    key: "invoice_company_address",
+    label: "Complete address",
+    type: "string",
+    group: "invoices",
+    hint: "Use commas, e.g. 123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India.",
+    multiline: true,
+  },
+  { key: "invoice_company_state", label: "State", type: "string", group: "invoices" },
+  { key: "invoice_company_pincode", label: "PIN code", type: "string", group: "invoices" },
+  { key: "invoice_company_email", label: "Invoice email", type: "string", group: "invoices" },
+  { key: "invoice_company_phone", label: "Phone", type: "string", group: "invoices" },
+  { key: "invoice_gstin", label: "GSTIN", type: "string", group: "invoices" },
+  { key: "invoice_pan", label: "PAN", type: "string", group: "invoices" },
+  { key: "invoice_website", label: "Website", type: "string", group: "invoices" },
+  { key: "invoice_logo_path", label: "Company logo path or URL", type: "string", group: "invoices", hint: "Optional. Leave blank to use the BSeva wordmark." },
+  { key: "invoice_prefix_customer", label: "Customer invoice prefix", type: "string", group: "invoices", hint: "Used as BSEVA/2026-27/000001." },
+  { key: "invoice_prefix_settlement", label: "Settlement invoice prefix", type: "string", group: "invoices" },
+  { key: "invoice_signatory_name", label: "Authorized signatory name", type: "string", group: "invoices" },
+  { key: "invoice_signatory_designation", label: "Authorized signatory designation", type: "string", group: "invoices" },
+  { key: "invoice_sac_code", label: "SAC code (services)", type: "string", group: "invoices", hint: "Shown on tax invoices. Default 999799. GST % is set in Pricing — invoices use the rate stored on the booking." },
+  { key: "invoice_hsn_code", label: "HSN code (optional)", type: "string", group: "invoices" },
+  { key: "invoice_terms", label: "Invoice terms & conditions", type: "string", group: "invoices", multiline: true },
+  { key: "invoice_notes", label: "Invoice notes / footer", type: "string", group: "invoices", multiline: true },
 ];
 
 const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: string; group: "customer" | "pujari" }[] = [
-  {
+    {
     key: "customer_cancel_fee_over_48h_percent",
     label: "Customer fee % when cancelling >48h before",
     type: "number",
@@ -139,11 +171,11 @@ const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: strin
     hint: "Default 50.",
   },
   {
-    key: "customer_cancel_min_hours",
-    label: "Customer minimum hours before cancel blocked",
+    key: "customer_cancel_fee_under_24h_percent",
+    label: "Customer fee % when cancelling under 24h",
     type: "number",
     group: "customer",
-    hint: "Default 24. Below this, customer cannot cancel.",
+    hint: "Default 100. Full charge — no refund.",
   },
   {
     key: "pujari_cancel_fee_over_48h_percent",
@@ -160,11 +192,11 @@ const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: strin
     hint: "Default 50. Charged to pujari wallet.",
   },
   {
-    key: "pujari_cancel_min_hours",
-    label: "Pujari minimum hours before cancel blocked",
+    key: "pujari_cancel_fee_under_24h_percent",
+    label: "Pujari penalty % when cancelling under 24h",
     type: "number",
     group: "pujari",
-    hint: "Default 24. Below this, pujari cannot cancel an accepted booking.",
+    hint: "Default 100. Same as no-show: 100% of that puja’s cost is deducted from the pujari wallet. Customer is refunded in full.",
   },
 ];
 
@@ -202,6 +234,44 @@ function coerceSettingValue(type: SettingType, raw: string | boolean) {
   if (type === "number") return Number(raw);
   if (type === "json") return textToNumberList(String(raw));
   return String(raw);
+}
+
+function rupeesDraft(stored: unknown): string {
+  if (stored == null || stored === "") return "";
+  const n = Number(stored);
+  if (!Number.isFinite(n)) return "";
+  return String(n / 100);
+}
+
+function settingToDraft(
+  item: { type: SettingType; money?: boolean },
+  v: unknown
+): string | boolean {
+  if (item.type === "boolean") return Boolean(v);
+  if (item.type === "json") return numberListToText(v);
+  if (item.money) return rupeesDraft(v);
+  return v == null ? "" : String(v);
+}
+
+function settingFromDraft(item: { type: SettingType; money?: boolean }, raw: string | boolean) {
+  if (item.money) return Math.round(Number(raw || 0) * 100);
+  return coerceSettingValue(item.type, raw);
+}
+
+function isSettingDirty(
+  item: { type: SettingType; money?: boolean; key: string },
+  draft: Record<string, string | boolean>,
+  stored: Record<string, unknown>
+) {
+  if (item.type === "boolean") return Boolean(draft[item.key]) !== Boolean(stored[item.key]);
+  if (item.type === "json") {
+    return (
+      textToNumberList(String(draft[item.key] ?? "")).join(",") !==
+      numberListToText(stored[item.key]).replace(/\s/g, "")
+    );
+  }
+  if (item.money) return String(draft[item.key] ?? "") !== rupeesDraft(stored[item.key]);
+  return String(draft[item.key] ?? "") !== String(stored[item.key] ?? "");
 }
 
 export default function Settings() {
@@ -250,10 +320,7 @@ export default function Settings() {
       setPlatform(cfg || {});
       const draft: Record<string, string | boolean> = {};
       for (const item of [...PLATFORM_KEYS, ...CANCEL_KEYS]) {
-        const v = cfg?.[item.key];
-        if (item.type === "boolean") draft[item.key] = Boolean(v);
-        else if (item.type === "json") draft[item.key] = numberListToText(v);
-        else draft[item.key] = v == null ? "" : String(v);
+        draft[item.key] = settingToDraft(item, cfg?.[item.key]);
       }
       setPlatformDraft(draft);
     } catch (e: any) {
@@ -314,10 +381,10 @@ export default function Settings() {
     }
   }
 
-  async function savePlatformKey(key: string, type: SettingType) {
+  async function savePlatformKey(key: string, type: SettingType, money?: boolean) {
     setSavingKey(key);
     try {
-      const value = coerceSettingValue(type, platformDraft[key] ?? "");
+      const value = settingFromDraft({ type, money }, platformDraft[key] ?? "");
       await api("/admin/config", {
         method: "PUT",
         body: JSON.stringify({ key, value }),
@@ -373,70 +440,141 @@ export default function Settings() {
     }
   }
 
+  function renderSettingRow(item: PlatformKey) {
+    const dirty = isSettingDirty(item, platformDraft, platform);
+    return (
+      <div
+        key={item.key}
+        className="flex flex-col sm:flex-row sm:items-end gap-3 border-b border-border/60 pb-4 last:border-0 last:pb-0"
+      >
+        <div className="flex-1 space-y-1">
+          <Label>{item.label}</Label>
+          {item.hint && <p className="text-xs text-muted-foreground">{item.hint}</p>}
+          {item.type === "boolean" ? (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={Boolean(platformDraft[item.key])}
+                onCheckedChange={(v) =>
+                  setPlatformDraft((prev) => ({ ...prev, [item.key]: !!v }))
+                }
+              />
+              Enabled
+            </label>
+          ) : item.money ? (
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                ₹
+              </span>
+              <Input
+                type="number"
+                min={0}
+                step="1"
+                className="pl-7"
+                value={String(platformDraft[item.key] ?? "")}
+                onChange={(e) =>
+                  setPlatformDraft((prev) => ({ ...prev, [item.key]: e.target.value }))
+                }
+              />
+            </div>
+          ) : item.multiline ? (
+            <Textarea
+              rows={3}
+              value={String(platformDraft[item.key] ?? "")}
+              onChange={(e) =>
+                setPlatformDraft((prev) => ({ ...prev, [item.key]: e.target.value }))
+              }
+            />
+          ) : (
+            <Input
+              type={item.type === "number" ? "number" : "text"}
+              value={String(platformDraft[item.key] ?? "")}
+              onChange={(e) =>
+                setPlatformDraft((prev) => ({ ...prev, [item.key]: e.target.value }))
+              }
+            />
+          )}
+        </div>
+        {dirty && (
+          <Button
+            size="sm"
+            disabled={savingKey === item.key}
+            onClick={() => void savePlatformKey(item.key, item.type, item.money)}
+          >
+            {savingKey === item.key ? "Saving…" : "Save"}
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <AdminLayout>
       <h1 className="text-h1 mb-6">Settings</h1>
 
       <div className="space-y-8 max-w-4xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="">Platform settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {visiblePlatformKeys.map((item) => {
-              const dirty =
-                item.type === "boolean"
-                  ? Boolean(platformDraft[item.key]) !== Boolean(platform[item.key])
-                  : item.type === "json"
-                    ? textToNumberList(String(platformDraft[item.key] ?? "")).join(",") !==
-                      numberListToText(platform[item.key]).replace(/\s/g, "")
-                    : String(platformDraft[item.key] ?? "") !== String(platform[item.key] ?? "");
-              return (
-                <div
-                  key={item.key}
-                  className="flex flex-col sm:flex-row sm:items-end gap-3 border-b border-border/60 pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="flex-1 space-y-1">
-                    <Label>{item.label}</Label>
-                    {item.hint && <p className="text-xs text-muted-foreground">{item.hint}</p>}
-                    {item.type === "boolean" ? (
-                      <label className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={Boolean(platformDraft[item.key])}
-                          onCheckedChange={(v) =>
-                            setPlatformDraft((prev) => ({ ...prev, [item.key]: !!v }))
-                          }
-                        />
-                        Enabled
-                      </label>
-                    ) : (
-                      <Input
-                        type={item.type === "number" ? "number" : "text"}
-                        value={String(platformDraft[item.key] ?? "")}
-                        onChange={(e) =>
-                          setPlatformDraft((prev) => ({ ...prev, [item.key]: e.target.value }))
-                        }
-                      />
+        {SETTING_GROUPS.map((group) => {
+          const items = visiblePlatformKeys.filter((item) => item.group === group.id);
+          const isPricing = group.id === "pricing";
+          if (!items.length && !isPricing) return null;
+          return (
+            <Card key={group.id}>
+              <CardHeader>
+                <CardTitle className="">{group.title}</CardTitle>
+                {group.description && (
+                  <p className="text-sm text-muted-foreground">{group.description}</p>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isPricing && (
+                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    <h3 className="font-semibold text-foreground">Tax & peak day</h3>
+                    <div className="space-y-1">
+                      <Label>GST %</Label>
+                      <Input value={gst} onChange={(e) => setGst(e.target.value)} type="number" min={0} step="0.01" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Peak day fee (₹)</Label>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                          ₹
+                        </span>
+                        <Input className="pl-7" value={peak} onChange={(e) => setPeak(e.target.value)} type="number" min={0} step="1" />
+                      </div>
+                    </div>
+                    {pricingDirty && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <Button onClick={savePricing} disabled={savingPricing}>
+                          {savingPricing ? "Saving…" : "Save"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={savingPricing}
+                          onClick={() => {
+                            setGst(savedGst);
+                            setPeak(savedPeak);
+                          }}
+                        >
+                          Discard
+                        </Button>
+                      </div>
                     )}
                   </div>
-                  {dirty && (
-                    <Button
-                      size="sm"
-                      disabled={savingKey === item.key}
-                      onClick={() => void savePlatformKey(item.key, item.type)}
-                    >
-                      {savingKey === item.key ? "Saving…" : "Save"}
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                )}
+                {items.length > 0 && (
+                  <div className={isPricing ? "space-y-4 rounded-lg border border-border p-4" : "space-y-4"}>
+                    {isPricing && <h3 className="font-semibold text-foreground">Date surge</h3>}
+                    {items.map((item) => renderSettingRow(item))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
 
         <Card>
           <CardHeader>
-            <CardTitle className="">Cancellation charges</CardTitle>
+            <CardTitle className="">Cancellation policy</CardTitle>
             <p className="text-sm text-muted-foreground">
               Time-based fees for customer and pujari cancellations. Values are percentages of booking total.
             </p>
@@ -485,40 +623,6 @@ export default function Settings() {
                 })}
               </div>
             ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="">GST and peak-day fee</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label>GST %</Label>
-              <Input value={gst} onChange={(e) => setGst(e.target.value)} type="number" min={0} step="0.01" />
-            </div>
-            <div className="space-y-1">
-              <Label>Peak day fee (₹)</Label>
-              <Input value={peak} onChange={(e) => setPeak(e.target.value)} type="number" min={0} step="1" />
-            </div>
-            {pricingDirty && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button onClick={savePricing} disabled={savingPricing}>
-                  {savingPricing ? "Saving…" : "Save pricing"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={savingPricing}
-                  onClick={() => {
-                    setGst(savedGst);
-                    setPeak(savedPeak);
-                  }}
-                >
-                  Discard
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
 

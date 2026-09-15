@@ -12,7 +12,6 @@ from app.audit import write_audit
 from app.db import get_db
 from app.deps import current_user, require_roles
 from app.domain import apply_wallet, row_dict
-from app.platform_config import get_setting
 from app.rbac import require_permission
 from app.schemas import MuhurtaConsultationIn, ServiceRecommendationIn
 
@@ -168,10 +167,7 @@ def create_muhurta_consultation(
         appt_time = raw_time[:8]
     else:
         raise HTTPException(400, "Invalid appointment time")
-    fee = svc.get("muhurta_fee_paise")
-    if fee is None:
-        fee = int(get_setting(db, "muhurta_consultation_fee_paise", 30000) or 0)
-    fee = int(fee)
+    fee = int(svc.get("muhurta_fee_paise") or 0)
     cid = str(uuid4())
     cnum = f"MUH-{cid[:8].upper()}"
     prefs = [d.isoformat() for d in (body.preferred_dates or [body.appointment_date])]

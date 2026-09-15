@@ -71,6 +71,7 @@ import { AuthProvider } from "./lib/AuthContext";
 import { ServiceAvailabilityProvider } from "./lib/ServiceAvailabilityContext";
 import LogoWatermark from "./components/LogoWatermark";
 import AdminSettlements from "./pages/admin/Settlements";
+import AdminInvoices from "./pages/admin/Invoices";
 import AdminPricingRules from "./pages/admin/PricingRules";
 import AdminPermissionsPage from "./pages/admin/AdminPermissions";
 import SupportPage, { CustomerSupportPage, PujariSupportPage } from "./pages/Support";
@@ -149,6 +150,7 @@ function Router() {
       <Route path={`${ops}/bulk-import`} component={AdminBulkImport} />
       <Route path={`${ops}/bookings`} component={AdminBookings} />
       <Route path={`${ops}/settlements`} component={AdminSettlements} />
+      <Route path={`${ops}/invoices`} component={AdminInvoices} />
       <Route path={`${ops}/payments`} component={AdminPayments} />
       <Route path={`${ops}/reviews`} component={AdminReviews} />
       <Route path={`${ops}/samagri`} component={AdminSamagri} />

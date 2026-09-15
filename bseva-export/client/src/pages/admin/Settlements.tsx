@@ -21,12 +21,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
+import { api, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 
-function paise(n: number | null | undefined) {
-  return `₹${((n || 0) / 100).toLocaleString("en-IN")}`;
+function blockedAmount(s: any) {
+  return Number(s?.blocked_paise || 0);
 }
 
 export default function AdminSettlements() {
@@ -89,17 +89,18 @@ export default function AdminSettlements() {
 
   const pending = rows.filter((s) => s.status === "pending" || s.status === "eligible").length;
   const settled = rows.filter((s) => s.status === "settled").length;
+  const blocked = rows.filter((s) => s.status === "blocked").length;
 
   return (
     <AdminLayout>
       <h1 className="text-h1 mb-2">Settlements</h1>
       <p className="text-sm text-muted-foreground mb-4 max-w-3xl">
         Pujari earnings settle automatically every <strong>{holdDays} days</strong> (about 2 weeks) after a
-        completed puja. When the due date arrives, the pujari wallet is credited without manual action.
-        Use <strong>Settle / override</strong> only for early payout or special cases.
+        completed puja. A pujari no-show blocks that booking’s settlement for the no-show amount (it is not
+        auto-paid). Use <strong>Settle / override</strong> only for early payout or special cases.
       </p>
 
-      <div className="grid sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid sm:grid-cols-4 gap-3 mb-6">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Auto cycle</p>
@@ -116,6 +117,12 @@ export default function AdminSettlements() {
           <CardContent className="p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Settled</p>
             <p className="text-lg font-semibold">{settled}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Blocked (no-show)</p>
+            <p className="text-lg font-semibold">{blocked}</p>
           </CardContent>
         </Card>
       </div>
@@ -135,6 +142,7 @@ export default function AdminSettlements() {
                 <TableHead>Customer paid</TableHead>
                 <TableHead>Platform fee</TableHead>
                 <TableHead>Pujari payable</TableHead>
+                <TableHead>Blocked</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -143,18 +151,20 @@ export default function AdminSettlements() {
                 <TableRow key={s.id}>
                   <TableCell className="font-mono text-xs">{String(s.booking_id || "").slice(0, 8)}</TableCell>
                   <TableCell>
-                    <Badge variant={s.status === "settled" ? "default" : "secondary"}>
+                    <Badge variant={s.status === "settled" ? "default" : s.status === "blocked" ? "destructive" : "secondary"}>
                       {s.status}
                       {s.status === "settled" && s.payment_reference === "AUTO_BIWEEKLY" ? " · auto" : ""}
                       {s.status === "settled" && s.override_flag ? " · override" : ""}
+                      {s.status === "blocked" && s.blocked_reason === "pujari_no_show" ? " · no-show" : ""}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDisplayDate(s.due_date)}</TableCell>
-                  <TableCell>{paise(s.customer_payment_paise)}</TableCell>
-                  <TableCell>{paise(s.platform_fee_paise)}</TableCell>
-                  <TableCell>{paise(s.settlement_amount_paise)}</TableCell>
+                  <TableCell>{rupees(s.customer_payment_paise)}</TableCell>
+                  <TableCell>{rupees(s.platform_fee_paise)}</TableCell>
+                  <TableCell>{rupees(s.settlement_amount_paise)}</TableCell>
+                  <TableCell>{blockedAmount(s) ? rupees(blockedAmount(s)) : "—"}</TableCell>
                   <TableCell>
-                    {s.status !== "settled" && (
+                    {s.status !== "settled" && s.status !== "blocked" && (
                       <Button size="sm" variant="outline" onClick={() => setActive(s)}>
                         Settle / override
                       </Button>
@@ -175,7 +185,7 @@ export default function AdminSettlements() {
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Normally this settles automatically on the due date ({formatDisplayDate(active?.due_date)}). Override credits the
-              pujari wallet now with {paise(active?.settlement_amount_paise)}.
+              pujari wallet now with {rupees(active?.settlement_amount_paise)}.
             </p>
             <div className="space-y-1">
               <Label>Reason</Label>

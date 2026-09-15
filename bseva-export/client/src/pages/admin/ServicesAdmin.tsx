@@ -94,6 +94,7 @@ const emptyForm = {
   food_provider: "included",
   muhurta_consultation_enabled: false,
   muhurta_fee_paise: 0,
+  dakshina_share_percent: 85,
   requires_muhurta: false,
   duration_minutes: 90,
   pujaris_required: 1,
@@ -273,6 +274,8 @@ export default function ServicesAdmin() {
       food_provider: s.food_provider || "included",
       muhurta_consultation_enabled: Boolean(s.muhurta_consultation_enabled),
       muhurta_fee_paise: Number(s.muhurta_fee_paise) || 0,
+      dakshina_share_percent:
+        s.dakshina_share_percent != null ? Number(s.dakshina_share_percent) : 85,
       requires_muhurta: Boolean(s.requires_muhurta),
       duration_minutes: s.duration_minutes || 90,
       pujaris_required: s.pujaris_required || 1,
@@ -405,7 +408,11 @@ export default function ServicesAdmin() {
         samagri_price_paise: Math.max(0, Math.round(Number(form.samagri_price_paise) || 0)),
         alankaram_price_paise: Math.max(0, Math.round(Number(form.alankaram_price_paise) || 0)),
         food_price_paise: Math.max(0, Math.round(Number(form.food_price_paise) || 0)),
-        muhurta_fee_paise: muhurtaFee > 0 ? muhurtaFee : null,
+        dakshina_share_percent: Math.min(
+          100,
+          Math.max(0, Number.isFinite(Number(form.dakshina_share_percent)) ? Number(form.dakshina_share_percent) : 85)
+        ),
+        muhurta_fee_paise: muhurtaFee,
         duration_minutes: Math.max(15, Math.round(Number(form.duration_minutes) || 90)),
         required_level: Math.min(4, Math.max(1, Number(form.required_level) || 2)),
         pujaris_required: Math.min(20, Math.max(1, Math.round(Number(form.pujaris_required) || 1))),
@@ -1060,6 +1067,28 @@ export default function ServicesAdmin() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="service-dakshina">Dakshina % (pujari share)</Label>
+                  <Input
+                    id="service-dakshina"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={form.dakshina_share_percent}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        dakshina_share_percent: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Default 85%. Admin can override for this puja only. Pujari earns this % of the main puja price.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="service-standard">Standard price (₹)</Label>
                   <Input
                     id="service-standard"
@@ -1377,7 +1406,7 @@ export default function ServicesAdmin() {
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Leave at 0 to use the platform-wide muhurta fee from Settings.
+                  Fee for this puja in rupees. Set 0 if the consultation is free. Each puja can have a different fee.
                 </p>
               </div>
             </div>

@@ -70,12 +70,12 @@ export function cancellationPolicy(hoursUntil: number) {
     };
   }
   return {
-    allowed: false,
+    allowed: true,
     window: "<24h" as const,
-    feePercent: 0,
+    feePercent: 100,
     refundPercent: 0,
     title: "Less than 24 hours",
-    message: "Cancellation is not available because the booking starts in less than 24 hours.",
+    message: "Cancelling less than 24 hours before the puja is a 100% charge (no refund).",
   };
 }
 
@@ -91,7 +91,7 @@ The final booking price may include applicable GST, service charges, and peak-da
 Cancellation is calculated from the scheduled booking date and time versus the current date and time:
 • More than 48 hours before booking: 10% cancellation charge, 90% refund to your Customer Wallet.
 • Between 24 and 48 hours: 50% cancellation charge, 50% refund to your Customer Wallet.
-• Less than 24 hours: cancellation is not permitted.
+• Less than 24 hours: 100% cancellation charge, no refund. If the pujari cancels in this window, 100% of that puja’s cost is deducted from their wallet (same as no-show) and the customer is refunded in full.
 
 4. Pujari levels
 Pujaris may only be assigned to services permitted by their Admin-approved service level. Requested levels remain pending until Admin verification.

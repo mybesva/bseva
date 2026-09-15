@@ -9,6 +9,22 @@ from sqlalchemy.orm import Session
 
 from app.platform_config import get_setting
 
+DEFAULT_DAKSHINA_SHARE_PERCENT = 85.0
+
+
+def dakshina_share_percent(service: Any | None = None) -> float:
+    """Pujari dakshina % for a puja. Default 85; admin can override per service."""
+    raw = None
+    if service is not None and hasattr(service, "get"):
+        raw = service.get("dakshina_share_percent")
+    try:
+        value = float(raw) if raw is not None else DEFAULT_DAKSHINA_SHARE_PERCENT
+    except (TypeError, ValueError):
+        value = DEFAULT_DAKSHINA_SHARE_PERCENT
+    if value < 0 or value > 100:
+        return DEFAULT_DAKSHINA_SHARE_PERCENT
+    return value
+
 
 def _weekend_days(db: Session) -> set[int]:
     """ISO weekday: Mon=1 … Sun=7. Default Sat+Sun."""
@@ -51,16 +67,25 @@ def surge_paise(
     pricing = db.execute(text("SELECT peak_day_fee_paise FROM pricing_config WHERE id = 1")).first()
     default_peak = int(pricing[0] if pricing else 0)
 
-    # Weekend surge from settings
+    # Weekend surge % from settings
     weekend_pct = float(get_setting(db, "weekend_surge_percent", 0) or 0)
-    weekend_fixed = int(get_setting(db, "weekend_surge_paise", 0) or 0)
     if booking_date and booking_date.isoweekday() in _weekend_days(db):
-        amt = int(round(base * weekend_pct / 100)) + weekend_fixed
+        amt = int(round(base * weekend_pct / 100))
         if amt <= 0 and default_peak > 0:
             amt = default_peak
         if amt > 0:
             peak_fee = amt
             reason = "weekend"
+
+    festival_fixed = int(get_setting(db, "festival_surge_paise", 0) or 0)
+    if festival_fixed <= 0:
+        festival_fixed = int(get_setting(db, "weekend_surge_paise", 0) or 0)
+    if booking_date and festival_fixed > 0:
+        from app.panchang import is_festival_day
+
+        if is_festival_day(booking_date):
+            peak_fee += festival_fixed
+            reason = "festival" if reason is None else f"{reason}+festival"
 
     # Configurable surge rules table (optional)
     try:
@@ -115,38 +140,35 @@ def compute_quote(
     include_food: bool | None = None,
 ) -> dict:
     # Prefer explicit main_puja component when set; else basic/standard/premium package price.
-    from app.platform_config import get_setting as _gs
 
-    def _pkg(key: str, setting_key: str) -> int:
+    def _pkg(key: str) -> int:
         raw = service.get(key)
         if raw is not None:
             try:
                 return int(raw)
             except (TypeError, ValueError):
                 pass
-        return int(_gs(db, setting_key, 0) or 0)
+        return 0
 
     main = service.get("main_puja_price_paise")
     if main is not None:
         base = int(main)
-        std = _pkg("standard_price_paise", "default_package_standard_paise")
+        std = _pkg("standard_price_paise")
         if package_type == "premium":
-            prem = _pkg("premium_price_paise", "default_package_premium_paise")
+            prem = _pkg("premium_price_paise")
             if prem > std:
                 base = base + (prem - std)
         elif package_type == "basic":
-            basic = _pkg("basic_price_paise", "default_package_basic_paise")
+            basic = _pkg("basic_price_paise")
             if basic > 0 and std > basic:
                 base = max(0, base - (std - basic))
     else:
         if package_type == "premium":
-            base = _pkg("premium_price_paise", "default_package_premium_paise")
+            base = _pkg("premium_price_paise")
         elif package_type == "basic":
-            base = _pkg("basic_price_paise", "default_package_basic_paise") or _pkg(
-                "standard_price_paise", "default_package_standard_paise"
-            )
+            base = _pkg("basic_price_paise") or _pkg("standard_price_paise")
         else:
-            base = _pkg("standard_price_paise", "default_package_standard_paise")
+            base = _pkg("standard_price_paise")
 
     def _comp(key: str, default: int = 0) -> int:
         try:
@@ -209,7 +231,7 @@ def compute_quote(
         0,
         adjusted_base + peak + components_total - int(discount_paise or 0) - int(wallet_credit_paise or 0),
     )
-    share = float(get_setting(db, "pujari_share_percent", 85))
+    share = dakshina_share_percent(service)
     platform_fee = int(round(adjusted_base * (100 - share) / 100))
     pujari_share = adjusted_base - platform_fee
     pricing = db.execute(text("SELECT * FROM pricing_config WHERE id = 1")).mappings().one()

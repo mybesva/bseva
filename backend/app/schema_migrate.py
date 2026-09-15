@@ -228,7 +228,7 @@ _DEFAULT_LEGAL_POLICIES = [
         "points": [
             {"title": "More than 48 hours before booking", "body": "10% cancellation charge, 90% refund to your Customer Wallet."},
             {"title": "Between 24 and 48 hours before booking", "body": "50% cancellation charge, 50% refund to your Customer Wallet."},
-            {"title": "Less than 24 hours before booking", "body": "Cancellation is not permitted."},
+            {"title": "Less than 24 hours before booking", "body": "100% cancellation charge, no refund. If the pujari cancels in this window, 100% of that puja’s cost is deducted from their wallet (same as no-show) and the customer is refunded in full."},
             {"title": "How timing is calculated", "body": "Cancellation is calculated from the scheduled booking date and time versus the current date and time."},
         ],
     },
@@ -249,26 +249,39 @@ _DEFAULT_LEGAL_POLICIES = [
 
 
 def _seed_legal_policies(conn) -> None:
-    count = conn.execute(text("SELECT COUNT(*) FROM legal_policies")).scalar() or 0
-    if count:
-        return
     import json
 
-    for policy in _DEFAULT_LEGAL_POLICIES:
-        conn.execute(
-            text(
-                """
-                INSERT INTO legal_policies (slug, title, version, sort_order, points)
-                VALUES (:slug, :title, '2026-01', :sort_order, CAST(:points AS jsonb))
-                """
-            ),
-            {
-                "slug": policy["slug"],
-                "title": policy["title"],
-                "sort_order": policy["sort_order"],
-                "points": json.dumps(policy["points"]),
-            },
-        )
+    count = conn.execute(text("SELECT COUNT(*) FROM legal_policies")).scalar() or 0
+    if not count:
+        for policy in _DEFAULT_LEGAL_POLICIES:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO legal_policies (slug, title, version, sort_order, points)
+                    VALUES (:slug, :title, '2026-01', :sort_order, CAST(:points AS jsonb))
+                    """
+                ),
+                {
+                    "slug": policy["slug"],
+                    "title": policy["title"],
+                    "sort_order": policy["sort_order"],
+                    "points": json.dumps(policy["points"]),
+                },
+            )
+        return
+    cancel = next((p for p in _DEFAULT_LEGAL_POLICIES if p["slug"] == "cancellation_policy"), None)
+    if not cancel:
+        return
+    conn.execute(
+        text(
+            """
+            UPDATE legal_policies
+            SET points = CAST(:points AS jsonb), version = '2026-09', updated_at = NOW()
+            WHERE slug = 'cancellation_policy'
+            """
+        ),
+        {"points": json.dumps(cancel["points"])},
+    )
 
 
 _FOUNDATION_STMTS = [
@@ -304,6 +317,7 @@ _FOUNDATION_STMTS = [
 
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS basic_price_paise INTEGER",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS booking_lead_hours INTEGER NOT NULL DEFAULT 48",
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_share_percent NUMERIC NOT NULL DEFAULT 85",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name TEXT",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT",
@@ -574,6 +588,25 @@ _FOUNDATION_STMTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS invoice_sequences (
+      fy TEXT PRIMARY KEY,
+      last_n INTEGER NOT NULL DEFAULT 0
+    )
+    """,
+    "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS email_status TEXT",
+    "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS email_error TEXT",
+    "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS emailed_at TIMESTAMPTZ",
+    "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'PAID'",
+    "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS original_invoice_id UUID",
+    "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS gstin TEXT",
+    "ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_paise INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_reason TEXT",
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS invoices_one_customer_per_booking
+    ON invoices (booking_id)
+    WHERE invoice_type = 'customer' AND booking_id IS NOT NULL
+    """,
+    """
     CREATE TABLE IF NOT EXISTS support_tickets (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       ticket_number TEXT NOT NULL UNIQUE,
@@ -633,7 +666,6 @@ def _seed_platform_settings(conn) -> None:
     defaults = {
         "virtual_puja_enabled": False,
         "pujari_settlement_days": 14,
-        "pujari_share_percent": 85,
         "loyalty_pujari_puja_count": 10,
         "loyalty_pujari_reward_paise": 50000,
         "loyalty_pujari_active": True,
@@ -652,13 +684,21 @@ def _seed_platform_settings(conn) -> None:
         "email_from_contact": "contact@b-seva.com",
         "weekend_days": [6, 7],
         "weekend_surge_percent": 0,
-        "weekend_surge_paise": 0,
+        "festival_surge_paise": 0,
         "pujari_joining_fee_enabled": False,
         "pujari_joining_fee_paise": 0,
-        "muhurta_consultation_fee_paise": 30000,
         "pujari_no_show_penalty_enabled": True,
-        "pujari_no_show_penalty_paise": 50000,
         "assign_distance_rings_km": [10, 15, 20, 30],
+        "invoice_brand_name": "BSeva",
+        "invoice_company_name": "BSeva Services Private Limited",
+        "invoice_company_address": "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India",
+        "invoice_company_state": "Telangana",
+        "invoice_company_pincode": "500034",
+        "invoice_company_email": "support@b-seva.com",
+        "invoice_website": "www.b-seva.com",
+        "invoice_prefix_customer": "BSEVA",
+        "invoice_sac_code": "999799",
+        "invoice_notes": "Thank you for choosing BSeva.",
     }
     for k, v in defaults.items():
         conn.execute(
@@ -671,6 +711,43 @@ def _seed_platform_settings(conn) -> None:
             ),
             {"k": k, "v": json.dumps(v)},
         )
+    addr = "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India"
+    conn.execute(
+        text(
+            """
+            UPDATE platform_settings
+            SET value = CAST(:v AS jsonb)
+            WHERE key = 'invoice_company_address'
+              AND (
+                value IS NULL
+                OR btrim(COALESCE(value #>> '{}', '')) = ''
+              )
+            """
+        ),
+        {"v": json.dumps(addr)},
+    )
+    conn.execute(
+        text(
+            """
+            UPDATE platform_settings
+            SET value = CAST(:v AS jsonb)
+            WHERE key = 'invoice_company_name'
+              AND btrim(COALESCE(value #>> '{}', '')) IN ('', 'B-Seva', 'BSeva')
+            """
+        ),
+        {"v": json.dumps("BSeva Services Private Limited")},
+    )
+    conn.execute(
+        text(
+            """
+            INSERT INTO platform_settings (key, value)
+            VALUES ('invoice_brand_name', CAST(:v AS jsonb))
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+            WHERE btrim(COALESCE(platform_settings.value #>> '{}', '')) IN ('', 'B-Seva')
+            """
+        ),
+        {"v": json.dumps("BSeva")},
+    )
 
 
 def _seed_reward_campaigns(conn) -> None:

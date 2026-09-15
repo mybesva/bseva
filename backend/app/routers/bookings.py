@@ -185,6 +185,27 @@ def list_pujari_roles(db: Session = Depends(get_db)):
     return out
 
 
+_UNDER_24H_CANCEL_BODY = (
+    "100% cancellation charge, no refund. If the pujari cancels in this window, "
+    "100% of that puja’s cost is deducted from their wallet (same as no-show) "
+    "and the customer is refunded in full."
+)
+
+
+def _normalize_legal_points(slug: str, points):
+    if slug != "cancellation_policy":
+        return points or []
+    out = []
+    for raw in points or []:
+        item = dict(raw)
+        title = str(item.get("title") or "").lower()
+        body = str(item.get("body") or "").lower()
+        if "less than 24" in title and "not permitted" in body:
+            item["body"] = _UNDER_24H_CANCEL_BODY
+        out.append(item)
+    return out
+
+
 @router.get("/legal")
 def list_legal_public(db: Session = Depends(get_db)):
     rows = db.execute(
@@ -198,7 +219,7 @@ def list_legal_public(db: Session = Depends(get_db)):
             import json
 
             points = json.loads(points)
-        data["points"] = points
+        data["points"] = _normalize_legal_points(str(data.get("slug") or ""), points)
         out.append(data)
     return out
 
@@ -217,7 +238,7 @@ def get_legal_public(slug: str, db: Session = Depends(get_db)):
         import json
 
         points = json.loads(points)
-    data["points"] = points
+    data["points"] = _normalize_legal_points(str(data.get("slug") or slug), points)
     return data
 
 
@@ -888,6 +909,17 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     except Exception:
         pass
     db.commit()
+    try:
+        from app.invoice_docs import issue_paid_booking_invoice
+
+        paid_row = db.execute(
+            text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
+            {"id": booking_id},
+        ).mappings().first()
+        if paid_row:
+            issue_paid_booking_invoice(db, dict(paid_row))
+    except Exception:
+        pass
     return {
         "id": booking_id,
         "booking_number": number,
@@ -1059,6 +1091,23 @@ def _cancel_actor(user: dict, booking: dict) -> str:
     raise HTTPException(403, "Not allowed")
 
 
+def _cancel_fee_and_refund(db, booking, policy: dict, actor: str, total: int, paid: bool) -> tuple[int, int]:
+    """Customer fee is % of booking total. Pujari under-24h / 100% is no-show (100% of puja cost)."""
+    if actor == "pujari":
+        refund = total if paid else 0
+        if policy.get("late") or int(policy.get("fee_percent") or 0) >= 100:
+            from app.no_show import penalty_paise_for_booking
+
+            return penalty_paise_for_booking(db, booking), refund
+        fee = int(round(total * int(policy.get("fee_percent") or 0) / 100)) if paid else 0
+        return fee, refund
+    if not paid:
+        return 0, 0
+    fee = int(round(total * int(policy.get("fee_percent") or 0) / 100))
+    refund = int(round(total * int(policy.get("refund_percent") or 0) / 100))
+    return fee, refund
+
+
 @router.get("/bookings/{booking_id}/cancel-preview")
 def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
@@ -1071,18 +1120,11 @@ def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = De
     policy = cancel_policy(hours, db=db, actor=actor)
     total = int(b["total_paise"] or 0)
     paid = b["payment_status"] == "paid"
-    fee = int(round(total * policy["fee_percent"] / 100)) if policy["allowed"] and paid else 0
-    if actor == "pujari":
-        # Pujari pays time-based penalty; customer is refunded in full when paid
-        refund = total if (policy["allowed"] and paid) else 0
-    else:
-        refund = int(round(total * policy["refund_percent"] / 100)) if (policy["allowed"] and paid) else 0
-        if not paid:
-            fee, refund = 0, 0
+    fee, refund = _cancel_fee_and_refund(db, b, policy, actor, total, paid)
     return {
         "ok": True,
         "actor": actor,
-        "allowed": policy["allowed"],
+        "allowed": True,
         "policy": policy["policy"],
         "hours_until": policy.get("hours"),
         "min_hours": policy.get("min_hours"),
@@ -1092,11 +1134,7 @@ def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = De
         "refund_paise": refund,
         "total_paise": total,
         "payment_status": b["payment_status"],
-        "message": (
-            None
-            if policy["allowed"]
-            else f"Cancellation is not allowed less than {int(policy.get('min_hours') or 24)} hours before the puja."
-        ),
+        "message": None,
     }
 
 
@@ -1113,20 +1151,9 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
     if b["status"] not in ("pending", "pending_acceptance", "confirmed"):
         raise HTTPException(400, f"Cannot cancel a booking in status {b['status']}")
     policy = cancel_policy(hours_until(b["booking_date"], b["start_time"]), db=db, actor=actor)
-    if not policy["allowed"]:
-        raise HTTPException(
-            400,
-            f"Cancellation is not allowed less than {int(policy.get('min_hours') or 24)} hours before the booking",
-        )
     total = int(b["total_paise"] or 0)
     paid = b["payment_status"] == "paid"
-    fee = int(round(total * policy["fee_percent"] / 100)) if paid else 0
-    if actor == "pujari":
-        refund = total if paid else 0
-    else:
-        refund = int(round(total * policy["refund_percent"] / 100)) if paid else 0
-        if not paid:
-            fee, refund = 0, 0
+    fee, refund = _cancel_fee_and_refund(db, b, policy, actor, total, paid)
     # Reason required when cancelling (meaningful text)
     reason_clean = validate_cancel_reason(reason, required=True)
     reason_full = reason_clean
@@ -1169,6 +1196,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
                 "debit",
                 f"Cancel penalty {b['booking_number']}",
                 booking_id,
+                allow_overdraft=True,
             )
         except ValueError as e:
             db.rollback()
@@ -1199,6 +1227,19 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
                 )
     except Exception:
         pass
+    if refund:
+        try:
+            from app.invoice_docs import create_credit_note, existing_customer_invoice
+
+            orig = existing_customer_invoice(db, booking_id)
+            if orig:
+                create_credit_note(db, booking=dict(b), original=orig, refund_paise=int(refund))
+                db.commit()
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
     return {
         "ok": True,
         "actor": actor,
@@ -1276,6 +1317,10 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
         ),
         {"id": booking_id},
     )
+    db.execute(
+        text("INSERT INTO payments (booking_id, amount_paise, status, provider) VALUES (CAST(:id AS uuid), :amt, 'successful', 'wallet')"),
+        {"id": booking_id, "amt": total},
+    )
     db.commit()
     try:
         from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
@@ -1297,6 +1342,17 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
                 method="Wallet",
                 transaction_id=str(b.get("booking_number") or booking_id),
             )
+    except Exception:
+        pass
+    try:
+        from app.invoice_docs import issue_paid_booking_invoice
+
+        paid_row = db.execute(
+            text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
+            {"id": booking_id},
+        ).mappings().first()
+        if paid_row:
+            issue_paid_booking_invoice(db, dict(paid_row))
     except Exception:
         pass
     return {"ok": True, "payment_status": "paid", "total_paise": total}

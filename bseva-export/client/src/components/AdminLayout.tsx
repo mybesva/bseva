@@ -79,6 +79,12 @@ const navigation: NavItem[] = [
     permissions: ["manage_settlements", "view_payments"],
   },
   {
+    nameKey: "admin.invoices",
+    suffix: "/invoices",
+    icon: FileText,
+    permissions: ["view_payments", "manage_settlements", "manage_bookings"],
+  },
+  {
     nameKey: "admin.payments",
     suffix: "/payments",
     icon: CreditCard,

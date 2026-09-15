@@ -69,6 +69,7 @@ def patch_profile(body: CustomerProfileIn, user=Depends(require_roles("customer"
               address = COALESCE(:addr, address),
               preferred_language = COALESCE(:lang, preferred_language),
               calendar_preference = COALESCE(:cal, calendar_preference),
+              gstin = CASE WHEN CAST(:gstin_set AS boolean) THEN NULLIF(:gstin, '') ELSE gstin END,
               updated_at = NOW()
             WHERE user_id = CAST(:id AS uuid)
             """
@@ -87,6 +88,8 @@ def patch_profile(body: CustomerProfileIn, user=Depends(require_roles("customer"
             "addr": _format_address(body) if any([body.address_line1, body.city]) else None,
             "lang": body.preferred_language,
             "cal": body.calendar_preference,
+            "gstin_set": body.gstin is not None,
+            "gstin": (body.gstin or "").strip().upper(),
             "id": user["id"],
         },
     )

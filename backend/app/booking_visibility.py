@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, time
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.domain import hours_until, row_dict
@@ -69,6 +70,22 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
         from app.pujari_team import enrich_booking_pujari_team
 
         enrich_booking_pujari_team(data)
+        try:
+            inv = db.execute(
+                text(
+                    """
+                    SELECT id, invoice_number FROM invoices
+                    WHERE booking_id = CAST(:id AS uuid) AND invoice_type = 'customer'
+                    ORDER BY created_at ASC LIMIT 1
+                    """
+                ),
+                {"id": str(data.get("id"))},
+            ).mappings().first()
+            if inv:
+                data["invoice_id"] = str(inv["id"])
+                data["invoice_number"] = inv["invoice_number"]
+        except Exception:
+            pass
         return data
 
     if role in ("admin", "super_admin"):

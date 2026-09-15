@@ -543,10 +543,23 @@ def _pricing_status(body: ServiceIn) -> str:
     return "priced"
 
 
+def _ensure_dakshina_column(db: Session) -> None:
+    try:
+        db.execute(
+            text(
+                "ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_share_percent NUMERIC NOT NULL DEFAULT 85"
+            )
+        )
+    except Exception:
+        db.rollback()
+
+
 @router.post("/services")
 def create_service(body: ServiceIn, user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
     import json
     from uuid import uuid4
+
+    _ensure_dakshina_column(db)
 
     main = body.main_puja_price_paise
     if main is None:
@@ -566,6 +579,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
               standard_price_paise, premium_price_paise, basic_price_paise, main_puja_price_paise,
               samagri_price_paise, alankaram_price_paise, food_price_paise,
               samagri_provider, alankaram_provider, food_provider,
+              dakshina_share_percent,
               muhurta_consultation_enabled, muhurta_fee_paise, requires_muhurta,
               duration_minutes, pujaris_required,
               basic_pujaris_required, standard_pujaris_required, premium_pujaris_required,
@@ -582,6 +596,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
               :std, :prm, :basic, :main,
               :sam, :alan, :food,
               :samp, :alanp, :foodp,
+              :dak,
               :muh_en, :muh_fee, :req_muh,
               :dur, :pujn, :pujn_basic, :pujn_std, :pujn_prm, :virt, :act,
               :sam_av, :alan_av, :food_av,
@@ -626,8 +641,9 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             "samp": body.samagri_provider or "included",
             "alanp": body.alankaram_provider or "included",
             "foodp": body.food_provider or "included",
+            "dak": 85.0 if body.dakshina_share_percent is None else max(0.0, min(100.0, float(body.dakshina_share_percent))),
             "muh_en": bool(body.muhurta_consultation_enabled),
-            "muh_fee": body.muhurta_fee_paise,
+            "muh_fee": int(body.muhurta_fee_paise or 0),
             "req_muh": bool(body.requires_muhurta),
             "dur": body.duration_minutes,
             "pujn": body.pujaris_required or 1,
@@ -690,6 +706,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
 def update_service(service_id: str, body: ServiceIn, user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
     import json
 
+    _ensure_dakshina_column(db)
     main = body.main_puja_price_paise
     if main is None:
         main = body.standard_price_paise
@@ -717,6 +734,7 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
               standard_price_paise=:std, premium_price_paise=:prm, basic_price_paise=:basic, main_puja_price_paise=:main,
               samagri_price_paise=:sam, alankaram_price_paise=:alan, food_price_paise=:food,
               samagri_provider=:samp, alankaram_provider=:alanp, food_provider=:foodp,
+              dakshina_share_percent=:dak,
               muhurta_consultation_enabled=:muh_en, muhurta_fee_paise=:muh_fee, requires_muhurta=:req_muh,
               duration_minutes=:dur, pujaris_required=:pujn,
               basic_pujaris_required=:pujn_basic, standard_pujaris_required=:pujn_std,
@@ -766,8 +784,9 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
             "samp": body.samagri_provider or "included",
             "alanp": body.alankaram_provider or "included",
             "foodp": body.food_provider or "included",
+            "dak": 85.0 if body.dakshina_share_percent is None else max(0.0, min(100.0, float(body.dakshina_share_percent))),
             "muh_en": bool(body.muhurta_consultation_enabled),
-            "muh_fee": body.muhurta_fee_paise,
+            "muh_fee": int(body.muhurta_fee_paise or 0),
             "req_muh": bool(body.requires_muhurta),
             "dur": body.duration_minutes,
             "pujn": body.pujaris_required or 1,

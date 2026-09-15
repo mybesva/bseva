@@ -19,6 +19,8 @@ from app.platform_config import get_setting
 from app.rbac import require_admin, require_permission
 from app.schemas import BookingRejectIn, NoShowPenaltyIn
 from app.security import verify_password
+from app.no_show import apply_no_show_to_booking
+from app.pricing import dakshina_share_percent
 
 router = APIRouter(tags=["lifecycle"])
 
@@ -410,7 +412,7 @@ def mark_no_show_penalty(
     admin=Depends(require_permission("manage_bookings")),
     db: Session = Depends(get_db),
 ):
-    """Admin marks accepted pujari as no-show and applies configurable wallet penalty (unless waived)."""
+    """Admin marks accepted pujari as no-show and deducts 100% of that puja's cost from their wallet."""
     waive = bool(body.waive)
     reason = body.reason
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
@@ -423,61 +425,18 @@ def mark_no_show_penalty(
     if b.get("no_show_marked_at") and int(b.get("no_show_penalty_paise") or 0) > 0 and not waive:
         raise HTTPException(400, "No-show penalty already applied")
 
-    enabled = bool(get_setting(db, "pujari_no_show_penalty_enabled", True))
-    amount = int(get_setting(db, "pujari_no_show_penalty_paise", 50000) or 0)
-    applied = 0
-    if waive or not enabled or amount <= 0:
-        db.execute(
-            text(
-                """
-                UPDATE bookings SET no_show_penalty_paise = 0, no_show_marked_at = NOW()
-                WHERE id = CAST(:id AS uuid)
-                """
-            ),
-            {"id": booking_id},
-        )
-        write_audit(
-            db,
-            str(admin["id"]),
-            f"no_show_waived:{reason or 'waived'}",
-            "booking",
-            booking_id,
-        )
-        db.commit()
-        return {"ok": True, "waived": True, "penalty_paise": 0}
-
-    try:
-        apply_wallet(
-            db,
-            str(b["pujari_id"]),
-            -amount,
-            "debit",
-            f"No-show penalty for booking {b.get('booking_number') or booking_id}",
-            booking_id,
-            f"NOSHOW-{booking_id[:8]}",
-        )
-        applied = amount
-    except ValueError as e:
-        raise HTTPException(400, f"Cannot deduct penalty: {e}")
-
-    db.execute(
-        text(
-            """
-            UPDATE bookings SET no_show_penalty_paise = :amt, no_show_marked_at = NOW()
-            WHERE id = CAST(:id AS uuid)
-            """
-        ),
-        {"amt": applied, "id": booking_id},
-    )
-    write_audit(
+    out = apply_no_show_to_booking(
         db,
-        str(admin["id"]),
-        f"no_show_penalty:{applied}:{reason or ''}",
-        "booking",
-        booking_id,
+        b,
+        actor_id=str(admin["id"]),
+        waive=waive,
+        reason=reason,
+        auto=False,
     )
+    if not out.get("ok"):
+        raise HTTPException(400, f"Cannot deduct penalty: {out.get('error') or 'wallet error'}")
     db.commit()
-    return {"ok": True, "waived": False, "penalty_paise": applied}
+    return {"ok": True, "waived": bool(out.get("waived")), "penalty_paise": int(out.get("penalty_paise") or 0)}
 
 
 @router.post("/bookings/{booking_id}/start-otp/request")
@@ -596,8 +555,13 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
     if b["status"] != "in_progress":
         raise HTTPException(400, "Booking must be in progress")
     set_booking_status(db, booking_id, "completed", actor_id=str(user["id"]))
-    # Create settlement pending for new model (skip legacy)
-    share = float(get_setting(db, "pujari_share_percent", 85)) / 100.0
+    # Create settlement pending for new model (skip legacy and no-show-blocked bookings)
+    no_show_blocked = bool(b.get("no_show_marked_at")) and int(b.get("no_show_penalty_paise") or 0) > 0
+    svc = db.execute(
+        text("SELECT * FROM services WHERE id = CAST(:id AS uuid)"),
+        {"id": str(b["service_id"])},
+    ).mappings().first()
+    share = dakshina_share_percent(svc) / 100.0
     days = int(get_setting(db, "pujari_settlement_days", 14))
     base = int(b["base_price_paise"])
     platform = int(round(base * (1 - share)))
@@ -608,7 +572,7 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
     due = date.today() + timedelta(days=days)
     try:
         st = b.get("settlement_status") or "not_applicable"
-        if st != "legacy":
+        if st != "legacy" and not no_show_blocked:
             db.execute(
                 text(
                     """
@@ -643,57 +607,20 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
         pass
     _maybe_loyalty(db, str(b["pujari_id"]), booking_id)
     _maybe_referral_reward(db, str(b["customer_id"]), booking_id)
-    # Customer + settlement invoice snapshots
+    # Settlement statement only (customer tax invoice is issued on payment)
     try:
-        from app.invoice_docs import create_customer_invoice, create_settlement_invoice
+        from app.invoice_docs import create_settlement_invoice
 
-        create_customer_invoice(db, booking=dict(b), user_id=str(b["customer_id"]))
         sett = db.execute(
             text("SELECT * FROM settlements WHERE booking_id = CAST(:id AS uuid)"),
             {"id": booking_id},
         ).mappings().first()
-        if sett:
+        if sett and str(sett.get("status") or "") != "blocked":
             create_settlement_invoice(db, booking=dict(b), settlement=dict(sett))
     except Exception:
         pass
     write_audit(db, str(user["id"]), "puja_completed", "booking", booking_id)
     db.commit()
-    try:
-        from app.mail.booking_payload import (
-            booking_email_data_from_row,
-            invoice_email_data_from_snapshot,
-            load_customer_email_context,
-            load_service_name,
-        )
-        from app.mail.senders import send_invoice_receipt_email
-
-        ctx = load_customer_email_context(db, str(b["customer_id"]))
-        if ctx.get("email"):
-            svc_name = load_service_name(db, str(b["service_id"]))
-            inv = db.execute(
-                text(
-                    """
-                    SELECT invoice_number, created_at FROM invoices
-                    WHERE booking_id = CAST(:id AS uuid) AND invoice_type = 'customer'
-                    ORDER BY created_at DESC LIMIT 1
-                    """
-                ),
-                {"id": booking_id},
-            ).mappings().first()
-            if inv:
-                send_invoice_receipt_email(
-                    to=ctx["email"],
-                    data=invoice_email_data_from_snapshot(
-                        customer_name=ctx["name"],
-                        invoice_number=str(inv["invoice_number"]),
-                        booking={**dict(b), "service_name": svc_name},
-                        payment_method="Wallet",
-                        payment_date=str(inv.get("created_at") or ""),
-                        language=ctx["language"],
-                    ),
-                )
-    except Exception:
-        pass
     return {"ok": True, "status": "completed"}
 
 
@@ -1018,6 +945,8 @@ def override_settlement(
         raise HTTPException(404, "Settlement not found")
     if s["status"] == "settled":
         raise HTTPException(400, "Already settled")
+    if s["status"] == "blocked":
+        raise HTTPException(400, "This settlement is blocked for a pujari no-show and cannot be paid out")
     if body.mark_settled:
         # Credit pujari if not legacy/double
         try:
@@ -1062,13 +991,13 @@ def public_config(db: Session = Depends(get_db)):
         "pujari_location_tracking_before_minutes": int(
             get_setting(db, "pujari_location_tracking_before_minutes", 15)
         ),
-        "muhurta_consultation_fee_paise": int(get_setting(db, "muhurta_consultation_fee_paise", 30000)),
         "registration_captcha_enabled": bool(get_setting(db, "registration_captcha_enabled", False)),
         "recaptcha_site_key": __import__("os").environ.get("VITE_RECAPTCHA_SITE_KEY")
         or __import__("os").environ.get("RECAPTCHA_SITE_KEY")
         or "",
         "customer_cancel_fee_over_48h_percent": int(get_setting(db, "customer_cancel_fee_over_48h_percent", 10)),
         "customer_cancel_fee_24_48h_percent": int(get_setting(db, "customer_cancel_fee_24_48h_percent", 50)),
+        "customer_cancel_fee_under_24h_percent": int(get_setting(db, "customer_cancel_fee_under_24h_percent", 100)),
         "customer_cancel_min_hours": int(get_setting(db, "customer_cancel_min_hours", 24)),
         "email_from_contact": str(get_setting(db, "email_from_contact", "contact@b-seva.com")),
         "email_from_support": str(get_setting(db, "email_from_support", "support@b-seva.com")),

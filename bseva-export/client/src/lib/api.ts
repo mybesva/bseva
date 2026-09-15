@@ -155,6 +155,40 @@ export async function openAdminPujariDocument(pujariId: string, docId: string) {
   window.open(URL.createObjectURL(blob), "_blank");
 }
 
+/** Resolve stored media paths so `/api/...` works against the API origin in local dev. */
+export function mediaSrc(raw?: string | null): string {
+  const url = (raw || "").trim();
+  if (!url) return "";
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("blob:") ||
+    url.startsWith("data:")
+  ) {
+    return url;
+  }
+  if (url.startsWith("/api/")) {
+    const base = apiBase();
+    return base ? `${base}${url}` : url;
+  }
+  return url;
+}
+
+export async function uploadPromoImage(file: File) {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("Image must be under 8 MB");
+  }
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(`${apiBase()}/api/v1/admin/promos/images`, { method: "POST", headers, body });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(formatFetchError(data, res, "Upload failed"));
+  return data as { ok: boolean; image_url: string; preview_url?: string };
+}
+
 export async function uploadAdminPujariDocument(pujariId: string, file: File, documentType: string) {
   const headers = new Headers();
   const token = getToken();
@@ -218,3 +252,25 @@ export function dashboardPath(role: string) {
 }
 
 export const rupees = (paise: number) => `₹${(Number(paise || 0) / 100).toLocaleString("en-IN")}`;
+
+export async function downloadInvoicePdf(invoiceId: string) {
+  const token = getToken();
+  const res = await fetch(`${apiBase()}/api/v1/invoices/${encodeURIComponent(invoiceId)}/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail || "Could not download invoice");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const cd = res.headers.get("Content-Disposition") || "";
+  const match = cd.match(/filename="([^"]+)"/);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = match?.[1] || "BSeva_Invoice.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

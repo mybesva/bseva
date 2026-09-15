@@ -21,13 +21,20 @@ from app.mail.templates import (
 )
 
 
-def _dispatch(to: str, content, *, from_addr: str | None = None) -> dict[str, Any]:
+def _dispatch(
+    to: str,
+    content,
+    *,
+    from_addr: str | None = None,
+    attachments: list[tuple[str, bytes, str]] | None = None,
+) -> dict[str, Any]:
     result = send_email(
         to=to,
         subject=content.subject,
         text_body=content.text,
         html_body=content.html,
         from_addr=from_addr,
+        attachments=attachments,
     )
     result["template_id"] = content.template_id
     return result
@@ -114,9 +121,13 @@ def send_payment_confirmation_email(
 
 
 def send_invoice_receipt_email(
-    *, to: str, data: InvoiceEmailData, from_addr: str | None = None
+    *,
+    to: str,
+    data: InvoiceEmailData,
+    from_addr: str | None = None,
+    attachments: list[tuple[str, bytes, str]] | None = None,
 ) -> dict[str, Any]:
-    return _dispatch(to, invoice_receipt_email(data), from_addr=from_addr)
+    return _dispatch(to, invoice_receipt_email(data), from_addr=from_addr, attachments=attachments)
 
 
 def send_booking_cancellation_email(

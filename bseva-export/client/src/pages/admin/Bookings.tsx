@@ -159,7 +159,7 @@ export default function Bookings() {
 
   async function applyNoShowPenalty(booking: any) {
     const reason = window.prompt(
-      `Mark the pujari as a no-show for ${booking.booking_number}? Add a note (optional).`
+      `Mark the pujari as a no-show for ${booking.booking_number}? 100% of this puja’s cost will be deducted from their wallet. Add a note (optional).`
     );
     if (reason === null) return;
     setPenaltyFor(booking.id);

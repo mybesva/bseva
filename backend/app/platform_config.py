@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 _DEFAULTS: dict[str, Any] = {
     "virtual_puja_enabled": False,
     "pujari_settlement_days": 14,
-    "pujari_share_percent": 85,
     "loyalty_pujari_puja_count": 10,
     "loyalty_pujari_reward_paise": 50000,
     "loyalty_pujari_active": True,
@@ -27,33 +26,40 @@ _DEFAULTS: dict[str, Any] = {
     "email_from_admin": "admin@b-seva.com",
     "email_from_info": "info@b-seva.com",
     "email_from_contact": "contact@b-seva.com",
-    "invoice_company_name": "BSeva",
+    "invoice_brand_name": "BSeva",
+    "invoice_company_name": "BSeva Services Private Limited",
+    "invoice_company_address": "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India",
+    "invoice_company_state": "Telangana",
+    "invoice_company_pincode": "500034",
+    "invoice_company_email": "support@b-seva.com",
+    "invoice_company_phone": "",
     "invoice_gstin": "",
-    "invoice_company_address": "",
-    "invoice_prefix_customer": "INV-C",
+    "invoice_pan": "",
+    "invoice_website": "www.b-seva.com",
+    "invoice_logo_path": "",
+    "invoice_prefix_customer": "BSEVA",
     "invoice_prefix_settlement": "INV-S",
+    "invoice_signatory_name": "",
+    "invoice_signatory_designation": "Authorized Signatory",
+    "invoice_sac_code": "999799",
+    "invoice_hsn_code": "",
+    "invoice_terms": "This invoice is issued for puja/religious services booked on BSeva. GST, if charged, is as applicable under Indian tax law. Disputes are subject to Hyderabad jurisdiction.",
+    "invoice_notes": "Thank you for choosing BSeva.",
     # Pujari joining fee (optional)
     "pujari_joining_fee_enabled": False,
     "pujari_joining_fee_paise": 0,
-    # Muhurta consultation default fee (per-service override allowed)
-    "muhurta_consultation_fee_paise": 30000,
-    # Pujari no-show / late cancel penalty
+    # Pujari no-show: 100% of that puja's cost is deducted from the pujari wallet
     "pujari_no_show_penalty_enabled": True,
-    "pujari_no_show_penalty_paise": 50000,
     # Cancellation charges (customer) — % of booking total
     "customer_cancel_fee_over_48h_percent": 10,
     "customer_cancel_fee_24_48h_percent": 50,
+    "customer_cancel_fee_under_24h_percent": 100,
     "customer_cancel_min_hours": 24,
-    # Cancellation charges (pujari) — % of booking total as pujari penalty; customer refunded in full
+    # Cancellation charges (pujari) — % of booking total; under 24h = 100% of puja cost (no-show)
     "pujari_cancel_fee_over_48h_percent": 10,
     "pujari_cancel_fee_24_48h_percent": 50,
+    "pujari_cancel_fee_under_24h_percent": 100,
     "pujari_cancel_min_hours": 24,
-    # Call forwarding (config only — provider integration pending)
-    "call_forwarding_enabled": False,
-    "call_forwarding_office_hours": "09:00-18:00",
-    "call_forwarding_timezone": "Asia/Kolkata",
-    "call_forwarding_primary_number": "",
-    "call_forwarding_forward_to": "",
     # CAPTCHA (public registration) — keys via env, not stored as secrets in DB
     "registration_captcha_enabled": False,
     # Suggested puja package list prices (paise) — Admin overrides per service
@@ -66,6 +72,8 @@ _DEFAULTS: dict[str, Any] = {
     "assign_distance_rings_km": [10, 15, 20, 30],
     # After puja end, pujari unavailable for this many hours (same before puja start)
     "pujari_schedule_buffer_hours": 4,
+    "weekend_surge_percent": 0,
+    "festival_surge_paise": 0,
 }
 
 

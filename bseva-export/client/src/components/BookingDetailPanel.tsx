@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { api, rupees } from "@/lib/api";
+import { api, downloadInvoicePdf, rupees } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
@@ -70,6 +70,8 @@ export type BookingDetail = {
   pujari_team_customer_note?: string;
   pujari_team_notice?: string | null;
   pujari_payment_notice?: string | null;
+  invoice_id?: string | null;
+  invoice_number?: string | null;
 };
 
 function statusColor(status: string) {
@@ -627,8 +629,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         <div className="rounded-lg border border-border p-3 space-y-2">
           <p className="text-sm text-muted-foreground">
             {viewerRole === "pujari"
-              ? "You can cancel an accepted booking. Time-based cancellation charges may apply."
-              : "You can cancel this booking. Time-based cancellation charges may apply."}
+              ? "You can cancel an accepted booking. Under 24 hours this is charged as a no-show (100% of that puja’s cost)."
+              : "You can cancel this booking. Under 24 hours the charge is 100% (no refund)."}
           </p>
           <Button variant="destructive" size="sm" disabled={busy} onClick={() => void openCancelDialog()}>
             Cancel booking
@@ -786,6 +788,21 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             </Button>
           </div>
         </div>
+      )}
+
+      {viewerRole === "customer" && booking.invoice_id && booking.payment_status === "paid" && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={() =>
+            void downloadInvoicePdf(String(booking.invoice_id)).catch((e) => toast.error(e.message || t("invoice.openFailed")))
+          }
+        >
+          <Download className="h-4 w-4 mr-2" />
+          {t("invoice.download")}
+          {booking.invoice_number ? ` · ${booking.invoice_number}` : ""}
+        </Button>
       )}
 
       {viewerRole === "customer" && booking.payment_status === "pending" && status !== "cancelled" && (

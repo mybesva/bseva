@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CustomerPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, apiBase, getToken, rupees } from "@/lib/api";
+import { api, apiBase, downloadInvoicePdf, getToken, rupees } from "@/lib/api";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
@@ -57,9 +57,17 @@ export default function CustomerInvoicesPage() {
               <div>
                 {t("invoice.created")}: {formatDisplayDateTime(inv.created_at)}
               </div>
-              <Button size="sm" variant="outline" onClick={() => void openHtml(inv)}>
-                {t("invoice.viewPrint")}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => void openHtml(inv)}>
+                  {t("invoice.viewPrint")}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => void downloadInvoicePdf(inv.id).catch((e) => toast.error(e.message))}
+                >
+                  {t("invoice.download")}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

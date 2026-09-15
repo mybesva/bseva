@@ -6,11 +6,11 @@ export type PublicConfig = {
   bseva_whatsapp_number: string;
   pujari_full_booking_details_before_hours: number;
   puja_start_otp_before_minutes: number;
-  muhurta_consultation_fee_paise: number;
   registration_captcha_enabled?: boolean;
   recaptcha_site_key?: string;
   customer_cancel_fee_over_48h_percent?: number;
   customer_cancel_fee_24_48h_percent?: number;
+  customer_cancel_fee_under_24h_percent?: number;
   customer_cancel_min_hours?: number;
   email_from_contact: string;
   email_from_support: string;
@@ -21,7 +21,6 @@ const DEFAULTS: PublicConfig = {
   bseva_whatsapp_number: "919014654994",
   pujari_full_booking_details_before_hours: 24,
   puja_start_otp_before_minutes: 15,
-  muhurta_consultation_fee_paise: 30000,
   email_from_contact: "contact@b-seva.com",
   email_from_support: "support@b-seva.com",
 };

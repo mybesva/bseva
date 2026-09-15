@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.platform_config import get_setting
+from app.pricing import DEFAULT_DAKSHINA_SHARE_PERCENT, dakshina_share_percent
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ def catalog_base_price_paise(row: dict) -> int:
 
 def dakshina_paise_for_service(db: Session, row: dict) -> int:
     base = catalog_base_price_paise(row)
-    share = float(get_setting(db, "pujari_share_percent", 85) or 85)
+    share = dakshina_share_percent(row)
     if base > 0:
         return max(DEFAULT_MIN_DAKSHINA_PAISE, int(round(base * share / 100)))
     min_display = int(get_setting(db, "min_dakshina_display_paise", DEFAULT_MIN_DAKSHINA_PAISE) or DEFAULT_MIN_DAKSHINA_PAISE)
@@ -149,7 +150,7 @@ def list_catalog_services_for_offers(db: Session) -> list[dict]:
                 SELECT id, name, slug, short_description, description, category,
                        basic_price_paise, standard_price_paise, premium_price_paise,
                        main_puja_price_paise, duration_minutes, active, pricing_status,
-                       display_order
+                       display_order, dakshina_share_percent
                 FROM services
                 WHERE active = TRUE
                    OR COALESCE(pricing_status, 'priced') = 'awaiting_pricing'
@@ -289,6 +290,7 @@ def _service_row_payload(db: Session, s: dict, applied_ids: set[str]) -> dict:
         "standard_price_paise": int(s.get("standard_price_paise") or 0),
         "catalog_price_paise": base if base > 0 else DEFAULT_CATALOG_BASE_PAISE,
         "dakshina_paise": dakshina_paise_for_service(db, s),
+        "dakshina_share_percent": dakshina_share_percent(s),
         "applied": sid in applied_ids,
         "categories": cats,
         "section_slugs": [c.get("slug") for c in cats if c.get("slug")],
@@ -301,11 +303,10 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
     services = list_catalog_services_for_offers(db)
     sections = _offer_sections(db)
     applied_ids = _load_application_ids(db, pujari_id)
-    share = float(get_setting(db, "pujari_share_percent", 85) or 85)
     out = [_service_row_payload(db, s, applied_ids) for s in services]
     applied_count = sum(1 for x in out if x["applied"])
     return {
-        "share_percent": share,
+        "share_percent": DEFAULT_DAKSHINA_SHARE_PERCENT,
         "sections": [{"slug": "all", "name": "All"}] + sections,
         "services": out,
         "applied_count": applied_count,
@@ -374,7 +375,7 @@ def get_admin_services_payload(db: Session, pujari_id: str) -> dict:
     verified_services = [x for x in catalog if x["verified"]]
     pending_review = [x for x in catalog if x["applied"] and not x["verified"]]
     return {
-        "share_percent": float(get_setting(db, "pujari_share_percent", 85) or 85),
+        "share_percent": DEFAULT_DAKSHINA_SHARE_PERCENT,
         "sections": [{"slug": "all", "name": "All"}] + _offer_sections(db),
         "services": catalog,
         "applied_service_ids": sorted(applied_ids),
