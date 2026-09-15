@@ -154,11 +154,11 @@ def compute_quote(
         except (TypeError, ValueError):
             return default
 
-    samagri = _comp("samagri_price_paise")
+    from app.service_addons import customer_samagri_price_paise
+
+    samagri_list = customer_samagri_price_paise(db, service)
     alankaram = _comp("alankaram_price_paise")
     food = _comp("food_price_paise")
-    # Admin configures list prices per service; no silent platform defaults.
-    samagri_list = samagri
     alankaram_list = alankaram
     samagri_prov = (service.get("samagri_provider") or "included").lower()
     alankaram_prov = (service.get("alankaram_provider") or "included").lower()
@@ -186,12 +186,12 @@ def compute_quote(
     else:
         # Legacy: customer pays when included or reimbursable.
         chargeable_providers = {"included", "reimbursable"}
-        samagri_charge = samagri if samagri_prov in chargeable_providers else 0
+        samagri_charge = samagri_list if samagri_prov in chargeable_providers else 0
         alankaram_charge = alankaram if alankaram_prov in chargeable_providers else 0
         food_charge = food if food_prov in chargeable_providers else 0
         reimbursement = 0
         if samagri_prov == "reimbursable":
-            reimbursement += samagri
+            reimbursement += samagri_list
         if alankaram_prov == "reimbursable":
             reimbursement += alankaram
         if food_prov == "reimbursable":
@@ -222,7 +222,7 @@ def compute_quote(
         "samagri": samagri_charge,
         "alankaram": alankaram_charge,
         "foodPrasadam": food_charge,
-        "samagriListPrice": samagri_list if include_samagri is not None else samagri,
+        "samagriListPrice": samagri_list,
         "alankaramListPrice": alankaram_list if include_alankaram is not None else alankaram,
         "foodListPrice": food,
         "componentsTotal": components_total,

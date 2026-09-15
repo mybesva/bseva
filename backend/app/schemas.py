@@ -90,7 +90,7 @@ class TokenOut(BaseModel):
 
 class BookingCreateIn(BaseModel):
     service_id: UUID
-    pujari_id: UUID
+    pujari_id: Optional[UUID] = None
     package_type: Literal["basic", "standard", "premium"]
     mode: Literal["in_person", "temple", "virtual"]
     booking_date: date

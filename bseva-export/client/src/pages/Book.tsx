@@ -150,10 +150,11 @@ export default function Book() {
               premium: pujaType.premium_price_paise,
             }}
             addonPrices={{
-              samagri: pujaType.samagri_price_paise,
+              samagri:
+                pujaType.customer_samagri_price_paise ?? pujaType.samagri_price_paise,
               alankaram: pujaType.alankaram_price_paise,
               food: pujaType.food_price_paise,
-              samagriAvailable: Boolean(pujaType.samagri_available),
+              samagriAvailable: pujaType.samagri_available !== false,
               alankaramAvailable: Boolean(pujaType.alankaram_available),
               foodAvailable: Boolean(pujaType.food_available),
             }}

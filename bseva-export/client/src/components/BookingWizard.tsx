@@ -82,6 +82,77 @@ type Tier = "basic" | "standard" | "premium";
 type ServiceMode = "physical" | "virtual";
 type CalendarType = "north" | "south" | "lunar";
 
+function addonListPaise(
+  selected: boolean,
+  quoteCharge: number | undefined,
+  listFromService: number | undefined,
+  listFromQuote: number | undefined,
+): number {
+  const list = Math.max(0, Number(listFromService ?? listFromQuote ?? 0));
+  if (!selected) return 0;
+  const fromQuote = Math.max(0, Number(quoteCharge ?? 0));
+  return fromQuote > 0 ? fromQuote : list;
+}
+
+function buildBookingBill(input: {
+  quote: any | null;
+  tier: Tier;
+  basePrices: BookingWizardProps["basePrices"];
+  settings: Record<string, string> | null;
+  includeSamagri: boolean;
+  includeAlankaram: boolean;
+  includeFood: boolean;
+  addonPrices?: BookingWizardProps["addonPrices"];
+}) {
+  const { quote, tier, basePrices, settings, includeSamagri, includeAlankaram, includeFood, addonPrices } =
+    input;
+  const gstPercent = Number(quote?.gstPercent ?? settings?.gstPercent ?? 18);
+  const basePrice = quote
+    ? Number(quote.basePrice ?? quote.mainPuja ?? 0)
+    : Number(basePrices[tier] || basePrices.standard || 0);
+  const locAdj = quote ? Number(quote.locationAdjustment ?? 0) : 0;
+  const peakFee = quote ? Number(quote.peakFee ?? 0) : 0;
+  const samagri = addonListPaise(
+    includeSamagri,
+    quote?.samagri,
+    addonPrices?.samagri ?? undefined,
+    quote?.samagriListPrice,
+  );
+  const alankaram = addonListPaise(
+    includeAlankaram,
+    quote?.alankaram,
+    addonPrices?.alankaram ?? undefined,
+    quote?.alankaramListPrice,
+  );
+  const foodOn = Boolean(addonPrices?.foodAvailable);
+  const food = addonListPaise(
+    includeFood && foodOn,
+    quote?.foodPrasadam ?? quote?.food,
+    addonPrices?.food ?? undefined,
+    quote?.foodListPrice,
+  );
+  const discount = quote ? Number(quote.discount ?? 0) : 0;
+  const walletCredit = quote ? Number(quote.walletCredit ?? 0) : 0;
+  const adjustedBase = basePrice + locAdj;
+  const subtotal = Math.max(0, adjustedBase + peakFee + samagri + alankaram + food - discount - walletCredit);
+  const gstAmount = Math.round((subtotal * gstPercent) / 100);
+  const totalAmount = subtotal + gstAmount;
+  return {
+    basePrice,
+    locationAdjustment: locAdj,
+    samagri,
+    alankaram,
+    foodPrasadam: food,
+    food,
+    peakFee,
+    subtotal,
+    gstPercent,
+    gstAmount,
+    totalAmount,
+    isPeakDay: Boolean(quote?.peakReason || peakFee > 0),
+  };
+}
+
 export default function BookingWizard({
   serviceId,
   pujaName,
@@ -239,37 +310,45 @@ export default function BookingWizard({
   }
 
   useEffect(() => {
-    if (!bookingDate) return;
     const qs = new URLSearchParams({
       service_id: serviceId,
       package_type: tier,
       city: city || "",
-      booking_date: format(bookingDate, "yyyy-MM-dd"),
       include_samagri: includeSamagri ? "true" : "false",
       include_alankaram: includeAlankaram ? "true" : "false",
       include_food: includeFood ? "true" : "false",
     });
+    if (bookingDate) qs.set("booking_date", format(bookingDate, "yyyy-MM-dd"));
     api(`/quote?${qs}`)
       .then(setQuote)
       .catch(() => setQuote(null));
   }, [bookingDate, serviceId, tier, city, includeSamagri, includeAlankaram, includeFood]);
 
-  const samagriPrice = Number(addonPrices?.samagri || quote?.samagriListPrice || 0);
+  const samagriListPaise = Number(addonPrices?.samagri ?? quote?.samagriListPrice ?? 0);
+  const samagriPrice = samagriListPaise;
   const alankaramPrice = Number(addonPrices?.alankaram || quote?.alankaramListPrice || 0);
   const foodPrice = Number(addonPrices?.food || quote?.foodListPrice || 0);
   const foodAvailable = Boolean(addonPrices?.foodAvailable);
   const deathRelated = isDeathRelatedService(serviceCategories);
-  const showSamagri = Boolean(addonPrices?.samagriAvailable) && samagriPrice > 0;
+  // Samagri: on by default for every puja unless admin turns it off. Alankaram: admin-only.
+  const showSamagri = addonPrices?.samagriAvailable !== false;
   const alankaramOffered =
     !deathRelated && Boolean(addonPrices?.alankaramAvailable) && alankaramPrice > 0;
   const showAlankaramComingSoon = !deathRelated && !alankaramOffered;
 
   function formatAddonPrice(paise: number, selected: boolean): string {
-    if (paise <= 0) return selected ? "Included in your booking total." : "Select to include in total";
+    if (paise <= 0) {
+      return selected ? "Price not set for this puja yet." : "Select to include in total";
+    }
     const amt = `₹${(paise / 100).toLocaleString("en-IN")}`;
     return selected
       ? `${amt} will be inclusive in your booking total.`
       : `${amt} · select to include in total`;
+  }
+
+  function formatInclusiveLine(paise: number): string {
+    if (paise <= 0) return "Price not set for this puja";
+    return `₹${(paise / 100).toLocaleString("en-IN")} · inclusive in your booking total`;
   }
 
   // Offer Samagri, Alankaram, and Food/Prasadam (when available) as customer opt-in.
@@ -424,12 +503,10 @@ export default function BookingWizard({
             {(includeSamagri || includeAlankaram || includeFood) && (
               <div className="text-sm border-t pt-3 space-y-1">
                 {includeSamagri && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-2">
                     <span>Samagri charge</span>
-                    <span>
-                      {samagriPrice > 0
-                        ? `₹${(samagriPrice / 100).toLocaleString("en-IN")}`
-                        : "As priced"}
+                    <span className="text-right text-primary font-medium">
+                      {formatInclusiveLine(Number(bill.samagri || 0))}
                     </span>
                   </div>
                 )}
@@ -531,32 +608,20 @@ export default function BookingWizard({
     }
   }, [virtualEnabled, serviceMode]);
 
-  const bill = useMemo(() => {
-    if (quote) {
-      return {
-        ...quote,
-        basePrice: quote.basePrice ?? quote.mainPuja,
-        samagri: quote.samagri ?? 0,
-        alankaram: quote.alankaram ?? 0,
-        foodPrasadam: quote.foodPrasadam ?? quote.food ?? 0,
-        peakFee: quote.peakFee ?? 0,
-        subtotal: quote.subtotal ?? quote.totalAmount,
-        gstPercent: quote.gstPercent ?? Number(settings?.gstPercent || 18),
-        gstAmount: quote.gstAmount ?? 0,
-        totalAmount: quote.totalAmount ?? quote.total ?? 0,
-      };
-    }
-    const base = Number(basePrices[tier] || basePrices.standard || 0);
-    return {
-      basePrice: base,
-      peakFee: 0,
-      subtotal: base,
-      gstPercent: Number(settings?.gstPercent || 18),
-      gstAmount: Math.floor((base * Number(settings?.gstPercent || 18)) / 100),
-      totalAmount: base + Math.floor((base * Number(settings?.gstPercent || 18)) / 100),
-      isPeakDay: false,
-    };
-  }, [quote, basePrices, tier, settings]);
+  const bill = useMemo(
+    () =>
+      buildBookingBill({
+        quote,
+        tier,
+        basePrices,
+        settings,
+        includeSamagri,
+        includeAlankaram,
+        includeFood,
+        addonPrices,
+      }),
+    [quote, basePrices, tier, settings, includeSamagri, includeAlankaram, includeFood, addonPrices],
+  );
 
   const canProceed = () => {
     if (currentStep === 1) return !!tier && !!serviceMode;
@@ -611,20 +676,17 @@ export default function BookingWizard({
         return;
       }
 
-      // Resolve a pujari id only (no details shown to customer during booking).
-      const nearby = await api<any[]>(
-        `/pujaris/nearby?lat=${lat}&lng=${lng}&service_id=${serviceId}`,
-      ).catch(() => [] as any[]);
-      const pujariId = nearby[0]?.id || nearby[0]?.priestId;
-      if (!pujariId) {
-        toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
-        return;
-      }
-      const result = await api<{ id: string; booking_number: string; total_paise: number; meeting_url?: string }>("/bookings", {
+      // Pujari is assigned by admin after payment (service area already verified above).
+      const result = await api<{
+        id: string;
+        booking_number: string;
+        total_paise: number;
+        meeting_url?: string;
+        awaiting_pujari_assignment?: boolean;
+      }>("/bookings", {
         method: "POST",
         body: JSON.stringify({
           service_id: serviceId,
-          pujari_id: pujariId,
           package_type: tier,
           mode: serviceMode === "virtual" ? "virtual" : "in_person",
           booking_date: format(bookingDate, "yyyy-MM-dd"),
@@ -647,7 +709,11 @@ export default function BookingWizard({
               : undefined,
         }),
       });
-      toast.success("Booking confirmed and paid from wallet");
+      toast.success(
+        result.awaiting_pujari_assignment
+          ? "Booking confirmed — our team will assign a pujari and notify you."
+          : "Booking confirmed and paid from wallet",
+      );
       setLocation(`/booking/${result.id || result.booking_number}`);
     } catch (error: any) {
       if (isServiceAreaUnavailableError(error?.message)) {
@@ -1075,10 +1141,12 @@ export default function BookingWizard({
                   <span>Service ({tierDetails[tier].name})</span>
                   <span>₹{(bill.basePrice / 100).toLocaleString("en-IN")}</span>
                 </div>
-                {Number(bill.samagri || 0) > 0 && (
-                  <div className="flex justify-between">
+                {(includeSamagri || Number(bill.samagri || 0) > 0) && (
+                  <div className="flex justify-between gap-2">
                     <span>Samagri charge</span>
-                    <span>₹{(bill.samagri / 100).toLocaleString("en-IN")}</span>
+                    <span className="text-primary font-medium">
+                      {formatInclusiveLine(Number(bill.samagri || 0))}
+                    </span>
                   </div>
                 )}
                 {Number(bill.alankaram || 0) > 0 && (
@@ -1130,12 +1198,10 @@ export default function BookingWizard({
                 <span>₹{(bill.basePrice / 100).toLocaleString("en-IN")}</span>
               </div>
               {(includeSamagri || Number(bill.samagri || 0) > 0) && (
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-2">
                   <span>Samagri</span>
-                  <span>
-                    {Number(bill.samagri || samagriPrice || 0) > 0
-                      ? `₹${(Number(bill.samagri || samagriPrice) / 100).toLocaleString("en-IN")}`
-                      : "As priced"}
+                  <span className="text-primary font-medium">
+                    {formatInclusiveLine(Number(bill.samagri || 0))}
                   </span>
                 </div>
               )}
@@ -1165,6 +1231,10 @@ export default function BookingWizard({
                   <span>₹{(bill.peakFee / 100).toLocaleString("en-IN")}</span>
                 </div>
               )}
+              <div className="flex justify-between">
+                <span>{t("booking.subtotal")}</span>
+                <span>₹{(bill.subtotal / 100).toLocaleString("en-IN")}</span>
+              </div>
               <div className="flex justify-between">
                 <span>{t("booking.gst")} ({bill.gstPercent}%)</span>
                 <span>₹{(bill.gstAmount / 100).toLocaleString("en-IN")}</span>

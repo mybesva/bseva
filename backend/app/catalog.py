@@ -120,6 +120,12 @@ def enrich_service(
     if data.get("pricing_status") == "awaiting_pricing" or data.get("standard_price_paise") is None:
         priced = False
     data["bookable"] = bool(data.get("active")) and priced
+    try:
+        from app.service_addons import customer_samagri_price_paise
+
+        data["customer_samagri_price_paise"] = customer_samagri_price_paise(db, data)
+    except Exception:
+        data["customer_samagri_price_paise"] = int(data.get("samagri_price_paise") or 0)
     if not include_inactive_meta and not data.get("active"):
         # still return for featured home cards
         pass

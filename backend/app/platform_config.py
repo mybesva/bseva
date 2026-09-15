@@ -60,6 +60,8 @@ _DEFAULTS: dict[str, Any] = {
     "default_package_basic_paise": 249900,
     "default_package_standard_paise": 349900,
     "default_package_premium_paise": 449900,
+    # Optional Samagri kit on booking when a puja has no per-service price set (₹500 default)
+    "default_samagri_kit_price_paise": 50000,
     # Admin reassignment distance rings (km)
     "assign_distance_rings_km": [10, 15, 20, 30],
 }

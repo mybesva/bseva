@@ -88,6 +88,45 @@ def cancel_policy(hours: float, db: Session | None = None, actor: str = "custome
     }
 
 
+def pujari_blocked_on_slot(
+    db: Session,
+    pujari_id: str,
+    booking_date: date,
+    start: time,
+    end: time,
+) -> bool:
+    """True if pujari marked this date/slot unavailable (calendar block)."""
+    row = db.execute(
+        text(
+            """
+            SELECT 1 FROM pujari_blocked_dates
+            WHERE pujari_id = CAST(:pid AS uuid) AND blocked_date = :d
+              AND (
+                start_time IS NULL OR end_time IS NULL
+                OR (start_time < :et AND end_time > :st)
+              )
+            LIMIT 1
+            """
+        ),
+        {"pid": pujari_id, "d": booking_date, "st": start, "et": end},
+    ).first()
+    return row is not None
+
+
+def pujari_free_for_slot(
+    db: Session,
+    pujari_id: str,
+    booking_date: date,
+    start: time,
+    end: time,
+) -> bool:
+    if pujari_blocked_on_slot(db, pujari_id, booking_date, start, end):
+        return False
+    if slot_conflict(db, pujari_id, booking_date, start, end):
+        return False
+    return True
+
+
 def slot_conflict(db: Session, pujari_id: str, booking_date: date, start: time, end: time) -> bool:
     row = db.execute(
         text(

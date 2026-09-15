@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -299,21 +299,54 @@ def service_availability(
     return {"service_available": bool(available)}
 
 
+def _parse_booking_time(value: str | None) -> time | None:
+    if not value or not str(value).strip():
+        return None
+    raw = str(value).strip()
+    for fmt in ("%H:%M:%S", "%H:%M"):
+        try:
+            return datetime.strptime(raw, fmt).time()
+        except ValueError:
+            continue
+    return None
+
+
 @router.get("/pujaris/nearby")
 def nearby(
     lat: float = Query(...),
     lng: float = Query(...),
     service_id: str | None = None,
+    booking_date: date | None = None,
+    start_time: str | None = None,
     db: Session = Depends(get_db),
     user=Depends(require_roles("customer", "admin")),
 ):
+    from app.domain import pujari_free_for_slot
+
     required = 1
+    duration_minutes = 90
     if service_id:
-        row = db.execute(text("SELECT required_level FROM services WHERE id = CAST(:id AS uuid)"), {"id": service_id}).first()
-        if not row:
+        svc = db.execute(
+            text("SELECT required_level, duration_minutes FROM services WHERE id = CAST(:id AS uuid)"),
+            {"id": service_id},
+        ).first()
+        if not svc:
             raise HTTPException(404, "Service not found")
-        required = int(row[0])
-    return nearby_pujaris(db, lat, lng, required)
+        required = int(svc[0])
+        duration_minutes = int(svc[1] or 90)
+
+    pujaris = nearby_pujaris(db, lat, lng, required)
+    start_t = _parse_booking_time(start_time)
+    if not booking_date or not start_t:
+        return pujaris
+
+    end_t = (datetime.combine(booking_date, start_t) + timedelta(minutes=duration_minutes)).time()
+    available = []
+    for p in pujaris:
+        pid = p.get("id")
+        if pid and pujari_free_for_slot(db, str(pid), booking_date, start_t, end_t):
+            available.append(p)
+    return available
 
 
 @router.get("/pujaris/previous")
@@ -384,48 +417,58 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             msg = f"This puja must be booked at least {lead_hours} hours in advance"
         raise HTTPException(400, msg)
 
-    pujari = db.execute(
-        text(
-            """
-            SELECT u.id, u.blocked, p.approved_level, p.verification_status, p.available
-            FROM users u JOIN pujari_profiles p ON p.user_id = u.id
-            WHERE u.id = CAST(:id AS uuid)
-            """
-        ),
-        {"id": str(body.pujari_id)},
-    ).mappings().first()
-    if not pujari or pujari["blocked"] or pujari["verification_status"] != "approved" or not pujari["available"]:
-        raise HTTPException(400, "This pujari is not available")
-    if not pujari_covers_location(
-        db, str(body.pujari_id), float(body.latitude), float(body.longitude), SERVICE_RADIUS_KM
-    ):
-        raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
-    blocked = db.execute(
-        text(
-            """
-            SELECT 1 FROM pujari_blocked_dates
-            WHERE pujari_id = CAST(:pid AS uuid) AND blocked_date = :d
-              AND (
-                start_time IS NULL OR end_time IS NULL
-                OR (start_time < :et AND end_time > :st)
-              )
-            """
-        ),
-        {"pid": str(body.pujari_id), "d": body.booking_date, "st": body.start_time, "et": body.start_time},
-    ).first()
-    if blocked:
-        raise HTTPException(400, "This pujari is not available on the selected date")
-    if not pujari["approved_level"] or int(pujari["approved_level"]) < int(svc["required_level"]):
-        raise HTTPException(400, "Pujari is not eligible for this service")
+    duration = int(svc["duration_minutes"] or 90)
+    start = body.start_time
+    end = (datetime.combine(body.booking_date, start) + timedelta(minutes=duration)).time()
+
     if body.mode == "virtual" and not svc["virtual_available"]:
         raise HTTPException(400, "This service is not available as a virtual puja")
+
+    has_pujari = body.pujari_id is not None
+    pujari = None
+    if has_pujari:
+        pujari = db.execute(
+            text(
+                """
+                SELECT u.id, u.blocked, p.approved_level, p.verification_status, p.available
+                FROM users u JOIN pujari_profiles p ON p.user_id = u.id
+                WHERE u.id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": str(body.pujari_id)},
+        ).mappings().first()
+        if not pujari or pujari["blocked"] or pujari["verification_status"] != "approved" or not pujari["available"]:
+            raise HTTPException(400, "This pujari is not available")
+        if not pujari_covers_location(
+            db, str(body.pujari_id), float(body.latitude), float(body.longitude), SERVICE_RADIUS_KM
+        ):
+            raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
+
+        from app.domain import pujari_blocked_on_slot
+
+        if pujari_blocked_on_slot(db, str(body.pujari_id), body.booking_date, start, end):
+            raise HTTPException(400, "This pujari is not available on the selected date")
+        if not pujari["approved_level"] or int(pujari["approved_level"]) < int(svc["required_level"]):
+            raise HTTPException(400, "Pujari is not eligible for this service")
+        if slot_conflict(db, str(body.pujari_id), body.booking_date, start, end):
+            raise HTTPException(409, "This time slot is already booked")
+    else:
+        if body.mode == "virtual":
+            raise HTTPException(
+                400,
+                "Virtual puja needs a pujari first. Book in-person; our team will assign a pujari and set up the meeting.",
+            )
+        if body.recurring and body.recurring != "none":
+            raise HTTPException(400, "Recurring series can be set up after admin assigns a pujari.")
 
     from app.service_categories import service_is_death_related
 
     if body.include_samagri:
-        if not svc.get("samagri_available"):
+        from app.service_addons import customer_samagri_price_paise
+
+        if svc.get("samagri_available") is False:
             raise HTTPException(400, "Samagri is not offered for this service")
-        if int(svc.get("samagri_price_paise") or 0) <= 0:
+        if customer_samagri_price_paise(db, dict(svc)) <= 0:
             raise HTTPException(400, "Samagri is not priced for this service")
 
     if body.include_alankaram:
@@ -435,12 +478,6 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             raise HTTPException(400, "Alankaram is not offered for this service")
         if int(svc.get("alankaram_price_paise") or 0) <= 0:
             raise HTTPException(400, "Alankaram is not priced for this service")
-
-    duration = int(svc["duration_minutes"] or 90)
-    start = body.start_time
-    end = (datetime.combine(body.booking_date, start) + timedelta(minutes=duration)).time()
-    if slot_conflict(db, str(body.pujari_id), body.booking_date, start, end):
-        raise HTTPException(409, "This time slot is already booked")
 
     from app.pricing import compute_quote
 
@@ -470,7 +507,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     number = f"BSV-{datetime.utcnow().strftime('%y%m%d')}-{booking_id[:8].upper()}"
     meeting = None
     public_invite = None
-    # New bookings await pujari acceptance; customer pays now; pujari settlement after completion
+    initial_status = "pending_acceptance" if has_pujari else "pending"
+    needs_reassignment = not has_pujari
+    # Paid bookings: with pujari → await accept; without → admin assigns pujari first
     db.execute(
         text(
             """
@@ -481,12 +520,14 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
               base_price_paise, peak_fee_paise, platform_fee_paise, pujari_payable_paise,
               gst_percent, gst_amount_paise, total_paise, terms_accepted, special_instructions,
               main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
-              pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested
+              pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested,
+              needs_reassignment
             ) VALUES (
               CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
-              :d, :st, :et, :loc, :addr, :lat, :lng, :meet, 'pending_acceptance', 'paid', 'pending', 'not_applicable',
+              :d, :st, :et, :loc, :addr, :lat, :lng, :meet, :bstatus, 'paid', 'pending', 'not_applicable',
               :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, :instr,
-              :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq
+              :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq,
+              :needs_reassign
             )
             """
         ),
@@ -494,7 +535,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             "id": booking_id,
             "num": number,
             "cid": user["id"],
-            "pid": str(body.pujari_id),
+            "pid": str(body.pujari_id) if body.pujari_id else None,
+            "bstatus": initial_status,
+            "needs_reassign": needs_reassignment,
             "sid": str(body.service_id),
             "pkg": body.package_type,
             "mode": body.mode,
@@ -535,7 +578,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     )
 
     # Virtual puja: create Google Meet (when configured) + public invite token
-    if body.mode == "virtual":
+    if body.mode == "virtual" and has_pujari:
         try:
             from app.meetings.service import ensure_virtual_meeting
 
@@ -629,7 +672,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     # Recurring series (first occurrence is this booking; more dates recorded for follow-up)
     series_id = None
     next_dates: list[str] = []
-    if body.recurring and body.recurring != "none":
+    if has_pujari and body.recurring and body.recurring != "none":
         import json
         from datetime import timedelta as td
         from app.pricing import compute_quote
@@ -795,16 +838,25 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         except Exception:
             pass
     try:
-        from app.routers.notifications import create_notification
+        from app.routers.notifications import create_notification, notify_ops_staff
 
-        create_notification(
-            db,
-            user_id=str(body.pujari_id),
-            title="New booking request",
-            body=f"New booking {number} awaiting your acceptance.",
-            category="booking",
-            link="/pujari",
-        )
+        if has_pujari:
+            create_notification(
+                db,
+                user_id=str(body.pujari_id),
+                title="New booking request",
+                body=f"New booking {number} awaiting your acceptance.",
+                category="booking",
+                link="/pujari",
+            )
+        else:
+            notify_ops_staff(
+                db,
+                title="Booking needs pujari assignment",
+                body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date}. Assign a pujari in Admin → Bookings.",
+                category="booking",
+                link="/admin/bookings?status=needs_reassignment",
+            )
     except Exception:
         pass
     db.commit()
@@ -814,7 +866,8 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         "total_paise": total,
         "meeting_url": meeting,
         "public_invite_url": public_invite,
-        "status": "pending_acceptance",
+        "status": initial_status,
+        "awaiting_pujari_assignment": not has_pujari,
         "recurring_series_id": series_id,
         "recurring_next_dates": next_dates,
         "breakdown": {

@@ -104,6 +104,12 @@ const PLATFORM_KEYS: { key: string; label: string; type: SettingType; superOnly?
     hint: "Suggested ₹4,499 = 449900.",
   },
   {
+    key: "default_samagri_kit_price_paise",
+    label: "Default Samagri kit price (paise)",
+    type: "number",
+    hint: "Used when a puja has Samagri enabled but no per-puja price (₹500 = 50000). Override per puja in Services → Samagri.",
+  },
+  {
     key: "assign_distance_rings_km",
     label: "Reassignment distance rings (km)",
     type: "json",

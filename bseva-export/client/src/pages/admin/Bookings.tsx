@@ -87,7 +87,9 @@ export default function Bookings() {
   const filtered = useMemo(() => {
     if (statusFilter === "all") return rows;
     if (statusFilter === "needs_reassignment") {
-      return rows.filter((b) => b.needs_reassignment || b.status === "rejected");
+      return rows.filter(
+        (b) => b.needs_reassignment || b.status === "rejected" || !b.pujari_id,
+      );
     }
     return rows.filter((b) => b.status === statusFilter);
   }, [rows, statusFilter]);
@@ -220,7 +222,8 @@ export default function Bookings() {
         </TableHeader>
         <TableBody>
           {filtered.map((b) => {
-            const needsAttention = Boolean(b.needs_reassignment) || b.status === "rejected";
+            const needsAttention =
+              Boolean(b.needs_reassignment) || b.status === "rejected" || !b.pujari_id;
             const canPenalise = ["confirmed", "in_progress", "completed", "cancelled"].includes(b.status);
             return (
               <TableRow key={b.id} className={cn(needsAttention &&"bg-red-50 hover:bg-red-100/70")}>
@@ -235,7 +238,10 @@ export default function Bookings() {
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
                     <Badge variant={statusVariant(b.status)}>{b.status.replace(/_/g, " ")}</Badge>
-                    {b.needs_reassignment && (
+                    {!b.pujari_id && (
+                      <span className="text-xs font-medium text-red-700">Assign pujari</span>
+                    )}
+                    {b.pujari_id && b.needs_reassignment && (
                       <span className="text-xs font-medium text-red-700">Needs reassignment</span>
                     )}
                     {b.rejection_reason && (
@@ -250,7 +256,7 @@ export default function Bookings() {
                       variant={needsAttention ? "default" : "outline"}
                       onClick={() => void openReassign(b)}
                     >
-                      Reassign
+                      {!b.pujari_id ? "Assign pujari" : "Reassign"}
                     </Button>
                     {canPenalise && b.pujari_id && (
                       <Button

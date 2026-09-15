@@ -1411,10 +1411,63 @@ export default function ServicesAdmin() {
               </TabsContent>
 
               <TabsContent value="samagri" className="space-y-4 mt-4">
+            <div className="rounded-lg border border-orange-200 bg-orange-50/40 p-3 space-y-3">
+              <p className="text-sm font-medium">Customer booking — Samagri kit</p>
+              <p className="text-xs text-muted-foreground">
+                Controls the optional Samagri checkbox on booking. Leave price at ₹0 to use the platform default
+                (Admin → Settings → Default Samagri kit price).
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="samagri-tab-enabled">Offer on booking</Label>
+                  <Select
+                    value={form.samagri_available ? "yes" : "no"}
+                    onValueChange={(v) => {
+                      const on = v === "yes";
+                      setForm({
+                        ...form,
+                        samagri_available: on,
+                        samagri_provider: on ? "reimbursable" : form.samagri_provider,
+                      });
+                    }}
+                  >
+                    <SelectTrigger id="samagri-tab-enabled">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="samagri-tab-price">Kit price for this puja (₹)</Label>
+                  <Input
+                    id="samagri-tab-price"
+                    type="number"
+                    min={0}
+                    step={1}
+                    disabled={!form.samagri_available}
+                    value={Number(form.samagri_price_paise) / 100}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        samagri_price_paise: Math.round(Number(e.target.value || 0) * 100),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              {form.samagri_available && Number(form.samagri_price_paise) <= 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Using platform default until you enter a price here and save.
+                </p>
+              )}
+            </div>
             {editId ? (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label>Preparation / Samagri for this service</Label>
+                  <Label>Preparation / Samagri items for this service</Label>
                   <Select
                     value={form.samagri_review_status}
                     onValueChange={(v) =>
@@ -1578,6 +1631,7 @@ export default function ServicesAdmin() {
               <TableHead>Categories</TableHead>
               <TableHead>Standard</TableHead>
               <TableHead>Samagri</TableHead>
+              <TableHead>Samagri ₹</TableHead>
               <TableHead>Alankaram</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Featured</TableHead>
@@ -1632,6 +1686,17 @@ export default function ServicesAdmin() {
                       >
                         {s.samagri_available ? "Yes" : "No"}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm whitespace-nowrap">
+                      {!s.samagri_available ? (
+                        "—"
+                      ) : Number(s.samagri_price_paise) > 0 ? (
+                        rupees(Number(s.samagri_price_paise))
+                      ) : (
+                        <span className="text-muted-foreground" title="Platform default on booking">
+                          Default
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge
