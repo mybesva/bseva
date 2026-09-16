@@ -484,6 +484,33 @@ def available_pujaris_for_booking(
     }
 
 
+@router.post("/bookings/{booking_id}/refresh-offers")
+def refresh_booking_offers(
+    booking_id: str,
+    admin=Depends(require_permission("manage_bookings")),
+    db: Session = Depends(get_db),
+):
+    """Re-send nearby pujari invites for a paid, unassigned in-person booking."""
+    b = db.execute(
+        text("SELECT id, pujari_id, payment_status, mode FROM bookings WHERE id = CAST(:id AS uuid)"),
+        {"id": booking_id},
+    ).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if b.get("pujari_id"):
+        raise HTTPException(400, "Booking already has a pujari — use Reassign instead")
+    if str(b.get("payment_status") or "").lower() != "paid":
+        raise HTTPException(400, "Booking is not paid")
+    if str(b.get("mode") or "") == "virtual":
+        raise HTTPException(400, "Virtual puja uses manual assign, not broadcast offers")
+    from app.booking_offers import create_offers_for_booking
+
+    invited = create_offers_for_booking(db, booking_id)
+    write_audit(db, str(admin["id"]), "refresh_booking_offers", "booking", booking_id)
+    db.commit()
+    return {"ok": True, "offers_sent": len(invited), "pujari_ids": invited}
+
+
 @router.post("/bookings/{booking_id}/assign")
 def assign_pujari_to_booking(
     booking_id: str,

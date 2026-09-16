@@ -1048,6 +1048,17 @@ def cron_booking_windows(request: Request, db: Session = Depends(get_db)):
     return {"ok": True, **run_booking_window_jobs()}
 
 
+@router.get("/ops/cron/booking-offers")
+def cron_booking_offers(request: Request, db: Session = Depends(get_db)):
+    """Re-invite eligible pujaris for paid, unassigned in-person bookings (e.g. after schedule changes)."""
+    _require_cron_auth(request)
+    from app.booking_offers import refresh_offers_for_open_bookings
+
+    invited = refresh_offers_for_open_bookings(db)
+    db.commit()
+    return {"ok": True, "job": "booking_offers", "newly_invited_pujari_ids": len(invited)}
+
+
 def _require_cron_auth(request: Request) -> None:
     """Vercel Cron sends Authorization: Bearer $CRON_SECRET automatically when CRON_SECRET is set."""
     import os

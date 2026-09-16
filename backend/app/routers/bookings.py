@@ -577,6 +577,62 @@ def create_booking(
         raise HTTPException(400, "This service is not available as a virtual puja")
 
     has_pujari = body.pujari_id is not None
+    if not has_pujari:
+        if body.recurring and body.recurring != "none":
+            raise HTTPException(400, "Recurring series can be set up after admin assigns a pujari.")
+        if body.mode != "virtual":
+            from app.booking_offers import eligible_pujaris_for_booking
+
+            if body.latitude is None or body.longitude is None:
+                raise HTTPException(400, "Booking location coordinates are required")
+            slot_candidates = eligible_pujaris_for_booking(
+                db,
+                latitude=float(body.latitude),
+                longitude=float(body.longitude),
+                required_level=int(svc["required_level"] or 1),
+                booking_date=ist_date,
+                start_time=start,
+                end_time=end,
+                service_id=str(body.service_id),
+            )
+            if not slot_candidates:
+                raise HTTPException(
+                    400,
+                    "No pujari is available for this date and time near your location. "
+                    "Choose another slot, or ask admin to assign a pujari.",
+                )
+            candidate_ids = {pid for pid, _dist in slot_candidates}
+            preferred_id: str | None = None
+            prev_rows = db.execute(
+                text(
+                    """
+                    SELECT b.pujari_id::text
+                    FROM bookings b
+                    WHERE b.customer_id = CAST(:cid AS uuid)
+                      AND b.pujari_id IS NOT NULL
+                    ORDER BY b.created_at DESC
+                    """
+                ),
+                {"cid": user["id"]},
+            ).all()
+            for row in prev_rows:
+                pid = str(row[0])
+                if pid in candidate_ids:
+                    preferred_id = pid
+                    break
+            if preferred_id is None and len(slot_candidates) == 1:
+                preferred_id = slot_candidates[0][0]
+            if preferred_id:
+                body.pujari_id = UUID(preferred_id)
+                has_pujari = True
+                logger.info(
+                    "booking_auto_assigned_pujari customer=%s pujari=%s service=%s date=%s",
+                    user["id"],
+                    preferred_id,
+                    body.service_id,
+                    ist_date,
+                )
+
     pujari = None
     if has_pujari:
         pujari = db.execute(
@@ -613,9 +669,6 @@ def create_booking(
             db, str(body.pujari_id), ist_date, start, end, str(body.service_id)
         ):
             raise HTTPException(409, "This time slot is already booked")
-    else:
-        if body.recurring and body.recurring != "none":
-            raise HTTPException(400, "Recurring series can be set up after admin assigns a pujari.")
 
     from app.service_categories import service_is_death_related
 
@@ -1017,9 +1070,26 @@ def create_booking(
             apply_referral_code(db, str(user["id"]), body.referral_code)
         except Exception:
             pass
+    is_virtual = str(getattr(body, "mode", "") or "") == "virtual"
     invited_pujari_ids: list[str] = []
+    # Offers must not depend on notification code (a push/in-app failure used to skip invites entirely).
+    if not has_pujari and not is_virtual:
+        try:
+            from app.booking_offers import create_offers_for_booking
+
+            invited_pujari_ids = create_offers_for_booking(db, booking_id)
+            if not invited_pujari_ids:
+                logger.warning(
+                    "booking_no_pujari_offers booking=%s number=%s date=%s",
+                    booking_id,
+                    number,
+                    body.booking_date,
+                )
+        except Exception:
+            logger.exception("create_offers_failed booking=%s", booking_id)
+
     try:
-        from app.booking_offers import create_offers_for_booking, notify_pujaris_new_offer
+        from app.booking_offers import notify_pujaris_new_offer
         from app.routers.notifications import create_notification, notify_ops_staff
 
         create_notification(
@@ -1033,7 +1103,6 @@ def create_booking(
             message_key="bookingCreated",
             message_vars={"number": number},
         )
-        is_virtual = str(getattr(body, "mode", "") or "") == "virtual"
         notify_ops_staff(
             db,
             title="New virtual puja booking" if is_virtual else "New booking",
@@ -1054,7 +1123,6 @@ def create_booking(
                 message_vars={"number": number},
             )
         elif not is_virtual:
-            invited_pujari_ids = create_offers_for_booking(db, booking_id)
             if invited_pujari_ids:
                 notify_pujaris_new_offer(
                     db,
@@ -1080,7 +1148,7 @@ def create_booking(
                 link="/admin/virtual-puja",
             )
     except Exception:
-        pass
+        logger.exception("booking_post_create_notifications_failed booking=%s", booking_id)
     db.commit()
     background_tasks.add_task(_post_create_booking_side_effects, booking_id, email_payload)
     return {
