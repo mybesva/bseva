@@ -139,16 +139,18 @@ python seed.py
 - Not a long-running uvicorn process
 - Mobile can later point `EXPO_PUBLIC_API_URL` at this same origin or a future AWS URL
 
-## Cron jobs (Hobby vs Pro)
+## Cron jobs (external — not in `vercel.json`)
 
-**Vercel Hobby** only allows cron schedules that run **at most once per day**. Deploys fail if `vercel.json` uses `* * * * *` or `*/10 * * * *`.
+**Vercel crons are disabled** in this project (Hobby deploy limits + bundle constraints). Use **[cron-job.org](https://cron-job.org)** (or GitHub Actions) to `GET` these URLs on your production origin with header:
 
-This repo uses one daily job: `/api/v1/ops/cron/daily` at `0 2 * * *` UTC (~07:30 IST).
+`Authorization: Bearer <CRON_SECRET>`
 
-Set **`CRON_SECRET`** in Vercel env; Vercel sends `Authorization: Bearer <CRON_SECRET>` on cron invocations.
+Set **`CRON_SECRET`** in Vercel → Environment Variables (see `scripts/sync_vercel_cron_secret.sh`).
 
-For **minute-level** OTP / puja lifecycle (previous `puja-lifecycle` every minute), either upgrade to **Pro** and restore finer schedules in `vercel.json`, or ping these URLs from an external scheduler (e.g. cron-job.org) with the same bearer token:
+| Schedule (suggested) | URL |
+|---------------------|-----|
+| Every 1–5 min | `/api/v1/ops/cron/puja-lifecycle` |
+| Every 10 min | `/api/v1/ops/cron/booking-reminders` |
+| Every 10 min | `/api/v1/ops/cron/booking-offers` |
 
-- `/api/v1/ops/cron/puja-lifecycle`
-- `/api/v1/ops/cron/booking-reminders`
-- `/api/v1/ops/cron/booking-offers`
+**Pujari booking invites** are created when the customer pays (`POST /bookings`), not by cron. Cron only **retries** open unassigned bookings.

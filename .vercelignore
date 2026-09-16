@@ -1,0 +1,27 @@
+# Mobile apps — large node_modules; not deployed to Vercel
+apps
+mobile
+
+# JS deps (installed during build / not bundled into Python function)
+**/node_modules
+**/.pnpm-store
+**/.expo
+
+# Python dev artifacts
+backend/.venv
+backend/tests
+backend/secrets
+backend/scripts
+**/__pycache__
+**/*.pyc
+.pytest_cache
+
+# Monorepo packages (web build uses bseva-export only)
+packages
+
+# IDE / git / docs
+.git
+.cursor
+docs
+*.tar.gz
+*.zip
