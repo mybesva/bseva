@@ -41,6 +41,8 @@ import {
   UserCheck
 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { parseCsv, rowsToObjects } from "@/lib/csv";
 
 type EntityType = "customers" | "pujaris" | "temples" | "services" | "samagri";
 
@@ -72,8 +74,8 @@ const entityConfig: Record<EntityType, {
   temples: {
     label: "Temples",
     icon: Building2,
-    fields: ["name", "description", "address", "city", "state", "pincode", "deity", "timings", "contactPhone", "contactEmail"],
-    sampleData: "name,description,address,city,state,pincode,deity,timings,contactPhone,contactEmail\nShri Ganesh Temple,Ancient temple dedicated to Lord Ganesha,MG Road,Bangalore,Karnataka,560001,Lord Ganesha,6:00 AM - 9:00 PM,9876543214,temple@email.com"
+    fields: ["name", "pujari_name", "deity", "address", "city", "state", "pincode", "timings", "contact_phone", "contact_email", "description"],
+    sampleData: "name,pujari_name,deity,address,city,state,pincode,timings,contact_phone,contact_email,description\nShri Ganesh Temple,Pandit Sharma,Lord Ganesha,MG Road,Hyderabad,Telangana,500001,6:00 AM - 9:00 PM,9876543210,temple@email.com,Ancient temple dedicated to Lord Ganesha"
   },
   services: {
     label: "Services/Pujas",
@@ -116,18 +118,9 @@ export default function BulkImportPage() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
-      
-      const data = lines.slice(1).map((line, index) => {
-        const values = line.split(',').map(v => v.trim());
-        const row: any = { _rowIndex: index + 2 };
-        headers.forEach((header, i) => {
-          row[header] = values[i] || '';
-        });
-        return row;
-      });
-
+      const table = parseCsv(text);
+      const headers = table[0] || [];
+      const data = rowsToObjects(table).map((row, index) => ({ ...row, _rowIndex: index + 2 }));
       setPreviewData(data);
       validateData(data, headers);
     };
@@ -136,7 +129,7 @@ export default function BulkImportPage() {
 
   const validateData = (data: any[], headers: string[]) => {
     const errors: Array<{ row: number; field: string; message: string }> = [];
-    const requiredFields = config.fields.slice(0, 3); // First 3 fields are usually required
+    const requiredFields = selectedEntity === "temples" ? ["name", "city"] : config.fields.slice(0, 3);
 
     // Check headers
     const missingHeaders = requiredFields.filter(f => !headers.includes(f));
@@ -158,7 +151,8 @@ export default function BulkImportPage() {
       }
 
       // Phone validation
-      if (row.phone && !/^\d{10}$/.test(row.phone.replace(/\D/g, ''))) {
+      const phone = row.phone || row.contact_phone || row.contactPhone;
+      if (phone && !/^\d{10}$/.test(String(phone).replace(/\D/g, '').slice(-10))) {
         errors.push({ row: index + 2, field: 'phone', message: 'Phone must be 10 digits' });
       }
 
@@ -187,38 +181,42 @@ export default function BulkImportPage() {
       toast.error("Please fix validation errors before importing");
       return;
     }
-
-    setIsImporting(true);
-    setImportProgress(0);
-
-    // Simulate import process
-    const total = previewData.length;
-    let success = 0;
-    let failed = 0;
-    const errors: Array<{ row: number; field: string; message: string }> = [];
-
-    for (let i = 0; i < total; i++) {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Simulate 95% success rate
-      if (Math.random() > 0.05) {
-        success++;
-      } else {
-        failed++;
-        errors.push({ row: i + 2, field: 'general', message: 'Database error' });
-      }
-
-      setImportProgress(Math.round(((i + 1) / total) * 100));
+    if (selectedEntity !== "temples") {
+      toast.error("Bulk import is currently enabled for Temples. Other entities still use the existing admin screens.");
+      return;
     }
 
-    setImportResult({ total, success, failed, errors });
-    setIsImporting(false);
-    
-    if (failed === 0) {
-      toast.success(`Successfully imported ${success} ${config.label.toLowerCase()}`);
-    } else {
-      toast.warning(`Imported ${success} of ${total} records. ${failed} failed.`);
+    setIsImporting(true);
+    setImportProgress(30);
+    try {
+      const items = previewData.map(({ _rowIndex, ...rest }) => rest);
+      const result = await api<{
+        total: number;
+        success: number;
+        created: number;
+        updated: number;
+        failed: number;
+        errors: Array<{ row: number; field: string; message: string }>;
+      }>("/admin/temples/bulk", {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      });
+      setImportProgress(100);
+      setImportResult({
+        total: result.total,
+        success: result.success,
+        failed: result.failed,
+        errors: result.errors || [],
+      });
+      if (result.failed === 0) {
+        toast.success(`Imported ${result.success} temples (${result.created} new, ${result.updated} updated)`);
+      } else {
+        toast.warning(`Imported ${result.success} of ${result.total}. ${result.failed} failed.`);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Import failed");
+    } finally {
+      setIsImporting(false);
     }
   };
 

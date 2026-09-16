@@ -7,6 +7,7 @@ import {
   Church,
   Sparkles,
   Calendar,
+  Video,
   CreditCard,
   Star,
   Bell,
@@ -39,6 +40,7 @@ import { api } from "@/lib/api";
 import { adminBasePath, adminPath } from "@/const";
 import ThemeToggle from "@/components/ThemeToggle";
 import BSevaLogo from "@/components/BSevaLogo";
+import NotificationBell, { CountBadge } from "@/components/NotificationBell";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -52,6 +54,25 @@ interface NavItem {
   permissions?: string[];
   superOnly?: boolean;
 }
+
+type NavBadges = {
+  bookings?: number;
+  virtual_puja?: number;
+  pujaris?: number;
+  payments?: number;
+  settlements?: number;
+  support?: number;
+  tooltips?: Record<string, string>;
+};
+
+/** Sidebar items that show ACTION-REQUIRED counts (never unread/visit counts). */
+const NAV_BADGE_KEYS: Record<string, keyof Omit<NavBadges, "tooltips">> = {
+  "/pujaris": "pujaris",
+  "/bookings": "bookings",
+  "/virtual-puja": "virtual_puja",
+  "/settlements": "settlements",
+  "/payments": "payments",
+};
 
 const navigation: NavItem[] = [
   { nameKey: "admin.dashboard", suffix: "", icon: LayoutDashboard },
@@ -72,6 +93,7 @@ const navigation: NavItem[] = [
   },
   { nameKey: "admin.samagri", suffix: "/samagri", icon: Flower2, permissions: ["manage_samagri"] },
   { nameKey: "admin.bookings", suffix: "/bookings", icon: Calendar, permissions: ["view_bookings", "manage_bookings"] },
+  { nameKey: "admin.virtualPuja", suffix: "/virtual-puja", icon: Video, permissions: ["view_bookings", "manage_bookings"] },
   {
     nameKey: "admin.settlements",
     suffix: "/settlements",
@@ -105,7 +127,7 @@ const navigation: NavItem[] = [
 ];
 
 const adminSidebarActionClass =
-  "flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50";
+  "flex w-full min-w-0 items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50";
 
 function AdminShell({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
@@ -113,6 +135,7 @@ function AdminShell({ children }: AdminLayoutProps) {
   const { user, logout, loading } = useAuth();
   const { lang, setLang, labels, t } = useI18n();
   const [permissions, setPermissions] = useState<string[] | null>(null);
+  const [badges, setBadges] = useState<NavBadges>({});
   const isSuper = user?.role === "super_admin";
   const opsBase = adminBasePath();
 
@@ -122,6 +145,22 @@ function AdminShell({ children }: AdminLayoutProps) {
       .then((r) => setPermissions(r.permissions || []))
       .catch(() => setPermissions([]));
   }, [user]);
+
+  useEffect(() => {
+    if (!user || (user.role !== "admin" && user.role !== "super_admin")) return;
+    const loadBadges = () => {
+      api<NavBadges>("/notifications/nav-badges")
+        .then(setBadges)
+        .catch(() => setBadges({}));
+    };
+    loadBadges();
+    const id = window.setInterval(loadBadges, 30000);
+    window.addEventListener("bseva-notifications-changed", loadBadges);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("bseva-notifications-changed", loadBadges);
+    };
+  }, [user, location]);
 
   const filteredNavigation = useMemo(() => {
     return navigation.filter((item) => {
@@ -182,19 +221,23 @@ function AdminShell({ children }: AdminLayoutProps) {
           <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-1">
               {filteredNavigation.map((item) => {
                 const href = adminPath(item.suffix);
+                const badgeKey = NAV_BADGE_KEYS[item.suffix];
                 return (
                   <Link key={item.suffix || "dashboard"} href={href}>
                     <a
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-w-0",
                         navActive(item.suffix)
                           ? "bg-primary/15 text-primary font-semibold"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       )}
                       onClick={() => setSidebarOpen(false)}
                     >
-                      <item.icon size={18} />
-                      {t(item.nameKey)}
+                      <item.icon size={18} className="shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{t(item.nameKey)}</span>
+                      {badgeKey ? (
+                        <CountBadge count={badges[badgeKey]} tooltip={badges.tooltips?.[badgeKey]} />
+                      ) : null}
                     </a>
                   </Link>
                 );
@@ -208,8 +251,9 @@ function AdminShell({ children }: AdminLayoutProps) {
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <LifeBuoy size={18} />
-                    Support
+                    <LifeBuoy size={18} className="shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">Support</span>
+                    <CountBadge count={badges.support} tooltip={badges.tooltips?.support} />
                   </a>
                 </Link>
               )}
@@ -272,7 +316,7 @@ function AdminShell({ children }: AdminLayoutProps) {
       </aside>
 
       <div className="lg:pl-64">
-        <header className="h-16 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-3">
+        <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur border-b border-border flex items-center px-4 lg:px-6 gap-3">
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </Button>
@@ -284,6 +328,7 @@ function AdminShell({ children }: AdminLayoutProps) {
               })()}
             </h1>
           </div>
+          <NotificationBell inboxHref={adminPath("/notifications")} />
           <ThemeToggle className="shrink-0" />
           <Button
             variant="outline"

@@ -178,6 +178,8 @@ def compute_quote(
     include_samagri: bool | None = None,
     include_alankaram: bool | None = None,
     include_food: bool | None = None,
+    mode: str | None = None,
+    country: str | None = None,
 ) -> dict:
     # Prefer explicit main_puja component when set; else basic/standard/premium package price.
 
@@ -190,25 +192,36 @@ def compute_quote(
                 pass
         return 0
 
-    main = service.get("main_puja_price_paise")
-    if main is not None:
-        base = int(main)
-        std = _pkg("standard_price_paise")
-        if package_type == "premium":
-            prem = _pkg("premium_price_paise")
-            if prem > std:
-                base = base + (prem - std)
-        elif package_type == "basic":
-            basic = _pkg("basic_price_paise")
-            if basic > 0 and std > basic:
-                base = max(0, base - (std - basic))
+    virtual_tier = None
+    if str(mode or "") == "virtual":
+        from app.timezones import is_india_country
+
+        virtual_tier = "domestic" if is_india_country(country) else "international"
+        key = "virtual_domestic_price_paise" if virtual_tier == "domestic" else "virtual_international_price_paise"
+        virt = _pkg(key) or _pkg("online_nri_price_paise")
+        if virt <= 0:
+            raise ValueError("Virtual Puja price is not configured for this service")
+        base = virt
     else:
-        if package_type == "premium":
-            base = _pkg("premium_price_paise")
-        elif package_type == "basic":
-            base = _pkg("basic_price_paise") or _pkg("standard_price_paise")
+        main = service.get("main_puja_price_paise")
+        if main is not None:
+            base = int(main)
+            std = _pkg("standard_price_paise")
+            if package_type == "premium":
+                prem = _pkg("premium_price_paise")
+                if prem > std:
+                    base = base + (prem - std)
+            elif package_type == "basic":
+                basic = _pkg("basic_price_paise")
+                if basic > 0 and std > basic:
+                    base = max(0, base - (std - basic))
         else:
-            base = _pkg("standard_price_paise")
+            if package_type == "premium":
+                base = _pkg("premium_price_paise")
+            elif package_type == "basic":
+                base = _pkg("basic_price_paise") or _pkg("standard_price_paise")
+            else:
+                base = _pkg("standard_price_paise")
 
     def _comp(key: str, default: int = 0) -> int:
         try:
@@ -307,6 +320,8 @@ def compute_quote(
         "gstAmount": gst_amt,
         "totalAmount": total,
         "currency": pricing.get("currency") or "INR",
+        "mode": str(mode or ""),
+        "virtualPriceTier": virtual_tier,
     }
 
 

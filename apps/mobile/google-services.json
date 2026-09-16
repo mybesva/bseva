@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "8471741307",
+    "project_id": "b-seva-61ab7",
+    "storage_bucket": "b-seva-61ab7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:8471741307:android:2da167525007c24be673de",
+        "android_client_info": {
+          "package_name": "com.bseva.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPBbLJWGSh171Cr9PPkz1vmZQhVLIaM_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

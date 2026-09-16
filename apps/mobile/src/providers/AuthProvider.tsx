@@ -4,6 +4,7 @@ import { TOKEN_KEY } from "@bseva/tokens";
 import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiClient } from "@/services/api";
+import { unregisterPushToken } from "@/services/push";
 
 type AuthValue = {
   user: AuthUser | null;
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const logout = useCallback(async () => {
+    await unregisterPushToken();
     await apiClient.logout();
     setUser(null);
   }, []);

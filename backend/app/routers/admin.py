@@ -28,6 +28,28 @@ from app.storage import content_type_for, delete_object, file_response, upload_b
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+
+def _apply_virtual_prices(db: Session, service_id: str, body: ServiceIn) -> None:
+    domestic = body.virtual_domestic_price_paise
+    international = body.virtual_international_price_paise
+    nri = body.online_nri_price_paise
+    if domestic is None:
+        domestic = nri
+    if international is None:
+        international = nri
+    db.execute(
+        text(
+            """
+            UPDATE services SET
+              virtual_domestic_price_paise = :d,
+              virtual_international_price_paise = :i,
+              online_nri_price_paise = :nri
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"d": domestic, "i": international, "nri": international if international is not None else nri, "id": service_id},
+    )
+
 _CUSTOMER_LOCATION_SQL = """
 COALESCE(
   NULLIF(TRIM(cp.location_label), ''),
@@ -744,6 +766,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             "pst": pst,
         },
     )
+    _apply_virtual_prices(db, sid, body)
     # Seed EN translation row for customer preferred-language lookups
     db.execute(
         text(
@@ -891,6 +914,7 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
     )
     if result.rowcount == 0:
         raise HTTPException(404, "Service not found")
+    _apply_virtual_prices(db, service_id, body)
     _sync_service_categories(db, service_id, body.category_slugs)
     # Upsert EN translation defaults from primary fields
     try:

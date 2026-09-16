@@ -8,11 +8,17 @@ import {
 } from "@/components/ui/select";
 
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
+export const BOOKING_PAGE_SIZES = [50, 100, 150, 200] as const;
 export const DEFAULT_PAGE_SIZE = 10;
+export const DEFAULT_BOOKING_PAGE_SIZE = 50;
 
-export function parsePageSize(raw: string | null | undefined) {
+export function parsePageSize(
+  raw: string | null | undefined,
+  allowed: readonly number[] = PAGE_SIZES,
+  fallback = DEFAULT_PAGE_SIZE,
+) {
   const n = Number(raw);
-  return (PAGE_SIZES as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
+  return allowed.includes(n) ? n : fallback;
 }
 
 export function parsePage(raw: string | null | undefined) {
@@ -27,6 +33,8 @@ export function AdminPager({
   pageSize,
   onPage,
   onPageSize,
+  sizes = PAGE_SIZES,
+  sizeLabel = "names / page",
 }: {
   page: number;
   pages: number;
@@ -34,6 +42,8 @@ export function AdminPager({
   pageSize: number;
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
+  sizes?: readonly number[];
+  sizeLabel?: string;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -41,13 +51,13 @@ export function AdminPager({
         Page {page}/{pages} · {total}
       </span>
       <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-        <SelectTrigger className="h-8 w-[148px] text-xs" aria-label="Names per page">
+        <SelectTrigger className="h-8 w-[148px] text-xs" aria-label="Rows per page">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {PAGE_SIZES.map((n) => (
+          {sizes.map((n) => (
             <SelectItem key={n} value={String(n)}>
-              {n} names / page
+              {n} {sizeLabel}
             </SelectItem>
           ))}
         </SelectContent>

@@ -18,7 +18,7 @@ export const registerSchema = z
     password: z.string().min(8, "At least 8 characters"),
     confirmPassword: z.string().min(1, "Confirm your password"),
     otp: z.string().min(4, "Enter the verification code").max(8),
-    language: z.enum(["en", "hi", "te"]).default("en"),
+    language: z.enum(["en", "hi", "te", "mr", "ta", "kn"]).default("en"),
     calendar_preference: z.enum(["north", "south", "lunar"]).default("north"),
     requested_level: z.number().int().min(1).max(4).optional(),
     registration_consent: z.boolean(),

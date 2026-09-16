@@ -7,10 +7,14 @@
 .env.test.local
 .env.production.local
 
-# Google service-account keys
+# Google / Firebase service-account keys (never commit Admin SDK JSON)
 backend/secrets/
+secrets/
 **/service-account*.json
 **/*-meet-service.json
+**/*firebase-adminsdk*.json
+**/firebase-adminsdk*.json
+**/firebase-service-account*.json
 
 # Python
 backend/.venv/

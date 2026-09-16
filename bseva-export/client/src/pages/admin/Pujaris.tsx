@@ -35,6 +35,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { nextSort, personLocation, SortableHead, StaticHead, type SortDir } from "@/components/SortableHead";
 import { AdminPager, DEFAULT_PAGE_SIZE, parsePage, parsePageSize } from "@/components/AdminPager";
+import { notifyBadgesChanged } from "@/components/NotificationBell";
 
 const emptyForm = { name: "", email: "", phone: "", password: "", requested_level: 2, location: "" };
 
@@ -108,6 +109,7 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
         body: JSON.stringify({ verification_status: status, approved_level: level }),
       });
       toast.success(formatVerificationStatus(status));
+      notifyBadgesChanged();
       await onChanged();
     } catch (e: any) {
       toast.error(e.message);

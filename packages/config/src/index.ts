@@ -39,8 +39,59 @@ export const ACTIVE_BOOKING_STATUSES = [
 
 export const DONE_BOOKING_STATUSES = ["completed", "cancelled", "rejected", "refunded"] as const;
 
-export const LANGS = ["en", "hi", "te"] as const;
+export const LANGS = ["en", "hi", "te", "mr", "ta", "kn"] as const;
 export type LangCode = (typeof LANGS)[number];
+
+export const PREFERRED_LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "te", label: "Telugu" },
+  { code: "hi", label: "Hindi" },
+  { code: "mr", label: "Marathi" },
+  { code: "ta", label: "Tamil" },
+  { code: "kn", label: "Kannada" },
+] as const;
+
+export function isLangCode(code: string | null | undefined): code is LangCode {
+  return !!code && (LANGS as readonly string[]).includes(code);
+}
+
+export const ADMIN_PERMISSIONS = [
+  "view_customers",
+  "create_customers",
+  "edit_customers",
+  "view_pujaris",
+  "create_pujaris",
+  "edit_pujaris",
+  "approve_pujaris",
+  "verify_pujaris",
+  "block_pujaris",
+  "view_bookings",
+  "manage_bookings",
+  "view_payments",
+  "manage_settlements",
+  "manage_services",
+  "manage_samagri",
+  "manage_promotions",
+  "manage_config",
+  "manage_admins",
+  "manage_support",
+  "manage_legal",
+  "view_reports",
+] as const;
+export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
+
+export function hasAdminPermission(
+  role: string | null | undefined,
+  permissions: string[] | null | undefined,
+  needed?: string | string[]
+): boolean {
+  if (role === "super_admin") return true;
+  if (role !== "admin") return false;
+  if (!needed || (Array.isArray(needed) && needed.length === 0)) return true;
+  const have = permissions || [];
+  const list = Array.isArray(needed) ? needed : [needed];
+  return list.some((p) => have.includes(p));
+}
 
 export const CALENDARS = ["north", "south", "lunar"] as const;
 export type CalendarPref = (typeof CALENDARS)[number];
@@ -79,6 +130,60 @@ export function dashboardPath(role: string): "/customer" | "/pujari" | "admin-we
   if (isAdminRole(role)) return "admin-web";
   if (isPujariRole(role)) return "/pujari";
   return "/customer";
+}
+
+/** Map backend/web notification `link` values onto React Native routes. */
+export function mapNotificationLinkToMobile(
+  link: string | null | undefined,
+  app: "consumer" | "admin"
+): string {
+  const raw = (link || "/").trim() || "/";
+  let path = raw;
+  try {
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      const u = new URL(raw);
+      path = `${u.pathname}${u.search}`;
+    }
+  } catch {
+    path = raw.startsWith("/") ? raw : `/${raw}`;
+  }
+  if (!path.startsWith("/")) path = `/${path}`;
+
+  const [pathname, search = ""] = path.split("?");
+  const qs = search ? `?${search}` : "";
+
+  if (app === "admin") {
+    const rest = pathname === "/admin" || pathname.startsWith("/admin/")
+      ? pathname.slice("/admin".length) || "/"
+      : pathname.startsWith("/bseva-ops")
+        ? pathname.replace(/^\/bseva-ops[^/]*/, "") || "/"
+        : pathname;
+    if (rest === "/" || rest === "") return "/(app)";
+    const pujariDetail = rest.match(/^\/pujaris\/([^/]+)$/);
+    if (pujariDetail) return `/pujari/${pujariDetail[1]}${qs}`;
+    if (rest === "/pujaris") return "/(app)/pujaris";
+    const bookingDetail = rest.match(/^\/bookings\/([^/]+)$/);
+    if (bookingDetail) return `/booking/${bookingDetail[1]}${qs}`;
+    if (rest === "/bookings") return "/(app)/bookings";
+    return rest.startsWith("/") ? `${rest}${qs}` : `/${rest}${qs}`;
+  }
+
+  const booking = pathname.match(/^\/booking\/([^/]+)$/);
+  if (booking) return `/customer/booking/${booking[1]}${qs}`;
+  if (pathname === "/my-bookings" || pathname === "/customer/bookings") return `/customer/bookings${qs}`;
+  if (pathname === "/customer/notifications") return `/customer/notifications${qs}`;
+  if (pathname === "/pujari/notifications") return `/pujari/notifications${qs}`;
+  if (pathname === "/pujari/bookings") return `/pujari/jobs${qs}`;
+  const join = pathname.match(/^\/join\/([^/]+)$/);
+  if (join) return `/join/${join[1]}${qs}`;
+  const service = pathname.match(/^\/services\/([^/]+)$/);
+  if (service) return `/service/${service[1]}${qs}`;
+  const book = pathname.match(/^\/book\/([^/]+)$/);
+  if (book) return `/customer/book/${book[1]}${qs}`;
+  if (pathname === "/astrology") return `/customer/astrology${qs}`;
+  if (pathname === "/customer" || pathname.startsWith("/customer/")) return `${pathname}${qs}`;
+  if (pathname === "/pujari" || pathname.startsWith("/pujari/")) return `${pathname}${qs}`;
+  return `${pathname}${qs}`;
 }
 
 export function formatApiError(detail: unknown, fallback = "Request failed"): string {

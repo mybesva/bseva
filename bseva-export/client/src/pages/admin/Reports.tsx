@@ -42,52 +42,10 @@ import {
 } from "lucide-react";
 import { api, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
+import { downloadReportWorkbook, type ReportWorkbookData as Report } from "@/lib/reportWorkbook";
 import { toast } from "sonner";
 
 type RangeKey = "today" | "last_7_days" | "last_30_days" | "last_90_days" | "this_year" | "custom";
-
-type Report = {
-  period: { from: string; to: string; label: string; range: string };
-  overview: {
-    revenue_paise: number;
-    revenue_change_pct: number | null;
-    bookings: number;
-    bookings_change_pct: number | null;
-    cancelled: number;
-    completed: number;
-    confirmed: number;
-    active_pujaris: number;
-    serving_pujaris: number;
-    avg_rating: number | null;
-    repeat_rate: number;
-    trend: { date: string; total: number; cancelled: number; completed: number; confirmed: number }[];
-    payment_methods: { method: string; amount_paise: number; count: number; percentage: number }[];
-    top_services: { id: string; name: string; bookings: number; revenue: number; avg_duration: number }[];
-  };
-  pujaris: { id: string; name: string; bookings: number; rating: number; earnings: number; availability_status: string }[];
-  customers: {
-    total_customers: number;
-    new_registrations: number;
-    total_bookings: number;
-    booked_customers: number;
-    repeat_rate: number;
-    avg_rating: number | null;
-    top: { id: string; name: string; email: string; bookings: number; spent_paise: number }[];
-  };
-  temples: { name: string; city: string; bookings: number; revenue: number }[];
-  modes: { name: string; bookings: number; revenue: number }[];
-  services: { id: string; name: string; bookings: number; revenue: number; avg_duration: number }[];
-  samagri: { id: string; name: string; unit: string; consumed: number; bookings: number; status: string }[];
-  samagri_bookings: number;
-  payments: {
-    gmv: number;
-    commissions: number;
-    priest_payouts: number;
-    pending_settlements: number;
-    refunds: number;
-    by_method: { method: string; amount_paise: number; count: number; percentage: number }[];
-  };
-};
 
 function Change({ value }: { value: number | null | undefined }) {
   if (value == null || Number.isNaN(value)) return null;
@@ -113,23 +71,6 @@ function isoDate(d: Date) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function csvEscape(v: unknown) {
-  const s = String(v ?? "");
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
-function downloadCsv(filename: string, rows: (string | number)[][]) {
-  const body = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
-  const blob = new Blob([body], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 export default function Reports() {
@@ -172,59 +113,13 @@ export default function Reports() {
     void generate({ range });
   }, [range]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function exportTab() {
+  function exportWorkbook() {
     if (!report) {
       toast.error("Generate a report first");
       return;
     }
-    const p = report.period;
-    const stamp = `${p.from}_to_${p.to}`;
-    if (activeTab === "pujari") {
-      downloadCsv(`BSeva_pujari_${stamp}.csv`, [
-        ["Pujari", "Bookings", "Rating", "Earnings (₹)", "Status"],
-        ...report.pujaris.map((r) => [r.name, r.bookings, r.rating, Number(r.earnings || 0) / 100, r.availability_status]),
-      ]);
-    } else if (activeTab === "customer") {
-      downloadCsv(`BSeva_customers_${stamp}.csv`, [
-        ["Customer", "Email", "Bookings", "Spent (₹)"],
-        ...report.customers.top.map((r) => [r.name, r.email, r.bookings, Number(r.spent_paise || 0) / 100]),
-      ]);
-    } else if (activeTab === "temple") {
-      downloadCsv(`BSeva_locations_${stamp}.csv`, [
-        ["Location", "Mode", "Bookings", "Revenue (₹)"],
-        ...report.temples.map((r) => [r.name, r.city, r.bookings, Number(r.revenue || 0) / 100]),
-      ]);
-    } else if (activeTab === "service") {
-      downloadCsv(`BSeva_services_${stamp}.csv`, [
-        ["Service", "Bookings", "Revenue (₹)", "Duration (min)"],
-        ...report.services.map((r) => [r.name, r.bookings, Number(r.revenue || 0) / 100, r.avg_duration]),
-      ]);
-    } else if (activeTab === "samagri") {
-      downloadCsv(`BSeva_samagri_${stamp}.csv`, [
-        ["Item", "Used on bookings", "Line items", "Unit", "Status"],
-        ...report.samagri.map((r) => [r.name, r.bookings, r.consumed, r.unit, r.status]),
-      ]);
-    } else if (activeTab === "payment") {
-      downloadCsv(`BSeva_payments_${stamp}.csv`, [
-        ["Method", "Count", "Amount (₹)", "Share %"],
-        ...report.payments.by_method.map((r) => [r.method, r.count, Number(r.amount_paise || 0) / 100, r.percentage]),
-      ]);
-    } else {
-      downloadCsv(`BSeva_overview_${stamp}.csv`, [
-        ["Metric", "Value"],
-        ["Period", p.label],
-        ["Revenue (₹)", Number(report.overview.revenue_paise || 0) / 100],
-        ["Bookings", report.overview.bookings],
-        ["Completed", report.overview.completed],
-        ["Cancelled", report.overview.cancelled],
-        ["Active pujaris", report.overview.active_pujaris],
-        ["Repeat rate %", report.overview.repeat_rate],
-        [],
-        ["Date", "Bookings", "Completed", "Cancelled"],
-        ...report.overview.trend.map((d) => [d.date, d.total, d.completed, d.cancelled]),
-      ]);
-    }
-    toast.success("Report exported");
+    downloadReportWorkbook(report);
+    toast.success("Excel report downloaded (Dashboard + every tab)");
   }
 
   const ov = report?.overview;
@@ -295,9 +190,9 @@ export default function Reports() {
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileBarChart className="w-4 h-4 mr-2" />}
               Generate report
             </Button>
-            <Button variant="outline" onClick={exportTab} disabled={!report || loading}>
+            <Button variant="outline" onClick={exportWorkbook} disabled={!report || loading}>
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export Excel
             </Button>
           </div>
         </div>

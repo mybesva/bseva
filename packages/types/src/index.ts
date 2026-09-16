@@ -28,6 +28,7 @@ export type CatalogService = {
   required_level?: number;
   standard_price_paise?: number | null;
   premium_price_paise?: number | null;
+  basic_price_paise?: number | null;
   duration_minutes?: number;
   virtual_available?: boolean;
   bookable?: boolean;
@@ -182,3 +183,39 @@ export type LegalPolicy = {
 };
 
 export type PublicConfig = Record<string, unknown>;
+
+export type AppNotification = {
+  id: string;
+  title: string;
+  body?: string | null;
+  category?: string | null;
+  link?: string | null;
+  is_read?: boolean;
+  created_at?: string;
+  [key: string]: unknown;
+};
+
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  limit?: number;
+  page_size?: number;
+  pages: number;
+};
+
+export type AdminPermissions = {
+  role: string;
+  permissions: string[];
+};
+
+export type NavBadges = {
+  bookings?: number;
+  virtual_puja?: number;
+  pujaris?: number;
+  payments?: number;
+  settlements?: number;
+  support?: number;
+  tooltips?: Record<string, string>;
+  [key: string]: unknown;
+};

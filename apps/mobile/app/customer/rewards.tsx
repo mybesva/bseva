@@ -1,7 +1,7 @@
 import * as Clipboard from "expo-clipboard";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Alert, ScrollView } from "react-native";
+import { Alert, ScrollView, Share } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -38,6 +38,13 @@ export default function RewardsScreen() {
               if (!mine) return;
               await Clipboard.setStringAsync(mine);
               Alert.alert("Copied", mine);
+            }}
+          />
+          <PrimaryButton
+            title="Share"
+            onPress={async () => {
+              if (!mine) return;
+              await Share.share({ message: `Join BSeva with my referral code ${mine}` });
             }}
           />
         </Card>

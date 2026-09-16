@@ -638,7 +638,27 @@ def assign_pujari_to_booking(
                 body=f"Booking {b.get('booking_number') or booking_id[:8]} was assigned to you.",
                 category="booking",
                 link="/pujari",
+                extra_data={"booking_id": booking_id},
             )
+            create_notification(
+                db,
+                user_id=str(b["customer_id"]),
+                title="Pujari assigned",
+                body=f"A pujari has been assigned to booking {b.get('booking_number') or booking_id[:8]}.",
+                category="booking",
+                link="/customer/bookings",
+                extra_data={"booking_id": booking_id},
+            )
+            if prev and str(prev) != str(body.pujari_id):
+                create_notification(
+                    db,
+                    user_id=str(prev),
+                    title="Booking changed",
+                    body=f"Booking {b.get('booking_number') or booking_id[:8]} was reassigned.",
+                    category="booking",
+                    link="/pujari/bookings",
+                    extra_data={"booking_id": booking_id},
+                )
             db.commit()
     except Exception:
         pass

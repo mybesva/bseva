@@ -435,9 +435,6 @@ def admin_config(user=Depends(require_permission("manage_config")), db: Session 
 
 @router.put("/admin/config")
 def update_config(body: SettingIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
-    # Virtual Puja is a Super Admin feature flag only
-    if body.key == "virtual_puja_enabled" and user.get("role") != "super_admin":
-        raise HTTPException(403, "Only Super Admin can enable or disable Virtual Puja")
     set_setting(db, body.key, body.value, str(user["id"]))
     write_audit(db, str(user["id"]), "config_update", "platform_settings", body.key)
     db.commit()

@@ -75,8 +75,11 @@ function BookingCard({
           </span>
           <span className="flex items-center gap-1">
             <Clock size={14} />
-            {booking.start_time || "—"}
+            {booking.schedule_display?.customer_local || booking.start_time || "—"}
           </span>
+          {booking.mode === "virtual" && booking.schedule_display?.india_local ? (
+            <span className="text-xs">India: {booking.schedule_display.india_local}</span>
+          ) : null}
           <span className="flex items-center gap-1">
             <MapPin size={14} />
             {booking.location_label || booking.mode || "—"}

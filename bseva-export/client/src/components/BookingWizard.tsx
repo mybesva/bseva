@@ -90,6 +90,42 @@ interface BookingWizardProps {
   bookingLeadHours?: number;
   /** Per-package pujari team size (from admin catalog). */
   pujariTeam?: ServicePujariConfig | null;
+  /** When in-person service is unavailable in the customer's area, allow Virtual Puja only. */
+  forceVirtualOnly?: boolean;
+  /** Per-service catalog flag. */
+  serviceVirtualAvailable?: boolean;
+}
+
+const VIRTUAL_COUNTRIES: { id: string; label: string }[] = [
+  { id: "IN", label: "India" },
+  { id: "AE", label: "United Arab Emirates" },
+  { id: "US", label: "United States" },
+  { id: "GB", label: "United Kingdom" },
+  { id: "SG", label: "Singapore" },
+  { id: "MY", label: "Malaysia" },
+  { id: "AU", label: "Australia" },
+  { id: "CA", label: "Canada" },
+  { id: "NZ", label: "New Zealand" },
+  { id: "DE", label: "Germany" },
+  { id: "FR", label: "France" },
+  { id: "NL", label: "Netherlands" },
+  { id: "IE", label: "Ireland" },
+  { id: "JP", label: "Japan" },
+  { id: "TH", label: "Thailand" },
+  { id: "SA", label: "Saudi Arabia" },
+  { id: "QA", label: "Qatar" },
+  { id: "KW", label: "Kuwait" },
+  { id: "OM", label: "Oman" },
+  { id: "BH", label: "Bahrain" },
+  { id: "ZA", label: "South Africa" },
+];
+
+function browserTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+  } catch {
+    return "Asia/Kolkata";
+  }
 }
 
 type BookingStep = 1 | 2 | 3 | 4;
@@ -98,7 +134,17 @@ type ServiceMode = "physical" | "virtual";
 type CalendarType = "north" | "south" | "lunar";
 
 type Step2FieldErrors = Partial<
-  Record<"bookingDate" | "address" | "doorNumber" | "locationText" | "mapLocation" | "city", string>
+  Record<
+    | "bookingDate"
+    | "address"
+    | "doorNumber"
+    | "locationText"
+    | "mapLocation"
+    | "city"
+    | "customerTimezone"
+    | "customerCountry",
+    string
+  >
 >;
 
 function RequiredMark() {
@@ -192,6 +238,8 @@ export default function BookingWizard({
   addonPrices,
   bookingLeadHours = 48,
   pujariTeam,
+  forceVirtualOnly = false,
+  serviceVirtualAvailable = true,
 }: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
@@ -242,6 +290,10 @@ export default function BookingWizard({
   const [extraDate, setExtraDate] = useState<Date | undefined>();
   const [extraDatePickerOpen, setExtraDatePickerOpen] = useState(false);
   const [step2Errors, setStep2Errors] = useState<Step2FieldErrors>({});
+  const [customerTimezone, setCustomerTimezone] = useState(browserTimezone);
+  const [customerCountry, setCustomerCountry] = useState("IN");
+  const [vpnBlocked, setVpnBlocked] = useState(false);
+  const [vpnMessage, setVpnMessage] = useState("");
   const { config: publicConfig } = usePublicConfig();
   const settings = {
     virtualPujaEnabled: publicConfig.virtual_puja_enabled ? "true" : "false",
@@ -359,10 +411,22 @@ export default function BookingWizard({
       include_food: includeFood ? "true" : "false",
     });
     if (bookingDate) qs.set("booking_date", format(bookingDate, "yyyy-MM-dd"));
+    qs.set("mode", serviceMode === "virtual" ? "virtual" : "in_person");
+    if (customerCountry) qs.set("country", customerCountry);
     api(`/quote?${qs}`)
       .then(setQuote)
       .catch(() => setQuote(null));
-  }, [bookingDate, serviceId, tier, city, includeSamagri, includeAlankaram, includeFood]);
+  }, [
+    bookingDate,
+    serviceId,
+    tier,
+    city,
+    includeSamagri,
+    includeAlankaram,
+    includeFood,
+    serviceMode,
+    customerCountry,
+  ]);
 
   const samagriListPaise = Number(addonPrices?.samagri ?? quote?.samagriListPrice ?? 0);
   const samagriPrice = samagriListPaise;
@@ -656,13 +720,60 @@ export default function BookingWizard({
     { number: 4, title: t("booking.payment") },
   ];
 
-  const virtualEnabled = settings?.virtualPujaEnabled !== "false";
+  const virtualEnabled =
+    settings?.virtualPujaEnabled !== "false" && serviceVirtualAvailable !== false;
 
   useEffect(() => {
     if (!virtualEnabled && serviceMode === "virtual") {
       setServiceMode("physical");
     }
   }, [virtualEnabled, serviceMode]);
+
+  useEffect(() => {
+    if (forceVirtualOnly && virtualEnabled) {
+      setServiceMode("virtual");
+    }
+  }, [forceVirtualOnly, virtualEnabled]);
+
+  useEffect(() => {
+    if (serviceMode !== "virtual") {
+      setVpnBlocked(false);
+      setVpnMessage("");
+      return;
+    }
+    let cancelled = false;
+    api<{ ok: boolean; blocked?: boolean; message?: string; country_code?: string }>(
+      "/bookings/virtual-precheck",
+      { method: "POST", body: "{}" },
+    )
+      .then((r) => {
+        if (cancelled) return;
+        if (r.blocked) {
+          setVpnBlocked(true);
+          setVpnMessage(
+            r.message ||
+              "Virtual Puja cannot be booked while a VPN or proxy is active. Please turn off your VPN/proxy and try again.",
+          );
+        } else {
+          setVpnBlocked(false);
+          setVpnMessage("");
+          if (r.country_code) {
+            const code = String(r.country_code).toUpperCase();
+            setCustomerCountry((prev) =>
+              VIRTUAL_COUNTRIES.some((c) => c.id === code) ? code : prev,
+            );
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setVpnBlocked(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceMode]);
 
   const bill = useMemo(
     () =>
@@ -703,15 +814,20 @@ export default function BookingWizard({
         err.bookingDate = bookingLeadHint(bookingLeadHours);
       }
     }
-    if (!city.trim()) err.city = "Enter city";
-    if (addressMode === "saved") {
-      const addr = composedServiceAddress();
-      if (!savedAddress || !addr.trim()) err.address = "Choose a saved address or add a new one";
-      if (lat == null || lng == null) err.mapLocation = "Address must include map location";
+    if (serviceMode === "virtual") {
+      if (!customerTimezone.trim()) err.customerTimezone = "Select your timezone";
+      if (!customerCountry.trim()) err.customerCountry = "Select your country";
     } else {
-      if (!doorNumber.trim()) err.doorNumber = "Enter door / flat / house number";
-      if (!locationText.trim()) err.locationText = "Enter street / area";
-      if (lat == null || lng == null) err.mapLocation = "Set the pin on the map";
+      if (!city.trim()) err.city = "Enter city";
+      if (addressMode === "saved") {
+        const addr = composedServiceAddress();
+        if (!savedAddress || !addr.trim()) err.address = "Choose a saved address or add a new one";
+        if (lat == null || lng == null) err.mapLocation = "Address must include map location";
+      } else {
+        if (!doorNumber.trim()) err.doorNumber = "Enter door / flat / house number";
+        if (!locationText.trim()) err.locationText = "Enter street / area";
+        if (lat == null || lng == null) err.mapLocation = "Set the pin on the map";
+      }
     }
     setStep2Errors(err);
     if (Object.keys(err).length > 0) {
@@ -727,6 +843,10 @@ export default function BookingWizard({
         toast.error("Please select a package and puja mode.");
         return;
       }
+      if (serviceMode === "virtual" && vpnBlocked) {
+        toast.error(vpnMessage || "Please turn off your VPN/proxy to continue with Virtual Puja.");
+        return;
+      }
     }
     if (currentStep === 2 && !validateStep2()) return;
     setStep2Errors({});
@@ -740,14 +860,35 @@ export default function BookingWizard({
       toast.error("Please select a booking date");
       return;
     }
-    if (lat == null || lng == null) {
+    const isVirtual = serviceMode === "virtual";
+    if (isVirtual && vpnBlocked) {
+      toast.error(vpnMessage || "Please turn off your VPN/proxy to continue with Virtual Puja.");
+      return;
+    }
+    if (!isVirtual && (lat == null || lng == null)) {
       toast.error("Please set the service location on the map before booking");
       return;
     }
     try {
       setSubmitting(true);
 
-      if (addressMode === "new") {
+      if (isVirtual) {
+        const pre = await api<{ ok: boolean; blocked?: boolean; message?: string }>(
+          "/bookings/virtual-precheck",
+          { method: "POST", body: "{}" },
+        );
+        if (pre.blocked) {
+          setVpnBlocked(true);
+          setVpnMessage(pre.message || "");
+          toast.error(
+            pre.message ||
+              "Virtual Puja cannot be booked while a VPN or proxy is active. Please turn off your VPN/proxy and try again.",
+          );
+          return;
+        }
+      }
+
+      if (!isVirtual && addressMode === "new") {
         const profile = await api<any>("/customer/profile").catch(() => ({}));
         const label = `${composedServiceAddress()}${city ? `, ${city}` : ""}`;
         await api("/customer/profile", {
@@ -768,13 +909,18 @@ export default function BookingWizard({
         await refreshServiceAvailability({ lat, lng });
       }
 
-      const avail = await api<{ service_available: boolean }>(
-        `/service-availability?lat=${lat}&lng=${lng}`
-      );
-      if (!avail.service_available) {
-        toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
-        return;
+      if (!isVirtual) {
+        const avail = await api<{ service_available: boolean }>(
+          `/service-availability?lat=${lat}&lng=${lng}`
+        );
+        if (!avail.service_available) {
+          toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
+          return;
+        }
       }
+
+      const countryLabel = VIRTUAL_COUNTRIES.find((c) => c.id === customerCountry)?.label || customerCountry;
+      const virtualLocation = `Virtual Puja · ${countryLabel} · ${customerTimezone}`;
 
       // Pujari is assigned by admin after payment (service area already verified above).
       const result = await api<{
@@ -788,14 +934,16 @@ export default function BookingWizard({
         body: JSON.stringify({
           service_id: serviceId,
           package_type: tier,
-          mode: serviceMode === "virtual" ? "virtual" : "in_person",
+          mode: isVirtual ? "virtual" : "in_person",
           booking_date: format(bookingDate, "yyyy-MM-dd"),
           start_time: bookingTime.length === 5 ? `${bookingTime}:00` : bookingTime,
-          location_label: `${composedServiceAddress()}${city ? `, ${city}` : ""}`,
-          address: composedServiceAddress(),
-          city,
-          latitude: lat,
-          longitude: lng,
+          location_label: isVirtual
+            ? virtualLocation
+            : `${composedServiceAddress()}${city ? `, ${city}` : ""}`,
+          address: isVirtual ? virtualLocation : composedServiceAddress(),
+          city: isVirtual ? countryLabel : city,
+          latitude: isVirtual ? undefined : lat,
+          longitude: isVirtual ? undefined : lng,
           special_instructions: specialInstructions || undefined,
           terms_accepted: true,
           include_samagri: includeSamagri,
@@ -807,6 +955,8 @@ export default function BookingWizard({
             recurring === "selected_dates"
               ? selectedDates.map((d) => format(d, "yyyy-MM-dd"))
               : undefined,
+          customer_timezone: isVirtual ? customerTimezone : undefined,
+          customer_country: isVirtual ? customerCountry : undefined,
         }),
       });
       toast.success(
@@ -895,6 +1045,7 @@ export default function BookingWizard({
               onValueChange={(v) => setServiceMode(v as ServiceMode)}
               className="grid grid-cols-1 md:grid-cols-2 gap-3"
             >
+              {!forceVirtualOnly && (
               <Label
                 className={cn(
                   "flex flex-col items-start w-full cursor-pointer rounded-lg p-4 transition-colors",
@@ -907,6 +1058,7 @@ export default function BookingWizard({
                 <span className="font-medium">{t("booking.physical")}</span>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">At customer location</p>
               </Label>
+              )}
               {virtualEnabled && (
                 <Label
                   className={cn(
@@ -922,6 +1074,14 @@ export default function BookingWizard({
                 </Label>
               )}
             </RadioGroup>
+            {serviceMode === "virtual" && vpnBlocked && (
+              <p className="text-sm text-destructive">{vpnMessage}</p>
+            )}
+            {forceVirtualOnly && virtualEnabled && (
+              <p className="text-xs text-muted-foreground">
+                In-person booking is not available at your location. You can continue with Virtual Puja.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -1013,6 +1173,79 @@ export default function BookingWizard({
             )}
           </div>
 
+          {serviceMode === "virtual" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>
+                  Your country
+                  <RequiredMark />
+                </Label>
+                <Select
+                  value={customerCountry}
+                  onValueChange={(v) => {
+                    setCustomerCountry(v);
+                    setStep2Errors((e) => ({ ...e, customerCountry: undefined }));
+                  }}
+                >
+                  <SelectTrigger className={cn(fieldHasError(step2Errors, "customerCountry") && inputErrorClass)}>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VIRTUAL_COUNTRIES.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {step2Errors.customerCountry && (
+                  <p className="text-xs text-destructive">{step2Errors.customerCountry}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  Your timezone
+                  <RequiredMark />
+                </Label>
+                <Select
+                  value={customerTimezone}
+                  onValueChange={(v) => {
+                    setCustomerTimezone(v);
+                    setStep2Errors((e) => ({ ...e, customerTimezone: undefined }));
+                  }}
+                >
+                  <SelectTrigger className={cn(fieldHasError(step2Errors, "customerTimezone") && inputErrorClass)}>
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(publicConfig.customer_timezones?.length
+                      ? publicConfig.customer_timezones
+                      : [{ id: "Asia/Kolkata", label: "India (IST)" }]
+                    )
+                      .concat(
+                        customerTimezone &&
+                          !(publicConfig.customer_timezones || []).some((z) => z.id === customerTimezone)
+                          ? [{ id: customerTimezone, label: customerTimezone }]
+                          : [],
+                      )
+                      .map((z) => (
+                        <SelectItem key={z.id} value={z.id}>
+                          {z.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {step2Errors.customerTimezone && (
+                  <p className="text-xs text-destructive">{step2Errors.customerTimezone}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Choose the date and time in your local timezone. Pujari availability is checked in India time (IST).
+                </p>
+              </div>
+            </div>
+          )}
+
+          {serviceMode !== "virtual" && (
           <div className="space-y-3">
             <Label>
               Address
@@ -1183,6 +1416,13 @@ export default function BookingWizard({
               {step2Errors.city && <p className="text-xs text-destructive">{step2Errors.city}</p>}
             </div>
           </div>
+          )}
+          {serviceMode === "virtual" && (
+            <p className="text-sm text-muted-foreground rounded-md border p-3">
+              Date and time above are in your timezone ({customerTimezone}). Pujari assignment uses the matching
+              India Standard Time so there are no scheduling conflicts.
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("booking.recurring")}</Label>
@@ -1295,11 +1535,19 @@ export default function BookingWizard({
               <p>
                 <span className="text-muted-foreground">Date: </span>
                 {bookingDate ? formatDisplayDate(bookingDate) : "—"} {bookingTime}
+                {serviceMode === "virtual" ? ` (${customerTimezone})` : ""}
               </p>
+              {serviceMode === "virtual" ? (
+                <p>
+                  <span className="text-muted-foreground">Country / timezone: </span>
+                  {(VIRTUAL_COUNTRIES.find((c) => c.id === customerCountry)?.label || customerCountry)} · {customerTimezone}
+                </p>
+              ) : (
               <p>
                 <span className="text-muted-foreground">Location: </span>
                 {composedServiceAddress()}, {city}
               </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Pujari details will be shared closer to the puja (notification / Ongoing bookings).
               </p>
@@ -1404,6 +1652,7 @@ export default function BookingWizard({
           <Button
             className="bg-primary hover:bg-primary/90"
             onClick={handleNextStep}
+            disabled={currentStep === 1 && serviceMode === "virtual" && vpnBlocked}
           >
             {t("common.next")} <ChevronRight className="w-4 h-4 ml-1" />
           </Button>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +18,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
+import { notifyBadgesChanged } from "@/components/NotificationBell";
+import {
+  AdminPager,
+  BOOKING_PAGE_SIZES,
+  DEFAULT_BOOKING_PAGE_SIZE,
+  parsePage,
+  parsePageSize,
+} from "@/components/AdminPager";
 
 type AvailablePujari = {
   id: string;
@@ -70,6 +79,20 @@ function statusVariant(status: string) {
   return "default" as const;
 }
 
+function isoDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function last30Dates() {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 29);
+  return { from: isoDate(from), to: isoDate(to) };
+}
+
 export default function Bookings() {
   const [rows, setRows] = useState<any[]>([]);
   const [page, setPage] = useState(1);
@@ -84,19 +107,70 @@ export default function Bookings() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   const statusFilter = params.get("status") || "all";
+  const assignmentFilter = params.get("assignment") || "all";
+  const rangeFilter = params.get("range") || "all";
+  const dateFrom = params.get("from") || "";
+  const dateTo = params.get("to") || "";
+  const pageSize = parsePageSize(params.get("size"), BOOKING_PAGE_SIZES, DEFAULT_BOOKING_PAGE_SIZE);
+  const urlPage = parsePage(params.get("page"));
+  const [q, setQ] = useState(params.get("q") || "");
 
-  const filtered = useMemo(() => {
-    if (statusFilter === "all") return rows;
-    if (statusFilter === "needs_reassignment") {
-      return rows.filter(
-        (b) => b.needs_reassignment || b.status === "rejected" || !b.pujari_id,
-      );
+  function updateFilters(next: {
+    status?: string;
+    assignment?: string;
+    range?: string;
+    from?: string;
+    to?: string;
+    q?: string;
+    page?: number;
+    size?: number;
+  }) {
+    const sp = new URLSearchParams();
+    const st = next.status ?? statusFilter;
+    const assign = next.assignment ?? assignmentFilter;
+    const range = next.range ?? rangeFilter;
+    const from = next.from ?? dateFrom;
+    const to = next.to ?? dateTo;
+    const query = next.q !== undefined ? next.q : params.get("q") || "";
+    const size = next.size ?? pageSize;
+    const resetPage =
+      next.status !== undefined ||
+      next.assignment !== undefined ||
+      next.range !== undefined ||
+      next.from !== undefined ||
+      next.to !== undefined ||
+      next.q !== undefined ||
+      next.size !== undefined;
+    const p = next.page ?? (resetPage ? 1 : urlPage);
+    if (st && st !== "all") sp.set("status", st);
+    if (assign && assign !== "all") sp.set("assignment", assign);
+    if (range && range !== "all") sp.set("range", range);
+    if (range === "custom") {
+      if (from) sp.set("from", from);
+      if (to) sp.set("to", to);
     }
-    return rows.filter((b) => b.status === statusFilter);
-  }, [rows, statusFilter]);
+    if (query.trim()) sp.set("q", query.trim());
+    if (size !== DEFAULT_BOOKING_PAGE_SIZE) sp.set("size", String(size));
+    if (p > 1) sp.set("page", String(p));
+    const qs = sp.toString();
+    setLocation(adminPath(`/bookings${qs ? `?${qs}` : ""}`));
+  }
 
-  async function load(p = page) {
-    const res = await apiBookings(p, 50);
+  async function load(p = urlPage) {
+    const extra: Record<string, string> = { mode: "physical" };
+    if (statusFilter && statusFilter !== "all") extra.status = statusFilter;
+    if (assignmentFilter && assignmentFilter !== "all") extra.assignment = assignmentFilter;
+    const qParam = (params.get("q") || "").trim();
+    if (qParam) extra.q = qParam;
+    if (rangeFilter === "last_30") {
+      const { from, to } = last30Dates();
+      extra.date_from = from;
+      extra.date_to = to;
+    } else if (rangeFilter === "custom") {
+      if (dateFrom) extra.date_from = dateFrom;
+      if (dateTo) extra.date_to = dateTo;
+    }
+    const res = await apiBookings(p, pageSize, extra);
     setRows(res.items);
     setPage(res.page);
     setPages(res.pages);
@@ -104,13 +178,9 @@ export default function Bookings() {
   }
 
   useEffect(() => {
-    void load(1).catch((e) => toast.error(e.message));
-  }, []);
-
-  function setStatus(status: string) {
-    const qs = status === "all" ? "" : `?status=${encodeURIComponent(status)}`;
-    setLocation(adminPath(`/bookings${qs}`));
-  }
+    setQ(params.get("q") || "");
+    void load(urlPage).catch((e) => toast.error(e.message));
+  }, [search]);
 
   async function openReassign(booking: any) {
     setReassignFor(booking);
@@ -136,6 +206,7 @@ export default function Bookings() {
       toast.success("Pujari assigned — waiting for them to accept");
       setReassignFor(null);
       setAvailable(null);
+      notifyBadgesChanged();
       await load();
     } catch (e: any) {
       toast.error(e.message || "Could not assign pujari");
@@ -183,16 +254,28 @@ export default function Bookings() {
 
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-4">Bookings</h1>
-      <div className="flex flex-wrap gap-2 mb-4 items-end">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <h1 className="text-h1">Bookings</h1>
+        <AdminPager
+          page={page}
+          pages={pages}
+          total={total}
+          pageSize={pageSize}
+          sizes={BOOKING_PAGE_SIZES}
+          sizeLabel="per page"
+          onPage={(p) => updateFilters({ page: p })}
+          onPageSize={(size) => updateFilters({ size })}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2 mb-3 items-end">
         <div className="space-y-1">
-          <Label className="text-xs">Status filter</Label>
-          <Select value={statusFilter} onValueChange={setStatus}>
-            <SelectTrigger className="w-[220px]">
+          <Label className="text-xs">Status</Label>
+          <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
+            <SelectTrigger className="w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="pending_acceptance">Pending acceptance</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
@@ -204,38 +287,101 @@ export default function Bookings() {
             </SelectContent>
           </Select>
         </div>
-        {statusFilter !== "all" && (
-          <Badge variant="secondary" className="mb-1">
-            Showing: {statusFilter.replace(/_/g, " ")} ({filtered.length})
-          </Badge>
+        <div className="space-y-1">
+          <Label className="text-xs">Pujari</Label>
+          <Select value={assignmentFilter} onValueChange={(v) => updateFilters({ assignment: v })}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All assignments</SelectItem>
+              <SelectItem value="unassigned">Needs assignment</SelectItem>
+              <SelectItem value="assigned">Assigned</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Customer date</Label>
+          <Select
+            value={rangeFilter}
+            onValueChange={(v) => updateFilters({ range: v, from: v === "custom" ? dateFrom : "", to: v === "custom" ? dateTo : "" })}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All dates</SelectItem>
+              <SelectItem value="last_30">Last 30 days</SelectItem>
+              <SelectItem value="custom">Between dates</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {rangeFilter === "custom" && (
+          <>
+            <div className="space-y-1">
+              <Label className="text-xs">From</Label>
+              <Input
+                type="date"
+                className="h-9 w-[150px]"
+                value={dateFrom}
+                onChange={(e) => updateFilters({ from: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">To</Label>
+              <Input
+                type="date"
+                className="h-9 w-[150px]"
+                value={dateTo}
+                onChange={(e) => updateFilters({ to: e.target.value })}
+              />
+            </div>
+          </>
         )}
-        <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
-          <span>
-            Page {page} / {pages} · {total} total
-          </span>
-          <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => void load(page - 1)}>
-            Prev
+        <div className="flex gap-2 flex-1 min-w-[220px] items-end">
+          <Input
+            placeholder="Search number, customer, pujari, service"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") updateFilters({ q });
+            }}
+          />
+          <Button type="button" variant="secondary" onClick={() => updateFilters({ q })}>
+            Search
           </Button>
-          <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => void load(page + 1)}>
-            Next
-          </Button>
+          {(params.get("q") || statusFilter !== "all" || assignmentFilter !== "all" || rangeFilter !== "all") && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setQ("");
+                setLocation(adminPath("/bookings"));
+              }}
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </div>
-      <Table>
+      <Table
+        className="border-separate border-spacing-0"
+        containerClassName="max-h-[calc(100vh-16rem)] overflow-auto rounded-lg border bg-card"
+      >
         <TableHeader>
-          <TableRow>
-            <TableHead>Number</TableHead>
-            <TableHead>Service</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Pujari</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Number</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Service</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Customer</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Pujari</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Date</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Total</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Status</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filtered.map((b) => {
+          {rows.map((b) => {
             const needsAttention =
               Boolean(b.needs_reassignment) || b.status === "rejected" || !b.pujari_id;
             const canPenalise = ["confirmed", "in_progress", "completed", "cancelled"].includes(b.status);
@@ -290,7 +436,7 @@ export default function Bookings() {
           {rows.length === 0 && (
             <TableRow>
               <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                No bookings yet.
+                No bookings match these filters.
               </TableCell>
             </TableRow>
           )}

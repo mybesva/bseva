@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getToken, logoutApi, meApi, type AuthUser } from "@/lib/api";
+import { unregisterFcmToken } from "@/lib/fcm";
 import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 
 type AuthState = {
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const logout = useCallback(async () => {
+    await unregisterFcmToken();
     logoutApi();
     setUser(null);
     releaseStaleUiLocks();

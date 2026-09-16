@@ -21,7 +21,7 @@ export default function BookService() {
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const svc = serviceQ.data;
   const [step, setStep] = useState(1);
-  const [pkg, setPkg] = useState<"standard" | "premium">("standard");
+  const [pkg, setPkg] = useState<"basic" | "standard" | "premium">("standard");
   const [mode, setMode] = useState<"in_person" | "virtual">("in_person");
   const [calendar, setCalendar] = useState(String(user?.calendar_preference || "north"));
   const [date, setDate] = useState(() => {
@@ -40,6 +40,9 @@ export default function BookService() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [includeSamagri, setIncludeSamagri] = useState(false);
   const [includeAlankaram, setIncludeAlankaram] = useState(false);
+  const [includeFood, setIncludeFood] = useState(false);
+  const [customerCountry, setCustomerCountry] = useState("IN");
+  const [customerTimezone, setCustomerTimezone] = useState("Asia/Kolkata");
   const [terms, setTerms] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [recurring, setRecurring] = useState("none");
@@ -85,6 +88,8 @@ export default function BookService() {
         booking_date: date,
         include_samagri: includeSamagri,
         include_alankaram: includeAlankaram,
+        include_food: includeFood,
+        country: mode === "virtual" ? customerCountry : undefined,
       });
       setQuote(q);
       const [near, prev] = await Promise.all([
@@ -109,6 +114,22 @@ export default function BookService() {
     if (!terms) {
       setError("Please accept the Terms & Conditions and Cancellation Policy");
       return;
+    }
+    if (mode === "virtual") {
+      try {
+        const pre = await apiClient.virtualPrecheck({
+          service_id: svc.id,
+          country: customerCountry,
+          timezone: customerTimezone,
+        });
+        if (pre.blocked) {
+          setError(pre.message || "Virtual puja is not available for this country");
+          return;
+        }
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Virtual puja precheck failed");
+        return;
+      }
     }
     setPending(true);
     setError(null);
@@ -141,7 +162,9 @@ export default function BookService() {
         terms_accepted: true,
         include_samagri: includeSamagri,
         include_alankaram: includeAlankaram,
-        include_food: false,
+        include_food: includeFood,
+        customer_country: mode === "virtual" ? customerCountry : undefined,
+        customer_timezone: mode === "virtual" ? customerTimezone : undefined,
         recurring,
         recurring_count: recurring !== "none" ? Number(recurringCount) || undefined : undefined,
       });
@@ -196,6 +219,9 @@ export default function BookService() {
         {step === 1 ? (
           <>
             <AppText variant="h3">Package & mode</AppText>
+            {svc.basic_price_paise ? (
+              <PrimaryButton title={`Basic ${rupees(svc.basic_price_paise)}`} variant={pkg === "basic" ? "primary" : "outline"} onPress={() => setPkg("basic")} />
+            ) : null}
             <PrimaryButton title={`Standard ${svc.standard_price_paise ? rupees(svc.standard_price_paise) : ""}`} variant={pkg === "standard" ? "primary" : "outline"} onPress={() => setPkg("standard")} />
             {svc.premium_price_paise ? (
               <PrimaryButton title={`Premium ${rupees(svc.premium_price_paise)}`} variant={pkg === "premium" ? "primary" : "outline"} onPress={() => setPkg("premium")} />
@@ -203,6 +229,12 @@ export default function BookService() {
             <PrimaryButton title="In-person" variant={mode === "in_person" ? "navy" : "outline"} onPress={() => setMode("in_person")} />
             {svc.virtual_available ? (
               <PrimaryButton title="Virtual" variant={mode === "virtual" ? "navy" : "outline"} onPress={() => setMode("virtual")} />
+            ) : null}
+            {mode === "virtual" ? (
+              <>
+                <Field label="Country code (e.g. IN)" value={customerCountry} onChangeText={setCustomerCountry} autoCapitalize="characters" />
+                <Field label="Time zone" value={customerTimezone} onChangeText={setCustomerTimezone} />
+              </>
             ) : null}
             <PrimaryButton title="Next" onPress={() => setStep(2)} />
           </>
@@ -233,7 +265,7 @@ export default function BookService() {
             {recurring !== "none" ? (
               <Field label="Repeat count" value={recurringCount} onChangeText={setRecurringCount} keyboardType="number-pad" />
             ) : null}
-            {muhurtaNeeded ? <Field label="Muhurta notes (optional)" value={muhurtaNotes} onChangeText={setMuhurtaNotes} /> : null}
+            {muhurtaNeeded ? <Field label="Muhurtham notes (optional)" value={muhurtaNotes} onChangeText={setMuhurtaNotes} /> : null}
             <Field label="Special instructions" value={instructions} onChangeText={setInstructions} />
             <View style={{ flexDirection: "row", gap: 8 }}>
               <View style={{ flex: 1 }}>
@@ -272,12 +304,19 @@ export default function BookService() {
               <AppText>Include alankaram</AppText>
               <Switch value={includeAlankaram} onValueChange={setIncludeAlankaram} />
             </View>
+            {svc.food_available ? (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <AppText>Include food / prasadam</AppText>
+                <Switch value={includeFood} onValueChange={setIncludeFood} />
+              </View>
+            ) : null}
             <PrimaryButton title="Refresh quote" variant="outline" onPress={() => void loadQuoteAndPujaris()} />
             {quote ? (
               <Card>
                 <AppText>Puja {rupees(Number(quote.basePrice))}</AppText>
                 {Number(quote.samagri) ? <AppText>Samagri {rupees(Number(quote.samagri))}</AppText> : null}
                 {Number(quote.alankaram) ? <AppText>Alankaram {rupees(Number(quote.alankaram))}</AppText> : null}
+                {Number(quote.foodPrasadam) ? <AppText>Food {rupees(Number(quote.foodPrasadam))}</AppText> : null}
                 <AppText>GST {rupees(Number(quote.gstAmount))}</AppText>
                 <AppText variant="h3">Total {rupees(Number(quote.totalAmount))}</AppText>
               </Card>
@@ -302,6 +341,7 @@ export default function BookService() {
                 I accept the Terms & Conditions and Cancellation Policy.
               </AppText>
             </View>
+            <PrimaryButton title="Read terms" variant="ghost" onPress={() => router.push("/legal/platform_terms")} />
             <PrimaryButton title="Back" variant="outline" onPress={() => setStep(3)} />
             <PrimaryButton title={pending ? "Booking..." : "Pay with wallet & book"} loading={pending} onPress={submit} />
           </>

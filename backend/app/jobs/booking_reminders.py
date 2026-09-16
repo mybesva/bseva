@@ -5,8 +5,6 @@
 """
 from __future__ import annotations
 
-from uuid import uuid4
-
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -68,23 +66,16 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         title = "Upcoming booking reminder"
                         body = f"Reminder: {service_name} ({booking_num}) is within {hours_ahead} hours."
                         cat = "booking_reminder"
-                    session.execute(
-                        text(
-                            """
-                            INSERT INTO notifications (id, user_id, channel, title, body, category, is_read, link)
-                            VALUES (
-                              CAST(:id AS uuid), CAST(:uid AS uuid), 'in_app',
-                              :title, :body, :cat, FALSE, '/pujari/bookings'
-                            )
-                            """
-                        ),
-                        {
-                            "id": str(uuid4()),
-                            "uid": str(b["pujari_id"]),
-                            "title": title,
-                            "body": body,
-                            "cat": cat,
-                        },
+                    from app.routers.notifications import create_notification
+
+                    create_notification(
+                        session,
+                        user_id=str(b["pujari_id"]),
+                        title=title,
+                        body=body,
+                        category=cat,
+                        link="/pujari/bookings",
+                        extra_data={"booking_id": str(b["id"])},
                     )
                     created += 1
 
@@ -104,26 +95,20 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                     {"uid": str(b["customer_id"]), "needle": f"%{booking_num}%"},
                 ).first()
                 if not c_exists:
-                    session.execute(
-                        text(
-                            """
-                            INSERT INTO notifications (id, user_id, channel, title, body, category, is_read, link)
-                            VALUES (
-                              CAST(:id AS uuid), CAST(:uid AS uuid), 'in_app',
-                              :title, :body, 'booking_reminder', FALSE, '/customer/bookings'
-                            )
-                            """
+                    from app.routers.notifications import create_notification
+
+                    create_notification(
+                        session,
+                        user_id=str(b["customer_id"]),
+                        title="Upcoming puja reminder",
+                        body=(
+                            f"Reminder: {service_name} ({booking_num}) starts within "
+                            f"{hours_ahead} hours. Your start OTP will appear in the app "
+                            f"15 minutes before the puja."
                         ),
-                        {
-                            "id": str(uuid4()),
-                            "uid": str(b["customer_id"]),
-                            "title": "Puja tomorrow / coming soon",
-                            "body": (
-                                f"Reminder: {service_name} ({booking_num}) starts within "
-                                f"{hours_ahead} hours. Your start OTP will appear in the app "
-                                f"15 minutes before the puja."
-                            ),
-                        },
+                        category="booking_reminder",
+                        link="/customer/bookings",
+                        extra_data={"booking_id": str(b["id"])},
                     )
                     created += 1
 

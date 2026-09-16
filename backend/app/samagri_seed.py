@@ -222,7 +222,7 @@ def _default_content(slug: str, display_en: str) -> dict[str, dict[str, str]]:
         base = {
             "en": {
                 "display_name": display_en,
-                "preparation_notes": "Keep the puja area clean and ready before the scheduled muhurta/time.",
+                "preparation_notes": "Keep the puja area clean and ready before the scheduled Muhurtham/time.",
                 "special_instructions": "Follow any final guidance from your assigned Pujari.",
                 "prasadam_notes": "Arrange simple prasadam/naivedyam as per family custom.",
                 "venue_notes": "Provide mats, water, plates, and a calm seating space.",

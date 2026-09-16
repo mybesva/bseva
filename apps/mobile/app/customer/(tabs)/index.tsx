@@ -23,6 +23,10 @@ export default function CustomerHome() {
   const wallet = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const panchang = useQuery({ queryKey: ["panchang", today, calendar], queryFn: () => apiClient.panchang(today, calendar) as Promise<Record<string, unknown>> });
   const recs = useQuery({ queryKey: ["recommendations"], queryFn: () => apiClient.recommendations() });
+  const banners = useQuery({
+    queryKey: ["promos", "post_login"],
+    queryFn: () => apiClient.promoBanners("post_login"),
+  });
   const ongoing = (bookings.data || []).filter((b) => b.status === "in_progress");
   const upcoming = (bookings.data || []).filter((b) => ["pending", "pending_acceptance", "confirmed"].includes(b.status)).slice(0, 3);
   const balance = wallet.data?.wallet?.balance_paise ?? wallet.data?.balance_paise ?? 0;
@@ -59,6 +63,12 @@ export default function CustomerHome() {
           </AppText>
           <PrimaryButton title={t("customer.loadWallet")} onPress={() => router.push("/customer/wallet")} />
         </Card>
+        {(banners.data || []).slice(0, 5).map((banner) => (
+          <Card key={banner.id}>
+            <AppText variant="h3">{banner.title || "BSeva"}</AppText>
+            {banner.subtitle ? <AppText variant="small">{banner.subtitle}</AppText> : null}
+          </Card>
+        ))}
         <Card>
           <AppText variant="small">Panchang · {today}</AppText>
           <ChoiceChips

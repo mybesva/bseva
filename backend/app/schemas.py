@@ -115,10 +115,11 @@ class BookingCreateIn(BaseModel):
     recurring_count: Optional[int] = Field(default=None, ge=1, le=52)
     selected_dates: Optional[list[date]] = None
     referral_code: Optional[str] = Field(default=None, max_length=40)
-    # Optional add-ons: pujari buys materials and is reimbursed from customer payment
     include_samagri: bool = False
     include_alankaram: bool = False
     include_food: bool = False
+    customer_timezone: Optional[str] = Field(default=None, max_length=80)
+    customer_country: Optional[str] = Field(default=None, max_length=80)
 
 
 class WalletLoadIn(BaseModel):
@@ -192,6 +193,8 @@ class ServiceIn(BaseModel):
     sankalpa_required: Optional[bool] = True
     languages: Optional[list[str]] = None
     online_nri_price_paise: Optional[int] = None
+    virtual_domestic_price_paise: Optional[int] = None
+    virtual_international_price_paise: Optional[int] = None
     category: Optional[str] = "puja"  # legacy coarse tag
     category_slugs: Optional[list[str]] = None  # multi-category assignment
     required_level: int = Field(ge=1, le=4)
@@ -380,4 +383,33 @@ class PujariServiceApplyIn(BaseModel):
 class PujariVerifiedServicesIn(BaseModel):
     """Admin/Head Pujari: official verified service list used for booking matching."""
     service_ids: list[str] = Field(default_factory=list)
+
+
+class FcmTokenIn(BaseModel):
+    token: str = Field(min_length=20, max_length=4096)
+    platform: Literal["web", "android", "ios"] = "web"
+
+
+class FcmTokenRemoveIn(BaseModel):
+    token: str = Field(min_length=20, max_length=4096)
+
+
+class TempleIn(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    description: Optional[str] = None
+    deity: Optional[str] = Field(default=None, max_length=120)
+    address: Optional[str] = None
+    city: Optional[str] = Field(default=None, max_length=120)
+    state: Optional[str] = Field(default=None, max_length=120)
+    pincode: Optional[str] = Field(default=None, max_length=12)
+    timings: Optional[str] = Field(default=None, max_length=120)
+    contact_phone: Optional[str] = Field(default=None, max_length=20)
+    contact_email: Optional[str] = Field(default=None, max_length=320)
+    pujari_name: Optional[str] = Field(default=None, max_length=120)
+    website: Optional[str] = None
+    active: bool = True
+
+
+class TempleBulkIn(BaseModel):
+    items: list[dict] = Field(default_factory=list, max_length=2000)
 

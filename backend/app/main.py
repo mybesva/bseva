@@ -23,6 +23,7 @@ from app.routers import (
     pujari,
     reports,
     support,
+    temples,
     wallet,
 )
 
@@ -32,6 +33,12 @@ async def lifespan(_app: FastAPI):
     # Schema migrations are NOT run on cold start (Vercel serverless).
     # Run separately: `cd backend && python -c "from app.schema_migrate import ensure_schema; ensure_schema()"`
     # or apply SQL under supabase/migrations/.
+    try:
+        from app.services.firebase_notifications import init_firebase
+
+        init_firebase()
+    except Exception:
+        pass
     yield
 
 
@@ -50,6 +57,7 @@ app.include_router(bookings.router, prefix="/api/v1")
 app.include_router(meetings.router, prefix="/api/v1")
 app.include_router(wallet.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(temples.router, prefix="/api/v1")
 app.include_router(admin_pujari.router, prefix="/api/v1")
 app.include_router(customer.router, prefix="/api/v1")
 app.include_router(pujari.router, prefix="/api/v1")

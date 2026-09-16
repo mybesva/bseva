@@ -15,16 +15,19 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bseva.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "BSeva uses the camera so you can take a profile photo, signature photo, or document photo instead of only picking from the library.",
         "NSPhotoLibraryUsageDescription": "BSeva needs photo library access to attach documents and profile photos.",
         "NSLocationWhenInUseUsageDescription": "BSeva uses your location to find nearby pujaris and save your address for bookings.",
-        "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it."
+        "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it.",
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
       "package": "com.bseva.app",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -37,7 +40,20 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "bseva" },
+            { "scheme": "https", "host": "bseva.vercel.app", "pathPrefix": "/" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "plugins": [

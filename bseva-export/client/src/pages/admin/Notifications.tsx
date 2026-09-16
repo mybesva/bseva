@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { toast } from "sonner";
+import { notifyBadgesChanged } from "@/components/NotificationBell";
 
 type Notification = {
   id: string;
@@ -42,12 +43,14 @@ export default function AdminNotifications() {
 
   async function markRead(id: string) {
     await api(`/notifications/${id}/read`, { method: "POST" });
+    notifyBadgesChanged();
     await load(page);
   }
 
   async function markAll() {
     await api("/notifications/read-all", { method: "POST" });
     toast.success("All marked read");
+    notifyBadgesChanged();
     await load(page);
   }
 
@@ -74,6 +77,22 @@ export default function AdminNotifications() {
           </select>
           <Button variant="outline" size="sm" onClick={() => void markAll()}>
             Mark all read
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              void (async () => {
+                try {
+                  const { sendTestPush } = await import("@/lib/fcm");
+                  const out = await sendTestPush();
+                  toast.success(`Test push sent (${out.success} device${out.success === 1 ? "" : "s"})`);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Test push failed");
+                }
+              })();
+            }}
+          >
+            Send test push
           </Button>
         </div>
       </div>

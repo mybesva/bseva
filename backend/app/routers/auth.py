@@ -353,6 +353,27 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
         from app.referrals import apply_referral_code
 
         apply_referral_code(db, user_id, body.referral_code)
+    try:
+        from app.routers.notifications import notify_ops_staff
+
+        if body.account_type == "pujari":
+            notify_ops_staff(
+                db,
+                title="New pujari registration",
+                body=f"{display_name} registered as a pujari.",
+                category="kyc",
+                link="/admin/pujaris",
+            )
+        else:
+            notify_ops_staff(
+                db,
+                title="New customer",
+                body=f"{display_name} created a customer account.",
+                category="ops",
+                link="/admin/customers",
+            )
+    except Exception:
+        pass
     db.commit()
     row = db.execute(text("SELECT * FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}).mappings().one()
     try:

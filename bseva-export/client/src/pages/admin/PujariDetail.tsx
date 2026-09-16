@@ -23,6 +23,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { PUJARI_SPECIALIZATIONS } from "@/lib/pujariSpecializations";
 import { formatDisplayDateTime } from "@/lib/formatDate";
+import { notifyBadgesChanged } from "@/components/NotificationBell";
 
 const DOC_LABELS: Record<string, string> = {
   identity: "Aadhaar (required)",
@@ -277,6 +278,7 @@ export default function PujariDetailPage() {
         }),
       });
       toast.success(`Marked ${status.replace(/_/g, " ")}`);
+      notifyBadgesChanged();
       await load();
     } catch (e: any) {
       toast.error(e.message);
@@ -439,6 +441,7 @@ export default function PujariDetailPage() {
                           setServiceOffers(out);
                           setVerifiedDraft(new Set(out.verified_service_ids || []));
                           toast.success("Verified services saved");
+                          notifyBadgesChanged();
                           await load();
                         } catch (e: any) {
                           toast.error(e.message);

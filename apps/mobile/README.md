@@ -1,6 +1,8 @@
 # BSeva mobile (Customer + Pujari)
 
-One Expo app. Admin remains web-only.
+One Expo app for Customer and Pujari. Admin/Super Admin use `apps/admin-mobile`.
+
+Role after login always comes from `GET /api/v1/auth/me`. There is no client-side role switch.
 
 ## Run (Expo Go)
 

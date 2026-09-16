@@ -54,8 +54,7 @@ const PLATFORM_KEYS: PlatformKey[] = [
     label: "Virtual Puja",
     type: "boolean",
     group: "features",
-    superOnly: true,
-    hint: "When off, customers only see in-person booking. Super Admin only.",
+    hint: "When off, customers cannot create Virtual Puja bookings. Admin and Super Admin can turn this on without a deployment.",
   },
   {
     key: "registration_captcha_enabled",

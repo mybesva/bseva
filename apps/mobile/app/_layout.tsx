@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BrandSplash } from "@/components/BrandSplash";
 import { AppProviders } from "@/providers/AppProviders";
+import { SessionEffects } from "@/providers/SessionEffects";
 import { useAppTheme } from "@/theme/ThemeContext";
 
 Notifications.setNotificationHandler({
@@ -36,6 +37,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProviders>
+        <SessionEffects />
         <BrandSplash>
           <ThemedStack />
         </BrandSplash>

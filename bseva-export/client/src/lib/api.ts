@@ -69,8 +69,18 @@ export type Paginated<T> = {
   pages: number;
 };
 
-export async function apiBookings<T = any>(page = 1, limit = 50): Promise<Paginated<T>> {
-  const data = await api<Paginated<T> | T[]>(`/bookings?page=${page}&limit=${limit}`);
+export async function apiBookings<T = any>(
+  page = 1,
+  limit = 50,
+  extra?: Record<string, string>,
+): Promise<Paginated<T>> {
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      if (v) qs.set(k, v);
+    }
+  }
+  const data = await api<Paginated<T> | T[]>(`/bookings?${qs}`);
   if (Array.isArray(data)) {
     return { items: data, total: data.length, page: 1, limit: data.length || limit, pages: 1 };
   }

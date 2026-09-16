@@ -355,6 +355,84 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)",
     "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link TEXT",
     """
+    CREATE TABLE IF NOT EXISTS fcm_device_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      fcm_token TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'web'
+        CHECK (platform IN ('web', 'android', 'ios')),
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (fcm_token)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_fcm_device_tokens_user_active
+      ON fcm_device_tokens (user_id)
+      WHERE active = TRUE
+    """,
+    """
+    UPDATE services
+    SET name = replace(name, 'Muhurta Consultation', 'Muhurtham Consultation')
+    WHERE name LIKE '%Muhurta Consultation%'
+    """,
+    """
+    UPDATE services
+    SET name = replace(name, 'Wedding Muhurta', 'Wedding Muhurtham')
+    WHERE name LIKE '%Wedding Muhurta%'
+    """,
+    """
+    UPDATE services
+    SET name = replace(name, 'Vivaha Muhurta', 'Vivaha Muhurtham')
+    WHERE name LIKE '%Vivaha Muhurta%'
+    """,
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS virtual_domestic_price_paise INTEGER",
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS virtual_international_price_paise INTEGER",
+    """
+    UPDATE services
+    SET virtual_domestic_price_paise = COALESCE(virtual_domestic_price_paise, online_nri_price_paise)
+    WHERE virtual_domestic_price_paise IS NULL
+    """,
+    """
+    UPDATE services
+    SET virtual_international_price_paise = COALESCE(virtual_international_price_paise, online_nri_price_paise)
+    WHERE virtual_international_price_paise IS NULL
+    """,
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_timezone TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_country TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS start_at_utc TIMESTAMPTZ",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS virtual_price_tier TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_bookings_mode_status ON bookings (mode, status)",
+    """
+    CREATE TABLE IF NOT EXISTS temples (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL,
+      description TEXT,
+      deity TEXT,
+      address TEXT,
+      city TEXT,
+      state TEXT,
+      pincode TEXT,
+      timings TEXT,
+      contact_phone TEXT,
+      contact_email TEXT,
+      pujari_name TEXT,
+      website TEXT,
+      image_url TEXT,
+      latitude DOUBLE PRECISION,
+      longitude DOUBLE PRECISION,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_temples_city ON temples (city)",
+    "CREATE INDEX IF NOT EXISTS idx_temples_name ON temples (lower(name))",
+    "ALTER TABLE temples ADD COLUMN IF NOT EXISTS pujari_name TEXT",
+    "ALTER TABLE temples ADD COLUMN IF NOT EXISTS timings TEXT",
+    "ALTER TABLE temples ADD COLUMN IF NOT EXISTS contact_phone TEXT",
+    """
     CREATE TABLE IF NOT EXISTS promo_banners (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       title TEXT NOT NULL,
@@ -1043,6 +1121,8 @@ def ensure_schema(*, quiet: bool = False) -> None:
             ("bookings", "meeting_url"),
             ("bookings", "google_calendar_event_id"),
             ("bookings", "meeting_invite_token"),
+            ("temples", "pujari_name"),
+            ("temples", "contact_phone"),
         ):
             present = conn.execute(
                 text(

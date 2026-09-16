@@ -75,7 +75,11 @@ export default function Book() {
   const showMuhurta =
     user?.role === "customer" && (pujaType.muhurta_consultation_enabled || pujaType.requires_muhurta);
 
-  const blockBooking = user?.role === "customer" && (!canBook || checking);
+  const virtualOn = Boolean(publicConfig?.virtual_puja_enabled);
+  const inPersonBlocked = user?.role === "customer" && (!canBook || checking);
+  const blockBooking = inPersonBlocked && !virtualOn;
+  const forceVirtualOnly =
+    user?.role === "customer" && virtualOn && !checking && status === "unavailable";
   const serviceNotBookable = pujaType.bookable === false;
 
   return (
@@ -102,7 +106,7 @@ export default function Book() {
         </section>
       )}
 
-      {user?.role === "customer" ? <ServiceAvailabilityBanner /> : null}
+      {user?.role === "customer" && !forceVirtualOnly ? <ServiceAvailabilityBanner /> : null}
 
       {serviceNotBookable ? (
         <div className="pb-8 max-w-2xl space-y-4">
@@ -146,6 +150,8 @@ export default function Book() {
             serviceId={pujaType.id}
             pujaName={pujaType.name}
             serviceCategories={pujaType.categories}
+            forceVirtualOnly={forceVirtualOnly}
+            serviceVirtualAvailable={pujaType.virtual_available !== false}
             bookingLeadHours={
               pujaType.booking_lead_hours != null ? Number(pujaType.booking_lead_hours) : 48
             }

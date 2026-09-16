@@ -19,6 +19,7 @@ import {
   ListChecks,
   Star,
   Gift,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,6 +32,7 @@ import PujariProfileGate from "@/components/PujariProfileGate";
 import ThemeToggle from "@/components/ThemeToggle";
 import SeasonalPopup from "@/components/SeasonalPopup";
 import BSevaLogo from "@/components/BSevaLogo";
+import NotificationBell, { CountBadge } from "@/components/NotificationBell";
 
 type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number }> };
 
@@ -43,6 +45,7 @@ const customerNav: NavItem[] = [
   { label: "My Address", href: "/customer/address", icon: MapPin },
   { label: "Wallet / Payments", href: "/customer/wallet", icon: Wallet },
   { label: "My Bookings", href: "/customer/bookings", icon: Calendar },
+  { label: "Notifications", href: "/customer/notifications", icon: Bell },
   { label: "Booking History", href: "/customer/history", icon: History },
   { label: "Invoices", href: "/customer/invoices", icon: FileText },
   { label: "Rewards & Referral", href: "/customer/rewards", icon: Sparkles },
@@ -54,6 +57,7 @@ const customerNav: NavItem[] = [
 const pujariNav: NavItem[] = [
   { label: "Dashboard", href: "/pujari", icon: LayoutDashboard },
   { label: "Bookings", href: "/pujari/bookings", icon: Calendar },
+  { label: "Notifications", href: "/pujari/notifications", icon: Bell },
   { label: "Complete Profile", href: "/pujari/onboarding", icon: Sparkles },
   { label: "My Profile", href: "/pujari/profile", icon: User },
   { label: "Address", href: "/pujari/address", icon: MapPin },
@@ -89,6 +93,12 @@ function PortalShell({
   const navRef = useRef<HTMLElement | null>(null);
   const scrollKey = `${role}-sidebar`;
   const { user, logout } = useAuth();
+  const [badges, setBadges] = useState<{
+    bookings?: number;
+    notifications?: number;
+    support?: number;
+    tooltips?: Record<string, string>;
+  }>({});
 
   async function handleLogout() {
     await logout();
@@ -100,6 +110,26 @@ function PortalShell({
     setOpen(false);
     releaseStaleUiLocks();
   }, [location]);
+
+  useEffect(() => {
+    const loadBadges = () => {
+      api<{
+        bookings?: number;
+        notifications?: number;
+        support?: number;
+        tooltips?: Record<string, string>;
+      }>("/notifications/nav-badges")
+        .then(setBadges)
+        .catch(() => setBadges({}));
+    };
+    loadBadges();
+    const id = window.setInterval(loadBadges, 30000);
+    window.addEventListener("bseva-notifications-changed", loadBadges);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("bseva-notifications-changed", loadBadges);
+    };
+  }, [location, user?.id]);
 
   useLayoutEffect(() => {
     const el = navRef.current;
@@ -159,6 +189,26 @@ function PortalShell({
                 >
                   <item.icon size={18} />
                   {item.label}
+                  <CountBadge
+                    count={
+                      item.href.endsWith("/bookings")
+                        ? badges.bookings
+                        : item.href.endsWith("/notifications")
+                          ? badges.notifications
+                          : item.href.endsWith("/support")
+                            ? badges.support
+                            : 0
+                    }
+                    tooltip={
+                      item.href.endsWith("/bookings")
+                        ? badges.tooltips?.bookings
+                        : item.href.endsWith("/notifications")
+                          ? badges.tooltips?.notifications
+                          : item.href.endsWith("/support")
+                            ? badges.tooltips?.support
+                            : undefined
+                    }
+                  />
                 </a>
               </Link>
             );
@@ -187,7 +237,10 @@ function PortalShell({
             </a>
           </Link>
           <span className="text-sm text-muted-foreground capitalize">{role} portal</span>
-          <ThemeToggle className="ml-auto shrink-0" />
+          <div className="ml-auto flex items-center gap-1">
+            <NotificationBell inboxHref={role === "pujari" ? "/pujari/notifications" : "/customer/notifications"} />
+            <ThemeToggle className="shrink-0" />
+          </div>
           <Button
             variant="outline"
             size="sm"

@@ -78,6 +78,8 @@ const emptyForm = {
   sankalpa_required: true,
   languages_text: "en, hi, te",
   online_nri_price_paise: null as number | null,
+  virtual_domestic_price_paise: null as number | null,
+  virtual_international_price_paise: null as number | null,
   category: "puja",
   category_slugs: [] as string[],
   search_aliases_text: "",
@@ -253,6 +255,18 @@ export default function ServicesAdmin() {
       sankalpa_required: s.sankalpa_required !== false,
       languages_text: Array.isArray(s.languages) ? s.languages.join(", ") : "en, hi, te",
       online_nri_price_paise: s.online_nri_price_paise != null ? Number(s.online_nri_price_paise) : null,
+      virtual_domestic_price_paise:
+        s.virtual_domestic_price_paise != null
+          ? Number(s.virtual_domestic_price_paise)
+          : s.online_nri_price_paise != null
+            ? Number(s.online_nri_price_paise)
+            : null,
+      virtual_international_price_paise:
+        s.virtual_international_price_paise != null
+          ? Number(s.virtual_international_price_paise)
+          : s.online_nri_price_paise != null
+            ? Number(s.online_nri_price_paise)
+            : null,
       category: s.category || "puja",
       category_slugs: categorySlugs,
       search_aliases_text: Array.isArray(s.search_aliases) ? s.search_aliases.join(", ") : "",
@@ -400,7 +414,9 @@ export default function ServicesAdmin() {
           .map((text, i) => ({ order: i + 1, text })),
         priests_min: Math.min(20, Math.max(1, Math.round(Number(form.priests_min) || 1))),
         priests_max: Math.min(20, Math.max(1, Math.round(Number(form.priests_max) || 1))),
-        online_nri_price_paise: form.online_nri_price_paise,
+        online_nri_price_paise: form.virtual_international_price_paise,
+        virtual_domestic_price_paise: form.virtual_domestic_price_paise,
+        virtual_international_price_paise: form.virtual_international_price_paise,
         standard_price_paise: form.standard_price_paise,
         premium_price_paise: form.premium_price_paise,
         basic_price_paise: null,
@@ -435,7 +451,7 @@ export default function ServicesAdmin() {
         alankaram_available: Boolean(form.alankaram_available),
         image_path: form.image_path.trim() || null,
         image_url: form.image_url.trim() || null,
-        virtual_available: virtualFlagOn ? form.virtual_available : false,
+        virtual_available: form.virtual_available,
       };
       delete (payload as any).search_aliases_text;
       if (editId) {
@@ -458,7 +474,7 @@ export default function ServicesAdmin() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
           <h1 className="text-h1">Puja Services</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -1381,14 +1397,14 @@ export default function ServicesAdmin() {
             </div>
 
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-              <p className="text-sm font-medium">Muhurta consultation</p>
+              <p className="text-sm font-medium">Muhurtham consultation</p>
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={form.muhurta_consultation_enabled}
                   onChange={(e) => setForm({ ...form, muhurta_consultation_enabled: e.target.checked })}
                 />
-                Offer a muhurta consultation for this service
+                Offer a Muhurtham consultation for this service
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -1396,7 +1412,7 @@ export default function ServicesAdmin() {
                   checked={form.requires_muhurta}
                   onChange={(e) => setForm({ ...form, requires_muhurta: e.target.checked })}
                 />
-                Muhurta is required before booking
+                Muhurtham is required before booking
               </label>
               <div className="space-y-2 max-w-xs">
                 <Label htmlFor="service-muhurta-fee">Consultation fee (₹)</Label>
@@ -1448,16 +1464,15 @@ export default function ServicesAdmin() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {virtualFlagOn && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.virtual_available}
-                    onChange={(e) => setForm({ ...form, virtual_available: e.target.checked })}
-                  />
-                  Virtual available for this puja
-                </label>
-              )}
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.virtual_available}
+                  onChange={(e) => setForm({ ...form, virtual_available: e.target.checked })}
+                />
+                Virtual available for this puja
+                {!virtualFlagOn ? " (platform Virtual Puja is currently off)" : ""}
+              </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={form.active}
@@ -1466,21 +1481,45 @@ export default function ServicesAdmin() {
                 Active (shown to customers)
               </label>
             </div>
-            <div className="space-y-2 max-w-xs">
-              <Label>Online / NRI price (₹)</Label>
-              <Input
-                type="number"
-                min={0}
-                step={1}
-                value={form.online_nri_price_paise != null ? form.online_nri_price_paise / 100 : ""}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    online_nri_price_paise:
-                      e.target.value === "" ? null : Math.round(Number(e.target.value) * 100),
-                  })
-                }
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Domestic Virtual Puja price (₹)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.virtual_domestic_price_paise != null ? form.virtual_domestic_price_paise / 100 : ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      virtual_domestic_price_paise:
+                        e.target.value === "" ? null : Math.round(Number(e.target.value) * 100),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">Used when the customer’s country is India.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>International Virtual Puja price (₹)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={
+                    form.virtual_international_price_paise != null
+                      ? form.virtual_international_price_paise / 100
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      virtual_international_price_paise:
+                        e.target.value === "" ? null : Math.round(Number(e.target.value) * 100),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">Used for customers outside India.</p>
+              </div>
             </div>
               </TabsContent>
 
@@ -1696,22 +1735,24 @@ export default function ServicesAdmin() {
         </DialogContent>
       </Dialog>
 
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[4.5rem]">Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Categories</TableHead>
-              <TableHead>Standard</TableHead>
-              <TableHead>Samagri</TableHead>
-              <TableHead>Samagri ₹</TableHead>
-              <TableHead>Alankaram</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Featured</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+      <Table
+        className="border-separate border-spacing-0"
+        containerClassName="max-h-[calc(100vh-14rem)] overflow-auto rounded-lg border bg-card"
+      >
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="sticky top-0 z-20 bg-card border-b w-[4.5rem]">Image</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Name</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Categories</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Standard</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Samagri</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Samagri ₹</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Alankaram</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Status</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Featured</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
           <TableBody>
             {(() => {
               const available = rows.filter((s) => isAvailable(s));
@@ -1866,7 +1907,7 @@ export default function ServicesAdmin() {
               if (rows.length === 0) {
                 return (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                       No services yet. Add your first puja service.
                     </TableCell>
                   </TableRow>
@@ -1876,7 +1917,7 @@ export default function ServicesAdmin() {
                 <>
                   {available.length > 0 && (
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableCell colSpan={7} className="font-semibold text-foreground py-2">
+                      <TableCell colSpan={10} className="font-semibold text-foreground py-2">
                         Available pujas ({available.length})
                       </TableCell>
                     </TableRow>
@@ -1884,7 +1925,7 @@ export default function ServicesAdmin() {
                   {available.map(renderRow)}
                   {upcoming.length > 0 && (
                     <TableRow className="bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-50/80 dark:hover:bg-amber-950/30">
-                      <TableCell colSpan={7} className="font-semibold text-amber-800 dark:text-amber-300 py-2">
+                      <TableCell colSpan={10} className="font-semibold text-amber-800 dark:text-amber-300 py-2">
                         Upcoming services — Coming Soon ({upcoming.length})
                       </TableCell>
                     </TableRow>
@@ -1895,7 +1936,6 @@ export default function ServicesAdmin() {
             })()}
           </TableBody>
         </Table>
-      </div>
     </AdminLayout>
   );
 }

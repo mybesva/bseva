@@ -33,7 +33,7 @@ export default function AstrologyScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
         {q.isLoading ? <LoadingBlock /> : null}
         <AppText color={colors.mutedForeground}>
-          Muhurta and astrology services use the same booking and wallet rules as pujas.
+          Muhurtham and astrology services use the same booking and wallet rules as pujas.
         </AppText>
         {!q.isLoading && !(q.data || []).length ? <EmptyState title="No astrology services listed." /> : null}
         {(q.data || []).map((s) => (

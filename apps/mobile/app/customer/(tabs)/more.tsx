@@ -2,35 +2,38 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LanguagePicker } from "@/components/LanguagePicker";
 import { AppText, Screen } from "@/components/ui";
 import { requestAppPermissions } from "@/utils/permissions";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 
-const ITEMS = [
-  { href: "/customer/profile", label: "Profile", icon: "person" as const },
-  { href: "/customer/address", label: "Address", icon: "location" as const },
-  { href: "/customer/invoices", label: "Invoices", icon: "document-text" as const },
-  { href: "/customer/rewards", label: "Rewards", icon: "gift" as const },
-  { href: "/customer/history", label: "History", icon: "time" as const },
-  { href: "/customer/astrology", label: "Astrology", icon: "planet" as const },
-  { href: "/customer/support", label: "Support", icon: "help-circle" as const },
-  { href: "/customer/password", label: "Change password", icon: "lock-closed" as const },
-];
-
 export default function CustomerMore() {
   const { colors, toggleTheme, theme } = useAppTheme();
   const { logout } = useAuth();
-  const { lang, setLang, labels } = useI18n();
+  const { t } = useI18n();
   const router = useRouter();
+  const items = [
+    { href: "/customer/notifications", label: t("mobile.notifications"), icon: "notifications" as const },
+    { href: "/customer/profile", label: t("mobile.profile"), icon: "person" as const },
+    { href: "/customer/address", label: t("mobile.address"), icon: "location" as const },
+    { href: "/customer/invoices", label: t("mobile.invoices"), icon: "document-text" as const },
+    { href: "/customer/rewards", label: t("mobile.rewards"), icon: "gift" as const },
+    { href: "/customer/history", label: t("mobile.history"), icon: "time" as const },
+    { href: "/customer/astrology", label: t("nav.astrology"), icon: "planet" as const },
+    { href: "/customer/support", label: t("mobile.support"), icon: "help-circle" as const },
+    { href: "/customer/password", label: t("mobile.password"), icon: "lock-closed" as const },
+    { href: "/legal/platform_terms", label: t("mobile.terms"), icon: "book" as const },
+    { href: "/legal/privacy", label: t("mobile.privacy"), icon: "shield-checkmark" as const },
+  ];
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">More</AppText>
+        <AppText variant="h2">{t("mobile.more")}</AppText>
       </SafeAreaView>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 4 }}>
-        {ITEMS.map((item) => (
+        {items.map((item) => (
           <Pressable
             key={item.href}
             onPress={() => router.push(item.href as never)}
@@ -42,36 +45,20 @@ export default function CustomerMore() {
           </Pressable>
         ))}
         <View style={{ height: 12 }} />
-        <AppText variant="small">Language</AppText>
-        <View style={{ flexDirection: "row", gap: 8, marginVertical: 8 }}>
-          {(["en", "hi", "te"] as const).map((code) => (
-            <Pressable
-              key={code}
-              onPress={() => setLang(code)}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 8,
-                backgroundColor: lang === code ? colors.primary : colors.secondary,
-              }}
-            >
-              <AppText variant="small" color={lang === code ? colors.primaryForeground : colors.foreground}>
-                {labels[code]}
-              </AppText>
-            </Pressable>
-          ))}
-        </View>
+        <LanguagePicker />
         <Pressable
           onPress={async () => {
             const status = await requestAppPermissions();
-            Alert.alert("Permissions", status);
+            Alert.alert(t("mobile.enablePermissions"), status);
           }}
           style={{ paddingVertical: 14 }}
         >
-          <AppText>Enable location, photos & notifications</AppText>
+          <AppText>{t("mobile.enablePermissions")}</AppText>
         </Pressable>
         <Pressable onPress={toggleTheme} style={{ paddingVertical: 14 }}>
-          <AppText>Theme: {theme === "dark" ? "Dark" : "Light"}</AppText>
+          <AppText>
+            {t("mobile.theme")}: {theme === "dark" ? t("mobile.themeDark") : t("mobile.themeLight")}
+          </AppText>
         </Pressable>
         <Pressable
           onPress={async () => {
@@ -80,7 +67,7 @@ export default function CustomerMore() {
           }}
           style={{ paddingVertical: 14 }}
         >
-          <AppText color={colors.destructive}>Log out</AppText>
+          <AppText color={colors.destructive}>{t("mobile.logout")}</AppText>
         </Pressable>
       </ScrollView>
     </Screen>

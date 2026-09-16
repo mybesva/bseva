@@ -1,24 +1,94 @@
+import { rupees } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
-import { Pressable, ScrollView } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 import { useState } from "react";
 
-export default function PujariServicesLevel() {
+type OfferService = {
+  id: string;
+  name: string;
+  slug?: string;
+  applied?: boolean;
+  catalog_price_paise?: number;
+  short_description?: string | null;
+};
+
+type OffersPayload = {
+  services?: OfferService[];
+  applied_count?: number;
+  note?: string;
+};
+
+export default function PujariServicesScreen() {
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   const profile = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
-  const roles = useQuery({ queryKey: ["pujari-roles"], queryFn: () => apiClient.pujariRoles() as Promise<{ level: number; title: string; summary?: string }[]> });
+  const roles = useQuery({
+    queryKey: ["pujari-roles"],
+    queryFn: () => apiClient.pujariRoles() as Promise<{ level: number; title: string; summary?: string }[]>,
+  });
+  const offers = useQuery({
+    queryKey: ["pujari-offers"],
+    queryFn: () => apiClient.pujariServiceOffers() as Promise<OffersPayload>,
+  });
   const approved = Number(profile.data?.approved_level || 0);
   const [level, setLevel] = useState<number | null>(null);
+  const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [applying, setApplying] = useState<string | null>(null);
   const rows = Array.isArray(roles.data) ? roles.data : [];
+  const services = (offers.data?.services || []).filter((s) =>
+    !q.trim() ? true : s.name.toLowerCase().includes(q.trim().toLowerCase())
+  );
+
   return (
     <Screen>
-      <ScreenHeader title="Upgrade role" back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+      <ScreenHeader title={t("mobile.serviceOffers")} back />
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }}>
         <ErrorBanner message={error} />
+        <AppText variant="h3">Capable services</AppText>
+        <Field label="Search" value={q} onChangeText={setQ} />
+        {offers.data?.note ? <AppText variant="small">{offers.data.note}</AppText> : null}
+        {services.map((s) => (
+          <Card key={s.id}>
+            <AppText variant="h3">{s.name}</AppText>
+            {s.short_description ? (
+              <AppText variant="small" color={colors.mutedForeground}>
+                {s.short_description}
+              </AppText>
+            ) : null}
+            {s.catalog_price_paise ? <AppText variant="small">{rupees(s.catalog_price_paise)}</AppText> : null}
+            {s.applied ? (
+              <AppText variant="small" color={colors.success}>
+                {t("mobile.applied")}
+              </AppText>
+            ) : (
+              <PrimaryButton
+                title={applying === s.id ? t("common.loading") : t("mobile.applyService")}
+                loading={applying === s.id}
+                onPress={async () => {
+                  setApplying(s.id);
+                  setError(null);
+                  try {
+                    await apiClient.applyPujariServiceOffer(s.id);
+                    await offers.refetch();
+                  } catch (e: unknown) {
+                    setError(e instanceof Error ? e.message : "Could not apply");
+                  } finally {
+                    setApplying(null);
+                  }
+                }}
+              />
+            )}
+          </Card>
+        ))}
+
+        <View style={{ height: 8 }} />
+        <AppText variant="h3">Upgrade role</AppText>
         <AppText>Approved level: {approved || "—"}</AppText>
         <AppText>Requested: {String(profile.data?.requested_level || "—")}</AppText>
         {rows.map((r) => (

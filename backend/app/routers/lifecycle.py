@@ -270,10 +270,11 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
         create_notification(
             db,
             user_id=str(b["customer_id"]),
-            title="Booking accepted",
-            body=f"Your booking {b.get('booking_number') or booking_id[:8]} was accepted.{meet_note}",
+            title="Booking confirmed",
+            body=f"Your booking {b.get('booking_number') or booking_id[:8]} was accepted by the pujari.{meet_note}",
             category="booking",
             link="/customer/bookings",
+            extra_data={"booking_id": booking_id},
         )
     except Exception:
         pass
@@ -620,6 +621,31 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
     except Exception:
         pass
     write_audit(db, str(user["id"]), "puja_completed", "booking", booking_id)
+    try:
+        from app.routers.notifications import create_notification
+
+        num = str(b.get("booking_number") or booking_id[:8])
+        create_notification(
+            db,
+            user_id=str(b["customer_id"]),
+            title="Puja completed",
+            body=f"Your puja {num} is complete. Thank you for booking with BSeva.",
+            category="booking",
+            link="/customer/history",
+            extra_data={"booking_id": booking_id},
+        )
+        if b.get("pujari_id"):
+            create_notification(
+                db,
+                user_id=str(b["pujari_id"]),
+                title="Booking completed",
+                body=f"Booking {num} was marked complete.",
+                category="booking",
+                link="/pujari/bookings",
+                extra_data={"booking_id": booking_id},
+            )
+    except Exception:
+        pass
     db.commit()
     return {"ok": True, "status": "completed"}
 
@@ -816,6 +842,35 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
         ),
         {"b": booking_id, "p": user["id"], "lat": body.latitude, "lng": body.longitude},
     )
+    try:
+        from app.routers.notifications import create_notification
+
+        already = db.execute(
+            text(
+                """
+                SELECT id FROM notifications
+                WHERE user_id = CAST(:uid AS uuid)
+                  AND category = 'pujari_arriving'
+                  AND COALESCE(link, '') LIKE :needle
+                  AND created_at > NOW() - INTERVAL '12 hours'
+                LIMIT 1
+                """
+            ),
+            {"uid": str(b["customer_id"]), "needle": f"%{booking_id}%"},
+        ).first()
+        if not already:
+            num = str(b.get("booking_number") or booking_id[:8])
+            create_notification(
+                db,
+                user_id=str(b["customer_id"]),
+                title="Pujari is on the way",
+                body=f"Live tracking is available for booking {num}.",
+                category="pujari_arriving",
+                link=f"/customer/bookings?booking={booking_id}",
+                extra_data={"booking_id": booking_id},
+            )
+    except Exception:
+        pass
     db.commit()
     return {"ok": True}
 
@@ -861,7 +916,16 @@ def get_location(booking_id: str, user=Depends(current_user), db: Session = Depe
 
 
 @router.get("/settlements")
-def list_settlements(user=Depends(current_user), db: Session = Depends(get_db)):
+def list_settlements(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    status: str | None = Query(None),
+    q: str | None = Query(None),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    user=Depends(current_user),
+    db: Session = Depends(get_db),
+):
     if user["role"] not in ("admin", "super_admin", "pujari"):
         raise HTTPException(403, "Not allowed")
 
@@ -923,14 +987,84 @@ def list_settlements(user=Depends(current_user), db: Session = Depends(get_db)):
             )
     db.commit()
 
-    if user["role"] in ("admin", "super_admin"):
-        rows = db.execute(text("SELECT * FROM settlements ORDER BY created_at DESC LIMIT 200")).mappings().all()
-    else:
+    if user["role"] not in ("admin", "super_admin"):
         rows = db.execute(
             text("SELECT * FROM settlements WHERE pujari_id = CAST(:id AS uuid) ORDER BY created_at DESC"),
             {"id": user["id"]},
         ).mappings().all()
-    return [row_dict(r) for r in rows]
+        return [row_dict(r) for r in rows]
+
+    extra = ""
+    filter_params: dict = {}
+    st = (status or "").strip().lower()
+    if st in {"pending", "eligible", "settled", "blocked"}:
+        extra += " AND s.status = :status "
+        filter_params["status"] = st
+    elif st == "awaiting":
+        extra += " AND s.status IN ('pending', 'eligible') "
+    query = (q or "").strip()
+    if query:
+        extra += """
+          AND (
+            COALESCE(b.booking_number, '') ILIKE :q
+            OR COALESCE(pu.name, '') ILIKE :q
+            OR COALESCE(cu.name, '') ILIKE :q
+            OR CAST(s.booking_id AS text) ILIKE :q
+          )
+        """
+        filter_params["q"] = f"%{query}%"
+    if date_from:
+        extra += " AND COALESCE(s.due_date, s.created_at::date) >= :date_from "
+        filter_params["date_from"] = date_from
+    if date_to:
+        extra += " AND COALESCE(s.due_date, s.created_at::date) <= :date_to "
+        filter_params["date_to"] = date_to
+
+    join_sql = """
+        FROM settlements s
+        LEFT JOIN bookings b ON b.id = s.booking_id
+        LEFT JOIN users pu ON pu.id = s.pujari_id
+        LEFT JOIN users cu ON cu.id = b.customer_id
+    """
+    total = int(
+        db.execute(text(f"SELECT COUNT(*) {join_sql} WHERE 1=1 {extra}"), filter_params).scalar() or 0
+    )
+    stats = db.execute(
+        text(
+            """
+            SELECT
+              COUNT(*) FILTER (WHERE status IN ('pending', 'eligible')) AS awaiting,
+              COUNT(*) FILTER (WHERE status = 'settled') AS settled,
+              COUNT(*) FILTER (WHERE status = 'blocked') AS blocked
+            FROM settlements
+            """
+        )
+    ).mappings().first()
+    rows = db.execute(
+        text(
+            f"""
+            SELECT s.*, b.booking_number, pu.name AS pujari_name, cu.name AS customer_name
+            {join_sql}
+            WHERE 1=1 {extra}
+            ORDER BY s.created_at DESC
+            LIMIT :lim OFFSET :off
+            """
+        ),
+        {**filter_params, "lim": limit, "off": (page - 1) * limit},
+    ).mappings().all()
+    return {
+        "items": [row_dict(r) for r in rows],
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": max(1, (total + limit - 1) // limit) if total else 1,
+        "hold_days": days,
+        "stats": {
+            "awaiting": int((stats or {}).get("awaiting") or 0),
+            "settled": int((stats or {}).get("settled") or 0),
+            "blocked": int((stats or {}).get("blocked") or 0),
+        },
+    }
 
 
 @router.post("/settlements/{settlement_id}/override")
@@ -985,6 +1119,7 @@ def public_config(db: Session = Depends(get_db)):
 
     return {
         "virtual_puja_enabled": bool(get_setting(db, "virtual_puja_enabled", False)),
+        "customer_timezones": __import__("app.timezones", fromlist=["CUSTOMER_TIMEZONES"]).CUSTOMER_TIMEZONES,
         "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919014654994")),
         "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 24)),
         "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 15)),

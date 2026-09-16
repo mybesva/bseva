@@ -19,6 +19,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { PREFERRED_LANGUAGES, uiLangFromPreferred, type PreferredLang } from "@/lib/languages";
 import { toast } from "sonner";
 import PersonNameFields from "@/components/PersonNameFields";
+import PushNotificationCard from "@/components/PushNotificationCard";
 import {
   splitDisplayName,
   validatePersonNameParts,
@@ -284,6 +285,7 @@ export default function CustomerProfilePage() {
           </form>
         </CardContent>
       </Card>
+      <PushNotificationCard />
     </CustomerPortal>
   );
 }

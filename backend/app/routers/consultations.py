@@ -156,7 +156,7 @@ def create_muhurta_consultation(
     if not svc:
         raise HTTPException(404, "Service not found")
     if not svc.get("muhurta_consultation_enabled") and not svc.get("requires_muhurta"):
-        raise HTTPException(400, "Muhurta consultation is not enabled for this service")
+        raise HTTPException(400, "Muhurtham consultation is not enabled for this service")
     if body.appointment_date < date.today():
         raise HTTPException(400, "Appointment date cannot be in the past")
     # Normalize time to HH:MM:SS
@@ -180,7 +180,7 @@ def create_muhurta_consultation(
                 str(user["id"]),
                 -fee,
                 "debit",
-                f"Muhurta consultation for {svc.get('name')} on {body.appointment_date.isoformat()} {raw_time[:5]}",
+                f"Muhurtham consultation for {svc.get('name')} on {body.appointment_date.isoformat()} {raw_time[:5]}",
                 None,
                 cnum,
             )

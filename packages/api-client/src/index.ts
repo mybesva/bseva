@@ -2,11 +2,15 @@ import { formatApiError, TERMS_VERSION, PRIVACY_VERSION } from "@bseva/config";
 import type {
   AuthUser,
   AvailabilityBlock,
+  AdminPermissions,
+  AppNotification,
   Booking,
   CatalogService,
   Invoice,
   LegalPolicy,
   NearbyPujari,
+  NavBadges,
+  Paginated,
   PujariDocument,
   PujariProfile,
   PublicConfig,
@@ -54,6 +58,37 @@ function joinUrl(base: string, path: string) {
   const b = base.replace(/\/$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${b}${p}`;
+}
+
+export function toQuery(params?: Record<string, string | number | boolean | undefined | null>): string {
+  const qs = new URLSearchParams();
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+  });
+  const q = qs.toString();
+  return q ? `?${q}` : "";
+}
+
+export function asPaginated<T>(data: Paginated<T> | T[] | unknown, fallbackLimit = 50): Paginated<T> {
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length, page: 1, limit: data.length || fallbackLimit, pages: 1 };
+  }
+  if (data && typeof data === "object") {
+    const d = data as Paginated<T> & { results?: T[] };
+    if (Array.isArray(d.items)) {
+      return {
+        items: d.items,
+        total: Number(d.total ?? d.items.length),
+        page: Number(d.page || 1),
+        limit: Number(d.limit ?? d.page_size ?? fallbackLimit),
+        pages: Number(d.pages || 1),
+      };
+    }
+    if (Array.isArray(d.results)) {
+      return { items: d.results, total: d.results.length, page: 1, pages: 1, limit: fallbackLimit };
+    }
+  }
+  return { items: [], total: 0, page: 1, pages: 1, limit: fallbackLimit };
 }
 
 export function createApiClient(opts: ApiClientOptions) {
@@ -206,6 +241,7 @@ export function createApiClient(opts: ApiClientOptions) {
       include_samagri?: boolean;
       include_alankaram?: boolean;
       include_food?: boolean;
+      country?: string;
     }) {
       const qs = new URLSearchParams({
         service_id: params.service_id,
@@ -216,6 +252,7 @@ export function createApiClient(opts: ApiClientOptions) {
       });
       if (params.city) qs.set("city", params.city);
       if (params.booking_date) qs.set("booking_date", params.booking_date);
+      if (params.country) qs.set("country", params.country);
       return api<Quote>(`/quote?${qs}`);
     },
 
@@ -241,8 +278,14 @@ export function createApiClient(opts: ApiClientOptions) {
       return api<Booking>("/bookings", { method: "POST", body: JSON.stringify(body) });
     },
 
-    async listBookings() {
-      return asArray<Booking>(await api<Booking[]>("/bookings"));
+    async listBookings(params?: Record<string, string | number | boolean | undefined>) {
+      const data = await api<Booking[] | Paginated<Booking>>(`/bookings${toQuery(params)}`);
+      if (Array.isArray(data)) return data;
+      return asPaginated<Booking>(data).items;
+    },
+
+    async listBookingsPage(params?: Record<string, string | number | boolean | undefined>) {
+      return asPaginated<Booking>(await api(`/bookings${toQuery(params)}`));
     },
 
     getBooking(id: string) {
@@ -341,6 +384,99 @@ export function createApiClient(opts: ApiClientOptions) {
 
     invoiceHtml(id: string) {
       return apiText(`/invoices/${id}/html`);
+    },
+
+    invoicePdf(id: string) {
+      return apiBlob(`/invoices/${id}/pdf`);
+    },
+
+    virtualPrecheck(body: Record<string, unknown>) {
+      return api<{ ok: boolean; blocked?: boolean; message?: string; country_code?: string }>(
+        "/bookings/virtual-precheck",
+        { method: "POST", body: JSON.stringify(body) }
+      );
+    },
+
+    getStartOtp(id: string) {
+      return api<{ available?: boolean; code?: string | null; message?: string; window_minutes?: number }>(
+        `/bookings/${id}/start-otp`
+      );
+    },
+
+    meetingInvite(token: string) {
+      return api(`/meetings/invite/${encodeURIComponent(token)}`);
+    },
+
+    contactMessage(body: Record<string, unknown>) {
+      return api("/support/contact", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    promoBanners(placement?: string) {
+      return api(`/promos/banners${toQuery({ placement })}`).then((d) => asArray<{ id: string; title?: string; subtitle?: string; image_url?: string; target_url?: string }>(d));
+    },
+
+    async listNotifications(params?: Record<string, string | number | boolean | undefined>) {
+      return asPaginated<AppNotification>(await api(`/notifications${toQuery(params)}`));
+    },
+
+    unreadNotificationCount() {
+      return api<{ count: number; unread?: number }>("/notifications/unread-count");
+    },
+
+    markNotificationRead(id: string) {
+      return api(`/notifications/${id}/read`, { method: "POST" });
+    },
+
+    markAllNotificationsRead() {
+      return api("/notifications/read-all", { method: "POST" });
+    },
+
+    registerFcmToken(token: string, platform: "android" | "ios" | "web") {
+      return api("/notifications/fcm/token", {
+        method: "POST",
+        body: JSON.stringify({ token, platform }),
+      });
+    },
+
+    removeFcmToken(token: string) {
+      return api("/notifications/fcm/token/remove", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+    },
+
+    sendTestPush() {
+      return api("/notifications/fcm/test", { method: "POST" });
+    },
+
+    navBadges() {
+      return api<NavBadges>("/notifications/nav-badges");
+    },
+
+    pujariServiceOffers() {
+      return api("/pujari/service-offers");
+    },
+
+    applyPujariServiceOffer(service_id: string) {
+      return api("/pujari/service-offers/apply", {
+        method: "POST",
+        body: JSON.stringify({ service_id }),
+      });
+    },
+
+    savePujariServiceOffers(service_ids: string[]) {
+      return api("/pujari/service-offers", {
+        method: "PUT",
+        body: JSON.stringify({ service_ids }),
+      });
+    },
+
+    adminMePermissions() {
+      return api<AdminPermissions>("/admin/me/permissions");
+    },
+
+    adminStats() {
+      return api("/admin/stats");
     },
 
     uploadCustomerPhoto(file: UploadFile) {

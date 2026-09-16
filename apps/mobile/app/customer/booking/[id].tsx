@@ -11,6 +11,32 @@ import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { formatDisplaySlot } from "@/utils/formatDate";
+import { useI18n } from "@/providers/I18nProvider";
+
+function CustomerStartOtp({ bookingId }: { bookingId: string }) {
+  const { t } = useI18n();
+  const { colors } = useAppTheme();
+  const otpQ = useQuery({
+    queryKey: ["start-otp", bookingId],
+    queryFn: () => apiClient.getStartOtp(bookingId),
+    refetchInterval: 30_000,
+  });
+  if (!otpQ.data) return null;
+  return (
+    <Card>
+      <AppText variant="h3">{t("mobile.startOtp")}</AppText>
+      {otpQ.data.code ? (
+        <AppText variant="h1" color={colors.primary} style={{ letterSpacing: 4 }}>
+          {otpQ.data.code}
+        </AppText>
+      ) : (
+        <AppText variant="small" color={colors.mutedForeground}>
+          {otpQ.data.message || "OTP appears here shortly before the scheduled start."}
+        </AppText>
+      )}
+    </Card>
+  );
+}
 
 function prepLines(data: unknown): string[] {
   if (!data) return [];
@@ -28,6 +54,7 @@ export default function BookingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const router = useRouter();
   const q = useQuery({ queryKey: ["booking", id], queryFn: () => apiClient.getBooking(id), enabled: !!id });
@@ -99,9 +126,17 @@ export default function BookingDetail() {
           </AppText>
           <AppText variant="small">Payment: {b.payment_status || "—"}</AppText>
           {b.meeting_url ? (
-            <PrimaryButton title="Open virtual meeting" variant="outline" onPress={() => void Linking.openURL(String(b.meeting_url))} />
+            <PrimaryButton title={t("mobile.joinMeet")} variant="outline" onPress={() => void Linking.openURL(String(b.meeting_url))} />
+          ) : null}
+          {b.public_invite_url ? (
+            <PrimaryButton
+              title="Invite link"
+              variant="ghost"
+              onPress={() => void Linking.openURL(String(b.public_invite_url))}
+            />
           ) : null}
         </Card>
+        {!pujari ? <CustomerStartOtp bookingId={b.id} /> : null}
         {prep.data ? (
           <Card>
             <AppText variant="h3">Preparation</AppText>
@@ -113,9 +148,24 @@ export default function BookingDetail() {
           </Card>
         ) : null}
         {loc.data?.latitude != null ? (
-          <AppText variant="small">
-            Live location: {Number(loc.data.latitude).toFixed(4)}, {Number(loc.data.longitude).toFixed(4)}
-          </AppText>
+          <Card>
+            <AppText variant="small">
+              Live location: {Number(loc.data.latitude).toFixed(4)}, {Number(loc.data.longitude).toFixed(4)}
+            </AppText>
+            <PrimaryButton
+              title="Open in Maps"
+              variant="outline"
+              onPress={() => {
+                const lat = Number(loc.data?.latitude);
+                const lng = Number(loc.data?.longitude);
+                void Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`);
+              }}
+            />
+          </Card>
+        ) : null}
+
+        {b.invoice_id ? (
+          <PrimaryButton title="View invoice" variant="outline" onPress={() => router.push(`/customer/invoice/${b.invoice_id}`)} />
         ) : null}
 
         {!pujari && b.payment_status === "pending" ? (

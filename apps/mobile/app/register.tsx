@@ -126,7 +126,7 @@ export default function RegisterScreen() {
               <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
               <Field label="Confirm password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
               <AppText variant="small">Preferred language</AppText>
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {LANGS.map((code) => (
                   <Pressable
                     key={code}
@@ -166,6 +166,12 @@ export default function RegisterScreen() {
                   {REGISTRATION_CONSENT_LABEL}
                 </AppText>
               </View>
+              <Pressable onPress={() => router.push("/legal/platform_terms")}>
+                <AppText color={colors.primary} variant="small">Read Terms</AppText>
+              </Pressable>
+              <Pressable onPress={() => router.push("/legal/privacy")}>
+                <AppText color={colors.primary} variant="small">Read Privacy Policy</AppText>
+              </Pressable>
               <PrimaryButton title={pending ? "Creating..." : "Create account"} loading={pending} onPress={onSubmit} />
             </View>
           </Card>

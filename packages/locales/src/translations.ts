@@ -1,9 +1,12 @@
-export type Lang = "en" | "hi" | "te";
+export type Lang = "en" | "hi" | "te" | "mr" | "ta" | "kn";
 
 export const LANG_LABELS: Record<Lang, string> = {
   en: "English",
   hi: "हिन्दी",
   te: "తెలుగు",
+  mr: "मराठी",
+  ta: "தமிழ்",
+  kn: "ಕನ್ನಡ",
 };
 
 type Dict = Record<string, string>;
@@ -956,4 +959,8 @@ const te: Dict = {
   "support.submitted": "టికెట్ సమర్పించబడింది",
 };
 
-export const dictionaries: Record<Lang, Dict> = { en, hi, te };
+const mr: Dict = { ...en };
+const ta: Dict = { ...en };
+const kn: Dict = { ...en };
+
+export const dictionaries: Record<Lang, Dict> = { en, hi, te, mr, ta, kn };

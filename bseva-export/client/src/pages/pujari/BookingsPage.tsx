@@ -284,7 +284,7 @@ export default function PujariBookingsPage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock size={14} />
-                            {row.booking.bookingTime || "—"}
+                            {row.booking.indiaLocal || row.booking.bookingTime || "—"}
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin size={14} />

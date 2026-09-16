@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -251,6 +251,8 @@ def quote(
     include_samagri: bool = False,
     include_alankaram: bool = False,
     include_food: bool = False,
+    mode: str | None = None,
+    country: str | None = None,
     db: Session = Depends(get_db),
 ):
     from app.pricing import compute_quote, parse_booking_date
@@ -263,16 +265,21 @@ def quote(
         raise HTTPException(404, "Service not found")
     if svc.get("standard_price_paise") is None or svc.get("pricing_status") == "awaiting_pricing":
         raise HTTPException(400, "This service is not yet priced for booking")
-    return compute_quote(
-        db,
-        service=svc,
-        package_type=package_type,
-        city=city,
-        booking_date=parse_booking_date(booking_date),
-        include_samagri=include_samagri,
-        include_alankaram=include_alankaram,
-        include_food=include_food,
-    )
+    try:
+        return compute_quote(
+            db,
+            service=svc,
+            package_type=package_type,
+            city=city,
+            booking_date=parse_booking_date(booking_date),
+            include_samagri=include_samagri,
+            include_alankaram=include_alankaram,
+            include_food=include_food,
+            mode=mode,
+            country=country,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
 
 
 @router.get("/pujaris")
@@ -390,8 +397,24 @@ def previous_pujaris(user=Depends(require_roles("customer")), db: Session = Depe
     return [row_dict(r) for r in rows if not r["blocked"] and r["verification_status"] == "approved" and r["available"]]
 
 
+@router.post("/bookings/virtual-precheck")
+def virtual_precheck(request: Request, user=Depends(require_roles("customer"))):
+    """Server-side VPN/proxy check before the Virtual Puja booking form is submitted."""
+    from app.vpn_check import VPN_MESSAGE, inspect_ip, client_ip
+
+    info = inspect_ip(client_ip(request))
+    if info.get("vpn_or_proxy"):
+        return {"ok": False, "blocked": True, "message": VPN_MESSAGE, "country_code": info.get("country_code")}
+    return {"ok": True, "blocked": False, "country_code": info.get("country_code")}
+
+
 @router.post("/bookings")
-def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+def create_booking(
+    body: BookingCreateIn,
+    request: Request,
+    user=Depends(require_roles("customer")),
+    db: Session = Depends(get_db),
+):
     from app.platform_config import get_setting
 
     if not body.terms_accepted:
@@ -408,29 +431,60 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         raise HTTPException(400, "This service is not yet available for booking")
     if body.mode == "virtual" and not bool(get_setting(db, "virtual_puja_enabled", False)):
         raise HTTPException(400, "Virtual Puja is currently disabled by Admin")
+    if body.mode == "virtual":
+        from app.timezones import ist_date_time, to_utc, validate_timezone
+        from app.vpn_check import assert_not_vpn
+
+        assert_not_vpn(request)
+        if not (body.customer_timezone or "").strip():
+            raise HTTPException(400, "Timezone is required for Virtual Puja")
+        if not (body.customer_country or "").strip():
+            raise HTTPException(400, "Country is required for Virtual Puja")
+        try:
+            validate_timezone(body.customer_timezone or "")
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
 
     # Service-area gate: booking location must have an eligible pujari within radius.
-    if body.latitude is None or body.longitude is None:
-        raise HTTPException(400, "Booking location coordinates are required")
-    try:
-        area_ok = service_available_near(
-            db,
-            float(body.latitude),
-            float(body.longitude),
-            int(svc["required_level"] or 1),
-            SERVICE_RADIUS_KM,
-        )
-    except Exception:
-        raise HTTPException(503, "Unable to verify service availability. Please try again.")
-    if not area_ok:
-        raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
+    # Virtual Puja is assigned by schedule (India time), not by 10 km radius.
+    if body.mode != "virtual":
+        if body.latitude is None or body.longitude is None:
+            raise HTTPException(400, "Booking location coordinates are required")
+        try:
+            area_ok = service_available_near(
+                db,
+                float(body.latitude),
+                float(body.longitude),
+                int(svc["required_level"] or 1),
+                SERVICE_RADIUS_KM,
+            )
+        except Exception:
+            raise HTTPException(503, "Unable to verify service availability. Please try again.")
+        if not area_ok:
+            raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
 
     # Per-puja minimum booking notice (default 48h / 2 days)
     lead_hours = int(svc.get("booking_lead_hours") if svc.get("booking_lead_hours") is not None else 48)
     if lead_hours < 1:
         lead_hours = 48
-    booking_start = datetime.combine(body.booking_date, body.start_time)
-    earliest_allowed = datetime.now() + timedelta(hours=lead_hours)
+
+    duration = int(svc["duration_minutes"] or 90)
+    start_at_utc = None
+    ist_date = body.booking_date
+    start = body.start_time
+    if body.mode == "virtual":
+        from app.timezones import ist_date_time, to_utc
+
+        start_at_utc = to_utc(body.booking_date, body.start_time, body.customer_timezone or "Asia/Kolkata")
+        ist_date, start = ist_date_time(body.booking_date, body.start_time, body.customer_timezone or "Asia/Kolkata")
+        end = (datetime.combine(ist_date, start) + timedelta(minutes=duration)).time()
+        booking_start = start_at_utc.replace(tzinfo=None)
+        earliest_allowed = datetime.utcnow() + timedelta(hours=lead_hours)
+    else:
+        end = (datetime.combine(body.booking_date, start) + timedelta(minutes=duration)).time()
+        booking_start = datetime.combine(body.booking_date, body.start_time)
+        earliest_allowed = datetime.now() + timedelta(hours=lead_hours)
+
     if booking_start < earliest_allowed:
         if lead_hours <= 2:
             msg = "This puja can only be booked for a time at least 2 hours from now"
@@ -441,10 +495,6 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         else:
             msg = f"This puja must be booked at least {lead_hours} hours in advance"
         raise HTTPException(400, msg)
-
-    duration = int(svc["duration_minutes"] or 90)
-    start = body.start_time
-    end = (datetime.combine(body.booking_date, start) + timedelta(minutes=duration)).time()
 
     if body.mode == "virtual" and not svc["virtual_available"]:
         raise HTTPException(400, "This service is not available as a virtual puja")
@@ -464,14 +514,17 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         ).mappings().first()
         if not pujari or pujari["blocked"] or pujari["verification_status"] != "approved" or not pujari["available"]:
             raise HTTPException(400, "This pujari is not available")
-        if not pujari_covers_location(
-            db, str(body.pujari_id), float(body.latitude), float(body.longitude), SERVICE_RADIUS_KM
-        ):
-            raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
+        if body.mode != "virtual":
+            if body.latitude is None or body.longitude is None:
+                raise HTTPException(400, "Booking location coordinates are required")
+            if not pujari_covers_location(
+                db, str(body.pujari_id), float(body.latitude), float(body.longitude), SERVICE_RADIUS_KM
+            ):
+                raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
 
         from app.domain import pujari_blocked_on_slot
 
-        if pujari_blocked_on_slot(db, str(body.pujari_id), body.booking_date, start, end):
+        if pujari_blocked_on_slot(db, str(body.pujari_id), ist_date, start, end):
             raise HTTPException(400, "This pujari is not available on the selected date")
         if not pujari["approved_level"] or int(pujari["approved_level"]) < int(svc["required_level"]):
             raise HTTPException(400, "Pujari is not eligible for this service")
@@ -480,15 +533,10 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         if not pujari_has_verified_service(db, str(body.pujari_id), str(body.service_id)):
             raise HTTPException(400, "This pujari is not verified for this service")
         if slot_conflict(
-            db, str(body.pujari_id), body.booking_date, start, end, str(body.service_id)
+            db, str(body.pujari_id), ist_date, start, end, str(body.service_id)
         ):
             raise HTTPException(409, "This time slot is already booked")
     else:
-        if body.mode == "virtual":
-            raise HTTPException(
-                400,
-                "Virtual puja needs a pujari first. Book in-person; our team will assign a pujari and set up the meeting.",
-            )
         if body.recurring and body.recurring != "none":
             raise HTTPException(400, "Recurring series can be set up after admin assigns a pujari.")
 
@@ -513,16 +561,21 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
     from app.pricing import compute_quote
 
     city = body.city or (body.location_label.split(",")[-1].strip() if body.location_label else None)
-    bill = compute_quote(
-        db,
-        service=svc,
-        package_type=body.package_type,
-        city=city,
-        booking_date=body.booking_date,
-        include_samagri=bool(body.include_samagri),
-        include_alankaram=bool(body.include_alankaram),
-        include_food=bool(body.include_food),
-    )
+    try:
+        bill = compute_quote(
+            db,
+            service=svc,
+            package_type=body.package_type,
+            city=city,
+            booking_date=ist_date,
+            include_samagri=bool(body.include_samagri),
+            include_alankaram=bool(body.include_alankaram),
+            include_food=bool(body.include_food),
+            mode=body.mode,
+            country=body.customer_country,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
     base = int(bill["basePrice"]) + int(bill["locationAdjustment"])
     platform_fee = int(bill["platformFee"])
     payable = int(bill["pujariShare"])
@@ -556,13 +609,15 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
               gst_percent, gst_amount_paise, total_paise, terms_accepted, special_instructions,
               main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
               pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested,
-              needs_reassignment, pujaris_required
+              needs_reassignment, pujaris_required,
+              customer_timezone, customer_country, start_at_utc, virtual_price_tier
             ) VALUES (
               CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
               :d, :st, :et, :loc, :addr, :lat, :lng, :meet, :bstatus, 'paid', 'pending', 'not_applicable',
               :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, :instr,
               :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq,
-              :needs_reassign, :team
+              :needs_reassign, :team,
+              :ctz, :ccountry, :start_utc, :vtier
             )
             """
         ),
@@ -576,7 +631,7 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             "sid": str(body.service_id),
             "pkg": body.package_type,
             "mode": body.mode,
-            "d": body.booking_date,
+            "d": ist_date,
             "st": start,
             "et": end,
             "loc": body.location_label,
@@ -601,6 +656,10 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
             "alanreq": bool(body.include_alankaram),
             "foodreq": bool(body.include_food),
             "team": team_size,
+            "ctz": body.customer_timezone if body.mode == "virtual" else None,
+            "ccountry": (body.customer_country or "").upper() if body.mode == "virtual" else None,
+            "start_utc": start_at_utc,
+            "vtier": bill.get("virtualPriceTier"),
         },
     )
     try:
@@ -780,6 +839,8 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                     include_samagri=bool(body.include_samagri),
                     include_alankaram=bool(body.include_alankaram),
                     include_food=bool(body.include_food),
+                    mode=body.mode,
+                    country=body.customer_country,
                 )
                 c_base = int(child_bill["basePrice"])
                 c_peak = int(child_bill["peakFee"])
@@ -805,13 +866,14 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                           gst_percent, gst_amount_paise, total_paise, terms_accepted, recurring_series_id,
                           main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
                           pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested,
-                          pujaris_required
+                          pujaris_required, customer_timezone, customer_country, start_at_utc, virtual_price_tier
                         ) VALUES (
                           CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
                           :d, :st, :et, :loc, :addr, :lat, :lng,
                           'pending', 'pending', 'not_applicable', 'not_applicable',
                           :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, CAST(:rs AS uuid),
-                          :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq, :team
+                          :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq, :team,
+                          :ctz, :ccountry, :start_utc, :vtier
                         )
                         """
                     ),
@@ -847,6 +909,10 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                         "alanreq": bool(body.include_alankaram),
                         "foodreq": bool(body.include_food),
                         "team": team_size,
+                        "ctz": body.customer_timezone if body.mode == "virtual" else None,
+                        "ccountry": (body.customer_country or "").upper() if body.mode == "virtual" else None,
+                        "start_utc": start_at_utc,
+                        "vtier": bill.get("virtualPriceTier"),
                     },
                 )
             if skipped:
@@ -880,6 +946,23 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
         from app.booking_offers import create_offers_for_booking, notify_pujaris_new_offer
         from app.routers.notifications import create_notification, notify_ops_staff
 
+        create_notification(
+            db,
+            user_id=str(user["id"]),
+            title="Booking created",
+            body=f"Your booking {number} is confirmed. We will update you as it progresses.",
+            category="booking",
+            link="/customer/bookings",
+            extra_data={"booking_id": booking_id},
+        )
+        is_virtual = str(getattr(body, "mode", "") or "") == "virtual"
+        notify_ops_staff(
+            db,
+            title="New virtual puja booking" if is_virtual else "New booking",
+            body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date} ({body.mode}).",
+            category="booking",
+            link="/admin/virtual-puja" if is_virtual else "/admin/bookings",
+        )
         if has_pujari:
             create_notification(
                 db,
@@ -888,8 +971,9 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                 body=f"New booking {number} awaiting your acceptance.",
                 category="booking",
                 link="/pujari/bookings",
+                extra_data={"booking_id": booking_id},
             )
-        else:
+        elif not is_virtual:
             invited_pujari_ids = create_offers_for_booking(db, booking_id)
             if invited_pujari_ids:
                 notify_pujaris_new_offer(
@@ -906,6 +990,14 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
                     category="booking",
                     link="/admin/bookings?status=needs_reassignment",
                 )
+        else:
+            notify_ops_staff(
+                db,
+                title="Virtual Puja needs pujari assignment",
+                body=f"{number} — assign a pujari using India time for this Virtual Puja.",
+                category="booking",
+                link="/admin/virtual-puja",
+            )
     except Exception:
         pass
     db.commit()
@@ -945,27 +1037,137 @@ def create_booking(body: BookingCreateIn, user=Depends(require_roles("customer")
 
 
 
+def admin_booking_filters(
+    *,
+    mode: str | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    assignment: str | None = None,
+    payment_status: str | None = None,
+) -> tuple[str, dict]:
+    """SQL AND-clauses + bind params for the admin booking list."""
+    extra = ""
+    params: dict = {}
+    mode_n = (mode or "").strip().lower()
+    if mode_n == "virtual":
+        extra += " AND b.mode = 'virtual' "
+    elif mode_n in ("physical", "in_person"):
+        extra += " AND COALESCE(b.mode, 'in_person') <> 'virtual' "
+
+    st = (status or "").strip().lower()
+    if st == "needs_reassignment":
+        extra += """
+          AND (
+            COALESCE(b.needs_reassignment, FALSE) = TRUE
+            OR b.status = 'rejected'
+            OR b.pujari_id IS NULL
+          )
+        """
+    elif st in {
+        "pending",
+        "pending_acceptance",
+        "confirmed",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "rejected",
+    }:
+        extra += " AND b.status = :status "
+        params["status"] = st
+
+    assign = (assignment or "").strip().lower()
+    if assign in ("unassigned", "needs_assignment"):
+        extra += " AND b.pujari_id IS NULL "
+    elif assign == "assigned":
+        extra += " AND b.pujari_id IS NOT NULL "
+
+    pay = (payment_status or "").strip().lower()
+    if pay in {"pending", "paid", "failed", "refund_pending", "refund_requested", "refunded"}:
+        extra += " AND LOWER(COALESCE(b.payment_status, '')) = :payment_status "
+        params["payment_status"] = pay
+
+    if date_from:
+        extra += " AND b.booking_date >= :date_from "
+        params["date_from"] = date_from
+    if date_to:
+        extra += " AND b.booking_date <= :date_to "
+        params["date_to"] = date_to
+
+    query = (q or "").strip()
+    if query:
+        extra += """
+          AND (
+            b.booking_number ILIKE :q
+            OR cu.name ILIKE :q
+            OR COALESCE(cu.email, '') ILIKE :q
+            OR COALESCE(pu.name, '') ILIKE :q
+            OR s.name ILIKE :q
+          )
+        """
+        params["q"] = f"%{query}%"
+    return extra, params
+
+
 @router.get("/bookings")
 def list_bookings(
     page: int = Query(1, ge=1),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=200),
+    mode: str | None = Query(None, description="virtual | physical | all"),
+    status: str | None = Query(None),
+    q: str | None = Query(None),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    assignment: str | None = Query(None, description="unassigned | assigned"),
+    payment_status: str | None = Query(None),
+    stats: bool = Query(False),
     user=Depends(current_user),
     db: Session = Depends(get_db),
 ):
     from app.booking_visibility import booking_for_role
+    from app.timezones import display_pair
 
     offset = (page - 1) * limit
+    mode_n = (mode or "").strip().lower()
+    payment_stats = None
 
     if user["role"] in ("admin", "super_admin"):
-        total = int(db.execute(text("SELECT COUNT(*) FROM bookings")).scalar() or 0)
+        extra, filter_params = admin_booking_filters(
+            mode=mode_n,
+            status=status,
+            q=q,
+            date_from=date_from,
+            date_to=date_to,
+            assignment=assignment,
+            payment_status=payment_status,
+        )
+        total = int(
+            db.execute(
+                text(
+                    f"""
+                    SELECT COUNT(*) FROM bookings b
+                    JOIN users cu ON cu.id = b.customer_id
+                    LEFT JOIN users pu ON pu.id = b.pujari_id
+                    JOIN services s ON s.id = b.service_id
+                    WHERE 1=1 {extra}
+                    """
+                ),
+                filter_params,
+            ).scalar()
+            or 0
+        )
+        params: dict = {"lim": limit, "off": offset, **filter_params}
         rows = db.execute(
             text(
-                """
-                SELECT b.*, cu.name AS customer_name, pu.name AS pujari_name, s.name AS service_name
+                f"""
+                SELECT b.*, cu.name AS customer_name, pu.name AS pujari_name, s.name AS service_name,
+                       cu.email AS customer_email
                 FROM bookings b
                 JOIN users cu ON cu.id = b.customer_id
                 LEFT JOIN users pu ON pu.id = b.pujari_id
                 JOIN services s ON s.id = b.service_id
+                WHERE 1=1 {extra}
                 ORDER BY
                   CASE WHEN COALESCE(b.needs_reassignment, FALSE) THEN 0 ELSE 1 END,
                   CASE WHEN b.status = 'rejected' THEN 0 ELSE 1 END,
@@ -973,13 +1175,43 @@ def list_bookings(
                 LIMIT :lim OFFSET :off
                 """
             ),
-            {"lim": limit, "off": offset},
+            params,
         ).mappings().all()
         items = [row_dict(r) for r in rows]
         from app.pujari_team import enrich_booking_pujari_team
 
         for item in items:
             enrich_booking_pujari_team(item)
+            utc = item.get("start_at_utc")
+            item["schedule_display"] = display_pair(utc, item.get("customer_timezone"))
+        if stats:
+            pay = db.execute(
+                text(
+                    f"""
+                    SELECT
+                      COALESCE(SUM(b.total_paise) FILTER (
+                        WHERE LOWER(COALESCE(b.payment_status, '')) = 'paid'
+                      ), 0) AS paid_total_paise,
+                      COALESCE(SUM(b.platform_fee_paise) FILTER (
+                        WHERE LOWER(COALESCE(b.payment_status, '')) = 'paid'
+                      ), 0) AS platform_fee_paise,
+                      COALESCE(SUM(COALESCE(b.pujari_payable_paise, 0)) FILTER (
+                        WHERE LOWER(COALESCE(b.payment_status, '')) = 'paid'
+                      ), 0) AS pujari_payable_paise
+                    FROM bookings b
+                    JOIN users cu ON cu.id = b.customer_id
+                    LEFT JOIN users pu ON pu.id = b.pujari_id
+                    JOIN services s ON s.id = b.service_id
+                    WHERE 1=1 {extra}
+                    """
+                ),
+                filter_params,
+            ).mappings().first()
+            payment_stats = {
+                "paid_total_paise": int((pay or {}).get("paid_total_paise") or 0),
+                "platform_fee_paise": int((pay or {}).get("platform_fee_paise") or 0),
+                "pujari_payable_paise": int((pay or {}).get("pujari_payable_paise") or 0),
+            }
     elif user["role"] in ("pujari", "head_pujari"):
         from app.booking_offers import ensure_offers_table
 
@@ -1030,6 +1262,8 @@ def list_bookings(
             {"id": pid, "lim": limit, "off": offset},
         ).mappings().all()
         items = [booking_for_role(db, dict(r), user) for r in rows]
+        for item in items:
+            item["schedule_display"] = display_pair(item.get("start_at_utc"), item.get("customer_timezone"))
     else:
         total = int(
             db.execute(
@@ -1053,14 +1287,19 @@ def list_bookings(
             {"id": user["id"], "lim": limit, "off": offset},
         ).mappings().all()
         items = [booking_for_role(db, dict(r), user) for r in rows]
+        for item in items:
+            item["schedule_display"] = display_pair(item.get("start_at_utc"), item.get("customer_timezone"))
 
-    return {
+    out = {
         "items": items,
         "total": total,
         "page": page,
         "limit": limit,
         "pages": max(1, (total + limit - 1) // limit) if total else 1,
     }
+    if payment_stats is not None:
+        out["payment_stats"] = payment_stats
+    return out
 
 
 @router.patch("/bookings/{booking_id}/status")
@@ -1201,6 +1440,42 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
         except ValueError as e:
             db.rollback()
             raise HTTPException(400, f"Pujari cancel fee could not be deducted: {e}") from e
+    try:
+        from app.routers.notifications import create_notification, notify_ops_staff
+
+        num = str(b.get("booking_number") or booking_id[:8])
+        refund_note = ""
+        if refund:
+            refund_note = f" A refund of ₹{int(refund) / 100:.0f} was credited to your wallet."
+        create_notification(
+            db,
+            user_id=str(b["customer_id"]),
+            title="Booking cancelled",
+            body=f"Booking {num} was cancelled.{refund_note}",
+            category="booking",
+            link="/customer/bookings",
+            extra_data={"booking_id": booking_id, "refund_paise": refund or 0},
+        )
+        if b.get("pujari_id") and actor != "pujari":
+            create_notification(
+                db,
+                user_id=str(b["pujari_id"]),
+                title="Booking cancelled",
+                body=f"Booking {num} was cancelled.",
+                category="booking",
+                link="/pujari/bookings",
+                extra_data={"booking_id": booking_id},
+            )
+        if actor == "pujari":
+            notify_ops_staff(
+                db,
+                title="Pujari cancelled a booking",
+                body=f"{num} was cancelled by the pujari.",
+                category="ops",
+                link="/admin/bookings",
+            )
+    except Exception:
+        pass
     db.commit()
     # Emails after commit — never roll back booking/payment on mail failure
     try:
@@ -1321,6 +1596,20 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
         text("INSERT INTO payments (booking_id, amount_paise, status, provider) VALUES (CAST(:id AS uuid), :amt, 'successful', 'wallet')"),
         {"id": booking_id, "amt": total},
     )
+    try:
+        from app.routers.notifications import create_notification
+
+        create_notification(
+            db,
+            user_id=str(user["id"]),
+            title="Payment received",
+            body=f"Payment for booking {b.get('booking_number') or booking_id[:8]} was successful.",
+            category="payment",
+            link="/customer/bookings",
+            extra_data={"booking_id": booking_id},
+        )
+    except Exception:
+        pass
     db.commit()
     try:
         from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name

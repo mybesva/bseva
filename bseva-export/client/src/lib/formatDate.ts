@@ -62,6 +62,21 @@ export function toDateInputValue(value: string | Date | null | undefined): strin
   return d ? format(d, "yyyy-MM-dd") : "";
 }
 
+export function toIsoDateInput(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Inclusive last N calendar days ending today (local). */
+export function lastNDaysRange(days = 30): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - (Math.max(1, days) - 1));
+  return { from: toIsoDateInput(from), to: toIsoDateInput(to) };
+}
+
 /** Date input (yyyy-MM-dd) → ISO start of day UTC for APIs */
 export function dateInputToIsoStart(value: string | null | undefined): string | null {
   const day = (value || "").trim().slice(0, 10);

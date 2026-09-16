@@ -143,7 +143,7 @@ NEW_SERVICES = [
     ("nava-chandi-homam", "Nava Chandi Homam", ["homam-havan"], ["Navachandi Homam", "Nava Chandi Homa", "Chandi Homam"], 3, False, None),
     # Marriage
     ("nischitartham", "Nischitartham / Engagement", ["marriage"], ["Nischitartha", "Engagement Ceremony", "Nischayathartham"], 2, False, None),
-    ("marriage-muhurta-consultation", "Marriage Muhurta Consultation", ["marriage", "astrology-muhurtham"], ["Marriage Muhurtham", "Wedding Muhurta", "Vivaha Muhurta"], 2, False, None),
+    ("marriage-muhurta-consultation", "Marriage Muhurtham Consultation", ["marriage", "astrology-muhurtham"], ["Marriage Muhurtham", "Wedding Muhurtham", "Vivaha Muhurtham", "Marriage Muhurtham Consultation"], 2, False, None),
     ("pre-wedding-ganapathi-puja", "Pre-Wedding Ganapathi Puja", ["marriage", "ganapathi"], ["Pre Wedding Ganesh Puja", "Wedding Ganapathi Puja"], 2, False, None),
     ("uma-maheshwara-puja", "Uma Maheshwara Puja", ["marriage", "shiva"], ["Uma Maheswara Puja", "Uma Maheshwara Kalyanam"], 2, False, None),
     ("marriage-anniversary-puja", "Marriage Anniversary Puja", ["marriage", "life-milestones"], ["Wedding Anniversary Puja", "Marriage Anniversary"], 2, False, None),
@@ -228,11 +228,11 @@ SPECIAL_SERVICES = [
     ),
     (
         "muhurta-consultation",
-        "Muhurta Consultation",
+        "Muhurtham Consultation",
         ["astrology-muhurtham"],
-        ["Muhurtham Consultation", "Muhurta", "Auspicious Timing Consultation"],
+        ["Muhurtham Consultation", "Auspicious Timing Consultation"],
         2,
-        "Standalone muhurta / muhurtham guidance.",
+        "Standalone Muhurtham guidance.",
     ),
 ]
 

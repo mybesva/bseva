@@ -22,6 +22,7 @@ import AdminServices from "./pages/admin/ServicesAdmin";
 import AdminRecommendations from "./pages/admin/Recommendations";
 import AdminBulkImport from "./pages/admin/BulkImport";
 import AdminBookings from "./pages/admin/Bookings";
+import AdminVirtualPuja from "./pages/admin/VirtualPuja";
 import AdminPayments from "./pages/admin/Payments";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminSamagri from "./pages/admin/Samagri";
@@ -68,6 +69,7 @@ import CustomerBookingsPage from "./pages/customer/BookingsPage";
 import CustomerHistoryPage from "./pages/customer/HistoryPage";
 import CustomerChangePasswordPage from "./pages/customer/ChangePasswordPage";
 import { AuthProvider } from "./lib/AuthContext";
+import FcmBootstrap from "./components/FcmBootstrap";
 import { ServiceAvailabilityProvider } from "./lib/ServiceAvailabilityContext";
 import LogoWatermark from "./components/LogoWatermark";
 import AdminSettlements from "./pages/admin/Settlements";
@@ -81,6 +83,7 @@ import CustomerRewardsPage from "./pages/customer/RewardsPage";
 import PublicPujariProfile from "./pages/PublicPujariProfile";
 import AdminPujariDetail from "./pages/admin/PujariDetail";
 import { adminBasePath } from "./const";
+import { CustomerNotificationsPage, PujariNotificationsPage } from "./pages/NotificationsInbox";
 import ScrollToTop from "./components/ScrollToTop";
 
 function Router() {
@@ -100,6 +103,7 @@ function Router() {
       <Route path="/customer/address" component={CustomerAddressPage} />
       <Route path="/customer/wallet" component={CustomerWalletPage} />
       <Route path="/customer/bookings" component={CustomerBookingsPage} />
+      <Route path="/customer/notifications" component={CustomerNotificationsPage} />
       <Route path="/customer/history" component={CustomerHistoryPage} />
       <Route path="/customer/change-password" component={CustomerChangePasswordPage} />
       <Route path="/customer/support" component={CustomerSupportPage} />
@@ -108,6 +112,7 @@ function Router() {
       <Route path="/customer/terms" component={CustomerTermsPage} />
       <Route path="/pujari-profile/:id" component={PublicPujariProfile} />
       <Route path="/pujari/bookings" component={PujariBookingsPage} />
+      <Route path="/pujari/notifications" component={PujariNotificationsPage} />
       <Route path="/pujari" component={PujariDashboard} />
       <Route path="/pujari/head-ratings" component={HeadRatingsPage} />
       <Route path="/pujari/onboarding" component={PujariOnboarding} />
@@ -149,6 +154,7 @@ function Router() {
       <Route path={`${ops}/recommendations`} component={AdminRecommendations} />
       <Route path={`${ops}/bulk-import`} component={AdminBulkImport} />
       <Route path={`${ops}/bookings`} component={AdminBookings} />
+      <Route path={`${ops}/virtual-puja`} component={AdminVirtualPuja} />
       <Route path={`${ops}/settlements`} component={AdminSettlements} />
       <Route path={`${ops}/invoices`} component={AdminInvoices} />
       <Route path={`${ops}/payments`} component={AdminPayments} />
@@ -180,6 +186,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light" switchable>
         <AuthProvider>
+          <FcmBootstrap />
           <ServiceAvailabilityProvider>
             <TooltipProvider>
               <LogoWatermark />

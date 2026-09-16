@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { toast } from "sonner";
+import { notifyBadgesChanged } from "@/components/NotificationBell";
 
 const CATEGORIES_CUSTOMER = ["Payments", "Wallet", "Bookings", "Others"];
 const CATEGORIES_PUJARI = ["Settlement", "Route Map / Location", "Others"];
@@ -76,6 +77,7 @@ export default function AdminSupport() {
     try {
       await api(`/support/conversations/${id}/close`, { method: "POST" });
       toast.success("Conversation resolved");
+      notifyBadgesChanged();
       await load();
     } catch (e: any) {
       toast.error(e.message);
@@ -102,6 +104,7 @@ export default function AdminSupport() {
       toast.success("Ticket created");
       setSubject("");
       setDescription("");
+      notifyBadgesChanged();
       await load();
     } catch (err: any) {
       toast.error(err.message);
@@ -117,6 +120,7 @@ export default function AdminSupport() {
         body: JSON.stringify({ status }),
       });
       toast.success("Updated");
+      notifyBadgesChanged();
       await load();
     } catch (e: any) {
       toast.error(e.message);

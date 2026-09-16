@@ -99,7 +99,7 @@ export default function MuhurtaConsultationBook({
           <div className="min-w-0">
             <p className="font-semibold text-foreground">
               {requiresMuhurtham
-                ? "This puja needs an auspicious time (muhurta)"
+                ? "This puja needs an auspicious time (Muhurtham)"
                 : "Book a Muhurtham consultation"}
             </p>
             <p className="text-sm text-muted-foreground mt-0.5">

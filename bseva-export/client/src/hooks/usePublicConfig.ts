@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 
 export type PublicConfig = {
   virtual_puja_enabled: boolean;
+  customer_timezones?: { id: string; label: string }[];
   bseva_whatsapp_number: string;
   pujari_full_booking_details_before_hours: number;
   puja_start_otp_before_minutes: number;

@@ -254,7 +254,7 @@ def run() -> None:
             ("Shraddha / Death Anniversary", "shraddha-death-anniversary", "Annual death anniversary rituals", "death_anniversary", 2, 350000, 550000, False),
             ("Astrology Consultation", "astrology-consultation", "General astrology consultation", "astrology", 2, 50000, 100000, False),
             ("Horoscope / Kundali Consultation", "kundali-consultation", "Kundali and horoscope reading", "astrology", 2, 75000, 150000, False),
-            ("Muhurta Consultation", "muhurta-consultation", "Standalone muhurta guidance", "astrology", 2, 30000, 50000, True),
+            ("Muhurtham Consultation", "muhurta-consultation", "Standalone Muhurtham guidance", "astrology", 2, 30000, 50000, True),
         ]:
             cur.execute("SELECT 1 FROM services WHERE slug = %s", (slug,))
             if not cur.fetchone():
