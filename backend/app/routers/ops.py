@@ -1059,6 +1059,24 @@ def cron_booking_offers(request: Request, db: Session = Depends(get_db)):
     return {"ok": True, "job": "booking_offers", "newly_invited_pujari_ids": len(invited)}
 
 
+@router.get("/ops/cron/daily")
+def cron_daily(request: Request, db: Session = Depends(get_db)):
+    """Once per day (Vercel Hobby): reminders, OTP windows, location unlock, booking offers."""
+    _require_cron_auth(request)
+    from app.booking_offers import refresh_offers_for_open_bookings
+    from app.jobs.booking_reminders import run_booking_window_jobs
+
+    windows = run_booking_window_jobs()
+    invited = refresh_offers_for_open_bookings(db)
+    db.commit()
+    return {
+        "ok": True,
+        "job": "daily",
+        "booking_windows": windows,
+        "booking_offers_new_invites": len(invited),
+    }
+
+
 def _require_cron_auth(request: Request) -> None:
     """Vercel Cron sends Authorization: Bearer $CRON_SECRET automatically when CRON_SECRET is set."""
     import os

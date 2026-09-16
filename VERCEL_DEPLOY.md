@@ -138,3 +138,17 @@ python seed.py
 - Function timeout ~30s (Hobby/Pro limits)
 - Not a long-running uvicorn process
 - Mobile can later point `EXPO_PUBLIC_API_URL` at this same origin or a future AWS URL
+
+## Cron jobs (Hobby vs Pro)
+
+**Vercel Hobby** only allows cron schedules that run **at most once per day**. Deploys fail if `vercel.json` uses `* * * * *` or `*/10 * * * *`.
+
+This repo uses one daily job: `/api/v1/ops/cron/daily` at `0 2 * * *` UTC (~07:30 IST).
+
+Set **`CRON_SECRET`** in Vercel env; Vercel sends `Authorization: Bearer <CRON_SECRET>` on cron invocations.
+
+For **minute-level** OTP / puja lifecycle (previous `puja-lifecycle` every minute), either upgrade to **Pro** and restore finer schedules in `vercel.json`, or ping these URLs from an external scheduler (e.g. cron-job.org) with the same bearer token:
+
+- `/api/v1/ops/cron/puja-lifecycle`
+- `/api/v1/ops/cron/booking-reminders`
+- `/api/v1/ops/cron/booking-offers`
