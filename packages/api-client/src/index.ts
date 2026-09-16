@@ -337,6 +337,43 @@ export function createApiClient(opts: ApiClientOptions) {
       });
     },
 
+    requestCompleteOtp(id: string) {
+      return api(`/bookings/${id}/complete-otp/request`, { method: "POST" });
+    },
+
+    getCompleteOtp(id: string) {
+      return api<{ available?: boolean; code?: string | null; message?: string; customer_can_verify?: boolean }>(
+        `/bookings/${id}/complete-otp`
+      );
+    },
+
+    verifyCompleteOtp(id: string, code: string) {
+      return api(`/bookings/${id}/complete-otp/verify`, {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      });
+    },
+
+    adminStartBooking(id: string, reason: string) {
+      return api(`/bookings/${id}/admin/start`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+    },
+
+    adminCompleteBooking(id: string, reason: string) {
+      return api(`/bookings/${id}/admin/complete`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+    },
+
+    pujariTrackingAssignments() {
+      return api<{ items: { booking_id: string; gps_interval_seconds?: number }[]; gps_interval_seconds?: number }>(
+        "/pujari/tracking-assignments"
+      );
+    },
+
     completeBooking(id: string) {
       return api(`/bookings/${id}/complete`, { method: "POST" });
     },
@@ -349,7 +386,7 @@ export function createApiClient(opts: ApiClientOptions) {
       return api(`/bookings/${id}/location`);
     },
 
-    updateBookingLocation(id: string, body: { latitude: number; longitude: number }) {
+    updateBookingLocation(id: string, body: { latitude: number; longitude: number; accuracy_m?: number }) {
       return api(`/bookings/${id}/location`, { method: "POST", body: JSON.stringify(body) });
     },
 

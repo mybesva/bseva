@@ -808,6 +808,29 @@ _FOUNDATION_STMTS = [
       PRIMARY KEY (category_id, language_code)
     )
     """,
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS complete_otp_code TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS complete_otp_sent_at TIMESTAMPTZ",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tracking_stopped_at TIMESTAMPTZ",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tracking_stop_reason TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS arrived_at TIMESTAMPTZ",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS arrival_hit_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE",
+    "ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS attempt_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS last_attempt_at TIMESTAMPTZ",
+    "ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ",
+    "ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS consumed_at TIMESTAMPTZ",
+    "ALTER TABLE pujari_location_pings ADD COLUMN IF NOT EXISTS accuracy_m DOUBLE PRECISION",
+    "ALTER TABLE otp_codes DROP CONSTRAINT IF EXISTS otp_codes_purpose_check",
+    """
+    DO $$ BEGIN
+      ALTER TABLE otp_codes ADD CONSTRAINT otp_codes_purpose_check
+        CHECK (purpose IN (
+          'register', 'login', 'verify', 'reset', 'verify_email', 'verify_phone',
+          'start_puja', 'complete_puja'
+        ));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
 ]
 
 
@@ -826,7 +849,18 @@ def _seed_platform_settings(conn) -> None:
         "referral_pujari_active": True,
         "puja_start_otp_before_minutes": 15,
         "pujari_location_tracking_before_minutes": 15,
-        "pujari_full_booking_details_before_hours": 24,
+        "pujari_full_booking_details_before_hours": 20,
+        "pujari_gps_update_interval_seconds": 60,
+        "customer_tracking_refresh_seconds": 60,
+        "pujari_arrival_radius_meters": 100,
+        "pujari_arrival_confirm_pings": 2,
+        "puja_complete_otp_before_minutes": 15,
+        "puja_otp_expiry_minutes": 240,
+        "puja_complete_otp_expiry_minutes": 480,
+        "puja_otp_resend_cooldown_seconds": 60,
+        "puja_otp_max_requests_per_hour": 5,
+        "puja_otp_max_verify_attempts": 5,
+        "puja_otp_lock_minutes": 10,
         "bseva_whatsapp_number": "919014654994",
         "email_from_accounts": "accounts@b-seva.com",
         "email_from_support": "support@b-seva.com",
@@ -867,6 +901,21 @@ def _seed_platform_settings(conn) -> None:
             ),
             {"k": k, "v": json.dumps(v)},
         )
+    # Move the previous 24h default to the new 20h product default without clobbering custom admin values.
+    conn.execute(
+        text(
+            """
+            UPDATE platform_settings
+            SET value = CAST(:v AS jsonb)
+            WHERE key = 'pujari_full_booking_details_before_hours'
+              AND (
+                value = CAST('24' AS jsonb)
+                OR btrim(COALESCE(value #>> '{}', '')) = '24'
+              )
+            """
+        ),
+        {"v": json.dumps(20)},
+    )
     addr = "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India"
     conn.execute(
         text(

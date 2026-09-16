@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BrandSplash } from "@/components/BrandSplash";
 import { AppProviders } from "@/providers/AppProviders";
 import { SessionEffects } from "@/providers/SessionEffects";
+import "@/services/pujariTracking";
 import { useAppTheme } from "@/theme/ThemeContext";
 
 Notifications.setNotificationHandler({

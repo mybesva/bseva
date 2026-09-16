@@ -6,6 +6,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { notificationLink, registerPushToken, unregisterPushToken } from "@/services/push";
+import { stopPujariTracking, syncPujariTracking } from "@/services/pujariTracking";
 
 export function SessionEffects() {
   const { user, isAuthenticated } = useAuth();
@@ -39,6 +40,37 @@ export function SessionEffects() {
     });
     return () => sub.remove();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user || (user.role !== "pujari" && user.role !== "head_pujari")) {
+      void stopPujariTracking();
+      return;
+    }
+    let cancelled = false;
+    async function tick() {
+      try {
+        const row = await apiClient.pujariTrackingAssignments();
+        if (cancelled) return;
+        const first = row.items?.[0];
+        if (first?.booking_id) {
+          await syncPujariTracking({
+            bookingId: first.booking_id,
+            intervalMs: (first.gps_interval_seconds || row.gps_interval_seconds || 60) * 1000,
+          });
+        } else {
+          await stopPujariTracking();
+        }
+      } catch {
+        /* keep last watcher; retry next tick */
+      }
+    }
+    void tick();
+    const t = setInterval(() => void tick(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [isAuthenticated, user?.id, user?.role]);
 
   return null;
 }

@@ -68,3 +68,17 @@ def set_booking_status(
         text(f"UPDATE bookings SET status = :st{extras} WHERE id = CAST(:id AS uuid)"),
         params,
     )
+    try:
+        from app.booking_tracking import STOP_CANCELLED, STOP_COMPLETED, STOP_REASSIGNED, STOP_REJECTED, STOP_STARTED, stop_tracking
+
+        reason = {
+            "in_progress": STOP_STARTED,
+            "completed": STOP_COMPLETED,
+            "cancelled": STOP_CANCELLED,
+            "rejected": STOP_REJECTED,
+            "pending_acceptance": STOP_REASSIGNED,
+        }.get(new_status)
+        if reason:
+            stop_tracking(db, booking_id, reason)
+    except Exception:
+        pass

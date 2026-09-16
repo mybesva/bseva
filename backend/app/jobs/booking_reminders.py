@@ -183,7 +183,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
 
 def issue_start_otps_nearing_start(db: Session | None = None) -> dict:
     """Auto-issue start OTP for confirmed bookings inside the configured pre-start window."""
-    from app.puja_start_otp import issue_start_puja_otp, otp_window_minutes, within_start_window
+    from app.puja_otp import PURPOSE_START, _active_row, issue_puja_otp, otp_window_minutes, within_start_window
 
     own = db is None
     session = db or SessionLocal()
@@ -191,7 +191,6 @@ def issue_start_otps_nearing_start(db: Session | None = None) -> dict:
     skipped = 0
     try:
         mins = otp_window_minutes(session)
-        # Look slightly beyond window so cron cadence doesn't miss
         look_hours = max(mins / 60.0, 0.25) + (10 / 60.0)
         rows = session.execute(
             text(
@@ -212,14 +211,120 @@ def issue_start_otps_nearing_start(db: Session | None = None) -> dict:
             if not within_start_window(session, b["booking_date"], b["start_time"]):
                 skipped += 1
                 continue
-            # Already issued and still active
-            if b.get("start_otp_code") and b.get("otp_sent_at"):
+            if _active_row(session, str(b["id"]), PURPOSE_START):
                 skipped += 1
                 continue
-            issue_start_puja_otp(session, dict(b), notify=True)
+            issue_puja_otp(session, dict(b), PURPOSE_START, notify=True, skip_rate_limit=True)
             issued += 1
         session.commit()
         return {"issued": issued, "skipped": skipped, "window_minutes": mins}
+    finally:
+        if own:
+            session.close()
+
+
+def issue_complete_otps_nearing_end(db: Session | None = None) -> dict:
+    from app.puja_otp import PURPOSE_COMPLETE, _active_row, issue_puja_otp, within_complete_window
+
+    own = db is None
+    session = db or SessionLocal()
+    issued = 0
+    skipped = 0
+    try:
+        rows = session.execute(
+            text(
+                """
+                SELECT b.*, s.name AS service_name
+                FROM bookings b
+                JOIN services s ON s.id = b.service_id
+                WHERE b.status = 'in_progress'
+                  AND b.pujari_id IS NOT NULL
+                """
+            )
+        ).mappings().all()
+        for b in rows:
+            booking = dict(b)
+            if not within_complete_window(session, booking):
+                skipped += 1
+                continue
+            if _active_row(session, str(booking["id"]), PURPOSE_COMPLETE):
+                skipped += 1
+                continue
+            try:
+                issue_puja_otp(session, booking, PURPOSE_COMPLETE, notify=True, skip_rate_limit=True)
+                issued += 1
+            except Exception:
+                skipped += 1
+        session.commit()
+        return {"issued": issued, "skipped": skipped}
+    finally:
+        if own:
+            session.close()
+
+
+def notify_location_unlocked(db: Session | None = None) -> dict:
+    from app.booking_visibility import pujari_hours_before_full
+    from app.domain import hours_until
+
+    own = db is None
+    session = db or SessionLocal()
+    created = 0
+    skipped = 0
+    try:
+        hours = float(pujari_hours_before_full(session))
+        rows = session.execute(
+            text(
+                """
+                SELECT b.id, b.booking_number, b.pujari_id, b.booking_date, b.start_time,
+                       s.name AS service_name
+                FROM bookings b
+                JOIN services s ON s.id = b.service_id
+                WHERE b.status = 'confirmed'
+                  AND b.pujari_id IS NOT NULL
+                  AND COALESCE(b.mode, 'in_person') <> 'virtual'
+                """
+            )
+        ).mappings().all()
+        for b in rows:
+            if hours_until(b["booking_date"], b["start_time"]) > hours:
+                skipped += 1
+                continue
+            exists = session.execute(
+                text(
+                    """
+                    SELECT id FROM notifications
+                    WHERE user_id = CAST(:uid AS uuid)
+                      AND category = 'location_unlocked'
+                      AND COALESCE(link, '') LIKE :needle
+                      AND created_at > NOW() - INTERVAL '36 hours'
+                    LIMIT 1
+                    """
+                ),
+                {"uid": str(b["pujari_id"]), "needle": f"%{b['id']}%"},
+            ).first()
+            if exists:
+                skipped += 1
+                continue
+            from app.routers.notifications import create_notification
+
+            num = b.get("booking_number") or str(b["id"])[:8]
+            create_notification(
+                session,
+                user_id=str(b["pujari_id"]),
+                title="Service location is now available",
+                body=(
+                    f"The customer service location for {b.get('service_name') or 'Puja'} ({num}) "
+                    "is now available. Open Bookings for maps and directions."
+                ),
+                category="location_unlocked",
+                link="/pujari/bookings",
+                extra_data={"booking_id": str(b["id"])},
+                message_key="locationUnlocked",
+                message_vars={"service": b.get("service_name") or "Puja", "number": num},
+            )
+            created += 1
+        session.commit()
+        return {"created": created, "skipped": skipped, "hours": hours}
     finally:
         if own:
             session.close()
@@ -229,6 +334,8 @@ def run_booking_window_jobs() -> dict:
     return {
         "reminders_24h": send_upcoming_booking_reminders(hours_ahead=24),
         "start_otp": issue_start_otps_nearing_start(),
+        "complete_otp": issue_complete_otps_nearing_end(),
+        "location_unlock": notify_location_unlocked(),
     }
 
 

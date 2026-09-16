@@ -18,7 +18,6 @@ from app.domain import apply_wallet, hours_until, row_dict
 from app.platform_config import get_setting
 from app.rbac import require_admin, require_permission
 from app.schemas import BookingRejectIn, NoShowPenaltyIn
-from app.security import verify_password
 from app.no_show import apply_no_show_to_booking
 from app.pricing import dakshina_share_percent
 
@@ -43,6 +42,15 @@ class RatingIn(BaseModel):
 class LocationPingIn(BaseModel):
     latitude: float
     longitude: float
+    accuracy_m: float | None = None
+
+
+class AdminOverrideIn(BaseModel):
+    reason: str = Field(min_length=5, max_length=500)
+
+
+class CompleteOtpVerifyIn(BaseModel):
+    code: str = Field(min_length=4, max_length=8)
 
 
 class SettlementOverrideIn(BaseModel):
@@ -444,7 +452,14 @@ def mark_no_show_penalty(
 
 @router.post("/bookings/{booking_id}/start-otp/request")
 def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
-    from app.puja_start_otp import issue_start_puja_otp, otp_window_minutes, within_start_window
+    from app.puja_otp import (
+        PURPOSE_START,
+        PujaOtpError,
+        has_active_display,
+        issue_puja_otp,
+        otp_window_minutes,
+        within_start_window,
+    )
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
@@ -462,20 +477,21 @@ def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "adm
     ).scalar()
     booking = dict(b)
     booking["service_name"] = svc or "Puja"
-    code = issue_start_puja_otp(db, booking, notify=True)
+    is_resend = has_active_display(booking, PURPOSE_START) or bool(booking.get("otp_sent_at"))
+    try:
+        issue_puja_otp(
+            db, booking, PURPOSE_START, notify=True, is_resend=is_resend, actor_id=str(user["id"])
+        )
+    except PujaOtpError as e:
+        raise HTTPException(e.status, e.message)
     db.commit()
-    out = {"ok": True, "sent_to": "customer", "window_minutes": mins}
-    from app.config import settings as app_settings
-
-    if app_settings.environment != "production":
-        out["dev_code"] = code
-    return out
+    return {"ok": True, "sent_to": "customer", "window_minutes": mins, "resent": is_resend}
 
 
 @router.get("/bookings/{booking_id}/start-otp")
 def get_start_otp(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
-    """Customer (and pujari) can view start OTP only inside the pre-start window."""
-    from app.puja_start_otp import otp_window_minutes, within_start_window
+    """Customer (and admin) can view start OTP only inside the pre-start window. Never reveal to pujari."""
+    from app.puja_otp import PURPOSE_START, otp_window_minutes, reveal_display_code, within_start_window
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
@@ -487,12 +503,7 @@ def get_start_otp(booking_id: str, user=Depends(current_user), db: Session = Dep
         raise HTTPException(403, "Not allowed")
     mins = otp_window_minutes(db)
     in_window = b["status"] == "confirmed" and within_start_window(db, b["booking_date"], b["start_time"])
-    code = None
-    try:
-        code = b.get("start_otp_code")
-    except Exception:
-        code = None
-    # Customers see the code; pujari enters what customer shares (don't reveal to pujari via this endpoint)
+    code = reveal_display_code(dict(b), PURPOSE_START)
     reveal = bool(code) and in_window and (is_customer or is_admin)
     return {
         "available": in_window and bool(code),
@@ -514,6 +525,8 @@ def get_start_otp(booking_id: str, user=Depends(current_user), db: Session = Dep
 
 @router.post("/bookings/{booking_id}/start-otp/verify")
 def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
+    from app.puja_otp import PURPOSE_START, PujaOtpError, verify_puja_otp
+
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
@@ -521,44 +534,60 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
         raise HTTPException(403, "Not allowed")
     if b["status"] != "confirmed":
         raise HTTPException(400, "Booking must be confirmed")
-    row = db.execute(
-        text(
-            """
-            SELECT * FROM otp_codes
-            WHERE phone = :phone AND purpose = 'start_puja' AND consumed = FALSE
-              AND expires_at > NOW()
-            ORDER BY created_at DESC LIMIT 1
-            """
-        ),
-        {"phone": f"booking:{booking_id}"},
-    ).mappings().first()
-    if not row or not verify_password(body.code, row["code_hash"]):
-        raise HTTPException(400, "Invalid or expired OTP")
-    db.execute(text("UPDATE otp_codes SET consumed = TRUE WHERE id = :id"), {"id": row["id"]})
     try:
-        db.execute(
-            text("UPDATE bookings SET start_otp_code = NULL WHERE id = CAST(:id AS uuid)"),
-            {"id": booking_id},
+        verify_puja_otp(db, dict(b), PURPOSE_START, body.code, actor_id=str(user["id"]))
+    except PujaOtpError as e:
+        db.commit()
+        raise HTTPException(e.status, e.message)
+    set_booking_status(db, booking_id, "in_progress", actor_id=str(user["id"]))
+    write_audit(db, str(user["id"]), "puja_started", "booking", booking_id)
+    try:
+        from app.routers.notifications import create_notification
+
+        num = str(b.get("booking_number") or booking_id[:8])
+        create_notification(
+            db,
+            user_id=str(b["customer_id"]),
+            title="Puja started",
+            body=f"Your puja {num} has started.",
+            category="booking",
+            link="/customer/bookings",
+            extra_data={"booking_id": booking_id},
+            message_key="pujaStarted",
+            message_vars={"number": num},
+        )
+        create_notification(
+            db,
+            user_id=str(b["pujari_id"]),
+            title="Puja started",
+            body=f"Booking {num} is now in progress.",
+            category="booking",
+            link="/pujari/bookings",
+            extra_data={"booking_id": booking_id},
+            message_key="pujaStarted",
+            message_vars={"number": num},
         )
     except Exception:
         pass
-    set_booking_status(db, booking_id, "in_progress", actor_id=str(user["id"]))
-    write_audit(db, str(user["id"]), "puja_started", "booking", booking_id)
     db.commit()
     return {"ok": True, "status": "in_progress"}
 
 
-@router.post("/bookings/{booking_id}/complete")
-def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+@router.post("/bookings/{booking_id}/admin/start")
+def admin_start_booking(booking_id: str, body: AdminOverrideIn, user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    if user["role"] == "pujari" and str(b["pujari_id"]) != str(user["id"]):
-        raise HTTPException(403, "Not allowed")
-    if b["status"] != "in_progress":
-        raise HTTPException(400, "Booking must be in progress")
-    set_booking_status(db, booking_id, "completed", actor_id=str(user["id"]))
-    # Create settlement pending for new model (skip legacy and no-show-blocked bookings)
+    if b["status"] != "confirmed":
+        raise HTTPException(400, "Booking must be confirmed")
+    set_booking_status(db, booking_id, "in_progress", actor_id=str(user["id"]))
+    write_audit(db, str(user["id"]), "admin_start_override", "booking", booking_id, reason=body.reason)
+    db.commit()
+    return {"ok": True, "status": "in_progress", "override": True}
+
+
+def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> None:
+    """Existing completion side effects — call exactly once after status → completed."""
     no_show_blocked = bool(b.get("no_show_marked_at")) and int(b.get("no_show_penalty_paise") or 0) > 0
     svc = db.execute(
         text("SELECT * FROM services WHERE id = CAST(:id AS uuid)"),
@@ -569,7 +598,6 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
     base = int(b["base_price_paise"])
     platform = int(round(base * (1 - share)))
     payable = int(round(base * share))
-    # Reimbursement is additive and separate from service earnings
     reimbursement = int(b.get("pujari_reimbursement_paise") or 0)
     settlement_total = payable + reimbursement
     due = date.today() + timedelta(days=days)
@@ -610,7 +638,6 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
         pass
     _maybe_loyalty(db, str(b["pujari_id"]), booking_id)
     _maybe_referral_reward(db, str(b["customer_id"]), booking_id)
-    # Settlement statement only (customer tax invoice is issued on payment)
     try:
         from app.invoice_docs import create_settlement_invoice
 
@@ -622,7 +649,7 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
             create_settlement_invoice(db, booking=dict(b), settlement=dict(sett))
     except Exception:
         pass
-    write_audit(db, str(user["id"]), "puja_completed", "booking", booking_id)
+    write_audit(db, actor_id, "puja_completed", "booking", booking_id)
     try:
         from app.routers.notifications import create_notification
 
@@ -635,6 +662,8 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
             category="booking",
             link="/customer/history",
             extra_data={"booking_id": booking_id},
+            message_key="completed",
+            message_vars={"number": num},
         )
         if b.get("pujari_id"):
             create_notification(
@@ -645,11 +674,145 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
                 category="booking",
                 link="/pujari/bookings",
                 extra_data={"booking_id": booking_id},
+                message_key="completed",
+                message_vars={"number": num},
             )
     except Exception:
         pass
+
+
+@router.post("/bookings/{booking_id}/complete")
+def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    """Pujari cannot bypass customer completion OTP. Admin must use /admin/complete."""
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if user["role"] == "pujari":
+        raise HTTPException(
+            400,
+            "Waiting for customer completion verification. Ask the customer to enter the Completion OTP in their BSeva app.",
+        )
+    raise HTTPException(400, "Admins must use the auditable /bookings/{id}/admin/complete override")
+
+
+@router.post("/bookings/{booking_id}/complete-otp/request")
+def request_complete_otp(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    from app.puja_otp import (
+        PURPOSE_COMPLETE,
+        PujaOtpError,
+        complete_otp_before_minutes,
+        has_active_display,
+        issue_puja_otp,
+        within_complete_window,
+    )
+
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if user["role"] == "pujari" and str(b["pujari_id"]) != str(user["id"]):
+        raise HTTPException(403, "Not allowed")
+    if b["status"] != "in_progress":
+        raise HTTPException(400, "Booking must be in progress")
+    booking = dict(b)
+    svc = db.execute(text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"), {"id": str(b["service_id"])}).scalar()
+    booking["service_name"] = svc or "Puja"
+    if not within_complete_window(db, booking):
+        mins = complete_otp_before_minutes(db)
+        raise HTTPException(400, f"Completion OTP is available from {mins} minutes before the expected end")
+    is_resend = has_active_display(booking, PURPOSE_COMPLETE) or bool(booking.get("complete_otp_sent_at"))
+    try:
+        issue_puja_otp(
+            db, booking, PURPOSE_COMPLETE, notify=True, is_resend=is_resend, actor_id=str(user["id"])
+        )
+    except PujaOtpError as e:
+        raise HTTPException(e.status, e.message)
+    db.commit()
+    return {"ok": True, "sent_to": "pujari", "resent": is_resend}
+
+
+@router.get("/bookings/{booking_id}/complete-otp")
+def get_complete_otp(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    """Pujari (and admin) see completion OTP. Customer never receives the code from this API."""
+    from app.puja_otp import (
+        PURPOSE_COMPLETE,
+        complete_otp_before_minutes,
+        expected_end_utc,
+        reveal_display_code,
+        within_complete_window,
+    )
+
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    is_customer = str(b["customer_id"]) == str(user["id"])
+    is_pujari = str(b.get("pujari_id") or "") == str(user["id"])
+    is_admin = user["role"] in ("admin", "super_admin")
+    if not (is_customer or is_pujari or is_admin):
+        raise HTTPException(403, "Not allowed")
+    booking = dict(b)
+    in_window = within_complete_window(db, booking)
+    code = reveal_display_code(booking, PURPOSE_COMPLETE)
+    reveal = bool(code) and in_window and (is_pujari or is_admin)
+    end = expected_end_utc(db, booking)
+    return {
+        "available": in_window and bool(code),
+        "window_minutes": complete_otp_before_minutes(db),
+        "status": b["status"],
+        "expected_end_at": end.isoformat(),
+        "otp_sent_at": b.get("complete_otp_sent_at"),
+        "code": code if reveal else None,
+        "customer_can_verify": is_customer and in_window and bool(code) and b["status"] == "in_progress",
+        "message": (
+            None
+            if reveal
+            else (
+                "Share the Completion OTP with the customer when the Puja is finished."
+                if is_pujari and in_window
+                else (
+                    "Enter the Completion OTP your pujari shares when the Puja is finished."
+                    if is_customer
+                    else "Completion OTP is not available yet."
+                )
+            )
+        ),
+    }
+
+
+@router.post("/bookings/{booking_id}/complete-otp/verify")
+def verify_complete_otp(booking_id: str, body: CompleteOtpVerifyIn, user=Depends(current_user), db: Session = Depends(get_db)):
+    from app.puja_otp import PURPOSE_COMPLETE, PujaOtpError, verify_puja_otp
+
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    is_customer = str(b["customer_id"]) == str(user["id"]) and user["role"] == "customer"
+    if not is_customer:
+        raise HTTPException(403, "Only the customer can verify the completion OTP")
+    if b["status"] != "in_progress":
+        raise HTTPException(400, "Booking must be in progress")
+    try:
+        verify_puja_otp(db, dict(b), PURPOSE_COMPLETE, body.code, actor_id=str(user["id"]))
+    except PujaOtpError as e:
+        db.commit()
+        raise HTTPException(e.status, e.message)
+    set_booking_status(db, booking_id, "completed", actor_id=str(user["id"]))
+    _run_completion_pipeline(db, b, booking_id, str(user["id"]))
     db.commit()
     return {"ok": True, "status": "completed"}
+
+
+@router.post("/bookings/{booking_id}/admin/complete")
+def admin_complete_booking(booking_id: str, body: AdminOverrideIn, user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if b["status"] != "in_progress":
+        raise HTTPException(400, "Booking must be in progress")
+    set_booking_status(db, booking_id, "completed", actor_id=str(user["id"]))
+    write_audit(db, str(user["id"]), "admin_complete_override", "booking", booking_id, reason=body.reason)
+    _run_completion_pipeline(db, b, booking_id, str(user["id"]))
+    db.commit()
+    return {"ok": True, "status": "completed", "override": True}
 
 
 def _maybe_loyalty(db: Session, pujari_id: str, booking_id: str) -> None:
@@ -826,23 +989,44 @@ def submit_rating(booking_id: str, body: RatingIn, user=Depends(current_user), d
 
 @router.post("/bookings/{booking_id}/location")
 def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
-    from app.puja_start_otp import within_location_window
+    from app.booking_tracking import maybe_detect_arrival, tracking_should_be_active
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
     if str(b["pujari_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
-    if not within_location_window(db, b["booking_date"], b["start_time"], str(b["status"])):
-        raise HTTPException(400, "Location tracking opens 15 minutes before the scheduled start")
-    db.execute(
-        text(
-            """
-            INSERT INTO pujari_location_pings (booking_id, pujari_id, latitude, longitude)
-            VALUES (CAST(:b AS uuid), CAST(:p AS uuid), :lat, :lng)
-            """
-        ),
-        {"b": booking_id, "p": user["id"], "lat": body.latitude, "lng": body.longitude},
+    booking = dict(b)
+    if not tracking_should_be_active(db, booking):
+        raise HTTPException(400, "Live tracking is not active for this booking")
+    try:
+        db.execute(
+            text(
+                """
+                INSERT INTO pujari_location_pings (booking_id, pujari_id, latitude, longitude, accuracy_m)
+                VALUES (CAST(:b AS uuid), CAST(:p AS uuid), :lat, :lng, :acc)
+                """
+            ),
+            {
+                "b": booking_id,
+                "p": user["id"],
+                "lat": body.latitude,
+                "lng": body.longitude,
+                "acc": body.accuracy_m,
+            },
+        )
+    except Exception:
+        db.execute(
+            text(
+                """
+                INSERT INTO pujari_location_pings (booking_id, pujari_id, latitude, longitude)
+                VALUES (CAST(:b AS uuid), CAST(:p AS uuid), :lat, :lng)
+                """
+            ),
+            {"b": booking_id, "p": user["id"], "lat": body.latitude, "lng": body.longitude},
+        )
+    arrived = maybe_detect_arrival(
+        db, booking, lat=body.latitude, lng=body.longitude, accuracy_m=body.accuracy_m
     )
     try:
         from app.routers.notifications import create_notification
@@ -870,51 +1054,130 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
                 category="pujari_arriving",
                 link=f"/customer/bookings?booking={booking_id}",
                 extra_data={"booking_id": booking_id},
+                message_key="arriving",
+                message_vars={"number": num},
             )
+        if arrived:
+            arrived_note = db.execute(
+                text(
+                    """
+                    SELECT id FROM notifications
+                    WHERE user_id = CAST(:uid AS uuid)
+                      AND category = 'pujari_arrived'
+                      AND COALESCE(link, '') LIKE :needle
+                      AND created_at > NOW() - INTERVAL '12 hours'
+                    LIMIT 1
+                    """
+                ),
+                {"uid": str(b["customer_id"]), "needle": f"%{booking_id}%"},
+            ).first()
+            if not arrived_note:
+                num = str(b.get("booking_number") or booking_id[:8])
+                create_notification(
+                    db,
+                    user_id=str(b["customer_id"]),
+                    title="Pujari has arrived",
+                    body=f"Your pujari has reached the puja location for booking {num}.",
+                    category="pujari_arrived",
+                    link=f"/customer/bookings?booking={booking_id}",
+                    extra_data={"booking_id": booking_id},
+                    message_key="arrived",
+                    message_vars={"number": num},
+                )
     except Exception:
         pass
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "arrived": arrived, "tracking_active": not arrived}
 
 
 @router.get("/bookings/{booking_id}/location")
 def get_location(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
-    from app.puja_start_otp import location_window_minutes, within_location_window
+    from app.booking_tracking import location_payload, tracking_should_be_active
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    allowed = user["role"] in ("admin", "super_admin") or str(user["id"]) in (str(b["customer_id"]), str(b["pujari_id"]))
-    if not allowed:
+    is_admin = user["role"] in ("admin", "super_admin")
+    is_customer = str(user["id"]) == str(b["customer_id"])
+    is_pujari = str(user["id"]) == str(b["pujari_id"])
+    if not (is_admin or is_customer or is_pujari):
         raise HTTPException(403, "Not allowed")
-    # Customers only see live tracking inside the 15-minute window (or while in progress)
-    if str(user["id"]) == str(b["customer_id"]) and user["role"] == "customer":
-        if not within_location_window(db, b["booking_date"], b["start_time"], str(b["status"])):
-            return {
-                "available": False,
-                "window_minutes": location_window_minutes(db),
-                "message": f"Pujari tracking appears from {location_window_minutes(db)} minutes before start",
-            }
-    row = db.execute(
+    booking = dict(b)
+    ping = None
+    if tracking_should_be_active(db, booking) or is_admin:
+        try:
+            ping = db.execute(
+                text(
+                    """
+                    SELECT latitude, longitude, recorded_at, accuracy_m FROM pujari_location_pings
+                    WHERE booking_id = CAST(:b AS uuid) ORDER BY recorded_at DESC LIMIT 1
+                    """
+                ),
+                {"b": booking_id},
+            ).mappings().first()
+        except Exception:
+            ping = db.execute(
+                text(
+                    """
+                    SELECT latitude, longitude, recorded_at FROM pujari_location_pings
+                    WHERE booking_id = CAST(:b AS uuid) ORDER BY recorded_at DESC LIMIT 1
+                    """
+                ),
+                {"b": booking_id},
+            ).mappings().first()
+    include_dest = is_customer or is_admin or (is_pujari and booking.get("latitude") is not None)
+    # Pujari only receives destination coords if booking_for_role would already unlock them.
+    if is_pujari and not is_admin:
+        from app.booking_visibility import can_pujari_see_full
+
+        unlocked = booking.get("status") in ("in_progress", "completed", "cancelled") or can_pujari_see_full(
+            db, booking.get("booking_date"), booking.get("start_time")
+        )
+        include_dest = include_dest and unlocked
+        if not unlocked:
+            booking = {**booking, "latitude": None, "longitude": None}
+    out = location_payload(
+        db,
+        booking,
+        dict(ping) if ping else None,
+        include_destination=include_dest,
+    )
+    if not tracking_should_be_active(db, booking) and not is_admin:
+        out["latitude"] = None
+        out["longitude"] = None
+        out["available"] = False
+    return out
+
+
+@router.get("/pujari/tracking-assignments")
+def pujari_tracking_assignments(user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
+    from app.booking_tracking import gps_interval_seconds, tracking_should_be_active
+
+    rows = db.execute(
         text(
             """
-            SELECT latitude, longitude, recorded_at FROM pujari_location_pings
-            WHERE booking_id = CAST(:b AS uuid) ORDER BY recorded_at DESC LIMIT 1
+            SELECT * FROM bookings
+            WHERE pujari_id = CAST(:pid AS uuid)
+              AND status = 'confirmed'
+              AND COALESCE(mode, 'in_person') <> 'virtual'
+            ORDER BY booking_date, start_time
             """
         ),
-        {"b": booking_id},
-    ).mappings().first()
-    if not row:
-        return {
-            "available": True,
-            "latitude": None,
-            "longitude": None,
-            "recorded_at": None,
-            "message": "Waiting for the pujari to share their live location",
-        }
-    out = row_dict(row)
-    out["available"] = True
-    return out
+        {"pid": str(user["id"])},
+    ).mappings().all()
+    items = []
+    interval = gps_interval_seconds(db)
+    for r in rows:
+        booking = dict(r)
+        if tracking_should_be_active(db, booking):
+            items.append(
+                {
+                    "booking_id": str(booking["id"]),
+                    "booking_number": booking.get("booking_number"),
+                    "gps_interval_seconds": interval,
+                }
+            )
+    return {"items": items, "gps_interval_seconds": interval}
 
 
 @router.get("/settlements")
@@ -1123,11 +1386,16 @@ def public_config(db: Session = Depends(get_db)):
         "virtual_puja_enabled": bool(get_setting(db, "virtual_puja_enabled", False)),
         "customer_timezones": __import__("app.timezones", fromlist=["CUSTOMER_TIMEZONES"]).CUSTOMER_TIMEZONES,
         "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919014654994")),
-        "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 24)),
+        "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 20)),
         "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 15)),
         "pujari_location_tracking_before_minutes": int(
             get_setting(db, "pujari_location_tracking_before_minutes", 15)
         ),
+        "pujari_gps_update_interval_seconds": int(get_setting(db, "pujari_gps_update_interval_seconds", 60)),
+        "customer_tracking_refresh_seconds": int(get_setting(db, "customer_tracking_refresh_seconds", 60)),
+        "pujari_arrival_radius_meters": int(get_setting(db, "pujari_arrival_radius_meters", 100)),
+        "puja_complete_otp_before_minutes": int(get_setting(db, "puja_complete_otp_before_minutes", 15)),
+        "puja_otp_resend_cooldown_seconds": int(get_setting(db, "puja_otp_resend_cooldown_seconds", 60)),
         "registration_captcha_enabled": bool(get_setting(db, "registration_captcha_enabled", False)),
         "recaptcha_site_key": __import__("os").environ.get("VITE_RECAPTCHA_SITE_KEY")
         or __import__("os").environ.get("RECAPTCHA_SITE_KEY")

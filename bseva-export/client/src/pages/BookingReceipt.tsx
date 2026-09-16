@@ -253,14 +253,14 @@ export default function BookingReceipt() {
               ) : (
                 <p className="text-muted-foreground">
                   {booking.pujari_reveal_note ||
-                    "Pujari details will be shared within 24 hours before your scheduled puja."}
+                    "Pujari details will be shared within 20 hours before your scheduled puja."}
                 </p>
               )}
             </div>
 
             {user?.role === "customer" &&
               booking.mode !== "virtual" &&
-              ["confirmed", "in_progress"].includes(String(booking.status || "")) && (
+              ["confirmed"].includes(String(booking.status || "")) && (
                 <div className="print:hidden">
                   <PujariLiveTrackCard
                     bookingId={String(booking.id)}

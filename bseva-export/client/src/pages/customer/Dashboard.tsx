@@ -2,6 +2,7 @@ import { CustomerPortal } from "@/components/RolePortals";
 import PromoBannerCarousel from "@/components/PromoBannerCarousel";
 import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -95,28 +96,34 @@ function CustomerDashboardContent() {
     });
   }, [bookings]);
   const [otpByBooking, setOtpByBooking] = useState<Record<string, { code?: string | null; available?: boolean; message?: string | null }>>({});
+  const [completeCodeByBooking, setCompleteCodeByBooking] = useState<Record<string, string>>({});
+  const [completeBusy, setCompleteBusy] = useState<string | null>(null);
 
   useEffect(() => {
     const targets = (bookings || []).filter((b) => b.status === "confirmed" || b.status === "in_progress");
     if (!targets.length) return;
     let cancelled = false;
-    void Promise.all(
-      targets.map(async (b) => {
-        try {
-          const otp = await api<any>(`/bookings/${b.id}/start-otp`);
-          return [String(b.id), otp] as const;
-        } catch {
-          return [String(b.id), null] as const;
-        }
-      })
-    ).then((pairs) => {
+    async function loadOtps() {
+      const pairs = await Promise.all(
+        targets.map(async (b) => {
+          try {
+            const otp = await api<any>(`/bookings/${b.id}/start-otp`);
+            return [String(b.id), otp] as const;
+          } catch {
+            return [String(b.id), null] as const;
+          }
+        }),
+      );
       if (cancelled) return;
       const next: Record<string, any> = {};
       for (const [id, otp] of pairs) if (otp) next[id] = otp;
       setOtpByBooking(next);
-    });
+    }
+    void loadOtps();
+    const t = window.setInterval(() => void loadOtps(), 30_000);
     return () => {
       cancelled = true;
+      window.clearInterval(t);
     };
   }, [bookings]);
 
@@ -154,14 +161,15 @@ function CustomerDashboardContent() {
                 const otp = otpByBooking[String(booking.id)];
                 return (
                 <Card key={booking.id} className="border-2 border-blue-200 bg-blue-50/40 shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
+                  <CardContent className="p-4 md:p-5 space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3 mb-1 flex-wrap">
                           <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
                           <Badge className={getStatusColor(booking.status)}>{booking.status.replace(/_/g, " ")}</Badge>
+                          <Badge variant="outline" className="capitalize">{booking.package_type}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>
+                        <p className="text-sm text-muted-foreground mb-1">#{booking.booking_number}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Calendar size={14} />
@@ -176,20 +184,63 @@ function CustomerDashboardContent() {
                             {booking.location_label || booking.mode}
                           </span>
                         </div>
+                      </div>
+                    </div>
                         {booking.status === "confirmed" && (
-                          <div className="mt-3 rounded-md border border-blue-200 bg-white/70 px-3 py-2">
-                            <p className="text-xs font-medium text-foreground mb-1">Puja start OTP</p>
+                          <div className="rounded-md border border-blue-200 bg-white/70 px-3 py-2">
+                            <p className="text-xs font-medium text-foreground mb-1">{t("otp.startTitle")}</p>
                             {otp?.available && otp.code ? (
-                              <p className="text-xl font-bold tracking-widest text-primary">{otp.code}</p>
+                              <>
+                                <p className="text-xl font-bold tracking-widest text-primary">{otp.code}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{t("otp.startShare")}</p>
+                              </>
                             ) : (
                               <p className="text-xs text-muted-foreground">
-                                {otp?.message || "OTP appears 15 minutes before start. Share it with your pujari to begin."}
+                                {otp?.message || t("track.notAvailable")}
                               </p>
                             )}
                           </div>
                         )}
+                        {booking.status === "in_progress" && (
+                          <div className="rounded-md border border-primary/30 bg-white/80 px-3 py-2 space-y-2">
+                            <p className="text-xs font-medium text-foreground">{t("otp.verifyComplete")}</p>
+                            <p className="text-xs text-muted-foreground">{t("otp.completeEnter")}</p>
+                            <div className="flex flex-wrap gap-2">
+                              <Input
+                                className="h-9 max-w-[160px] tracking-widest"
+                                maxLength={8}
+                                value={completeCodeByBooking[String(booking.id)] || ""}
+                                onChange={(e) =>
+                                  setCompleteCodeByBooking((prev) => ({ ...prev, [String(booking.id)]: e.target.value }))
+                                }
+                                placeholder="OTP"
+                              />
+                              <Button
+                                size="sm"
+                                disabled={completeBusy === String(booking.id) || (completeCodeByBooking[String(booking.id)] || "").trim().length < 4}
+                                onClick={() => {
+                                  const code = (completeCodeByBooking[String(booking.id)] || "").trim();
+                                  setCompleteBusy(String(booking.id));
+                                  api(`/bookings/${booking.id}/complete-otp/verify`, {
+                                    method: "POST",
+                                    body: JSON.stringify({ code }),
+                                  })
+                                    .then(() => {
+                                      toast.success(t("otp.completeAction"));
+                                      return apiBookings(1, 50);
+                                    })
+                                    .then((row) => setBookings(row.items))
+                                    .catch((e: any) => toast.error(e.message || "Could not complete puja"))
+                                    .finally(() => setCompleteBusy(null));
+                                }}
+                              >
+                                {t("otp.completeAction")}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                         {booking.mode === "virtual" && (booking.meeting_url || booking.public_invite_url) && (
-                          <div className="mt-3 rounded-lg border-2 border-blue-400 bg-white px-3 py-3 space-y-2">
+                          <div className="rounded-lg border-2 border-blue-400 bg-white px-3 py-3 space-y-2">
                             <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                               <Video size={16} className="text-blue-600" />
                               Google Meet ready — join your virtual puja
@@ -209,25 +260,13 @@ function CustomerDashboardContent() {
                             ) : null}
                           </div>
                         )}
-                        {booking.mode !== "virtual" &&
-                          ["confirmed", "in_progress"].includes(String(booking.status || "")) && (
-                            <div className="mt-3">
-                              <PujariLiveTrackCard
-                                bookingId={String(booking.id)}
-                                destinationLat={booking.latitude}
-                                destinationLng={booking.longitude}
-                              />
-                            </div>
-                          )}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="capitalize self-start md:self-center pointer-events-none select-none"
-                        title="Package type"
-                      >
-                        {booking.package_type}
-                      </Badge>
-                    </div>
+                        {booking.mode !== "virtual" && booking.status === "confirmed" && (
+                          <PujariLiveTrackCard
+                            bookingId={String(booking.id)}
+                            destinationLat={booking.latitude}
+                            destinationLng={booking.longitude}
+                          />
+                        )}
                   </CardContent>
                 </Card>
               );

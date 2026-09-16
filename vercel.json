@@ -10,8 +10,18 @@
       "includeFiles": "backend/**"
     }
   },
-  "rewrites": [
+    "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/((?!api/|firebase-messaging-sw\\.js).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/v1/ops/cron/puja-lifecycle",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/v1/ops/cron/booking-reminders",
+      "schedule": "*/10 * * * *"
+    }
   ]
 }

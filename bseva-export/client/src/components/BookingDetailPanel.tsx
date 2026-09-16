@@ -24,7 +24,8 @@ import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { downloadSamagriListForBooking } from "@/lib/downloadSamagriList";
 import { Download } from "lucide-react";
-import { pujarisIncludedShort, pujariTeamAcceptNotice, pujariTeamPaymentNotice } from "@/lib/pujariTeam";
+import { mapsDirectionsUrl, mapsSearchUrl } from "@/lib/googleMaps";
+import { pujariTeamAcceptNotice, pujariTeamPaymentNotice, pujarisIncludedShort } from "@/lib/pujariTeam";
 
 export type BookingDetail = {
   id: string;
@@ -116,7 +117,6 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const [busy, setBusy] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [otpCode, setOtpCode] = useState("");
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
   const [customerOtp, setCustomerOtp] = useState<{
@@ -125,6 +125,16 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     message?: string | null;
     window_minutes?: number;
   } | null>(null);
+  const [completeOtp, setCompleteOtp] = useState<{
+    available?: boolean;
+    code?: string | null;
+    message?: string | null;
+    customer_can_verify?: boolean;
+  } | null>(null);
+  const [completeCode, setCompleteCode] = useState("");
+  const [resendWait, setResendWait] = useState(0);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [pujariOrigin, setPujariOrigin] = useState<{ lat: number; lng: number } | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -143,6 +153,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       } catch {
         setCustomerOtp(null);
       }
+      try {
+        const cotp = await api<any>(`/bookings/${bookingId}/complete-otp`);
+        setCompleteOtp(cotp);
+      } catch {
+        setCompleteOtp(null);
+      }
     } catch (e: any) {
       toast.error(e.message || "Could not load booking");
     } finally {
@@ -153,6 +169,31 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   useEffect(() => {
     void load();
   }, [bookingId]);
+
+  useEffect(() => {
+    if (!bookingId) return;
+    const t = window.setInterval(() => {
+      api<any>(`/bookings/${bookingId}/start-otp`).then(setCustomerOtp).catch(() => undefined);
+      api<any>(`/bookings/${bookingId}/complete-otp`).then(setCompleteOtp).catch(() => undefined);
+    }, 30_000);
+    return () => window.clearInterval(t);
+  }, [bookingId]);
+
+  useEffect(() => {
+    if (resendWait <= 0) return;
+    const t = window.setTimeout(() => setResendWait((s) => Math.max(0, s - 1)), 1000);
+    return () => window.clearTimeout(t);
+  }, [resendWait]);
+
+  useEffect(() => {
+    if (viewerRole !== "pujari") return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setPujariOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => undefined,
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 },
+    );
+  }, [viewerRole, bookingId]);
 
   useEffect(() => {
     if (initialIntent === "reject" && !loading) {
@@ -296,7 +337,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
       {viewerRole === "customer" &&
         booking.mode !== "virtual" &&
-        (status === "confirmed" || status === "in_progress") && (
+        status === "confirmed" && (
           <PujariLiveTrackCard
             bookingId={bookingId}
             destinationLat={booking.latitude}
@@ -337,26 +378,41 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           </div>
           {booking.location_label && (
             <div className="col-span-2">
-              <div className="text-muted-foreground">Location</div>
+              <div className="text-muted-foreground">{t("detail.serviceLocation")}</div>
               <div className="font-medium">{booking.location_label}</div>
               {viewerRole === "pujari" &&
                 booking.latitude != null &&
                 booking.longitude != null &&
                 (status === "confirmed" || status === "in_progress") && (
-                  <a
-                    className="text-sm text-primary underline mt-1 inline-block"
-                    href={`https://www.google.com/maps?q=${booking.latitude},${booking.longitude}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open service location on map
-                  </a>
+                  <div className="flex flex-wrap gap-3 mt-1">
+                    <a
+                      className="text-sm text-primary underline"
+                      href={mapsSearchUrl(Number(booking.latitude), Number(booking.longitude))}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("track.openMaps")}
+                    </a>
+                    <a
+                      className="text-sm text-primary underline"
+                      href={mapsDirectionsUrl({
+                        originLat: pujariOrigin?.lat,
+                        originLng: pujariOrigin?.lng,
+                        destLat: Number(booking.latitude),
+                        destLng: Number(booking.longitude),
+                      })}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("detail.directionsToPuja")}
+                    </a>
+                  </div>
                 )}
             </div>
           )}
           {viewerRole === "pujari" && booking.details_level === "basic" && (
             <div className="col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Full customer address and contact unlock within the configured hours before the puja (default 24h).
+              Full customer address and contact unlock within the configured hours before the puja (default 20h).
             </div>
           )}
           {booking.special_instructions && (
@@ -484,13 +540,11 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
       {viewerRole === "customer" && status === "confirmed" && (
         <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
-          <p className="text-sm font-medium text-foreground">Puja start OTP</p>
+          <p className="text-sm font-medium text-foreground">{t("otp.startTitle")}</p>
           {customerOtp?.available && customerOtp.code ? (
             <>
               <p className="text-2xl font-bold tracking-widest text-primary">{customerOtp.code}</p>
-              <p className="text-xs text-muted-foreground">
-                Share this OTP with your pujari only when they are ready to start the puja.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("otp.startShare")}</p>
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -498,6 +552,34 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 `OTP appears here from ${customerOtp?.window_minutes ?? 15} minutes before the scheduled start.`}
             </p>
           )}
+        </div>
+      )}
+
+      {viewerRole === "customer" && status === "in_progress" && (
+        <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <p className="text-sm font-medium">{t("otp.verifyComplete")}</p>
+          <p className="text-xs text-muted-foreground">{t("otp.completeEnter")}</p>
+          <div className="flex flex-wrap gap-2 items-end">
+            <div className="space-y-1 flex-1 min-w-[140px]">
+              <Label>OTP</Label>
+              <Input value={completeCode} onChange={(e) => setCompleteCode(e.target.value)} placeholder="Enter OTP" maxLength={8} />
+            </div>
+            <Button
+              disabled={busy || completeCode.trim().length < 4}
+              onClick={() =>
+                run(
+                  () =>
+                    api(`/bookings/${bookingId}/complete-otp/verify`, {
+                      method: "POST",
+                      body: JSON.stringify({ code: completeCode.trim() }),
+                    }).then(() => undefined),
+                  t("otp.completeAction"),
+                )
+              }
+            >
+              {t("otp.completeAction")}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -742,30 +824,29 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       {canStartOtp && (
         <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/40 p-3">
           <p className="text-sm text-muted-foreground">
-            Request an OTP for the customer, then enter the code they share to start the puja.
+            Ask the customer for their Start Puja OTP, then enter it here to begin.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"
-              disabled={busy}
+              disabled={busy || resendWait > 0}
               onClick={() =>
                 run(async () => {
-                  const out = await api<{ ok: boolean; dev_code?: string }>(`/bookings/${bookingId}/start-otp/request`, {
-                    method: "POST",
-                  });
-                  if (out.dev_code) {
-                    setDevOtp(out.dev_code);
-                    setOtpCode(out.dev_code);
+                  try {
+                    await api(`/bookings/${bookingId}/start-otp/request`, { method: "POST" });
+                    setResendWait(60);
+                  } catch (e: any) {
+                    const msg = String(e?.message || "");
+                    const m = msg.match(/(\d+)\s*s/);
+                    if (m) setResendWait(Number(m[1]));
+                    throw e;
                   }
-                }, "OTP sent to customer")
+                }, t("otp.resent"))
               }
             >
-              {t("detail.startOtp")}
+              {resendWait > 0 ? t("otp.cooldown", { seconds: resendWait }) : t("otp.resend")}
             </Button>
           </div>
-          {devOtp && (
-            <p className="text-xs text-muted-foreground">Dev OTP: <strong>{devOtp}</strong></p>
-          )}
           <div className="flex flex-wrap gap-2 items-end">
             <div className="space-y-1 flex-1 min-w-[140px]">
               <Label>OTP code</Label>
@@ -839,17 +920,81 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       )}
 
       {canComplete && (
-        <Button
-          disabled={busy}
-          onClick={() =>
-            run(
-              () => api(`/bookings/${bookingId}/complete`, { method: "POST" }).then(() => undefined),
-              "Puja completed"
-            )
-          }
-        >
-          {t("detail.complete")}
-        </Button>
+        <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <p className="font-medium text-sm">{t("otp.completeTitle")}</p>
+          {completeOtp?.code ? (
+            <>
+              <p className="text-2xl font-bold tracking-widest text-primary">{completeOtp.code}</p>
+              <p className="text-xs text-muted-foreground">{t("otp.completeShare")}</p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">{completeOtp?.message || t("detail.waitingCompletion")}</p>
+          )}
+          <Button
+            variant="secondary"
+            disabled={busy || resendWait > 0}
+            onClick={() =>
+              run(async () => {
+                try {
+                  await api(`/bookings/${bookingId}/complete-otp/request`, { method: "POST" });
+                  setResendWait(60);
+                } catch (e: any) {
+                  const msg = String(e?.message || "");
+                  const m = msg.match(/(\d+)\s*s/);
+                  if (m) setResendWait(Number(m[1]));
+                  throw e;
+                }
+              }, "OTP updated")
+            }
+          >
+            {resendWait > 0 ? t("otp.cooldown", { seconds: resendWait }) : t("otp.resend")}
+          </Button>
+          <p className="text-xs text-muted-foreground">{t("detail.waitingCompletion")}</p>
+        </div>
+      )}
+
+      {viewerRole === "admin" && status === "confirmed" && (
+        <div className="space-y-2 rounded-lg border p-3">
+          <Label>Admin start override reason</Label>
+          <Input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
+          <Button
+            disabled={busy || overrideReason.trim().length < 5}
+            onClick={() =>
+              run(
+                () =>
+                  api(`/bookings/${bookingId}/admin/start`, {
+                    method: "POST",
+                    body: JSON.stringify({ reason: overrideReason.trim() }),
+                  }).then(() => undefined),
+                "Puja started (admin override)",
+              )
+            }
+          >
+            Admin start puja
+          </Button>
+        </div>
+      )}
+
+      {viewerRole === "admin" && status === "in_progress" && (
+        <div className="space-y-2 rounded-lg border p-3">
+          <Label>Admin complete override reason</Label>
+          <Input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
+          <Button
+            disabled={busy || overrideReason.trim().length < 5}
+            onClick={() =>
+              run(
+                () =>
+                  api(`/bookings/${bookingId}/admin/complete`, {
+                    method: "POST",
+                    body: JSON.stringify({ reason: overrideReason.trim() }),
+                  }).then(() => undefined),
+                "Puja completed (admin override)",
+              )
+            }
+          >
+            Admin complete puja
+          </Button>
+        </div>
       )}
 
       {showRate && (

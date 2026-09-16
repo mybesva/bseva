@@ -20,7 +20,7 @@ export type PublicConfig = {
 const DEFAULTS: PublicConfig = {
   virtual_puja_enabled: false,
   bseva_whatsapp_number: "919014654994",
-  pujari_full_booking_details_before_hours: 24,
+  pujari_full_booking_details_before_hours: 20,
   puja_start_otp_before_minutes: 15,
   email_from_contact: "contact@b-seva.com",
   email_from_support: "support@b-seva.com",

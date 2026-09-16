@@ -1,8 +1,10 @@
-"""Demo: create a live-tracking booking for Customer 1 → pujari2 (within ~10 min).
+"""Demo helper: seed a CONFIRMED booking inside the live-tracking window.
 
-No redeploy needed: booking is set to ``in_progress`` so the tracking window
-is open on production even if the server clock is UTC, and a GPS ping is
-inserted so the customer map shows a pin immediately.
+This script is for local/dev QA only. Production customer/pujari UIs do not
+special-case BSV-DEMO-TRACK numbers or hardcoded coordinates — they only show
+GPS stored in pujari_location_pings for confirmed bookings in the tracking window.
+
+Refuse to run against production unless BSEVA_ALLOW_DEMO_TRACKING=1.
 
 Usage (from backend/):
   python3 -m scripts.demo_live_tracking
@@ -13,6 +15,7 @@ Login:
 """
 from __future__ import annotations
 
+import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -44,6 +47,11 @@ def _uid(db, email: str) -> str:
 
 
 def main() -> int:
+    env = (os.environ.get("ENVIRONMENT") or os.environ.get("VERCEL_ENV") or "").lower()
+    if env in ("production", "preview") and os.environ.get("BSEVA_ALLOW_DEMO_TRACKING") != "1":
+        print("Refusing to seed demo tracking in production/preview.")
+        print("Set BSEVA_ALLOW_DEMO_TRACKING=1 only for explicit QA.")
+        return 2
     db = SessionLocal()
     try:
         customer_id = _uid(db, CUSTOMER_EMAIL)
@@ -87,7 +95,7 @@ def main() -> int:
         total = base + gst
         payable = base - platform
 
-        # in_progress → tracking API always open (no timezone / deploy dependency)
+        # confirmed + start in 10 minutes → within default 15-minute tracking window
         db.execute(
             text(
                 """
@@ -97,14 +105,14 @@ def main() -> int:
                   status, payment_status, settlement_status, rating_status,
                   base_price_paise, peak_fee_paise, platform_fee_paise, pujari_payable_paise,
                   gst_percent, gst_amount_paise, total_paise, terms_accepted, special_instructions,
-                  main_puja_charge_paise, accepted_at, started_at
+                  main_puja_charge_paise, accepted_at
                 ) VALUES (
                   CAST(:id AS uuid), :num, CAST(:cid AS uuid), CAST(:pid AS uuid), CAST(:sid AS uuid),
                   'standard', 'in_person',
                   :d, :st, :et, :loc, :addr, :lat, :lng,
-                  'in_progress', 'paid', 'pending', 'not_applicable',
+                  'confirmed', 'paid', 'pending', 'not_applicable',
                   :base, 0, :plat, :payable, 18, :gst, :total, TRUE, :instr,
-                  :base, NOW(), NOW()
+                  :base, NOW()
                 )
                 """
             ),
@@ -163,7 +171,7 @@ def main() -> int:
         print(f"  id:       {booking_id}")
         print(f"  Service:  {service['name']}")
         print(f"  Start:    {start_at.strftime('%Y-%m-%d %H:%M')} (local)")
-        print(f"  Status:   in_progress (tracking open)")
+        print(f"  Status:   confirmed (tracking window uses real GPS pings)")
         print(f"  Customer: {CUSTOMER_EMAIL}")
         print(f"  Pujari:   {PUJARI_EMAIL}")
         print(f"  Password: TestPass123!")

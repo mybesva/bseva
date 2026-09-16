@@ -20,9 +20,11 @@
       "infoPlist": {
         "NSCameraUsageDescription": "BSeva uses the camera so you can take a profile photo, signature photo, or document photo instead of only picking from the library.",
         "NSPhotoLibraryUsageDescription": "BSeva needs photo library access to attach documents and profile photos.",
-        "NSLocationWhenInUseUsageDescription": "BSeva uses your location to find nearby pujaris and save your address for bookings.",
+        "NSLocationWhenInUseUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival, and to find nearby pujaris or save your address.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
+        "NSLocationAlwaysUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
         "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it.",
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": ["remote-notification", "location"]
       }
     },
     "android": {
@@ -37,6 +39,9 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",
@@ -59,7 +64,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-location",
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true,
+          "locationAlwaysAndWhenInUsePermission": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival."
+        }
+      ],
+      "expo-task-manager",
       "expo-image-picker",
       "expo-document-picker",
       "expo-splash-screen",

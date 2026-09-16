@@ -1,4 +1,4 @@
-"""Booking visibility: 24h rule for pujaris; public pujari DTO."""
+"""Booking visibility: time-gated full details for pujaris; public pujari DTO."""
 from __future__ import annotations
 
 from datetime import date, datetime, time
@@ -12,7 +12,7 @@ from app.platform_config import get_setting
 
 
 def pujari_hours_before_full(db: Session) -> float:
-    return float(get_setting(db, "pujari_full_booking_details_before_hours", 24))
+    return float(get_setting(db, "pujari_full_booking_details_before_hours", 20))
 
 
 def can_pujari_see_full(db: Session, booking_date: date, start: time) -> bool:
@@ -42,7 +42,7 @@ def public_pujari(row: dict) -> dict:
     return out
 
 
-def _attach_invite_urls(data: dict, *, reveal_meet: bool) -> None:
+def _attach_invite_urls(db: Session, data: dict, *, reveal_meet: bool) -> None:
     token = data.get("meeting_invite_token")
     public = public_invite_url_for(str(token) if token else None)
     if reveal_meet:
@@ -56,8 +56,9 @@ def _attach_invite_urls(data: dict, *, reveal_meet: bool) -> None:
         data.pop("google_calendar_event_id", None)
         data["meeting_link_visible"] = False
         if str(data.get("mode") or "") == "virtual":
+            hours = int(pujari_hours_before_full(db))
             data["meeting_reveal_note"] = (
-                "Google Meet link unlocks within 24 hours before your scheduled virtual puja."
+                f"Google Meet link unlocks within {hours} hours before your scheduled virtual puja."
             )
 
 
@@ -86,12 +87,14 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                 data["invoice_number"] = inv["invoice_number"]
         except Exception:
             pass
+        for secret in ("start_otp_code", "complete_otp_code"):
+            data.pop(secret, None)
         return data
 
     if role in ("admin", "super_admin"):
         data["details_level"] = "full"
         data["pujari_details_visible"] = True
-        _attach_invite_urls(data, reveal_meet=True)
+        _attach_invite_urls(db, data, reveal_meet=True)
         return _finish()
 
     bd = data.get("booking_date")
@@ -119,10 +122,11 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                 "pujari_id",
             ):
                 data.pop(k, None)
+            hours = int(pujari_hours_before_full(db))
             data["pujari_reveal_note"] = (
-                "Pujari details will be shared within 24 hours before your scheduled puja."
+                f"Pujari details will be shared within {hours} hours before your scheduled puja."
             )
-        _attach_invite_urls(data, reveal_meet=within_window)
+        _attach_invite_urls(db, data, reveal_meet=within_window)
         return _finish()
 
     if role in ("pujari", "head_pujari"):
@@ -147,6 +151,7 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
             full = within_window or data.get("status") in ("in_progress", "completed", "cancelled")
             data["details_level"] = "full" if full else "basic"
             data["pujari_details_visible"] = True
+            data["location_unlock_hours"] = int(pujari_hours_before_full(db))
             raw_name = str(data.get("customer_name") or "").strip()
             if raw_name:
                 parts = [p for p in raw_name.split() if p]
@@ -170,6 +175,6 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                     data["location_area"] = data["location_label"]
             if invited:
                 data["pujari_accept_required"] = True
-            _attach_invite_urls(data, reveal_meet=full)
+            _attach_invite_urls(db, data, reveal_meet=full)
             return _finish()
     raise PermissionError("Not allowed")

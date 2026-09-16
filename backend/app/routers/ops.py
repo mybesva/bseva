@@ -985,6 +985,41 @@ def cron_start_otp(request: Request, db: Session = Depends(get_db)):
     return {"ok": True, "job": "start_otp", **issue_start_otps_nearing_start(db)}
 
 
+@router.get("/ops/cron/complete-otp")
+def cron_complete_otp(request: Request, db: Session = Depends(get_db)):
+    _require_cron_auth(request)
+    from app.jobs.booking_reminders import issue_complete_otps_nearing_end
+
+    return {"ok": True, "job": "complete_otp", **issue_complete_otps_nearing_end(db)}
+
+
+@router.get("/ops/cron/location-unlock")
+def cron_location_unlock(request: Request, db: Session = Depends(get_db)):
+    _require_cron_auth(request)
+    from app.jobs.booking_reminders import notify_location_unlocked
+
+    return {"ok": True, "job": "location_unlock", **notify_location_unlocked(db)}
+
+
+@router.get("/ops/cron/puja-lifecycle")
+def cron_puja_lifecycle(request: Request, db: Session = Depends(get_db)):
+    """Every 1 minute: start OTP, completion OTP, 20h location unlock. Idempotent."""
+    _require_cron_auth(request)
+    from app.jobs.booking_reminders import (
+        issue_complete_otps_nearing_end,
+        issue_start_otps_nearing_start,
+        notify_location_unlocked,
+    )
+
+    return {
+        "ok": True,
+        "job": "puja_lifecycle",
+        "start_otp": issue_start_otps_nearing_start(db),
+        "complete_otp": issue_complete_otps_nearing_end(db),
+        "location_unlock": notify_location_unlocked(db),
+    }
+
+
 @router.get("/ops/cron/booking-windows")
 def cron_booking_windows(request: Request, db: Session = Depends(get_db)):
     """Runs both jobs (reminders + OTP). Prefer the split cron paths above."""
