@@ -76,6 +76,8 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         category=cat,
                         link="/pujari/bookings",
                         extra_data={"booking_id": str(b["id"])},
+                        message_key="samagriReminder" if samagri else "reminder",
+                        message_vars={"number": booking_num, "service": service_name, "hours": hours_ahead},
                     )
                     created += 1
 
@@ -109,6 +111,8 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         category="booking_reminder",
                         link="/customer/bookings",
                         extra_data={"booking_id": str(b["id"])},
+                        message_key="reminder",
+                        message_vars={"service": service_name, "number": booking_num, "hours": hours_ahead},
                     )
                     created += 1
 

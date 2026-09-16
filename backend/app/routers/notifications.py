@@ -33,7 +33,20 @@ def create_notification(
     category: str = "system",
     link: str | None = None,
     extra_data: Mapping[str, Any] | None = None,
+    message_key: str | None = None,
+    message_vars: Mapping[str, Any] | None = None,
 ) -> str:
+    title_out, body_out = title, body
+    if message_key:
+        try:
+            from app.i18n import ADMIN_ROLES, notify_copy, user_preferred_lang, user_role
+
+            role = user_role(db, str(user_id))
+            if role not in ADMIN_ROLES:
+                loc = user_preferred_lang(db, str(user_id))
+                title_out, body_out = notify_copy(message_key, loc, message_vars)
+        except Exception:
+            title_out, body_out = title, body
     nid = str(uuid4())
     db.execute(
         text(
@@ -48,8 +61,8 @@ def create_notification(
         {
             "id": nid,
             "uid": user_id,
-            "title": title,
-            "body": body,
+            "title": title_out,
+            "body": body_out,
             "cat": category,
             "link": link,
         },
@@ -61,14 +74,14 @@ def create_notification(
             "notification_id": nid,
             "category": category or "system",
             "link": link or "",
-            "title": title,
-            "body": body,
+            "title": title_out,
+            "body": body_out,
         }
         if extra_data:
             for key, value in extra_data.items():
                 if value is not None:
                     data[str(key)] = value
-        push_to_user(db, str(user_id), title=title, body=body, data=data)
+        push_to_user(db, str(user_id), title=title_out, body=body_out, data=data)
     except Exception:
         logger.exception("FCM fan-out failed for notification %s", nid)
     return nid
@@ -347,12 +360,8 @@ def nav_badges(user=Depends(current_user), db: Session = Depends(get_db)):
         "bookings": booking_unread,
         "notifications": unread,
         "tooltips": {
-            "notifications": f"{unread} unread notification{'s' if unread != 1 else ''}" if unread else "",
-            "bookings": (
-                f"{booking_unread} unread booking notification{'s' if booking_unread != 1 else ''}"
-                if booking_unread
-                else ""
-            ),
+            "notifications": f"{unread} unread" if unread else "",
+            "bookings": f"{booking_unread} unread" if booking_unread else "",
         },
     }
     if str(user.get("role") or "") in ("admin", "super_admin"):

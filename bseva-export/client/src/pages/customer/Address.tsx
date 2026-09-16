@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { validateAddress } from "@/lib/fieldValidation";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const empty: AddressValue = {
   address_line1: "",
@@ -24,6 +25,7 @@ const empty: AddressValue = {
 };
 
 export default function CustomerAddressPage() {
+  const { t } = useI18n();
   const { refresh } = useServiceAvailability();
   const [value, setValue] = useState<AddressValue>(empty);
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ export default function CustomerAddressPage() {
     <CustomerPortal>
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="">My Address</CardTitle>
+          <CardTitle className="">{t("customer.myAddress")}</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             This is your default service location and billing address for invoices. Booking availability is
             checked using the map pin here.

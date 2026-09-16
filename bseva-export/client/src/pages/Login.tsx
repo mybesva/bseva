@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import PasswordInput, { passwordStrengthOk } from "@/components/PasswordInput";
+import PasswordInput from "@/components/PasswordInput";
 import { dashboardPath, loginApi } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useI18n } from "@/i18n/I18nProvider";
+import { errorKeyForCode } from "@bseva/locales";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -14,8 +16,9 @@ import { safeReturnUrl } from "@/const";
 import BSevaLogo from "@/components/BSevaLogo";
 
 export default function Login() {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { refresh, user, loading } = useAuth();
+  const { t } = useI18n();
   const search = typeof window !== "undefined" ? window.location.search : "";
   const params = new URLSearchParams(search);
   const roleHint = params.get("role");
@@ -53,19 +56,26 @@ export default function Login() {
         (roleHint === "pujari" && out.user.role === "head_pujari") ||
         (roleHint === "admin" && (out.user.role === "admin" || out.user.role === "super_admin"));
       if (!roleOk) {
-        toast.error(`This sign-in is for ${roleHint} accounts. Your account role is ${out.user.role}.`);
+        toast.error(t("auth.wrongRole", { expected: roleHint, actual: out.user.role }));
       }
       await refresh();
-      toast.success(`Welcome, ${out.user.name}`);
+      toast.success(t("auth.welcomeName", { name: out.user.name }));
       goAfterLogin(out.user.role);
-    } catch (err: any) {
-      toast.error(err.message || "Login failed");
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      const key = errorKeyForCode(code);
+      toast.error(key ? t(key) : (err as Error)?.message || t("errors.loginFailed"));
     } finally {
       setPending(false);
     }
   }
 
-  const portalLabel = roleHint ? `${roleHint.charAt(0).toUpperCase()}${roleHint.slice(1)} Login` : "Login to BSeva";
+  const portalLabel =
+    roleHint === "customer"
+      ? t("auth.customerLogin")
+      : roleHint === "pujari"
+        ? t("auth.pujariLogin")
+        : t("auth.loginTitle");
 
   return (
     <Layout publicOnly>
@@ -76,12 +86,12 @@ export default function Login() {
               <BSevaLogo size="md" />
             </div>
             <CardTitle className="text-2xl text-foreground">{portalLabel}</CardTitle>
-            <CardDescription>Use your registered email or phone and password.</CardDescription>
+            <CardDescription>{t("auth.loginDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form key={roleHint || "default"} className="space-y-4" onSubmit={onSubmit} autoComplete="off">
               <div className="space-y-2">
-                <Label htmlFor="identifier">Email or Phone</Label>
+                <Label htmlFor="identifier">{t("auth.emailOrPhone")}</Label>
                 <Input
                   id="identifier"
                   value={identifier}
@@ -92,7 +102,7 @@ export default function Login() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <PasswordInput
                   id="password"
                   value={password}
@@ -104,10 +114,10 @@ export default function Login() {
               </div>
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
                 <LogIn className="w-4 h-4 mr-2" />
-                {pending ? "Logging in..." : "Login"}
+                {pending ? t("auth.loggingIn") : t("auth.login")}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
-                New to BSeva?{" "}
+                {t("auth.newToBseva")}{" "}
                 <Link
                   href={
                     (() => {
@@ -120,11 +130,11 @@ export default function Login() {
                   }
                   className="text-primary font-semibold"
                 >
-                  Create an account
+                  {t("mobile.createAccount")}
                 </Link>
               </p>
               <p className="text-sm text-center">
-                <Link href="/" className="text-muted-foreground hover:text-primary">Back to home</Link>
+                <Link href="/" className="text-muted-foreground hover:text-primary">{t("auth.backHome")}</Link>
               </p>
             </form>
           </CardContent>

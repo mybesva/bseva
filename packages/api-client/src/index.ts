@@ -1,4 +1,4 @@
-import { formatApiError, TERMS_VERSION, PRIVACY_VERSION } from "@bseva/config";
+import { formatApiError, parseApiError, TERMS_VERSION, PRIVACY_VERSION } from "@bseva/config";
 import type {
   AuthUser,
   AvailabilityBlock,
@@ -23,10 +23,12 @@ import type {
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status = 0) {
+  code?: string;
+  constructor(message: string, status = 0, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -46,6 +48,7 @@ export type TokenStore = {
 export type ApiClientOptions = {
   getBaseUrl: () => string;
   tokenStore: TokenStore;
+  getLocale?: () => string | Promise<string | null | undefined>;
 };
 
 export type UploadFile = {
@@ -98,20 +101,20 @@ export function createApiClient(opts: ApiClientOptions) {
     if (!headers.has("Content-Type") && init.body && !isForm) {
       headers.set("Content-Type", "application/json");
     }
+    const locale = await opts.getLocale?.();
+    if (locale && !headers.has("Accept-Language")) headers.set("Accept-Language", locale);
     const token = await opts.tokenStore.getToken();
     if (token) headers.set("Authorization", `Bearer ${token}`);
     let res: Response;
     try {
       res = await fetch(joinUrl(opts.getBaseUrl(), `/api/v1${path}`), { ...init, headers });
     } catch {
-      throw new ApiError("Unable to reach BSeva. Check your connection and try again.", 0);
+      throw new ApiError("Unable to reach BSeva. Check your connection and try again.", 0, "NETWORK");
     }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new ApiError(
-        formatApiError((data as { detail?: unknown }).detail, res.statusText || "Request failed"),
-        res.status
-      );
+      const parsed = parseApiError((data as { detail?: unknown }).detail, res.statusText || "Request failed");
+      throw new ApiError(parsed.message, res.status, parsed.code);
     }
     return data as T;
   }

@@ -10,6 +10,7 @@ import { apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const CANCELLED = new Set(["cancelled", "refunded"]);
 
@@ -32,8 +33,10 @@ function statusColor(status: string) {
   }
 }
 
-function formatStatus(status: string) {
-  return String(status || "").replace(/_/g, " ");
+function formatStatus(status: string, t: (key: string) => string) {
+  const key = `status.${status}`;
+  const translated = t(key);
+  return translated === key ? String(status || "").replace(/_/g, " ") : translated;
 }
 
 function BookingCard({
@@ -45,6 +48,7 @@ function BookingCard({
   onOpen: () => void;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className="border rounded-lg p-4 space-y-2 cursor-pointer hover:border-primary/40"
@@ -53,7 +57,7 @@ function BookingCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-semibold">{booking.service_name}</h3>
-          <Badge className={statusColor(booking.status)}>{formatStatus(booking.status)}</Badge>
+          <Badge className={statusColor(booking.status)}>{formatStatus(booking.status, t)}</Badge>
         </div>
         <Button
           size="sm"
@@ -63,7 +67,7 @@ function BookingCard({
             onOpen();
           }}
         >
-          Receipt
+          {t("booking.receipt")}
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">#{booking.booking_number}</p>
@@ -106,6 +110,7 @@ function BookingCard({
 
 export default function CustomerBookingsPage() {
   const [, setLocation] = useLocation();
+  const { t } = useI18n();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("upcoming");
@@ -161,28 +166,28 @@ export default function CustomerBookingsPage() {
   };
 
   const emptyMsg: Record<string, string> = {
-    upcoming: "No upcoming bookings.",
-    completed: "No completed bookings yet.",
-    cancelled: "No cancelled bookings.",
+    upcoming: t("customer.noBookings"),
+    completed: t("priest.completed"),
+    cancelled: t("status.cancelled"),
   };
 
   return (
     <CustomerPortal>
       <Card>
         <CardHeader>
-          <CardTitle>My Bookings</CardTitle>
+          <CardTitle>{t("nav.bookings")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="bg-secondary/30 h-auto flex flex-wrap justify-start gap-1 mb-2">
               <TabsTrigger value="upcoming" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Upcoming ({upcoming.length})
+                {t("customer.upcoming")} ({upcoming.length})
               </TabsTrigger>
               <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Completed ({completed.length})
+                {t("status.completed")} ({completed.length})
               </TabsTrigger>
               <TabsTrigger value="cancelled" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Cancelled ({cancelled.length})
+                {t("status.cancelled")} ({cancelled.length})
               </TabsTrigger>
             </TabsList>
 

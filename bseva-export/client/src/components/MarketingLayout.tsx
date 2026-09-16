@@ -6,14 +6,7 @@ import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { Lang } from "@/i18n/translations";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
 import ThemeToggle from "@/components/ThemeToggle";
 import BSevaLogo from "@/components/BSevaLogo";
@@ -83,7 +76,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   const search = useSearch();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { t, lang, setLang, labels } = useI18n();
+  const { t } = useI18n();
   const { config } = usePublicConfig();
   const phoneDisplay = whatsappDisplay(config.bseva_whatsapp_number);
   const supportEmail = config.email_from_support || "support@b-seva.com";
@@ -132,19 +125,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp", color: SOCIAL_BRAND.whatsapp, filled: true },
   ];
 
-  const LanguageSelect = ({ className }: { className?: string }) => (
-    <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
-      <SelectTrigger className={className || "w-[120px] h-8 text-xs"}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {(Object.keys(labels) as Lang[]).map((code) => (
-          <SelectItem key={code} value={code}>
-            {labels[code]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+  const LanguageSelect = ({ triggerClassName }: { triggerClassName?: string }) => (
+    <LanguageSelector triggerClassName={triggerClassName} />
   );
 
   return (
@@ -246,7 +228,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                       <BSevaLogo size="md" />
                     </a>
                   </Link>
-                  <LanguageSelect className="w-full" />
+                  <LanguageSelect triggerClassName="w-full" />
                   <nav className="flex flex-col gap-4">
                     {navItems.map((item) => (
                       <Link key={item.path} href={item.path}>
@@ -342,15 +324,15 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </ul>
           </div>
           <div>
-            <h4 className="text-h4 mb-4 text-primary">Legal</h4>
+            <h4 className="text-h4 mb-4 text-primary">{t("footer.legal")}</h4>
             <ul className="space-y-2 text-sm text-sidebar-foreground/80">
-              <li><Link href="/terms"><a className="hover:text-primary">Terms & Conditions</a></Link></li>
-              <li><Link href="/privacy"><a className="hover:text-primary">Privacy Policy</a></Link></li>
+              <li><Link href="/terms"><a className="hover:text-primary">{t("nav.terms")}</a></Link></li>
+              <li><Link href="/privacy"><a className="hover:text-primary">{t("nav.privacy")}</a></Link></li>
             </ul>
           </div>
         </div>
         <div className="container border-t border-sidebar-border pt-6 text-center text-xs text-sidebar-foreground/50">
-          © Bseva. All rights reserved.
+          {t("footer.rights")}
         </div>
       </footer>
     </div>

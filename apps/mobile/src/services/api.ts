@@ -3,6 +3,12 @@ import * as SecureStore from "expo-secure-store";
 import { createApiClient } from "@bseva/api-client";
 import { TOKEN_KEY } from "@bseva/tokens";
 
+let currentLocale = "en";
+
+export function setApiLocale(code: string) {
+  currentLocale = code || "en";
+}
+
 export function resolveApiBase(): string {
   const env = (process.env.EXPO_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
   if (env) {
@@ -17,6 +23,7 @@ export function resolveApiBase(): string {
 
 export const apiClient = createApiClient({
   getBaseUrl: resolveApiBase,
+  getLocale: () => currentLocale,
   tokenStore: {
     getToken: () => SecureStore.getItemAsync(TOKEN_KEY),
     setToken: async (token) => {

@@ -1,38 +1,31 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LANG_LABELS, translate, type Lang } from "@bseva/locales";
-import { isLangCode } from "@bseva/config";
+import { dictionaries, type Lang } from "@bseva/locales";
 import { LANG_KEY } from "@bseva/tokens";
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 
+/** Admin/Super Admin app is English-only. Shared locale catalogs still power keys. */
 type I18nValue = {
   lang: Lang;
   setLang: (lang: Lang) => void;
   t: (key: string) => string;
-  labels: typeof LANG_LABELS;
+  labels: { en: string };
 };
 
 const I18nContext = createContext<I18nValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
-
   useEffect(() => {
-    void AsyncStorage.getItem(LANG_KEY).then((stored) => {
-      if (isLangCode(stored)) setLangState(stored);
-    });
+    void AsyncStorage.setItem(LANG_KEY, "en");
   }, []);
 
   const value = useMemo<I18nValue>(
     () => ({
-      lang,
-      labels: LANG_LABELS,
-      setLang: (next) => {
-        setLangState(next);
-        void AsyncStorage.setItem(LANG_KEY, next);
-      },
-      t: (key) => translate(lang, key),
+      lang: "en",
+      labels: { en: "English" },
+      setLang: () => undefined,
+      t: (key) => dictionaries.en[key] || key,
     }),
-    [lang]
+    []
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

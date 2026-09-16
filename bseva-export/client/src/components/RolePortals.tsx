@@ -33,44 +33,46 @@ import ThemeToggle from "@/components/ThemeToggle";
 import SeasonalPopup from "@/components/SeasonalPopup";
 import BSevaLogo from "@/components/BSevaLogo";
 import NotificationBell, { CountBadge } from "@/components/NotificationBell";
+import { useI18n } from "@/i18n/I18nProvider";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
-type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number }> };
+type NavItem = { labelKey: string; href: string; icon: React.ComponentType<{ size?: number }> };
 
 /** Persist sidebar scroll across SPA navigations (nav remounts on route change). */
 const sidebarScrollY: Record<string, number> = {};
 
 const customerNav: NavItem[] = [
-  { label: "Dashboard", href: "/customer", icon: LayoutDashboard },
-  { label: "My Profile", href: "/customer/profile", icon: User },
-  { label: "My Address", href: "/customer/address", icon: MapPin },
-  { label: "Wallet / Payments", href: "/customer/wallet", icon: Wallet },
-  { label: "My Bookings", href: "/customer/bookings", icon: Calendar },
-  { label: "Notifications", href: "/customer/notifications", icon: Bell },
-  { label: "Booking History", href: "/customer/history", icon: History },
-  { label: "Invoices", href: "/customer/invoices", icon: FileText },
-  { label: "Rewards & Referral", href: "/customer/rewards", icon: Sparkles },
-  { label: "Support", href: "/customer/support", icon: FileText },
-  { label: "Change Password", href: "/customer/change-password", icon: KeyRound },
-  { label: "Terms & Conditions", href: "/customer/terms", icon: ScrollText },
+  { labelKey: "nav.dashboard", href: "/customer", icon: LayoutDashboard },
+  { labelKey: "customer.myProfile", href: "/customer/profile", icon: User },
+  { labelKey: "customer.myAddress", href: "/customer/address", icon: MapPin },
+  { labelKey: "customer.walletPayments", href: "/customer/wallet", icon: Wallet },
+  { labelKey: "nav.bookings", href: "/customer/bookings", icon: Calendar },
+  { labelKey: "nav.notifications", href: "/customer/notifications", icon: Bell },
+  { labelKey: "customer.bookingHistory", href: "/customer/history", icon: History },
+  { labelKey: "nav.invoices", href: "/customer/invoices", icon: FileText },
+  { labelKey: "nav.rewards", href: "/customer/rewards", icon: Sparkles },
+  { labelKey: "nav.support", href: "/customer/support", icon: FileText },
+  { labelKey: "nav.password", href: "/customer/change-password", icon: KeyRound },
+  { labelKey: "nav.terms", href: "/customer/terms", icon: ScrollText },
 ];
 
 const pujariNav: NavItem[] = [
-  { label: "Dashboard", href: "/pujari", icon: LayoutDashboard },
-  { label: "Bookings", href: "/pujari/bookings", icon: Calendar },
-  { label: "Notifications", href: "/pujari/notifications", icon: Bell },
-  { label: "Complete Profile", href: "/pujari/onboarding", icon: Sparkles },
-  { label: "My Profile", href: "/pujari/profile", icon: User },
-  { label: "Address", href: "/pujari/address", icon: MapPin },
-  { label: "My Documents", href: "/pujari/documents", icon: FolderOpen },
-  { label: "Services", href: "/pujari/services", icon: ListChecks },
-  { label: "Availability", href: "/pujari/availability", icon: Clock },
-  { label: "Bank / Settlement", href: "/pujari/bank", icon: Landmark },
-  { label: "Dakshina", href: "/pujari/earnings", icon: Wallet },
-  { label: "Referral", href: "/pujari/referral", icon: Gift },
-  { label: "Assess Pujaris", href: "/pujari/head-ratings", icon: Star },
-  { label: "Support", href: "/pujari/support", icon: FileText },
-  { label: "Change Password", href: "/pujari/change-password", icon: KeyRound },
-  { label: "Terms & Conditions", href: "/pujari/terms", icon: ScrollText },
+  { labelKey: "nav.dashboard", href: "/pujari", icon: LayoutDashboard },
+  { labelKey: "nav.bookings", href: "/pujari/bookings", icon: Calendar },
+  { labelKey: "nav.notifications", href: "/pujari/notifications", icon: Bell },
+  { labelKey: "nav.onboarding", href: "/pujari/onboarding", icon: Sparkles },
+  { labelKey: "nav.profile", href: "/pujari/profile", icon: User },
+  { labelKey: "nav.address", href: "/pujari/address", icon: MapPin },
+  { labelKey: "nav.documents", href: "/pujari/documents", icon: FolderOpen },
+  { labelKey: "pujari.serviceOffers", href: "/pujari/services", icon: ListChecks },
+  { labelKey: "nav.availability", href: "/pujari/availability", icon: Clock },
+  { labelKey: "nav.bank", href: "/pujari/bank", icon: Landmark },
+  { labelKey: "nav.earnings", href: "/pujari/earnings", icon: Wallet },
+  { labelKey: "nav.referral", href: "/pujari/referral", icon: Gift },
+  { labelKey: "nav.headRatings", href: "/pujari/head-ratings", icon: Star },
+  { labelKey: "nav.support", href: "/pujari/support", icon: FileText },
+  { labelKey: "nav.password", href: "/pujari/change-password", icon: KeyRound },
+  { labelKey: "nav.terms", href: "/pujari/terms", icon: ScrollText },
 ];
 
 function PortalShell({
@@ -93,6 +95,7 @@ function PortalShell({
   const navRef = useRef<HTMLElement | null>(null);
   const scrollKey = `${role}-sidebar`;
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const [badges, setBadges] = useState<{
     bookings?: number;
     notifications?: number;
@@ -159,7 +162,9 @@ function PortalShell({
             {user?.public_id ? (
               <p className="text-xs text-sidebar-foreground/60 font-mono mt-0.5 truncate">{user.public_id}</p>
             ) : null}
-            <p className="text-xs text-sidebar-foreground/70 capitalize">{role}</p>
+            <p className="text-xs text-sidebar-foreground/70">
+              {role === "pujari" ? t("auth.pujari") : t("auth.customer")}
+            </p>
             {headerBelow}
           </div>
         </div>
@@ -188,7 +193,7 @@ function PortalShell({
                   }}
                 >
                   <item.icon size={18} />
-                  {item.label}
+                  {t(item.labelKey)}
                   <CountBadge
                     count={
                       item.href.endsWith("/bookings")
@@ -201,11 +206,11 @@ function PortalShell({
                     }
                     tooltip={
                       item.href.endsWith("/bookings")
-                        ? badges.tooltips?.bookings
+                        ? t("notifications.unreadBookings", { count: badges.bookings || 0 })
                         : item.href.endsWith("/notifications")
-                          ? badges.tooltips?.notifications
+                          ? t("notifications.unreadCount", { count: badges.notifications || 0 })
                           : item.href.endsWith("/support")
-                            ? badges.tooltips?.support
+                            ? t("notifications.unreadSupport", { count: badges.support || 0 })
                             : undefined
                     }
                   />
@@ -228,7 +233,7 @@ function PortalShell({
       )}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label={t("nav.openMenu")}>
             <Menu size={22} />
           </Button>
           <Link href="/">
@@ -236,8 +241,11 @@ function PortalShell({
               <BSevaLogo size="sm" />
             </a>
           </Link>
-          <span className="text-sm text-muted-foreground capitalize">{role} portal</span>
+          <span className="text-sm text-muted-foreground">
+            {role === "pujari" ? t("portal.pujariPortal") : t("portal.customerPortal")}
+          </span>
           <div className="ml-auto flex items-center gap-1">
+            <LanguageSelector />
             <NotificationBell inboxHref={role === "pujari" ? "/pujari/notifications" : "/customer/notifications"} />
             <ThemeToggle className="shrink-0" />
           </div>
@@ -248,13 +256,13 @@ function PortalShell({
             onClick={() => void handleLogout()}
           >
             <LogOut size={16} className="mr-1.5" />
-            Logout
+            {t("nav.logout")}
           </Button>
         </header>
         <main className="flex-1 p-4 lg:p-8" data-scroll-reset>
           {children}
         </main>
-        <footer className="border-t py-4 text-center text-xs text-muted-foreground">© Bseva. All rights reserved.</footer>
+        <footer className="border-t py-4 text-center text-xs text-muted-foreground">{t("footer.rights")}</footer>
       </div>
     </div>
   );
@@ -285,6 +293,7 @@ function CustomerShell({ children }: { children: ReactNode }) {
 function PujariShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { t } = useI18n();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [nav, setNav] = useState(pujariNav);
   const [profile, setProfile] = useState<any>(null);
@@ -327,12 +336,12 @@ function PujariShell({ children }: { children: ReactNode }) {
         profile.verification_status === "under_review" ||
         !!profile.profile_submitted_at);
     const badgeLabel = verified
-      ? "Verified"
+      ? t("pujari.verified")
       : underReview
-        ? "Under review"
+        ? t("pujari.underReview")
         : status === "ready_for_submission"
-          ? "Ready to submit"
-          : "Not verified";
+          ? t("pujari.readyToSubmit")
+          : t("pujari.notVerified");
 
     return (
       <div className="mt-2 w-full space-y-2 border-t border-sidebar-border/50 pt-2">

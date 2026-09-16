@@ -275,6 +275,8 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             category="booking",
             link="/customer/bookings",
             extra_data={"booking_id": booking_id},
+            message_key="accepted",
+            message_vars={"number": str(b.get("booking_number") or booking_id[:8])},
         )
     except Exception:
         pass

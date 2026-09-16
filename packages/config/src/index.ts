@@ -44,11 +44,11 @@ export type LangCode = (typeof LANGS)[number];
 
 export const PREFERRED_LANGUAGES = [
   { code: "en", label: "English" },
-  { code: "te", label: "Telugu" },
-  { code: "hi", label: "Hindi" },
-  { code: "mr", label: "Marathi" },
-  { code: "ta", label: "Tamil" },
-  { code: "kn", label: "Kannada" },
+  { code: "te", label: "తెలుగు" },
+  { code: "hi", label: "हिन्दी" },
+  { code: "mr", label: "मराठी" },
+  { code: "ta", label: "தமிழ்" },
+  { code: "kn", label: "ಕನ್ನಡ" },
 ] as const;
 
 export function isLangCode(code: string | null | undefined): code is LangCode {
@@ -186,10 +186,19 @@ export function mapNotificationLinkToMobile(
   return `${pathname}${qs}`;
 }
 
-export function formatApiError(detail: unknown, fallback = "Request failed"): string {
-  if (typeof detail === "string") return detail;
+export function parseApiError(detail: unknown, fallback = "Request failed"): { message: string; code?: string } {
+  if (typeof detail === "string" && detail.trim()) return { message: detail };
   if (Array.isArray(detail)) {
-    return detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(", ") || fallback;
+    const msgs = detail.map((d: { msg?: string; message?: string }) => d?.msg || d?.message).filter(Boolean) as string[];
+    return { message: msgs.join(", ") || fallback, code: "VALIDATION" };
   }
-  return fallback;
+  if (detail && typeof detail === "object") {
+    const d = detail as { code?: string; message?: string; msg?: string };
+    return { message: (d.message || d.msg || fallback).trim() || fallback, code: d.code };
+  }
+  return { message: fallback };
+}
+
+export function formatApiError(detail: unknown, fallback = "Request failed"): string {
+  return parseApiError(detail, fallback).message;
 }

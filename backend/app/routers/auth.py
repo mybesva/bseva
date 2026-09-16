@@ -14,7 +14,7 @@ from app.domain import row_dict
 from app.platform_config import get_setting
 from app.schemas import ChangePasswordIn, LoginIn, MePatchIn, OtpRequestIn, OtpVerifyIn, RegisterIn, TokenOut
 from app.security import create_access_token, hash_password, verify_password
-from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
+from app.i18n import coded_http
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -55,7 +55,7 @@ def _verify_registration_otp(db: Session, body: RegisterIn) -> None:
         consume=True,
     )
     if not result.get("ok"):
-        raise HTTPException(400, "Invalid or expired OTP")
+        raise coded_http(400, "INVALID_OTP", "Invalid or expired OTP")
 
 
 def _public(row: dict) -> dict:
@@ -168,7 +168,7 @@ def verify_otp_ep(body: OtpVerifyIn, db: Session = Depends(get_db)):
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else None
     result = verify_email_otp(db, email=email, code=body.code, purpose=purpose, consume=True)
     if not result.get("ok"):
-        raise HTTPException(400, "Invalid or expired OTP")
+        raise coded_http(400, "INVALID_OTP", "Invalid or expired OTP")
     return {"ok": True}
 
 
@@ -182,15 +182,15 @@ def login_with_otp(body: OtpVerifyIn, db: Session = Depends(get_db)):
         raise HTTPException(400, "Email is required")
     verified = verify_email_otp(db, email=email, code=body.code, purpose="login", consume=True)
     if not verified.get("ok"):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired OTP")
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
     row = db.execute(
         text("SELECT * FROM users WHERE lower(email) = :e LIMIT 1"),
         {"e": email},
     ).mappings().first()
     if not row:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired OTP")
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
     if row["blocked"]:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, ACCOUNT_BLOCKED)
+        raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
     return TokenOut(access_token=create_access_token(str(row["id"]), row["role"]), user=_public(dict(row)))
 
 
@@ -397,9 +397,9 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
         {"id": body.identifier.strip()},
     ).mappings().first()
     if not row or not verify_password(body.password, row["password_hash"]):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email/phone or password")
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "LOGIN_FAILED", "Invalid email/phone or password")
     if row["blocked"]:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, ACCOUNT_BLOCKED)
+        raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
     if row["role"] in ("customer", "pujari", "head_pujari") and not (row.get("public_id") or "").strip():
         from app.public_ids import ensure_public_id
 

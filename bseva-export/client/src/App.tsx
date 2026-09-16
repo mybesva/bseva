@@ -69,6 +69,7 @@ import CustomerBookingsPage from "./pages/customer/BookingsPage";
 import CustomerHistoryPage from "./pages/customer/HistoryPage";
 import CustomerChangePasswordPage from "./pages/customer/ChangePasswordPage";
 import { AuthProvider } from "./lib/AuthContext";
+import { LanguageSync } from "./i18n/LanguageSync";
 import FcmBootstrap from "./components/FcmBootstrap";
 import { ServiceAvailabilityProvider } from "./lib/ServiceAvailabilityContext";
 import LogoWatermark from "./components/LogoWatermark";
@@ -186,6 +187,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light" switchable>
         <AuthProvider>
+          <LanguageSync />
           <FcmBootstrap />
           <ServiceAvailabilityProvider>
             <TooltipProvider>

@@ -4,8 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function PrivacyPage() {
+  const { t } = useI18n();
   const { policies, loading } = useLegalPolicies(["privacy"]);
   const privacy = policyBySlug(policies, "privacy");
 
@@ -15,10 +17,10 @@ export default function PrivacyPage() {
         <Button variant="ghost" size="sm" className="mb-6 -ml-2" asChild>
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t("common.back")}
           </Link>
         </Button>
-        <h1 className="text-h1 mb-2">{privacy?.title ||"Privacy Policy"}</h1>
+        <h1 className="text-h1 mb-2">{privacy?.title || t("legal.privacy")}</h1>
         {privacy?.version && (
           <p className="text-sm text-muted-foreground mb-8">Version {privacy.version}</p>
         )}
@@ -31,7 +33,7 @@ export default function PrivacyPage() {
             </section>
           ))}
         </div>
-        <p className="mt-12 text-xs text-muted-foreground">© Bseva. All rights reserved.</p>
+        <p className="mt-12 text-xs text-muted-foreground">{t("footer.rights")}</p>
       </div>
     </Layout>
   );

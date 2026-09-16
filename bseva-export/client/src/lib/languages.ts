@@ -1,26 +1,21 @@
-export const PREFERRED_LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "te", label: "Telugu" },
-  { code: "hi", label: "Hindi" },
-  { code: "mr", label: "Marathi" },
-  { code: "ta", label: "Tamil" },
-  { code: "kn", label: "Kannada" },
-] as const;
+import { LANG_LABELS, isLang, type Lang } from "@bseva/locales";
 
-export type PreferredLang = (typeof PREFERRED_LANGUAGES)[number]["code"];
+export const PREFERRED_LANGUAGES = (Object.keys(LANG_LABELS) as Lang[]).map((code) => ({
+  code,
+  label: LANG_LABELS[code],
+}));
 
-const PREFERRED_CODES = new Set<string>(PREFERRED_LANGUAGES.map((l) => l.code));
+export type PreferredLang = Lang;
 
 export function isPreferredLang(code: string | null | undefined): code is PreferredLang {
-  return !!code && PREFERRED_CODES.has(code);
+  return isLang(code);
 }
 
 export function preferredLangLabel(code: string | null | undefined) {
-  return PREFERRED_LANGUAGES.find((l) => l.code === code)?.label || "English";
+  return isLang(code) ? LANG_LABELS[code] : LANG_LABELS.en;
 }
 
-/** Site chrome is translated for en/hi/te only; other preferences still save. */
-export function uiLangFromPreferred(code: string | null | undefined): "en" | "hi" | "te" {
-  if (code === "hi" || code === "te") return code;
-  return "en";
+/** UI language is the stored preference for all six supported locales. */
+export function uiLangFromPreferred(code: string | null | undefined): Lang {
+  return isLang(code) ? code : "en";
 }

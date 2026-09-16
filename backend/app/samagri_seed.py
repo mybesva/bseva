@@ -61,10 +61,64 @@ CATALOG: dict[str, tuple[str, str, str, str]] = {
     "vehicle_ribbon": ("Decorative ribbon / toran (optional)", "तोरण / रिबन", "తోరణం", "pcs"),
 }
 
+# Marathi / Kannada / Tamil names (religious terms kept as transliteration where appropriate)
+SAMAGRI_EXTRA: dict[str, dict[str, str]] = {
+    "turmeric": {"mr": "हळद", "kn": "ಅರಿಶಿನ", "ta": "மஞ்சள்"},
+    "kumkum": {"mr": "कुंकू", "kn": "ಕುಂಕುಮ", "ta": "குங்குமம்"},
+    "sandalwood": {"mr": "चंदन", "kn": "ಗಂಧ", "ta": "சந்தனம்"},
+    "akshata": {"mr": "अक्षत", "kn": "ಅಕ್ಷತೆ", "ta": "அட்சதை"},
+    "flowers": {"mr": "फुले", "kn": "ಹೂವುಗಳು", "ta": "பூக்கள்"},
+    "garlands": {"mr": "माळा", "kn": "ಹೂವಿನ ಹಾರ", "ta": "பூமாலை"},
+    "incense": {"mr": "उदबत्ती", "kn": "ಅಗರಬತ್ತಿ", "ta": "ஊதுபத்தி"},
+    "camphor": {"mr": "कर्पूर", "kn": "ಕರ್ಪೂರ", "ta": "கற்பூரம்"},
+    "lamp_oil": {"mr": "दीप तेल / तूप", "kn": "ದೀಪ ಎಣ್ಣೆ / ತುಪ್ಪ", "ta": "தீப எண்ணெய் / நெய்"},
+    "cotton_wicks": {"mr": "वात", "kn": "ಬತ್ತಿ", "ta": "திரி"},
+    "betel_leaves": {"mr": "विड्याची पाने", "kn": "ವೀಳ್ಯದೆಲೆ", "ta": "வெற்றிலை"},
+    "betel_nuts": {"mr": "सुपारी", "kn": "ಅಡಿಕೆ", "ta": "பாக்கு"},
+    "coconuts": {"mr": "नारळ", "kn": "ತೆಂಗಿನಕಾಯಿ", "ta": "தேங்காய்"},
+    "fruits": {"mr": "फळे", "kn": "ಹಣ್ಣುಗಳು", "ta": "பழங்கள்"},
+    "bananas": {"mr": "केळी", "kn": "ಬಾಳೆಹಣ್ಣು", "ta": "வாழைப்பழம்"},
+    "kalash": {"mr": "कलश", "kn": "ಕಲಶ", "ta": "கலசம்"},
+    "mango_leaves": {"mr": "आंब्याची पाने", "kn": "ಮಾವಿನ ಎಲೆ", "ta": "மாவிலை"},
+    "thread": {"mr": "मौली / कलावा", "kn": "ಮೌಲಿ", "ta": "காப்பு நூல்"},
+    "rice": {"mr": "तांदूळ", "kn": "ಅಕ್ಕಿ", "ta": "அரிசி"},
+    "jaggery": {"mr": "गुळ", "kn": "ಬೆಲ್ಲ", "ta": "வெல்லம்"},
+    "sugar": {"mr": "साखर", "kn": "ಸಕ್ಕರೆ", "ta": "சர்க்கரை"},
+    "milk": {"mr": "दूध", "kn": "ಹಾಲು", "ta": "பால்"},
+    "curd": {"mr": "दही", "kn": "ಮೊಸರು", "ta": "தயிர்"},
+    "ghee": {"mr": "तूप", "kn": "ತುಪ್ಪ", "ta": "நெய்"},
+    "honey": {"mr": "मध", "kn": "ಜೇನು", "ta": "தேன்"},
+    "panchamrit_kit": {"mr": "पंचामृत साहित्य", "kn": "ಪಂಚಾಮೃತ ಸಾಮಗ್ರಿ", "ta": "பஞ்சாமிர்த சாமக்ரி"},
+    "navadhanyalu": {"mr": "नवधान्य", "kn": "ನವಧಾನ್ಯ", "ta": "நவதானியம்"},
+    "homa_samidha": {"mr": "होम समिधा", "kn": "ಹೋಮ ಸಮಿಧೆ", "ta": "ஹோம சமித்"},
+    "homa_kund": {"mr": "होम कुंड", "kn": "ಹೋಮ ಕುಂಡ", "ta": "ஹோம குண்டம்"},
+    "blades_grass": {"mr": "दर्भ गवत", "kn": "ದರ್ಭೆ ಹುಲ್ಲು", "ta": "தர்ப்பை புல்"},
+    "new_cloth": {"mr": "नवे वस्त्र", "kn": "ಹೊಸ ವಸ್ತ್ರ", "ta": "புதிய ஆடை"},
+    "deity_photo": {"mr": "देवता फोटो / मूर्ती", "kn": "ದೇವತೆ ಚಿತ್ರ / ವಿಗ್ರಹ", "ta": "தெய்வ படம் / விக்கிரகம்"},
+    "mats": {"mr": "आसन / चटई", "kn": "ಆಸನ / ಚಾಪೆ", "ta": "ஆசனம் / பாய்"},
+    "plates_glasses": {"mr": "ताट, वाटी, ग्लास", "kn": "ತಟ್ಟೆ, ಗ್ಲಾಸ್, ಬಟ್ಟಲು", "ta": "தட்டு, கிண்ணம், கண்ணாடி"},
+    "drinking_water": {"mr": "पिण्याचे पाणी", "kn": "ಕುಡಿಯುವ ನೀರು", "ta": "குடிநீர்"},
+    "matchbox": {"mr": "काडीपेटी", "kn": "ಮ್ಯಾಚ್‌ಬಾಕ್ಸ್", "ta": "தீப்பெட்டி"},
+    "knife": {"mr": "चाकू", "kn": "ಚಾಕು", "ta": "கத்தி"},
+    "bricks": {"mr": "विटा", "kn": "ಇಟ್ಟಿಗೆ", "ta": "செங்கல்"},
+    "soil_turmeric_mix": {"mr": "शुभ्र माती", "kn": "ಶುದ್ಧ ಮಣ್ಣು", "ta": "சுத்தமான மண்"},
+    "bell": {"mr": "घंटा", "kn": "ಗಂಟೆ", "ta": "மணி"},
+    "prasadam_rice": {"mr": "प्रसाद तांदूळ", "kn": "ಪ್ರಸಾದ ಅಕ್ಕಿ", "ta": "பிரசாத அரிசி"},
+    "prasadam_sweet": {"mr": "मिठाई नैवेद्य", "kn": "ನೈವೇದ್ಯ ಸಿಹಿ", "ta": "நைவேத்திய இனிப்பு"},
+    "blouse_piece": {"mr": "ब्लाउज पीस", "kn": "ಬ್ಲೌಸ್ ಪೀಸ್", "ta": "ரவிக்கை துணி"},
+    "coins": {"mr": "नाणी", "kn": "ನಾಣ್ಯಗಳು", "ta": "நாணயங்கள்"},
+    "samagri_kit": {"mr": "पूजा सामग्री किट (BSeva)", "kn": "ಪೂಜಾ ಸಾಮಗ್ರಿ ಕಿಟ್ (BSeva)", "ta": "பூஜை சாமக்ரி கிட் (BSeva)"},
+    "vehicle_lemon": {"mr": "लिंबू", "kn": "ನಿಂಬೆಹಣ್ಣು", "ta": "எலுமிச்சை"},
+    "vehicle_ribbon": {"mr": "तोरण / रिबन", "kn": "ತೋರಣ", "ta": "தோரணம்"},
+}
+
 DISCLAIMER = {
     "en": "Requirements may vary based on family tradition / Veda Shakha / regional practice. Your assigned Pujari may confirm final requirements.",
     "hi": "पारिवारिक परंपरा / वेद शाखा / क्षेत्रीय रीति के अनुसार आवश्यकताएँ बदल सकती हैं। नियुक्त पुजारी अंतिम सूची की पुष्टि कर सकते हैं।",
     "te": "కుటుంబ సాంప్రదాయం / వేద శాఖ / ప్రాంతీయ ఆచారం బట్టి అవసరాలు మారవచ్చు. మీకు కేటాయించిన పుజారి తుది జాబితాను నిర్ధారించవచ్చు.",
+    "mr": "कुटुंबीय परंपरा / वेद शाखा / प्रादेशिक रीतीनुसार आवश्यकता बदलू शकतात. नेमलेले पुजारी अंतिम यादी निश्चित करू शकतात.",
+    "kn": "ಕುಟುಂಬ ಸಂಪ್ರದಾಯ / ವೇದ ಶಾಖೆ / ಪ್ರಾದೇಶಿಕ ಆಚಾರದಂತೆ ಅಗತ್ಯಗಳು ಬದಲಾಗಬಹುದು. ನಿಯೋಜಿತ ಪೂಜಾರಿ ಅಂತಿಮ ಪಟ್ಟಿ ದೃಢಪಡಿಸಬಹುದು.",
+    "ta": "குடும்ப பாரம்பரியம் / வேத சாகை / பிராந்திய வழக்கத்தின்படி தேவைகள் மாறலாம். நியமிக்கப்பட்ட பூசாரி இறுதி பட்டியலை உறுதி செய்யலாம்.",
 }
 
 # Per-service lines: (item_key, qty, unit|None, category, provided_by, optional, sort)
@@ -265,6 +319,18 @@ def _ensure_item(conn, item_key: str) -> str:
         )
         sid = str(conn.execute(text("SELECT id FROM samagri_items WHERE item_key = :k"), {"k": item_key}).scalar())
     for lang, name in (("en", en), ("hi", hi), ("te", te)):
+        conn.execute(
+            text(
+                """
+                INSERT INTO samagri_item_translations (samagri_item_id, language_code, item_name)
+                VALUES (CAST(:id AS uuid), :lang, :name)
+                ON CONFLICT (samagri_item_id, language_code) DO UPDATE SET item_name = EXCLUDED.item_name
+                """
+            ),
+            {"id": sid, "lang": lang, "name": name},
+        )
+    extra = SAMAGRI_EXTRA.get(item_key) or {}
+    for lang, name in extra.items():
         conn.execute(
             text(
                 """

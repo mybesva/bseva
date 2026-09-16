@@ -1,4 +1,5 @@
 import { adminPath } from "@/const";
+import { LANG_STORAGE_KEY, parseApiErrorDetail } from "@bseva/locales";
 
 const TOKEN_KEY = "bseva_token";
 
@@ -26,25 +27,22 @@ export function setToken(token: string | null) {
   else localStorage.setItem(TOKEN_KEY, token);
 }
 
-function formatFetchError(data: unknown, res: Response, fallback: string): string {
+function formatFetchError(data: unknown, res: Response, fallback: string): { message: string; code?: string } {
   const detail = (data as { detail?: unknown; message?: unknown } | null)?.detail;
-  if (typeof detail === "string" && detail.trim()) return detail;
-  if (Array.isArray(detail)) {
-    const msgs = detail
-      .map((d: { msg?: string; message?: string }) => d?.msg || d?.message)
-      .filter(Boolean);
-    if (msgs.length) return msgs.join(", ");
-  }
-  if (detail && typeof detail === "object") {
-    const nested = (detail as { message?: string; msg?: string }).message
-      || (detail as { message?: string; msg?: string }).msg;
-    if (nested) return nested;
-  }
+  const parsed = parseApiErrorDetail(detail, "");
+  if (parsed.message) return parsed;
   const top = (data as { message?: unknown } | null)?.message;
-  if (typeof top === "string" && top.trim()) return top;
+  if (typeof top === "string" && top.trim()) return { message: top };
   const statusBit = res.status ? ` (${res.status})` : "";
-  if (res.statusText?.trim()) return `${res.statusText}${statusBit}`;
-  return `${fallback}${statusBit}`;
+  if (res.statusText?.trim()) return { message: `${res.statusText}${statusBit}` };
+  return { message: `${fallback}${statusBit}` };
+}
+
+function throwApiError(data: unknown, res: Response, fallback: string): never {
+  const parsed = formatFetchError(data, res, fallback);
+  const err = new Error(parsed.message) as Error & { code?: string };
+  err.code = parsed.code;
+  throw err;
 }
 
 export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
@@ -52,10 +50,14 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   if (!headers.has("Content-Type") && opts.body) headers.set("Content-Type", "application/json");
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (typeof window !== "undefined") {
+    const lang = localStorage.getItem(LANG_STORAGE_KEY);
+    if (lang && !headers.has("Accept-Language")) headers.set("Accept-Language", lang);
+  }
   const res = await fetch(`${apiBase()}/api/v1${path}`, { ...opts, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(formatFetchError(data, res, "Request failed"));
+    throwApiError(data, res, "Request failed");
   }
   return data as T;
 }
@@ -128,7 +130,7 @@ export async function uploadPujariAsset(kind: "photo" | "signature", file: File)
   const res = await fetch(`${apiBase()}/api/v1/pujari/profile/${kind}`, { method: "POST", headers, body });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(formatFetchError(data, res, "Upload failed"));
+    throwApiError(data, res, "Upload failed");
   }
   return data;
 }
@@ -195,7 +197,7 @@ export async function uploadPromoImage(file: File) {
   body.append("file", file);
   const res = await fetch(`${apiBase()}/api/v1/admin/promos/images`, { method: "POST", headers, body });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(formatFetchError(data, res, "Upload failed"));
+    if (!res.ok) throwApiError(data, res, "Upload failed");
   return data as { ok: boolean; image_url: string; preview_url?: string };
 }
 

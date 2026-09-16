@@ -1,13 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LANG_LABELS, translate, type Lang } from "@bseva/locales";
+import { LANG_LABELS, translate, type Lang, type TranslateVars } from "@bseva/locales";
 import { isLangCode } from "@bseva/config";
 import { LANG_KEY } from "@bseva/tokens";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { setApiLocale } from "@/services/api";
 
 type I18nValue = {
   lang: Lang;
   setLang: (lang: Lang) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: TranslateVars) => string;
   labels: typeof LANG_LABELS;
 };
 
@@ -18,7 +19,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void AsyncStorage.getItem(LANG_KEY).then((stored) => {
-      if (isLangCode(stored)) setLangState(stored);
+      if (isLangCode(stored)) {
+        setLangState(stored);
+        setApiLocale(stored);
+      }
     });
   }, []);
 
@@ -28,9 +32,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       labels: LANG_LABELS,
       setLang: (next) => {
         setLangState(next);
+        setApiLocale(next);
         void AsyncStorage.setItem(LANG_KEY, next);
       },
-      t: (key) => translate(lang, key),
+      t: (key, vars) => translate(lang, key, vars),
     }),
     [lang]
   );

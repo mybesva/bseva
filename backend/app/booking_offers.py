@@ -307,6 +307,8 @@ def notify_pujaris_new_offer(
                 body=body,
                 category="booking",
                 link="/pujari/bookings",
+                message_key="newRequest",
+                message_vars={"service": service_name or "Puja", "number": booking_number},
             )
         except Exception:
             continue

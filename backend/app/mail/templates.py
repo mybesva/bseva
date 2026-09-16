@@ -14,6 +14,7 @@ from app.mail.brand import (
     paragraph,
     render_email,
 )
+from app.i18n import email_closing, email_greet, email_label, normalize_lang
 
 
 @dataclass
@@ -67,40 +68,31 @@ class InvoiceEmailData:
 
 
 def _greet(name: str, language: str) -> str:
-    n = (name or "").strip() or "Ji"
-    lang = (language or "en").lower()
-    if lang == "hi":
-        return f"नमस्ते {n},"
-    if lang == "te":
-        return f"నమస్తే {n},"
-    return f"Namaste {n},"
+    return email_greet(name, language)
 
 
 def _closing(language: str) -> str:
-    lang = (language or "en").lower()
-    if lang == "hi":
-        return "ॐ शांति,\nBSeva"
-    if lang == "te":
-        return "ఓం శాంతి,\nBSeva"
-    return "Om Shanti,\nBSeva"
+    return email_closing(language)
 
 
 def _booking_detail_rows(data: BookingEmailData) -> list[tuple[str, str]]:
+    lang = normalize_lang(data.language)
+    L = lambda key: email_label(key, lang)
     rows = [
-        ("Customer", data.customer_name),
-        ("Booking ID", data.booking_number or data.booking_id),
-        ("Service", data.service_name),
-        ("Date", data.booking_date),
-        ("Time / Muhurtham", data.muhurtham or data.start_time),
-        ("Location", data.location or "—"),
-        ("Package", data.package or "—"),
-        ("Main puja", format_inr_paise(data.main_puja_paise)),
-        ("Samagri", format_inr_paise(data.samagri_paise)),
-        ("Alankaram", format_inr_paise(data.alankaram_paise)),
-        ("Food / Prasadam", format_inr_paise(data.food_prasadam_paise)),
-        ("Total amount", format_inr_paise(data.total_paise)),
-        ("Payment status", data.payment_status or "—"),
-        ("Booking status", data.booking_status or "—"),
+        (L("customer"), data.customer_name),
+        (L("bookingId"), data.booking_number or data.booking_id),
+        (L("service"), data.service_name),
+        (L("date"), data.booking_date),
+        (L("timeMuhurtham"), data.muhurtham or data.start_time),
+        (L("location"), data.location or "—"),
+        (L("package"), data.package or "—"),
+        (L("mainPuja"), format_inr_paise(data.main_puja_paise)),
+        (L("samagri"), format_inr_paise(data.samagri_paise)),
+        (L("alankaram"), format_inr_paise(data.alankaram_paise)),
+        (L("food"), format_inr_paise(data.food_prasadam_paise)),
+        (L("total"), format_inr_paise(data.total_paise)),
+        (L("paymentStatus"), data.payment_status or "—"),
+        (L("bookingStatus"), data.booking_status or "—"),
     ]
     rows.extend(data.extra_rows)
     return [(k, v) for k, v in rows if v not in (None, "")]

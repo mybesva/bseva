@@ -6,6 +6,7 @@ import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Ban, FileText, Scale } from "lucide-react";
 import { Link } from "wouter";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   platform_terms: Scale,
@@ -14,6 +15,7 @@ const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; classNa
 };
 
 export default function TermsPage() {
+  const { t } = useI18n();
   const { policies, loading } = useLegalPolicies([
     "platform_terms",
     "booking_terms",
@@ -34,10 +36,10 @@ export default function TermsPage() {
         <Button variant="ghost" size="sm" className="mb-6 -ml-2" asChild>
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t("common.back")}
           </Link>
         </Button>
-        <h1 className="text-h1 mb-2">Terms & Conditions</h1>
+        <h1 className="text-h1 mb-2">{t("legal.terms")}</h1>
         <p className="text-sm text-muted-foreground mb-6">
           Choose a section to read. Only one section is shown at a time.
         </p>

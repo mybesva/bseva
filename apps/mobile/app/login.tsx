@@ -1,12 +1,16 @@
 import { dashboardPath, isAdminRole } from "@bseva/config";
+import { errorKeyForCode } from "@bseva/locales";
 import { loginSchema } from "@bseva/validation";
+import { ApiError } from "@bseva/api-client";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { LanguagePicker } from "@/components/LanguagePicker";
 import { useAuth } from "@/providers/AuthProvider";
+import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 
@@ -22,6 +26,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { refresh } = useAuth();
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +36,8 @@ export default function LoginScreen() {
     setError(null);
     const parsed = loginSchema.safeParse({ identifier, password });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || "Check your details");
+      const msg = parsed.error.issues[0]?.message || "auth.checkDetails";
+      setError(t(msg));
       return;
     }
     setPending(true);
@@ -44,13 +50,16 @@ export default function LoginScreen() {
       }
       router.replace(routeForRole(out.user.role) as never);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Login failed");
+      const code = e instanceof ApiError ? e.code : undefined;
+      const key = errorKeyForCode(code);
+      setError(key ? t(key) : e instanceof Error ? e.message : t("errors.loginFailed"));
     } finally {
       setPending(false);
     }
   }
 
-  const title = roleHint === "pujari" ? "Pujari sign in" : roleHint === "customer" ? "Customer sign in" : "Sign in to BSeva";
+  const title =
+    roleHint === "pujari" ? t("mobile.signInPujari") : roleHint === "customer" ? t("mobile.signInCustomer") : t("auth.loginTitle");
 
   return (
     <Screen>
@@ -59,23 +68,24 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
           <Card>
             <AppText color={colors.mutedForeground} style={{ marginBottom: 16 }}>
-              Use your registered email or phone and password. Your actual role comes from the server after sign-in.
+              {t("auth.loginDesc")} {t("auth.loginMobileHint")}
             </AppText>
+            <LanguagePicker />
             <View style={{ gap: 14 }}>
               <ErrorBanner message={error} />
               <Field
-                label="Email or phone"
+                label={t("auth.emailOrPhone")}
                 value={identifier}
                 onChangeText={setIdentifier}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
               />
-              <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-              <PrimaryButton title={pending ? "Signing in..." : "Sign in"} loading={pending} onPress={onSubmit} />
+              <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              <PrimaryButton title={pending ? t("auth.signingIn") : t("auth.signIn")} loading={pending} onPress={onSubmit} />
               <Pressable onPress={() => router.push({ pathname: "/register", params: roleHint ? { role: roleHint } : {} })}>
                 <AppText color={colors.primary} style={{ textAlign: "center", fontWeight: "700" }}>
-                  Create an account
+                  {t("mobile.createAccount")}
                 </AppText>
               </Pressable>
             </View>

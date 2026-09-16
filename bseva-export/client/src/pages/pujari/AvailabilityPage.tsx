@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PujariPortal } from "@/components/RolePortals";
+import { useI18n } from "@/i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
@@ -69,6 +70,7 @@ function LegendSwatch({
 }
 
 export default function PujariAvailabilityPage() {
+  const { t } = useI18n();
   const { active: onboardingActive } = usePujariOnboardingGate("availability");
   const [available, setAvailable] = useState(true);
   const [radius, setRadius] = useState("");
@@ -216,7 +218,7 @@ export default function PujariAvailabilityPage() {
     <PujariPortal>
       <div className="max-w-6xl mx-auto space-y-6 md:space-y-8">
         <section className="bg-sidebar text-sidebar-foreground rounded-xl px-5 py-7 md:px-8 md:py-9 border border-[#D4AF37]/20 shadow-sm">
-          <h1 className="text-h1">Availability</h1>
+          <h1 className="text-h1">{t("pujari.availabilityTitle")}</h1>
           <p className="mt-2 text-sm md:text-base text-sidebar-foreground/75 max-w-2xl">
             Manage when customers can book you, your service area, and dates you want blocked on your calendar.
           </p>

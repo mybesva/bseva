@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 
 export default function CustomerTabs() {
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   return (
     <Tabs
       screenOptions={{
@@ -16,23 +18,23 @@ export default function CustomerTabs() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: "Home", tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} /> }}
+        options={{ title: t("mobile.home"), tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="services"
-        options={{ title: "Services", tabBarIcon: ({ color, size }) => <Ionicons name="sparkles" color={color} size={size} /> }}
+        options={{ title: t("nav.services"), tabBarIcon: ({ color, size }) => <Ionicons name="sparkles" color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="bookings"
-        options={{ title: "Bookings", tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} /> }}
+        options={{ title: t("nav.bookings"), tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="wallet"
-        options={{ title: "Wallet", tabBarIcon: ({ color, size }) => <Ionicons name="wallet" color={color} size={size} /> }}
+        options={{ title: t("nav.wallet"), tabBarIcon: ({ color, size }) => <Ionicons name="wallet" color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="more"
-        options={{ title: "More", tabBarIcon: ({ color, size }) => <Ionicons name="menu" color={color} size={size} /> }}
+        options={{ title: t("mobile.more"), tabBarIcon: ({ color, size }) => <Ionicons name="menu" color={color} size={size} /> }}
       />
     </Tabs>
   );

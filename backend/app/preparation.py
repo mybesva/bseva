@@ -7,8 +7,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-SUPPORTED_LANGS = ("en", "hi", "te")
-FALLBACK_LANG = "en"
+from app.i18n import FALLBACK_LANG, SUPPORTED_LANGS, normalize_lang as _normalize_lang
 
 SECTION_CUSTOMER = "customer_arrange"
 SECTION_INCLUDED = "included_bseva"
@@ -26,24 +25,23 @@ DEFAULT_DISCLAIMER = {
     "en": "Requirements may vary based on family tradition / Veda Shakha / regional practice. Your assigned Pujari may confirm final requirements.",
     "hi": "पारिवारिक परंपरा / वेद शाखा / क्षेत्रीय रीति के अनुसार आवश्यकताएँ बदल सकती हैं। नियुक्त पुजारी अंतिम सूची की पुष्टि कर सकते हैं।",
     "te": "కుటుంబ సాంప్రదాయం / వేద శాఖ / ప్రాంతీయ ఆచారం బట్టి అవసరాలు మారవచ్చు. మీకు కేటాయించిన పుజారి తుది జాబితాను నిర్ధారించవచ్చు.",
+    "mr": "कुटुंबीय परंपरा / वेद शाखा / प्रादेशिक रीतीनुसार आवश्यकता बदलू शकतात. नेमलेले पुजारी अंतिम यादी निश्चित करू शकतात.",
+    "kn": "ಕುಟುಂಬ ಸಂಪ್ರದಾಯ / ವೇದ ಶಾಖೆ / ಪ್ರಾದೇಶಿಕ ಆಚಾರದಂತೆ ಅಗತ್ಯಗಳು ಬದಲಾಗಬಹುದು. ನಿಯೋಜಿತ ಪೂಜಾರಿ ಅಂತಿಮ ಪಟ್ಟಿ ದೃಢಪಡಿಸಬಹುದು.",
+    "ta": "குடும்ப பாரம்பரியம் / வேத சாகை / பிராந்திய வழக்கத்தின்படி தேவைகள் மாறலாம். நியமிக்கப்பட்ட பூசாரி இறுதி பட்டியலை உறுதி செய்யலாம்.",
 }
 
 PENDING_MSG = {
     "en": "Your detailed Samagri checklist will be confirmed shortly.",
     "hi": "आपकी विस्तृत सामग्री सूची शीघ्र पुष्टि की जाएगी।",
     "te": "మీ వివరమైన సామగ్రి జాబితా త్వరలో నిర్ధారించబడుతుంది.",
+    "mr": "तुमची तपशीलवार सामग्री यादी लवकरच निश्चित होईल.",
+    "kn": "ನಿಮ್ಮ ವಿವರವಾದ ಸಾಮಗ್ರಿ ಪಟ್ಟಿ ಶೀಘ್ರದಲ್ಲೇ ದೃಢಪಡುತ್ತದೆ.",
+    "ta": "உங்கள் விரிவான சாமக்ரி பட்டியல் விரைவில் உறுதி செய்யப்படும்.",
 }
 
 
 def normalize_lang(code: str | None) -> str:
-    c = (code or FALLBACK_LANG).strip().lower()[:5]
-    if c in SUPPORTED_LANGS:
-        return c
-    if c.startswith("te"):
-        return "te"
-    if c.startswith("hi"):
-        return "hi"
-    return FALLBACK_LANG
+    return _normalize_lang(code)
 
 
 def customer_preferred_language(db: Session, customer_id: str) -> str:

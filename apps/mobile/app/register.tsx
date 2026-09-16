@@ -15,7 +15,7 @@ export default function RegisterScreen() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const router = useRouter();
   const { refresh } = useAuth();
-  const { setLang, lang } = useI18n();
+  const { setLang, lang, t } = useI18n();
   const { colors } = useAppTheme();
   const [accountType, setAccountType] = useState<"customer" | "pujari">(role === "pujari" ? "pujari" : "customer");
   const [name, setName] = useState("");
@@ -35,7 +35,7 @@ export default function RegisterScreen() {
   async function sendOtp() {
     setError(null);
     if (!phone && !email) {
-      setError("Enter phone or email first");
+      setError(t("validation.identifier"));
       return;
     }
     try {
@@ -63,7 +63,7 @@ export default function RegisterScreen() {
       referral_code: referralCode.trim() || undefined,
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || "Check your details");
+      setError(t(parsed.error.issues[0]?.message || "auth.checkDetails"));
       return;
     }
     setPending(true);
@@ -98,21 +98,21 @@ export default function RegisterScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Create your BSeva account" back />
+      <ScreenHeader title={t("auth.registerTitle")} back />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
           <Card>
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
               <View style={{ flex: 1 }}>
                 <PrimaryButton
-                  title="Customer"
+                  title={t("auth.customer")}
                   variant={accountType === "customer" ? "primary" : "outline"}
                   onPress={() => setAccountType("customer")}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <PrimaryButton
-                  title="Pujari"
+                  title={t("auth.pujari")}
                   variant={accountType === "pujari" ? "navy" : "outline"}
                   onPress={() => setAccountType("pujari")}
                 />
@@ -120,12 +120,12 @@ export default function RegisterScreen() {
             </View>
             <View style={{ gap: 12 }}>
               <ErrorBanner message={error} />
-              <Field label="Full name" value={name} onChangeText={setName} />
-              <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-              <Field label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-              <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-              <Field label="Confirm password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
-              <AppText variant="small">Preferred language</AppText>
+              <Field label={t("auth.name")} value={name} onChangeText={setName} />
+              <Field label={t("auth.email")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+              <Field label={t("auth.phone")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+              <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              <Field label={t("auth.confirmPassword")} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              <AppText variant="small">{t("profile.preferredLanguage")}</AppText>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {LANGS.map((code) => (
                   <Pressable
@@ -146,20 +146,20 @@ export default function RegisterScreen() {
               </View>
               {accountType === "pujari" ? (
                 <Field
-                  label="Requested service level (1–4)"
+                  label={t("pujari.level.requested")}
                   value={String(requestedLevel)}
                   onChangeText={(v) => setRequestedLevel(Math.min(4, Math.max(1, Number(v) || 1)))}
                   keyboardType="number-pad"
                 />
               ) : null}
-              <Field label="Referral code (optional)" value={referralCode} onChangeText={setReferralCode} autoCapitalize="characters" />
-              <PrimaryButton title={otpSent ? "Resend OTP" : "Send OTP"} variant="outline" onPress={sendOtp} />
+              <Field label={t("auth.referralOptional")} value={referralCode} onChangeText={setReferralCode} autoCapitalize="characters" />
+              <PrimaryButton title={otpSent ? t("auth.resendOtp") : t("auth.sendOtp")} variant="outline" onPress={sendOtp} />
               {otpSent ? (
                 <AppText variant="small" color={colors.mutedForeground}>
-                  Test OTP is 123456 (no SMS yet).
+                  {t("auth.otpDemo")}
                 </AppText>
               ) : null}
-              <Field label="OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
+              <Field label={t("auth.otp")} value={otp} onChangeText={setOtp} keyboardType="number-pad" />
               <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                 <Switch value={consent} onValueChange={setConsent} trackColor={{ true: colors.primary }} />
                 <AppText variant="small" style={{ flex: 1 }}>
@@ -167,12 +167,12 @@ export default function RegisterScreen() {
                 </AppText>
               </View>
               <Pressable onPress={() => router.push("/legal/platform_terms")}>
-                <AppText color={colors.primary} variant="small">Read Terms</AppText>
+                <AppText color={colors.primary} variant="small">{t("nav.terms")}</AppText>
               </Pressable>
               <Pressable onPress={() => router.push("/legal/privacy")}>
-                <AppText color={colors.primary} variant="small">Read Privacy Policy</AppText>
+                <AppText color={colors.primary} variant="small">{t("nav.privacy")}</AppText>
               </Pressable>
-              <PrimaryButton title={pending ? "Creating..." : "Create account"} loading={pending} onPress={onSubmit} />
+              <PrimaryButton title={pending ? t("common.loading") : t("auth.createAccount")} loading={pending} onPress={onSubmit} />
             </View>
           </Card>
         </ScrollView>

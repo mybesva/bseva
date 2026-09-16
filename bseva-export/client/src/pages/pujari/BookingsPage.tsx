@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearch } from "wouter";
 import { PujariPortal } from "@/components/RolePortals";
+import { useI18n } from "@/i18n/I18nProvider";
 import BookingDetailPanel from "@/components/BookingDetailPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ function parseQuery(search: string) {
 }
 
 export default function PujariBookingsPage() {
+  const { t } = useI18n();
   const search = useSearch();
   const initial = parseQuery(search);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -169,7 +171,7 @@ export default function PujariBookingsPage() {
     <PujariPortal>
       <Card className="border-border shadow-sm">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Bookings</CardTitle>
+          <CardTitle className="text-2xl">{t("nav.bookings")}</CardTitle>
           <p className="text-sm text-muted-foreground">
             Filter by status, date, or search. Cancelled and expired are separate from Completed.
           </p>

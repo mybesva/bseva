@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.domain import row_dict
+from app.i18n import normalize_lang
 
 # Common spelling normalizations for forgiving search
 _ALIAS_EXPAND = {
@@ -87,14 +88,16 @@ def enrich_service(
             except Exception:
                 data[key] = [] if key == "process_steps" else ["en"]
     # Overlay translated marketing fields without duplicating the service row
-    code = (lang or "en").lower()[:2]
-    if code and code != "en":
+    code = normalize_lang(lang)
+    data["locale"] = code
+    if code != "en":
         try:
             tr = db.execute(
                 text(
                     """
-                    SELECT short_description, full_description, spiritual_meaning,
-                           common_occasions, benefits, whats_included
+                    SELECT name, short_description, full_description, spiritual_meaning,
+                           common_occasions, benefits, whats_included,
+                           customer_instructions, pujari_instructions
                     FROM service_translations
                     WHERE service_id = CAST(:id AS uuid) AND language_code = :lang
                     LIMIT 1
@@ -104,12 +107,15 @@ def enrich_service(
             ).mappings().first()
             if tr:
                 for k in (
+                    "name",
                     "short_description",
                     "full_description",
                     "spiritual_meaning",
                     "common_occasions",
                     "benefits",
                     "whats_included",
+                    "customer_instructions",
+                    "pujari_instructions",
                 ):
                     if tr.get(k):
                         data[k] = tr[k]
@@ -162,7 +168,8 @@ def resolve_service_by_slug(db: Session, slug: str, *, active_only: bool = True)
     return row
 
 
-def list_categories_public(db: Session) -> list[dict]:
+def list_categories_public(db: Session, lang: str | None = None) -> list[dict]:
+    code = normalize_lang(lang)
     rows = db.execute(
         text(
             """
@@ -180,4 +187,27 @@ def list_categories_public(db: Session) -> list[dict]:
             """
         )
     ).mappings().all()
-    return [row_dict(r) for r in rows]
+    out = [row_dict(r) for r in rows]
+    if code == "en" or not out:
+        return out
+    try:
+        ids = [str(r["id"]) for r in out]
+        tr_rows = db.execute(
+            text(
+                """
+                SELECT category_id::text AS category_id, name
+                FROM category_translations
+                WHERE language_code = :lang
+                  AND category_id = ANY(CAST(:ids AS uuid[]))
+                """
+            ),
+            {"lang": code, "ids": ids},
+        ).mappings().all()
+        names = {str(r["category_id"]): r["name"] for r in tr_rows if r.get("name")}
+        for item in out:
+            translated = names.get(str(item["id"]))
+            if translated:
+                item["name"] = translated
+    except Exception:
+        pass
+    return out

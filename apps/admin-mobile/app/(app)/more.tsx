@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LanguagePicker } from "@/components/LanguagePicker";
 import { AppText, Screen } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
 import { useAuth } from "@/providers/AuthProvider";
@@ -57,7 +56,6 @@ export default function AdminMore() {
             <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
           </Pressable>
         ))}
-        <LanguagePicker />
         <Pressable onPress={toggleTheme} style={{ paddingVertical: 12 }}>
           <AppText>
             {t("mobile.theme")}: {theme === "dark" ? t("mobile.themeDark") : t("mobile.themeLight")}

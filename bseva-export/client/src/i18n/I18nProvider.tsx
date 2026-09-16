@@ -1,29 +1,40 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { dictionaries, LANG_LABELS, type Lang } from "./translations";
-import { pujariFormEn, pujariFormHi, pujariFormTe } from "./pujariForm";
-
-const extras: Record<Lang, Record<string, string>> = { en: pujariFormEn, hi: pujariFormHi, te: pujariFormTe };
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  LANG_LABELS,
+  LANG_STORAGE_KEY,
+  dictionaries,
+  isLang,
+  normalizeLang,
+  translate as translateKey,
+  type Lang,
+  type TranslateVars,
+} from "@bseva/locales";
 
 type I18nContextValue = {
   lang: Lang;
-  setLang: (lang: Lang) => void;
-  t: (key: string) => string;
+  setLang: (lang: Lang, opts?: { persist?: boolean }) => void;
+  t: (key: string, vars?: TranslateVars) => string;
   labels: typeof LANG_LABELS;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window === "undefined") return "en";
-    const saved = localStorage.getItem("bseva-lang") as Lang | null;
-    return saved && dictionaries[saved] ? saved : "en";
-  });
+function readStoredLang(): Lang {
+  if (typeof window === "undefined") return "en";
+  return normalizeLang(localStorage.getItem(LANG_STORAGE_KEY));
+}
 
-  const setLang = (next: Lang) => {
-    setLangState(next);
-    localStorage.setItem("bseva-lang", next);
-  };
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(readStoredLang);
+
+  const setLang = useCallback((next: Lang, opts?: { persist?: boolean }) => {
+    const resolved = isLang(next) ? next : "en";
+    setLangState(resolved);
+    if (typeof window !== "undefined") {
+      document.documentElement.lang = resolved;
+      if (opts?.persist !== false) localStorage.setItem(LANG_STORAGE_KEY, resolved);
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -34,10 +45,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       lang,
       setLang,
       labels: LANG_LABELS,
-      t: (key: string) =>
-        extras[lang][key] || dictionaries[lang][key] || extras.en[key] || dictionaries.en[key] || key,
+      t: (key, vars) => translateKey(lang, key, vars),
     }),
-    [lang]
+    [lang, setLang]
   );
 
   return (
@@ -54,3 +64,7 @@ export function useI18n() {
   if (!ctx) throw new Error("useI18n must be used within I18nProvider");
   return ctx;
 }
+
+/** Kept for existing imports; dictionaries now include all six languages. */
+export { dictionaries, LANG_LABELS };
+export type { Lang };

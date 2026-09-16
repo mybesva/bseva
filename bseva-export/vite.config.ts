@@ -95,6 +95,8 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      "@bseva/locales": path.resolve(repoRoot, "packages/locales/src/index.ts"),
+      "@bseva/config": path.resolve(repoRoot, "packages/config/src/index.ts"),
     },
   },
   // Load from repo root `.env` (and local overrides in this package)
@@ -118,6 +120,7 @@ export default defineConfig({
     ],
     fs: {
       strict: true,
+      allow: [repoRoot],
       deny: ["**/.*"],
     },
   },

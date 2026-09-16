@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, LoadingBlock, PrimaryButton } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
+import { LanguagePicker } from "@/components/LanguagePicker";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 
@@ -98,7 +99,7 @@ export default function LandingScreen() {
                 <TextInput
                   value={q}
                   onChangeText={setQ}
-                  placeholder="Search Pujas, Homams, Vrathams..."
+                  placeholder={t("home.searchPujas")}
                   placeholderTextColor={colors.mutedForeground}
                   style={{ flex: 1, color: colors.foreground, paddingVertical: 10 }}
                   onSubmitEditing={() =>
@@ -110,7 +111,7 @@ export default function LandingScreen() {
                   style={{ backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10 }}
                 >
                   <AppText variant="small" color={colors.primaryForeground} style={{ fontWeight: "700" }}>
-                    Search
+                    {t("home.search")}
                   </AppText>
                 </Pressable>
               </View>
@@ -119,31 +120,32 @@ export default function LandingScreen() {
         </ImageBackground>
 
         <View style={{ padding: 20, gap: 16 }}>
-          <AppText variant="h2">{t("portal.customer.title").includes("Customer") ? "Choose your BSeva portal" : "Get started"}</AppText>
+          <LanguagePicker />
+          <AppText variant="h2">{t("home.choosePortal")}</AppText>
           <Card>
             <Ionicons name="people" size={28} color={colors.primary} />
             <AppText variant="h3" style={{ marginTop: 8 }}>
-              {t("auth.customer") === "auth.customer" ? "Customer" : t("auth.customer")}
+              {t("auth.customer")}
             </AppText>
             <AppText variant="small" color={colors.mutedForeground} style={{ marginVertical: 8 }}>
-              Book pujas, manage wallet, and track bookings.
+              {t("home.customerBlurb")}
             </AppText>
             <View style={{ gap: 8 }}>
-              <PrimaryButton title="Login as Customer" onPress={() => router.push({ pathname: "/login", params: { role: "customer" } })} />
-              <PrimaryButton title="Register as Customer" variant="outline" onPress={() => router.push({ pathname: "/register", params: { role: "customer" } })} />
+              <PrimaryButton title={t("mobile.loginAsCustomer")} onPress={() => router.push({ pathname: "/login", params: { role: "customer" } })} />
+              <PrimaryButton title={t("mobile.registerAsCustomer")} variant="outline" onPress={() => router.push({ pathname: "/register", params: { role: "customer" } })} />
             </View>
           </Card>
           <Card>
             <Ionicons name="flower" size={28} color={colors.primary} />
             <AppText variant="h3" style={{ marginTop: 8 }}>
-              Pujari
+              {t("auth.pujari")}
             </AppText>
             <AppText variant="small" color={colors.mutedForeground} style={{ marginVertical: 8 }}>
-              Complete your profile, upload documents, and receive bookings.
+              {t("home.pujariBlurb")}
             </AppText>
             <View style={{ gap: 8 }}>
-              <PrimaryButton title="Login as Pujari" variant="navy" onPress={() => router.push({ pathname: "/login", params: { role: "pujari" } })} />
-              <PrimaryButton title="Register as Pujari" variant="outline" onPress={() => router.push({ pathname: "/register", params: { role: "pujari" } })} />
+              <PrimaryButton title={t("mobile.loginAsPujari")} variant="navy" onPress={() => router.push({ pathname: "/login", params: { role: "pujari" } })} />
+              <PrimaryButton title={t("mobile.registerAsPujari")} variant="outline" onPress={() => router.push({ pathname: "/register", params: { role: "pujari" } })} />
             </View>
           </Card>
         </View>
@@ -152,7 +154,7 @@ export default function LandingScreen() {
           <AppText variant="eyebrow" color={colors.primary}>
             {t("home.offerings")}
           </AppText>
-          <AppText variant="h2">Popular Pujas</AppText>
+          <AppText variant="h2">{t("home.popularPujas")}</AppText>
           {popular.isLoading ? <LoadingBlock /> : null}
           {services.map((s: CatalogService) => (
             <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
@@ -163,7 +165,7 @@ export default function LandingScreen() {
                 <View style={{ flex: 1 }}>
                   <AppText variant="h3">{s.name}</AppText>
                   <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
-                    {s.short_description || s.description || (s.standard_price_paise ? `From ${rupees(s.standard_price_paise)}` : "Available soon")}
+                    {s.short_description || s.description || (s.standard_price_paise ? t("home.fromPrice", { price: rupees(s.standard_price_paise) }) : t("home.availableSoon"))}
                   </AppText>
                 </View>
               </Card>

@@ -9,6 +9,7 @@ import { resolveNotificationPath } from "@/lib/fcm";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { notifyBadgesChanged } from "@/components/NotificationBell";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type Note = {
   id: string;
@@ -23,6 +24,7 @@ type Note = {
 function InboxList() {
   const [items, setItems] = useState<Note[]>([]);
   const [, setLocation] = useLocation();
+  const { t } = useI18n();
 
   async function load() {
     const list = await api<{ items: Note[] }>("/notifications?page=1&page_size=50");
@@ -41,7 +43,7 @@ function InboxList() {
 
   async function markAll() {
     await api("/notifications/read-all", { method: "POST" });
-    toast.success("All marked read");
+    toast.success(t("notifications.markAllRead"));
     notifyBadgesChanged();
     await load();
   }
@@ -49,13 +51,13 @@ function InboxList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-h1">Notifications</h1>
+        <h1 className="text-h1">{t("notifications.title")}</h1>
         <Button size="sm" variant="outline" onClick={() => void markAll()}>
-          Mark all read
+          {t("notifications.markAllRead")}
         </Button>
       </div>
       <div className="space-y-2">
-        {items.length === 0 && <p className="text-sm text-muted-foreground">No notifications yet.</p>}
+        {items.length === 0 && <p className="text-sm text-muted-foreground">{t("notifications.empty")}</p>}
         {items.map((n) => (
           <button
             key={n.id}
@@ -66,7 +68,7 @@ function InboxList() {
             <div className="flex items-center gap-2">
               <h3 className="font-medium">{n.title}</h3>
               <Badge variant="secondary">{n.category || "system"}</Badge>
-              {!n.is_read && <Badge>Unread</Badge>}
+              {!n.is_read && <Badge>{t("notifications.unread")}</Badge>}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{n.body}</p>
             <p className="text-xs text-muted-foreground mt-1">

@@ -27,15 +27,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import RolePortalGate from "@/components/RolePortalGate";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useI18n } from "@/i18n/I18nProvider";
-import type { Lang } from "@/i18n/translations";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { dictionaries } from "@bseva/locales";
 import { api } from "@/lib/api";
 import { adminBasePath, adminPath } from "@/const";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -133,7 +125,7 @@ function AdminShell({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, loading } = useAuth();
-  const { lang, setLang, labels, t } = useI18n();
+  const t = (key: string) => dictionaries.en[key] || key;
   const [permissions, setPermissions] = useState<string[] | null>(null);
   const [badges, setBadges] = useState<NavBadges>({});
   const isSuper = user?.role === "super_admin";
@@ -286,18 +278,6 @@ function AdminShell({ children }: AdminLayoutProps) {
           </nav>
 
           <div className="p-4 border-t border-sidebar-border space-y-3 shrink-0">
-            <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
-              <SelectTrigger className="w-full h-8 text-xs bg-sidebar border-sidebar-border text-sidebar-foreground">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(labels) as Lang[]).map((code) => (
-                  <SelectItem key={code} value={code}>
-                    {labels[code]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Link href={adminPath("/settings")}>
               <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent/50 transition-colors cursor-pointer">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">

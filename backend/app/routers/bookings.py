@@ -34,17 +34,19 @@ def panchang(on: date = Query(..., alias="date"), calendar: str = "north"):
 
 
 @router.get("/service-categories")
-def list_service_categories(db: Session = Depends(get_db)):
+def list_service_categories(request: Request, lang: str | None = None, db: Session = Depends(get_db)):
     from app.catalog import list_categories_public
+    from app.i18n import resolve_request_lang
 
     try:
-        return list_categories_public(db)
+        return list_categories_public(db, resolve_request_lang(lang, request))
     except Exception:
         return []
 
 
 @router.get("/services")
 def list_services(
+    request: Request,
     q: str | None = None,
     category: str | None = None,
     popular: bool | None = None,
@@ -58,6 +60,9 @@ def list_services(
     category=popular is a virtual filter (is_popular).
     """
     from app.catalog import enrich_service, normalize_search
+    from app.i18n import resolve_request_lang
+
+    lang = resolve_request_lang(lang, request)
 
     params: dict = {}
     where = ["1=1"]
@@ -135,14 +140,15 @@ def list_services(
 
 
 @router.get("/services/{slug}")
-def get_service(slug: str, lang: str | None = None, db: Session = Depends(get_db)):
+def get_service(slug: str, request: Request, lang: str | None = None, db: Session = Depends(get_db)):
     from app.catalog import enrich_service, resolve_service_by_slug
+    from app.i18n import coded_http, resolve_request_lang
 
     # Resolve alias; allow inactive for admin-style preview via active_only=False then gate bookable
     row = resolve_service_by_slug(db, slug, active_only=False)
     if not row:
-        raise HTTPException(404, "Service not found")
-    data = enrich_service(db, row, lang=lang)
+        raise coded_http(404, "SERVICE_NOT_FOUND", "Service not found")
+    data = enrich_service(db, row, lang=resolve_request_lang(lang, request))
     # Public detail: active services always; inactive featured allowed for "coming soon"
     if not row["active"] and not row.get("is_featured_home"):
         raise HTTPException(404, "Service not found")
@@ -954,6 +960,8 @@ def create_booking(
             category="booking",
             link="/customer/bookings",
             extra_data={"booking_id": booking_id},
+            message_key="bookingCreated",
+            message_vars={"number": number},
         )
         is_virtual = str(getattr(body, "mode", "") or "") == "virtual"
         notify_ops_staff(
@@ -972,6 +980,8 @@ def create_booking(
                 category="booking",
                 link="/pujari/bookings",
                 extra_data={"booking_id": booking_id},
+                message_key="awaiting",
+                message_vars={"number": number},
             )
         elif not is_virtual:
             invited_pujari_ids = create_offers_for_booking(db, booking_id)
@@ -1455,6 +1465,8 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             category="booking",
             link="/customer/bookings",
             extra_data={"booking_id": booking_id, "refund_paise": refund or 0},
+            message_key="cancelled",
+            message_vars={"number": num},
         )
         if b.get("pujari_id") and actor != "pujari":
             create_notification(
@@ -1465,6 +1477,8 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
                 category="booking",
                 link="/pujari/bookings",
                 extra_data={"booking_id": booking_id},
+                message_key="cancelled",
+                message_vars={"number": num},
             )
         if actor == "pujari":
             notify_ops_staff(
@@ -1607,6 +1621,8 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
             category="payment",
             link="/customer/bookings",
             extra_data={"booking_id": booking_id},
+            message_key="paymentOk",
+            message_vars={"number": str(b.get("booking_number") or booking_id[:8])},
         )
     except Exception:
         pass
