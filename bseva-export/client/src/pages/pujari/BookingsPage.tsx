@@ -27,6 +27,7 @@ import { apiBookings } from "@/lib/api";
 import {
   displayStatus,
   formatPaise,
+  compareByPujaSchedule,
   isExpiredBooking,
   isUpcomingBooking,
   mapApiBooking,
@@ -148,9 +149,10 @@ export default function PujariBookingsPage() {
         return hay.includes(needle);
       })
       .sort((a, b) => {
-        const ta = new Date(a.booking.bookingDate || 0).getTime();
-        const tb = new Date(b.booking.bookingDate || 0).getTime();
-        return segment === "upcoming" ? ta - tb : tb - ta;
+        if (segment === "upcoming" || status === "pending") {
+          return compareByPujaSchedule(a, b, "asc");
+        }
+        return compareByPujaSchedule(a, b, "desc");
       });
   }, [rows, segment, status, q, from, to]);
 

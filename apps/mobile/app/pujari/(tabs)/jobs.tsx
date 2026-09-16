@@ -15,6 +15,11 @@ export default function PujariJobs() {
   const router = useRouter();
   const { t } = useI18n();
   const q = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
+  const rows = [...(q.data || [])].sort((a, b) => {
+    const da = `${a.booking_date || ""}T${a.start_time || "00:00:00"}`;
+    const db = `${b.booking_date || ""}T${b.start_time || "00:00:00"}`;
+    return da.localeCompare(db);
+  });
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
@@ -25,8 +30,8 @@ export default function PujariJobs() {
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
       >
         {q.isLoading ? <LoadingBlock /> : null}
-        {(q.data || []).length === 0 ? <EmptyState title={t("mobile.noJobs")} /> : null}
-        {(q.data || []).map((b: Booking) => (
+        {rows.length === 0 ? <EmptyState title={t("mobile.noJobs")} /> : null}
+        {rows.map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

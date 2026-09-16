@@ -1380,7 +1380,7 @@ def list_bookings(
                      AND b.status IN ('pending', 'pending_acceptance')
                      AND b.payment_status = 'paid'
                    )
-                ORDER BY b.created_at DESC
+                ORDER BY b.booking_date ASC, b.start_time ASC NULLS LAST, b.created_at DESC
                 LIMIT :lim OFFSET :off
                 """
             ),

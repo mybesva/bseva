@@ -73,6 +73,18 @@ export function mapApiBooking(b: any): PujariBookingRow {
 }
 
 /** Scheduled start (local). Uses booking date + start_time when available. */
+/** Sort by scheduled puja start (date + time), earliest first by default. */
+export function compareByPujaSchedule(
+  a: PujariBookingRow,
+  b: PujariBookingRow,
+  direction: "asc" | "desc" = "asc"
+): number {
+  const ta = bookingStartAt(a)?.getTime() ?? 0;
+  const tb = bookingStartAt(b)?.getTime() ?? 0;
+  const diff = ta - tb;
+  return direction === "asc" ? diff : -diff;
+}
+
 export function bookingStartAt(row: PujariBookingRow): Date | null {
   if (!row.booking.bookingDate) return null;
   const d = new Date(row.booking.bookingDate);

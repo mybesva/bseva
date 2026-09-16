@@ -17,6 +17,7 @@ import { api, apiBookings } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
+  compareByPujaSchedule,
   displayStatus,
   formatPaise,
   isExpiredBooking,
@@ -137,11 +138,14 @@ function PujariDashboardContent() {
 
   const pendingAcceptance = useMemo(
     () =>
-      rows.filter(
-        (r) =>
-          ["pending", "pending_acceptance"].includes(r.booking.status) && !isExpiredBooking(r, now)
-      ),
-    [rows]
+      rows
+        .filter(
+          (r) =>
+            ["pending", "pending_acceptance"].includes(r.booking.status) &&
+            !isExpiredBooking(r, now)
+        )
+        .sort((a, b) => compareByPujaSchedule(a, b, "asc")),
+    [rows, now]
   );
 
   const readyToStart = useMemo(
@@ -155,11 +159,8 @@ function PujariDashboardContent() {
   const upcoming = useMemo(() => {
     return rows
       .filter((b) => isUpcomingBooking(b, now))
-      .sort(
-        (a, b) =>
-          new Date(a.booking.bookingDate!).getTime() - new Date(b.booking.bookingDate!).getTime()
-      );
-  }, [rows]);
+      .sort((a, b) => compareByPujaSchedule(a, b, "asc"));
+  }, [rows, now]);
 
   const completedOnly = useMemo(() => {
     return rows
