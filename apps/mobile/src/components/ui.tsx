@@ -201,7 +201,7 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <View style={{ backgroundColor: color + "22", paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill }}>
       <Text style={{ color, fontSize: 11, fontWeight: "700", textTransform: "uppercase" }}>
-        {translated === key ? t("status.pending") : translated}
+        {translated === key ? t("status.unknown") : translated}
       </Text>
     </View>
   );

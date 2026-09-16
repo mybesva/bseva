@@ -83,7 +83,7 @@ export default function Services() {
       return;
     }
     if (!canBook) {
-      notifyBookingBlocked(status);
+      notifyBookingBlocked(status, t);
       setLocation(`/services/${slug}`);
       return;
     }

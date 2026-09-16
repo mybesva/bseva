@@ -73,6 +73,17 @@ _PHASE3_STMTS = [
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS recommendation_translations (
+      recommendation_id UUID NOT NULL REFERENCES service_recommendations(id) ON DELETE CASCADE,
+      language_code TEXT NOT NULL CHECK (language_code IN ('hi', 'te', 'mr', 'ta', 'kn')),
+      title TEXT NOT NULL,
+      description TEXT,
+      recurrence_hint TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (recommendation_id, language_code)
+    )
+    """,
     # --- Wallet ledger reason for penalties / joining fee ---
     "ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS meta JSONB",
 ]

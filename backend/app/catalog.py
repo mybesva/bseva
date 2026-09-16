@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from typing import Any
 
 from sqlalchemy import text
@@ -35,10 +36,13 @@ _ALIAS_EXPAND = {
 
 
 def normalize_search(q: str) -> str:
-    # ``\w`` is Unicode-aware in Python, so native-script searches survive
-    # normalization (the old ASCII-only expression erased them completely).
+    # Keep Unicode letters *and combining marks* used by Indic scripts. Python
+    # ``\w`` excludes some vowel signs, so filtering with a regex corrupts words.
     s = (q or "").strip().casefold()
-    s = re.sub(r"[^\w\s\-_/]", " ", s, flags=re.UNICODE)
+    s = "".join(
+        ch if (ch.isspace() or ch in "-_/" or unicodedata.category(ch)[0] in {"L", "M", "N"}) else " "
+        for ch in s
+    )
     s = re.sub(r"\s+", " ", s).strip()
     parts = []
     for tok in s.split():
@@ -64,7 +68,14 @@ def localized_service_name(db: Session, service_id: str, lang: str | None, fallb
         ).scalar()
         return str(name or fallback)
     except Exception:
-        return fallback
+        try:
+            name = db.execute(
+                text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"),
+                {"id": service_id},
+            ).scalar()
+            return str(name or fallback)
+        except Exception:
+            return fallback
 
 
 def service_categories(db: Session, service_id: str, lang: str | None = None) -> list[dict]:

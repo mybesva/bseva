@@ -297,13 +297,13 @@ export default function PujariBookingsPage() {
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {row.booking.pujarisIncludedLabel ||
-                            pujarisIncludedShort(row.booking.pujarisRequired || 1)}
+                            pujarisIncludedShort(row.booking.pujarisRequired || 1, t)}
                         </p>
                         {canAccept &&
                         (row.booking.pujarisRequired || 1) > 1 &&
-                        pujariTeamAcceptNotice(row.booking.pujarisRequired || 1) ? (
+                        pujariTeamAcceptNotice(row.booking.pujarisRequired || 1, t) ? (
                           <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2">
-                            {pujariTeamAcceptNotice(row.booking.pujarisRequired || 1)}
+                            {pujariTeamAcceptNotice(row.booking.pujarisRequired || 1, t)}
                           </p>
                         ) : null}
                       </div>

@@ -168,6 +168,16 @@ _STMTS = [
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS legal_policy_translations (
+      policy_id UUID NOT NULL REFERENCES legal_policies(id) ON DELETE CASCADE,
+      language_code TEXT NOT NULL CHECK (language_code IN ('hi', 'te', 'mr', 'ta', 'kn')),
+      title TEXT NOT NULL,
+      points JSONB NOT NULL DEFAULT '[]'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (policy_id, language_code)
+    )
+    """,
 ]
 
 _DEFAULT_PUJARI_ROLES = [

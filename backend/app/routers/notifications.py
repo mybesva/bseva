@@ -44,7 +44,15 @@ def create_notification(
             role = user_role(db, str(user_id))
             if role not in ADMIN_ROLES:
                 loc = user_preferred_lang(db, str(user_id))
-                title_out, body_out = notify_copy(message_key, loc, message_vars)
+                localized_vars = dict(message_vars or {})
+                service_id = localized_vars.pop("service_id", None)
+                if service_id:
+                    from app.catalog import localized_service_name
+
+                    localized_vars["service"] = localized_service_name(
+                        db, str(service_id), loc, str(localized_vars.get("service") or "Puja")
+                    )
+                title_out, body_out = notify_copy(message_key, loc, localized_vars)
         except Exception:
             title_out, body_out = title, body
     nid = str(uuid4())

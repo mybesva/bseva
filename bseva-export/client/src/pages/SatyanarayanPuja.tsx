@@ -6,8 +6,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Check, Clock, Users, Star, ArrowRight, Download } from "lucide-react";
 import { useStartBooking } from "@/hooks/useStartBooking";
 import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function SatyanarayanPuja() {
+  const { t } = useI18n();
   const { startBooking, bookingBlocked, checking } = useStartBooking();
   const goBook = () => startBooking("satyanarayan-puja");
   return (
@@ -156,7 +158,7 @@ export default function SatyanarayanPuja() {
                   className="w-full bg-sidebar text-white hover:bg-sidebar/90"
                   onClick={goBook}
                   disabled={bookingBlocked}
-                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
+                  title={bookingBlocked ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
                 >
                   Select Package
                 </Button>
@@ -197,7 +199,7 @@ export default function SatyanarayanPuja() {
                   className="w-full bg-primary text-white hover:bg-primary/90 h-12 font-bold shadow-md"
                   onClick={goBook}
                   disabled={bookingBlocked}
-                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
+                  title={bookingBlocked ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
                 >
                   Select Package
                 </Button>
@@ -235,7 +237,7 @@ export default function SatyanarayanPuja() {
                   className="w-full bg-sidebar text-white hover:bg-sidebar/90"
                   onClick={goBook}
                   disabled={bookingBlocked}
-                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
+                  title={bookingBlocked ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
                 >
                   Select Package
                 </Button>

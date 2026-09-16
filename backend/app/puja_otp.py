@@ -219,7 +219,12 @@ def _notify_otp(db: Session, *, user_id: str, purpose: str, code: str, booking: 
         link=link,
         extra_data={"booking_id": str(booking["id"])},
         message_key=key,
-        message_vars={"code": code, "service": service, "number": number},
+        message_vars={
+            "code": code,
+            "service": service,
+            "service_id": str(booking.get("service_id") or ""),
+            "number": number,
+        },
     )
 
 

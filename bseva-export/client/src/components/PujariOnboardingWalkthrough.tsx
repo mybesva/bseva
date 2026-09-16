@@ -14,6 +14,7 @@ import {
 } from "@/lib/pujariOnboarding";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type Props = {
   page: OnboardingPage;
@@ -25,10 +26,15 @@ type Props = {
 };
 
 export function PujariOnboardingProgress({ step }: { step: number }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-lg border border-border bg-secondary/20 p-4 space-y-2 mb-6">
       <p className="text-sm font-medium">
-        Complete profile — Step {step} of {ONBOARDING_STEPS}: {stepLabel(step)}
+        {t("web.onboarding.progress", {
+          step,
+          total: ONBOARDING_STEPS,
+          label: t(stepLabel(step), { step }),
+        })}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {Array.from({ length: ONBOARDING_STEPS }, (_, i) => i + 1).map((n) => (
@@ -96,6 +102,7 @@ export default function PujariOnboardingWalkthrough({
   saving = false,
 }: Props) {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [, setLocation] = useLocation();
   const { active, step } = usePujariOnboardingGate(page);
   const [busy, setBusy] = useState(false);
@@ -135,7 +142,7 @@ export default function PujariOnboardingWalkthrough({
       });
       if (onFieldErrors) onFieldErrors(errors);
       if (Object.keys(errors).length) {
-        toast.error("Complete required fields marked in red, then tap Save & next again");
+        toast.error(t("web.onboarding.completeRequired"));
         document.querySelector<HTMLElement>(".border-red-500, .text-red-600")?.scrollIntoView({
           behavior: "smooth",
           block: "center",
@@ -156,7 +163,7 @@ export default function PujariOnboardingWalkthrough({
       await patchOnboardingStep(next);
       setLocation(routeForOnboardingStep(next));
     } catch (e: any) {
-      toast.error(e.message || "Could not continue");
+      toast.error(e.message || t("web.onboarding.continueFailed"));
     } finally {
       setBusy(false);
     }
@@ -170,16 +177,16 @@ export default function PujariOnboardingWalkthrough({
       {errList.length > 0 && (
         <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2">
           {errList.map((msg) => (
-            <p key={msg}>• {msg}</p>
+            <p key={msg}>• {t(msg)}</p>
           ))}
         </div>
       )}
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" disabled={busy || saving || step <= 1} onClick={() => void goBack()}>
-          Back
+          {t("common.back")}
         </Button>
         <Button type="button" disabled={busy || saving} onClick={() => void goContinue()}>
-          {busy || saving ? "Saving…" : "Save & next"}
+          {busy || saving ? t("web.common.saving") : t("web.onboarding.saveNext")}
         </Button>
       </div>
     </div>

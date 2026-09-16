@@ -44,10 +44,10 @@ export default function PujariOnboardingPage() {
     setPayingFee(true);
     try {
       const out = await api<{ joining_fee_status: string }>("/pujari/joining-fee/pay", { method: "POST" });
-      toast.success(out.joining_fee_status === "paid" ? "Joining fee paid" : "No joining fee is due");
+      toast.success(t(out.joining_fee_status === "paid" ? "web.onboarding.feePaid" : "web.onboarding.noFee"));
       await load();
     } catch (err: any) {
-      toast.error(err.message || "Could not pay joining fee");
+      toast.error(err.message || t("web.onboarding.feeFailed"));
     } finally {
       setPayingFee(false);
     }
@@ -58,7 +58,7 @@ export default function PujariOnboardingPage() {
     const errors = await validateOnboardingStep(6, profile, { consent });
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
-      toast.error("Accept consent to submit");
+      toast.error(t("web.validation.finalConsent"));
       return;
     }
     setSaving(true);
@@ -71,11 +71,11 @@ export default function PujariOnboardingPage() {
           privacy_version: "2026-01",
         }),
       });
-      toast.success("Profile submitted for review");
+      toast.success(t("web.onboarding.submitted"));
       await refresh();
       setLocation("/pujari");
     } catch (err: any) {
-      toast.error(err.message || "Submission failed");
+      toast.error(err.message || t("web.onboarding.submitFailed"));
     } finally {
       setSaving(false);
     }
@@ -99,20 +99,20 @@ export default function PujariOnboardingPage() {
         <Card className="max-w-3xl mb-6 border-primary/30 bg-orange-50/60">
           <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Joining fee</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("web.onboarding.joiningFee")}</p>
               <p className="font-semibold text-lg capitalize">
-                {feeStatus.replace(/_/g, " ")}
+                {t(`status.${feeStatus}`)}
                 {feeAmount > 0 ? ` · ${rupees(feeAmount)}` : ""}
               </p>
               {feeStatus === "pending" && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  The fee is deducted from your BSeva wallet. Top up your wallet if the balance is short.
+                  {t("web.onboarding.feeDescription")}
                 </p>
               )}
             </div>
             {feeStatus === "pending" && (
               <Button size="sm" disabled={payingFee} onClick={() => void payJoiningFee()}>
-                {payingFee ? "Paying…" : "Pay joining fee"}
+                {payingFee ? t("web.onboarding.paying") : t("web.onboarding.payFee")}
               </Button>
             )}
           </CardContent>
@@ -120,36 +120,36 @@ export default function PujariOnboardingPage() {
       )}
       <Card className="max-w-3xl">
         <CardHeader>
-          <CardTitle>Review &amp; submit</CardTitle>
+          <CardTitle>{t("web.onboarding.reviewSubmit")}</CardTitle>
           <PujariOnboardingProgress step={6} />
         </CardHeader>
         <CardContent className="space-y-4">
           {errMsgs.length > 0 && (
             <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2">
               {errMsgs.map((msg) => (
-                <p key={msg}>• {msg}</p>
+                <p key={msg}>• {t(msg)}</p>
               ))}
             </div>
           )}
           <div className="text-sm space-y-1 border rounded-md p-4 bg-secondary/20">
             <p>
-              <span className="text-muted-foreground">Name:</span> {profile.full_name || "—"}
+              <span className="text-muted-foreground">{t("auth.name")}:</span> {profile.full_name || "—"}
             </p>
             <p>
-              <span className="text-muted-foreground">Phone:</span> {profile.mobile_number || user?.phone || "—"}
+              <span className="text-muted-foreground">{t("auth.phone")}:</span> {profile.mobile_number || user?.phone || "—"}
             </p>
             <p>
-              <span className="text-muted-foreground">City:</span> {profile.city || "—"}
+              <span className="text-muted-foreground">{t("auth.city")}:</span> {profile.city || "—"}
             </p>
             <p>
-              <span className="text-muted-foreground">Experience:</span> {profile.experience_years ?? "—"} years
+              <span className="text-muted-foreground">{t("pujari.public.experience")}:</span> {profile.experience_years ?? "—"} {t("pujari.public.years")}
             </p>
             <p>
-              <span className="text-muted-foreground">Sampradaya:</span>{" "}
+              <span className="text-muted-foreground">{t("pujari.public.sampradaya")}:</span>{" "}
               {profile.sampradaya ? t(`pujari.${profile.sampradaya}`) : "—"}
             </p>
             <p>
-              <span className="text-muted-foreground">Completion:</span> {profile.profile_completion_percentage ?? 0}%
+              <span className="text-muted-foreground">{t("pujari.profile.completion")}:</span> {profile.profile_completion_percentage ?? 0}%
             </p>
           </div>
           <label
@@ -170,16 +170,15 @@ export default function PujariOnboardingPage() {
               }}
             />
             <span>
-              I confirm that the information provided is accurate and I consent to final profile submission for
-              verification under BSeva Terms &amp; Privacy Policy. *
+              {t("web.onboarding.consent")} *
             </span>
           </label>
           <div className="flex flex-wrap gap-2 pt-2 border-t">
             <Button type="button" variant="outline" onClick={() => setLocation("/pujari/bank")}>
-              Back
+              {t("common.back")}
             </Button>
             <Button type="button" disabled={saving || !consent} onClick={() => void finalSubmit()}>
-              {saving ? "Submitting…" : "Final submit"}
+              {saving ? t("web.onboarding.submitting") : t("web.onboarding.finalSubmit")}
             </Button>
           </div>
         </CardContent>

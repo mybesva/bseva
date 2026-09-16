@@ -3,9 +3,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
+import { useI18n } from "@/i18n/I18nProvider";
 
 /** Shared gate for every CTA that starts a booking flow. */
 export function useStartBooking() {
+  const { t } = useI18n();
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { canBook, checking, status } = useServiceAvailability();
@@ -21,7 +23,7 @@ export function useStartBooking() {
       return;
     }
     if (!canBook) {
-      notifyBookingBlocked(status);
+      notifyBookingBlocked(status, t);
       return;
     }
     setLocation(path);

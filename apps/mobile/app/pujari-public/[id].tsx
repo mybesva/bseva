@@ -5,6 +5,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 function asList(v: unknown): string {
   if (Array.isArray(v)) return v.filter(Boolean).map(String).join(", ");
@@ -36,8 +37,9 @@ export default function PublicPujari() {
   const raw = useLocalSearchParams<{ id: string | string[] }>().id;
   const id = Array.isArray(raw) ? raw[0] : raw;
   const { colors } = useAppTheme();
+  const { t, lang } = useI18n();
   const q = useQuery({
-    queryKey: ["public-pujari", id],
+    queryKey: ["public-pujari", id, lang],
     queryFn: () => apiClient.publicPujari(id!) as Promise<Record<string, unknown>>,
     enabled: !!id,
   });
@@ -46,27 +48,27 @@ export default function PublicPujari() {
 
   return (
     <Screen>
-      <ScreenHeader title="Pujari" back />
+      <ScreenHeader title={t("mobile.pujariTitle")} back />
       {q.isLoading ? <LoadingBlock /> : null}
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-        <ErrorBanner message={q.isError ? (q.error instanceof Error ? q.error.message : "Pujari not found") : null} />
+        <ErrorBanner message={q.isError ? (q.error instanceof Error ? q.error.message : t("mobile.pujariNotFound")) : null} />
         {q.data ? (
           <Card>
-            <AppText variant="h2">{String(p.name || p.full_name || "Pujari")}</AppText>
+            <AppText variant="h2">{String(p.name || p.full_name || t("mobile.pujariTitle"))}</AppText>
             <AppText variant="small" color={colors.mutedForeground}>
-              Level {String(p.approved_level ?? "—")}
+              {t("mobile.level", { level: String(p.approved_level ?? "—") })}
             </AppText>
             <View style={{ height: 12 }} />
-            <Row label="Location" value={loc || String(p.location_label || "")} />
-            <Row label="Experience" value={p.experience_years != null ? `${p.experience_years} years` : null} />
+            <Row label={t("mobile.location")} value={loc || String(p.location_label || "")} />
+            <Row label={t("mobile.experience")} value={p.experience_years != null ? t("mobile.experienceYears", { count: Number(p.experience_years) }) : null} />
             <Row
-              label="Rating"
+              label={t("mobile.ratingValue")}
               value={p.avg_stars != null ? `★ ${Number(p.avg_stars).toFixed(1)} (${p.rating_count || 0})` : null}
             />
-            <Row label="Sampradaya" value={p.sampradaya ? String(p.sampradaya) : null} />
-            <Row label="Gotra" value={p.gotra ? String(p.gotra) : null} />
-            <Row label="Languages" value={asList(p.languages)} />
-            <Row label="Specializations" value={asList(p.specializations)} />
+            <Row label={t("mobile.sampradaya")} value={p.sampradaya ? String(p.sampradaya) : null} />
+            <Row label={t("mobile.gotra")} value={p.gotra ? String(p.gotra) : null} />
+            <Row label={t("mobile.languages")} value={asList(p.languages)} />
+            <Row label={t("mobile.specializations")} value={asList(p.specializations)} />
           </Card>
         ) : null}
       </ScrollView>

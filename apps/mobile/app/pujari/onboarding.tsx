@@ -18,12 +18,14 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 type Profile = Record<string, unknown>;
 
 export default function PujariOnboarding() {
   const router = useRouter();
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export default function PujariOnboarding() {
       setProfile(updated);
       setStep(next);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -69,7 +71,7 @@ export default function PujariOnboarding() {
   if (!profile) {
     return (
       <Screen>
-        <ScreenHeader title="Onboarding" back />
+        <ScreenHeader title={t("mobile.onboarding")} back />
         <LoadingBlock />
       </Screen>
     );
@@ -93,12 +95,12 @@ export default function PujariOnboarding() {
 
   return (
     <Screen>
-      <ScreenHeader title={`Onboarding ${step}/6`} back />
+      <ScreenHeader title={t("mobile.onboardingStep", { step })} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
         <ErrorBanner message={error} />
-        <AppText variant="small">{Number(profile.profile_completion_percentage || 0)}% complete</AppText>
+        <AppText variant="small">{t("mobile.percentComplete", { percent: Number(profile.profile_completion_percentage || 0) })}</AppText>
         {String(profile.joining_fee_status) === "pending" ? (
-          <PrimaryButton title="Pay joining fee from wallet" onPress={() => void apiClient.payJoiningFee().then(load).catch((e) => setError(e.message))} />
+          <PrimaryButton title={t("mobile.payJoiningFee")} onPress={() => void apiClient.payJoiningFee().then(load).catch((e) => setError(e.message))} />
         ) : null}
 
         {step === 1 ? (
@@ -110,13 +112,13 @@ export default function PujariOnboarding() {
                 setPhoto(await apiClient.pujariMediaUri("photo"));
               }}
             />
-            <Field label="Full name" value={String(profile.full_name || "")} onChangeText={(v) => set("full_name", v)} />
-            <Field label="Date of birth (YYYY-MM-DD)" value={String(profile.date_of_birth || "").slice(0, 10)} onChangeText={(v) => set("date_of_birth", v)} />
-            <Field label="Mobile" value={String(profile.mobile_number || "")} onChangeText={(v) => set("mobile_number", v)} keyboardType="phone-pad" />
-            <Field label="Gotra" value={String(profile.gotra || "")} onChangeText={(v) => set("gotra", v)} />
-            <Field label="Pravara" value={String(profile.pravara || "")} onChangeText={(v) => set("pravara", v)} />
+            <Field label={t("mobile.fullName")} value={String(profile.full_name || "")} onChangeText={(v) => set("full_name", v)} />
+            <Field label={t("mobile.dateOfBirth")} value={String(profile.date_of_birth || "").slice(0, 10)} onChangeText={(v) => set("date_of_birth", v)} />
+            <Field label={t("mobile.mobileNumber")} value={String(profile.mobile_number || "")} onChangeText={(v) => set("mobile_number", v)} keyboardType="phone-pad" />
+            <Field label={t("mobile.gotra")} value={String(profile.gotra || "")} onChangeText={(v) => set("gotra", v)} />
+            <Field label={t("mobile.pravara")} value={String(profile.pravara || "")} onChangeText={(v) => set("pravara", v)} />
             <PrimaryButton
-              title={busy ? "Saving..." : "Save & continue"}
+              title={busy ? t("mobile.saving") : t("mobile.saveContinue")}
               loading={busy}
               onPress={() =>
                 void saveStep(2, {
@@ -147,19 +149,19 @@ export default function PujariOnboarding() {
 
         {step === 3 ? (
           <>
-            <Field label="Years of experience" value={String(profile.experience_years || "")} onChangeText={(v) => set("experience_years", Number(v) || 0)} keyboardType="number-pad" />
-            <AppText variant="small">Qualifications</AppText>
+            <Field label={t("mobile.yearsExperience")} value={String(profile.experience_years || "")} onChangeText={(v) => set("experience_years", Number(v) || 0)} keyboardType="number-pad" />
+            <AppText variant="small">{t("mobile.qualifications")}</AppText>
             <ChoiceChips multiple options={PUJARI_QUALS.map((q) => ({ id: q.id, label: q.label }))} value={quals} onChange={(v) => set("qualifications", v)} />
-            <Field label="Qualification year" value={String(profile.qualification_year || "")} onChangeText={(v) => set("qualification_year", Number(v) || undefined)} keyboardType="number-pad" />
-            <AppText variant="small">Sampradaya</AppText>
+            <Field label={t("mobile.qualificationYear")} value={String(profile.qualification_year || "")} onChangeText={(v) => set("qualification_year", Number(v) || undefined)} keyboardType="number-pad" />
+            <AppText variant="small">{t("mobile.sampradaya")}</AppText>
             <ChoiceChips options={SAMPRADAYA_OPTS.map((s) => ({ id: s, label: s }))} value={String(profile.sampradaya || "")} onChange={(v) => set("sampradaya", v)} />
-            <AppText variant="small">Languages</AppText>
+            <AppText variant="small">{t("mobile.languages")}</AppText>
             <ChoiceChips multiple options={PUJARI_LANGS.map((s) => ({ id: s, label: s }))} value={langs} onChange={(v) => set("languages", v)} />
-            <AppText variant="small">Specializations</AppText>
+            <AppText variant="small">{t("mobile.specializations")}</AppText>
             <ChoiceChips multiple options={PUJARI_SPECS.map((s) => ({ id: s, label: s }))} value={specs} onChange={(v) => set("specializations", v)} />
-            <PrimaryButton title="Back" variant="outline" onPress={() => setStep(2)} />
+            <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(2)} />
             <PrimaryButton
-              title={busy ? "Saving..." : "Save & continue"}
+              title={busy ? t("mobile.saving") : t("mobile.saveContinue")}
               loading={busy}
               onPress={() =>
                 void saveStep(4, {
@@ -177,7 +179,7 @@ export default function PujariOnboarding() {
 
         {step === 4 ? (
           <>
-            <AppText>Upload Aadhaar (identity) before final submit. Camera is available on mobile.</AppText>
+            <AppText>{t("mobile.documentsHelp")}</AppText>
             {(docs.data || []).map((d) => (
               <Card key={d.id}>
                 <AppText>{d.document_type}</AppText>
@@ -196,24 +198,24 @@ export default function PujariOnboarding() {
                 />
               </Card>
             ))}
-            <PrimaryButton title="Back" variant="outline" onPress={() => setStep(3)} />
-            <PrimaryButton title="Continue" onPress={() => void saveStep(5, {})} />
+            <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(3)} />
+            <PrimaryButton title={t("mobile.continue")} onPress={() => void saveStep(5, {})} />
           </>
         ) : null}
 
         {step === 5 ? (
           <>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <AppText>Available for bookings</AppText>
+              <AppText>{t("mobile.availableBookings")}</AppText>
               <Switch value={!!profile.available} onValueChange={(v) => set("available", v)} />
             </View>
-            <Field label="Service radius (km)" value={String(profile.service_radius_km || "")} onChangeText={(v) => set("service_radius_km", Number(v) || 0)} keyboardType="number-pad" />
-            <Field label="Account holder" value={String(profile.bank_holder_name || "")} onChangeText={(v) => set("bank_holder_name", v)} />
-            <Field label="IFSC" value={String(profile.bank_ifsc || "")} onChangeText={(v) => set("bank_ifsc", v)} autoCapitalize="characters" />
-            <Field label="Account last 4" value={String(profile.bank_account_last4 || "")} onChangeText={(v) => set("bank_account_last4", v)} keyboardType="number-pad" maxLength={4} />
-            <PrimaryButton title="Back" variant="outline" onPress={() => setStep(4)} />
+            <Field label={t("mobile.serviceRadius")} value={String(profile.service_radius_km || "")} onChangeText={(v) => set("service_radius_km", Number(v) || 0)} keyboardType="number-pad" />
+            <Field label={t("mobile.accountHolder")} value={String(profile.bank_holder_name || "")} onChangeText={(v) => set("bank_holder_name", v)} />
+            <Field label={t("mobile.ifsc")} value={String(profile.bank_ifsc || "")} onChangeText={(v) => set("bank_ifsc", v)} autoCapitalize="characters" />
+            <Field label={t("mobile.accountLast4")} value={String(profile.bank_account_last4 || "")} onChangeText={(v) => set("bank_account_last4", v)} keyboardType="number-pad" maxLength={4} />
+            <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(4)} />
             <PrimaryButton
-              title={busy ? "Saving..." : "Save & continue"}
+              title={busy ? t("mobile.saving") : t("mobile.saveContinue")}
               loading={busy}
               onPress={() =>
                 void saveStep(6, {
@@ -241,13 +243,13 @@ export default function PujariOnboarding() {
                 {PUJARI_FINAL_CONSENT_LABEL}
               </AppText>
             </View>
-            <PrimaryButton title="Back" variant="outline" onPress={() => setStep(5)} />
+            <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(5)} />
             <PrimaryButton
-              title={busy ? "Submitting..." : "Submit for verification"}
+              title={busy ? t("mobile.submitting") : t("mobile.submitVerification")}
               loading={busy}
               onPress={async () => {
                 if (!consent) {
-                  setError("Consent is required");
+                  setError(t("mobile.consentRequired"));
                   return;
                 }
                 setBusy(true);
@@ -261,7 +263,7 @@ export default function PujariOnboarding() {
                   });
                   router.replace("/pujari");
                 } catch (e: unknown) {
-                  setError(e instanceof Error ? e.message : "Submit failed");
+                  setError(e instanceof Error ? e.message : t("mobile.submitFailed"));
                 } finally {
                   setBusy(false);
                 }

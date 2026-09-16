@@ -103,7 +103,7 @@ export default function CustomerHome() {
         ) : null}
         {upcoming.length > 0 ? (
           <>
-            <AppText variant="h2">Upcoming</AppText>
+            <AppText variant="h2">{t("mobile.upcoming")}</AppText>
             {upcoming.map((b: Booking) => (
               <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
                 <Card>
@@ -119,7 +119,7 @@ export default function CustomerHome() {
         ) : null}
         {recItems.length > 0 ? (
           <>
-            <AppText variant="h2">Recommended</AppText>
+            <AppText variant="h2">{t("mobile.recommended")}</AppText>
             {recItems.slice(0, 5).map((item, i) => {
               const rec = item as { title?: string; name?: string; service_slug?: string; slug?: string };
               return (

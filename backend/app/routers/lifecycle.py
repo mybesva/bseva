@@ -238,6 +238,7 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
                 pujari_ids=list(dict.fromkeys(new_pujari_ids)),
                 booking_number=str(b.get("booking_number") or booking_id[:8]),
                 service_name=str(svc or "Puja"),
+                service_id=str(b["service_id"]),
             )
     except Exception:
         pass
@@ -298,7 +299,9 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             text("SELECT email, name, preferred_language FROM users WHERE id = CAST(:id AS uuid)"),
             {"id": str(b["customer_id"])},
         ).mappings().first()
-        svc_name = load_service_name(db, str(b["service_id"]))
+        svc_name = load_service_name(
+            db, str(b["service_id"]), str((cust or {}).get("preferred_language") or "en")
+        )
         if cust and cust.get("email"):
             extra = {"status": "confirmed"}
             data = booking_email_data_from_row(

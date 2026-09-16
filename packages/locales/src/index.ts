@@ -7,6 +7,8 @@ import mr from "./resources/mr";
 import kn from "./resources/kn";
 import ta from "./resources/ta";
 import { coverage } from "./resources/coverage";
+import { mobileCoverage } from "./resources/mobileCoverage";
+import { webCoverage } from "./resources/webCoverage";
 
 export {
   DEFAULT_LANG,
@@ -41,21 +43,27 @@ export {
 export { ERROR_CODE_KEYS, errorKeyForCode, parseApiErrorDetail } from "./errors";
 
 /** English is copied first so missing locale keys fall back without showing raw keys. */
-export const dictionaries: Record<Lang, Record<string, string>> = {
-  en: { ...en, ...coverage.en },
-  hi: { ...en, ...coverage.en, ...hi, ...coverage.hi },
-  te: { ...en, ...coverage.en, ...te, ...coverage.te },
-  mr: { ...en, ...coverage.en, ...mr, ...coverage.mr },
-  kn: { ...en, ...coverage.en, ...kn, ...coverage.kn },
-  ta: { ...en, ...coverage.en, ...ta, ...coverage.ta },
-};
+const base: Record<string, string> = { ...en, ...coverage.en, ...webCoverage.en, ...mobileCoverage.en };
+
+function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): Record<string, string> {
+  return { ...locale, ...coverage[lang], ...webCoverage[lang], ...mobileCoverage[lang] };
+}
 
 export const localeOverrides: Record<Exclude<Lang, "en">, Record<string, string>> = {
-  hi: { ...hi, ...coverage.hi },
-  te: { ...te, ...coverage.te },
-  mr: { ...mr, ...coverage.mr },
-  kn: { ...kn, ...coverage.kn },
-  ta: { ...ta, ...coverage.ta },
+  hi: localeDict("hi", hi),
+  te: localeDict("te", te),
+  mr: localeDict("mr", mr),
+  kn: localeDict("kn", kn),
+  ta: localeDict("ta", ta),
+};
+
+export const dictionaries: Record<Lang, Record<string, string>> = {
+  en: base,
+  hi: { ...base, ...localeOverrides.hi },
+  te: { ...base, ...localeOverrides.te },
+  mr: { ...base, ...localeOverrides.mr },
+  kn: { ...base, ...localeOverrides.kn },
+  ta: { ...base, ...localeOverrides.ta },
 };
 
 export function translate(lang: Lang | string, key: string, vars?: TranslateVars): string {

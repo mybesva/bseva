@@ -77,12 +77,10 @@ def load_customer_email_context(db: Session, customer_id: str) -> dict[str, str]
     }
 
 
-def load_service_name(db: Session, service_id: str) -> str:
-    name = db.execute(
-        text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"),
-        {"id": service_id},
-    ).scalar()
-    return str(name or "Puja")
+def load_service_name(db: Session, service_id: str, language: str = "en") -> str:
+    from app.catalog import localized_service_name
+
+    return localized_service_name(db, service_id, language)
 
 
 def invoice_email_data_from_snapshot(

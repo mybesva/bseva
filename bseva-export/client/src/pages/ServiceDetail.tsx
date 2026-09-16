@@ -103,7 +103,7 @@ export default function ServiceDetail() {
       return;
     }
     if (!canBook) {
-      notifyBookingBlocked(status);
+      notifyBookingBlocked(status, t);
       return;
     }
     setLocation(path);
@@ -275,7 +275,7 @@ export default function ServiceDetail() {
                   disabled={!svc.bookable || (isAuthenticated && user?.role === "customer" && (!canBook || checking))}
                   title={
                     svc.bookable && isAuthenticated && user?.role === "customer" && !canBook
-                      ? BOOKING_UNAVAILABLE_HINT
+                      ? t(BOOKING_UNAVAILABLE_HINT)
                       : undefined
                   }
                   onClick={book}
@@ -285,7 +285,7 @@ export default function ServiceDetail() {
                     : checking
                       ? "Checking…"
                       : isAuthenticated && user?.role === "customer" && !canBook
-                        ? BOOKING_UNAVAILABLE_HINT
+                        ? t(BOOKING_UNAVAILABLE_HINT)
                         : "Book this puja"}
                 </Button>
                 <Link href="/services">

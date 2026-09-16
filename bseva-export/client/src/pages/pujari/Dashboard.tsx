@@ -301,7 +301,7 @@ function PujariDashboardContent() {
                 <div className="mt-3 rounded-md border-2 border-blue-300 bg-blue-50 px-3 py-2">
                   <p className="text-xs font-semibold text-foreground flex items-center gap-1 mb-2">
                     <Video size={14} className="text-blue-600" />
-                    Google Meet ready
+                    {t("web.dashboard.meetReadyShort")}
                   </p>
                   <Button
                     size="sm"
@@ -311,13 +311,13 @@ function PujariDashboardContent() {
                       window.open(row.booking.meetingUrl!, "_blank", "noopener,noreferrer");
                     }}
                   >
-                    Join Google Meet
+                    {t("web.meeting.join")}
                   </Button>
                 </div>
               )}
             </div>
             <Badge className={statusBadgeClass(shown)}>
-              {shown.replace(/_/g, " ")}
+              {t(shown === "expired" ? "web.status.expired" : `status.${shown}`)}
             </Badge>
           </div>
         </button>

@@ -19,14 +19,14 @@ export default function JoinMeet() {
     <Screen>
       <ScreenHeader title={t("mobile.joinMeet")} back />
       {q.isLoading ? <LoadingBlock /> : null}
-      {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : "Invite not found"} /> : null}
+      {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : t("mobile.inviteNotFound")} /> : null}
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-        <AppText variant="h2">{q.data?.title || "Virtual puja"}</AppText>
+        <AppText variant="h2">{q.data?.title || t("mobile.virtualPuja")}</AppText>
         {url ? (
           <PrimaryButton title={t("mobile.joinMeet")} onPress={() => void Linking.openURL(url)} />
         ) : (
           <View>
-            <AppText>This invite is not ready yet. Open it again closer to the scheduled time.</AppText>
+            <AppText>{t("mobile.inviteNotReady")}</AppText>
           </View>
         )}
       </ScrollView>

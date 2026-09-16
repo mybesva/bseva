@@ -1,4 +1,5 @@
 export type PackageTier = "basic" | "standard" | "premium";
+export type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
 
 export type ServicePujariConfig = {
   pujaris_required?: number | null;
@@ -28,23 +29,23 @@ export function pujarisForPackage(service: ServicePujariConfig | null | undefine
   return clamp(Number(fallback) || 1);
 }
 
-export function pujarisIncludedLabel(count: number) {
+export function pujarisIncludedLabel(count: number, t: TranslateFn) {
   const n = clamp(count);
-  return n === 1 ? "1 Pujari" : `${n} Pujaris`;
+  return t("booking.pujariCount", { count: n });
 }
 
-export function pujarisIncludedShort(count: number) {
-  return `Pujaris included: ${pujarisIncludedLabel(count)}`;
+export function pujarisIncludedShort(count: number, t: TranslateFn) {
+  return t("web.booking.pujarisIncluded", { count: clamp(count) });
 }
 
-export function pujariTeamAcceptNotice(total: number) {
+export function pujariTeamAcceptNotice(total: number, t: TranslateFn) {
   const n = clamp(total);
   if (n <= 1) return null;
   const add = n - 1;
-  return `This booking requires ${n} Pujaris. You need to bring ${add} additional Pujari${add === 1 ? "" : "s"} with you.`;
+  return t("web.booking.teamAcceptNotice", { total: n, additional: add });
 }
 
-export function pujariTeamPaymentNotice(total: number) {
+export function pujariTeamPaymentNotice(total: number, t: TranslateFn) {
   if (clamp(total) <= 1) return null;
-  return "The full Dakshina is paid to you as the assigned Pujari. Bring your team and distribute payment among them.";
+  return t("web.booking.teamPaymentNotice");
 }

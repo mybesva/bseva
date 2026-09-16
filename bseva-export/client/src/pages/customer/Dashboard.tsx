@@ -130,7 +130,7 @@ function CustomerDashboardContent() {
   return (
     <>
       <section className="bg-sidebar text-sidebar-foreground py-10 px-6 rounded-xl mb-8">
-        <h1 className="text-h1 mb-2">{t("customer.welcome")}, {user?.name || "Customer"}</h1>
+        <h1 className="text-h1 mb-2">{t("customer.welcome")}, {user?.name || t("auth.customer")}</h1>
         <p className="text-sidebar-foreground/80">{t("customer.subtitle")}</p>
         {user?.public_id ? (
           <p className="mt-2 text-sm text-sidebar-foreground/70 font-mono">ID: {user.public_id}</p>
@@ -166,7 +166,7 @@ function CustomerDashboardContent() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3 mb-1 flex-wrap">
                           <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
-                          <Badge className={getStatusColor(booking.status)}>{booking.status.replace(/_/g, " ")}</Badge>
+                          <Badge className={getStatusColor(booking.status)}>{t(`status.${booking.status}`)}</Badge>
                           <Badge variant="outline" className="capitalize">{booking.package_type}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">#{booking.booking_number}</p>
@@ -243,12 +243,12 @@ function CustomerDashboardContent() {
                           <div className="rounded-lg border-2 border-blue-400 bg-white px-3 py-3 space-y-2">
                             <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                               <Video size={16} className="text-blue-600" />
-                              Google Meet ready — join your virtual puja
+                              {t("web.dashboard.meetReady")}
                             </p>
                             {booking.meeting_url ? (
                               <Button asChild size="sm">
                                 <a href={booking.meeting_url} target="_blank" rel="noopener noreferrer">
-                                  Join Google Meet
+                                  {t("web.meeting.join")}
                                 </a>
                               </Button>
                             ) : booking.public_invite_url ? (
@@ -344,10 +344,10 @@ function CustomerDashboardContent() {
                     <Button
                       className="w-full bg-primary hover:bg-primary/90 font-bold"
                       disabled={!canBook || checking}
-                      title={!canBook ? BOOKING_UNAVAILABLE_HINT : undefined}
+                      title={!canBook ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
                       onClick={() => {
                         if (!canBook || checking) {
-                          notifyBookingBlocked(status);
+                          notifyBookingBlocked(status, t);
                           return;
                         }
                         setLocation(`/book/${rec.service_slug}`);
@@ -389,10 +389,10 @@ function CustomerDashboardContent() {
                   <Button
                     className="w-full bg-primary hover:bg-primary/90 font-bold"
                     disabled={!canBook || checking}
-                    title={!canBook ? BOOKING_UNAVAILABLE_HINT : undefined}
+                    title={!canBook ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
                     onClick={() => {
                       if (!canBook || checking) {
-                        notifyBookingBlocked(status);
+                        notifyBookingBlocked(status, t);
                         return;
                       }
                       setLocation(`/book/${puja.slug}`);

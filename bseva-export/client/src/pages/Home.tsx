@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import LandingHeroBackground from "@/components/LandingHeroBackground";
 
 const ICONS = [Flower, Flame, HomeIcon, Sparkles, Heart, Calendar, Users, UserCheck, Search, StarIcon];
 
@@ -56,8 +57,7 @@ export default function Home() {
     <Layout>
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src="/images/hero-bg.png" alt="Temple Atmosphere" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-sidebar/60 via-sidebar/40 to-background" />
+          <LandingHeroBackground />
         </div>
 
         <div className="container relative z-10 pt-20 pb-12 text-center">

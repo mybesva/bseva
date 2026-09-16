@@ -11,18 +11,20 @@ import {
 import type { ServiceAvailabilityStatus } from "@/lib/ServiceAvailabilityContext";
 import { toast } from "sonner";
 
-export function notifyBookingBlocked(status: ServiceAvailabilityStatus) {
+type TranslateFn = (key: string) => string;
+
+export function notifyBookingBlocked(status: ServiceAvailabilityStatus, t: TranslateFn) {
   if (status === "unavailable") {
-    toast.message(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
+    toast.message(t(COMING_SOON_TITLE), { description: t(COMING_SOON_BODY) });
     return;
   }
   if (status === "no_address") {
-    toast.message(MY_ADDRESS_TITLE, { description: MY_ADDRESS_BODY });
+    toast.message(t(MY_ADDRESS_TITLE), { description: t(MY_ADDRESS_BODY) });
     return;
   }
   if (status === "permission_denied" || status === "unsupported") {
-    toast.message(ENABLE_LOCATION_TITLE, { description: ENABLE_LOCATION_BODY });
+    toast.message(t(ENABLE_LOCATION_TITLE), { description: t(ENABLE_LOCATION_BODY) });
     return;
   }
-  toast.message(AVAILABILITY_ERROR_TITLE, { description: AVAILABILITY_ERROR_BODY });
+  toast.message(t(AVAILABILITY_ERROR_TITLE), { description: t(AVAILABILITY_ERROR_BODY) });
 }

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { api, rupees } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type BookingResult = {
   id: string;
@@ -47,6 +48,7 @@ export default function MuhurtaConsultationBook({
   requiresMuhurtham,
   feePaise,
 }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [apptDate, setApptDate] = useState<Date | undefined>();
   const [apptTime, setApptTime] = useState("10:00");
@@ -56,11 +58,11 @@ export default function MuhurtaConsultationBook({
 
   async function confirmBooking() {
     if (!apptDate) {
-      toast.error("Please select an appointment date");
+      toast.error(t("web.muhurta.needDate"));
       return;
     }
     if (!apptTime) {
-      toast.error("Please select an appointment time");
+      toast.error(t("web.muhurta.needTime"));
       return;
     }
     setSubmitting(true);
@@ -79,11 +81,11 @@ export default function MuhurtaConsultationBook({
       setOpen(false);
       toast.success(
         out.payment_status === "paid"
-          ? `Muhurtham consultation booked. ${rupees(out.fee_paise)} debited.`
-          : "Muhurtham consultation booked successfully."
+          ? t("web.muhurta.bookedPaid", { amount: rupees(out.fee_paise) })
+          : t("web.muhurta.booked")
       );
     } catch (e: any) {
-      toast.error(e.message || "Could not book consultation");
+      toast.error(e.message || t("web.muhurta.bookFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -99,45 +101,44 @@ export default function MuhurtaConsultationBook({
           <div className="min-w-0">
             <p className="font-semibold text-foreground">
               {requiresMuhurtham
-                ? "This puja needs an auspicious time (Muhurtham)"
-                : "Book a Muhurtham consultation"}
+                ? t("web.muhurta.requiredTitle")
+                : t("web.muhurta.title")}
             </p>
             <p className="text-sm text-muted-foreground mt-0.5">
               {receipt
-                ? "Your Muhurtham consultation appointment is confirmed. A pujari will join at the selected time and share recommended dates for this puja."
+                ? t("web.muhurta.confirmedDescription")
                 : feePaise > 0
-                  ? `Book an appointment with a pujari for ${rupees(feePaise)} (wallet). Choose date and time below — same flow as a normal booking.`
-                  : "Book an appointment with a pujari. Choose date and time — same flow as a normal booking."}
+                  ? t("web.muhurta.paidDescription", { amount: rupees(feePaise) })
+                  : t("web.muhurta.freeDescription")}
             </p>
           </div>
         </div>
         {!receipt && !open && (
           <Button variant="secondary" onClick={() => setOpen(true)}>
-            Book Muhurtham consultation
+            {t("web.muhurta.bookAction")}
           </Button>
         )}
       </div>
 
       <div className="rounded-md border border-primary/20 bg-card/80 px-3 py-2.5 text-sm space-y-1">
-        <p className="font-medium text-foreground">B-Seva benefit</p>
+        <p className="font-medium text-foreground">{t("web.muhurta.benefitTitle")}</p>
         <p className="text-muted-foreground">
-          If you set your muhurtham through B-Seva, you get a discount when you book marriage /
-          wedding services with us. Your consultation fee stays as a paid receipt on your account.
+          {t("web.muhurta.benefitDescription")}
         </p>
       </div>
 
       {open && !receipt && (
         <div className="rounded-md border bg-card p-4 space-y-4">
           <div>
-            <p className="font-semibold text-foreground">Muhurtham consultation booking</p>
+            <p className="font-semibold text-foreground">{t("web.muhurta.bookingTitle")}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Service: {serviceName} · Select your appointment date and time
+              {t("web.muhurta.servicePrompt", { service: serviceName })}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Appointment date *</Label>
+              <Label>{t("web.muhurta.appointmentDate")} *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -145,7 +146,7 @@ export default function MuhurtaConsultationBook({
                     className={cn("w-full justify-start", !apptDate &&"text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {apptDate ? formatDisplayDate(apptDate) : "Select date"}
+                    {apptDate ? formatDisplayDate(apptDate) : t("booking.selectDate")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -160,7 +161,7 @@ export default function MuhurtaConsultationBook({
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label>Appointment time *</Label>
+              <Label>{t("web.muhurta.appointmentTime")} *</Label>
               <Input
                 type="time"
                 value={apptTime}
@@ -187,42 +188,42 @@ export default function MuhurtaConsultationBook({
           </div>
 
           <div className="space-y-2">
-            <Label>Notes for pujari (optional)</Label>
+            <Label>{t("web.muhurta.notes")}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Marriage muhurtham for April, family in Hyderabad…"
+              placeholder={t("web.muhurta.notesPlaceholder")}
               rows={3}
             />
           </div>
 
           <div className="rounded-md border bg-orange-50/50 px-3 py-2 text-sm space-y-1">
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Consultation</span>
-              <span className="font-medium">Muhurtham guidance</span>
+              <span className="text-muted-foreground">{t("web.muhurta.consultation")}</span>
+              <span className="font-medium">{t("web.muhurta.guidance")}</span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Date & time</span>
+              <span className="text-muted-foreground">{t("web.muhurta.dateTime")}</span>
               <span className="font-medium">
                 {apptDate ? formatDisplayDate(apptDate) : "—"} · {apptTime || "—"}
               </span>
             </div>
             <div className="flex justify-between gap-2 border-t pt-1 font-semibold">
-              <span>Total</span>
-              <span className="text-primary">{feePaise > 0 ? rupees(feePaise) :"Free"}</span>
+              <span>{t("common.total")}</span>
+              <span className="text-primary">{feePaise > 0 ? rupees(feePaise) : t("web.muhurta.free")}</span>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => void confirmBooking()} disabled={submitting}>
               {submitting
-                ? "Confirming…"
+                ? t("web.muhurta.confirming")
                 : feePaise > 0
-                  ? `Confirm & pay ${rupees(feePaise)}`
-                  : "Confirm appointment"}
+                  ? t("web.muhurta.confirmPay", { amount: rupees(feePaise) })
+                  : t("web.muhurta.confirmAppointment")}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </div>
@@ -230,36 +231,35 @@ export default function MuhurtaConsultationBook({
 
       {receipt && (
         <div className="rounded-md border bg-card px-4 py-3 text-sm space-y-2">
-          <p className="font-semibold text-foreground">Consultation receipt</p>
+          <p className="font-semibold text-foreground">{t("web.muhurta.receipt")}</p>
           <div className="space-y-1">
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Reference</span>
+              <span className="text-muted-foreground">{t("web.muhurta.reference")}</span>
               <span className="font-medium">{receipt.consultation_number || receipt.id.slice(0, 8)}</span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Service</span>
+              <span className="text-muted-foreground">{t("booking.service")}</span>
               <span className="font-medium">{receipt.service_name || serviceName}</span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Appointment</span>
+              <span className="text-muted-foreground">{t("web.muhurta.appointment")}</span>
               <span className="font-medium">
                 {formatDisplayDate(receipt.appointment_date)} · {timeDisplay}
               </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Status</span>
-              <span className="font-medium text-green-700">Booked · awaiting pujari</span>
+              <span className="text-muted-foreground">{t("common.status")}</span>
+              <span className="font-medium text-green-700">{t("web.muhurta.awaitingPujari")}</span>
             </div>
             {receipt.fee_paise > 0 && (
               <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Paid</span>
+                <span className="text-muted-foreground">{t("status.paid")}</span>
                 <span className="font-medium">{rupees(receipt.fee_paise)}</span>
               </div>
             )}
           </div>
           <p className="text-xs text-muted-foreground pt-1 border-t">
-            Keep this receipt — it counts toward your marriage-service discount when you book with
-            B-Seva. You can still complete the main puja booking below after guidance.
+            {t("web.muhurta.receiptNote")}
           </p>
         </div>
       )}

@@ -8,10 +8,12 @@ import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryBu
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function PujariProfile() {
   const { colors } = useAppTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const q = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const [p, setP] = useState<Record<string, unknown>>({});
   const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
@@ -59,7 +61,7 @@ export default function PujariProfile() {
   if (q.isLoading) {
     return (
       <Screen>
-        <ScreenHeader title="Profile" back />
+        <ScreenHeader title={t("mobile.profile")} back />
         <LoadingBlock />
       </Screen>
     );
@@ -70,14 +72,14 @@ export default function PujariProfile() {
 
   return (
     <Screen>
-      <ScreenHeader title="Pujari profile" back />
+      <ScreenHeader title={t("mobile.pujariProfile")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
-        <ErrorBanner message={error || (q.isError ? (q.error instanceof Error ? q.error.message : "Could not load profile") : null)} />
+        <ErrorBanner message={error || (q.isError ? (q.error instanceof Error ? q.error.message : t("mobile.couldNotLoadProfile")) : null)} />
         {q.isError ? (
-          <PrimaryButton title="Retry" onPress={() => void q.refetch()} />
+          <PrimaryButton title={t("mobile.retry")} onPress={() => void q.refetch()} />
         ) : null}
         <AppText variant="small">
-          Verification: {String(p.verification_status || p.profile_status || "—")} · {pct}% complete
+          {t("mobile.verificationProgress", { status: String(p.verification_status || p.profile_status || "—"), percent: pct })}
         </AppText>
         {photo && photoOk ? (
           <Image
@@ -102,7 +104,7 @@ export default function PujariProfile() {
           </View>
         )}
         <Card>
-          <AppText variant="h3">Photo</AppText>
+          <AppText variant="h3">{t("mobile.photo")}</AppText>
           <MediaPicker
             onPicked={async (file) => {
               await apiClient.uploadPujariAsset("photo", file);
@@ -112,50 +114,50 @@ export default function PujariProfile() {
           />
         </Card>
         <Card>
-          <AppText variant="h3">Signature</AppText>
+          <AppText variant="h3">{t("mobile.signature")}</AppText>
           {sign ? (
             <Image source={sign} style={{ width: "100%", height: 80, resizeMode: "contain", backgroundColor: colors.secondary }} />
           ) : null}
-          <AppText variant="small">Take a photo of your signature or pick an image.</AppText>
+          <AppText variant="small">{t("mobile.signatureHelp")}</AppText>
           <MediaPicker
-            cameraLabel="Photograph signature"
+            cameraLabel={t("mobile.photographSignature")}
             onPicked={async (file) => {
               await apiClient.uploadPujariAsset("signature", file);
               setSign(await apiClient.pujariMediaUri("signature"));
             }}
           />
         </Card>
-        <Field label="Full name" value={String(p.full_name || "")} onChangeText={(v) => set("full_name", v)} />
-        <Field label="Father's name" value={String(p.father_name || "")} onChangeText={(v) => set("father_name", v)} />
-        <Field label="Date of birth" value={String(p.date_of_birth || "").slice(0, 10)} onChangeText={(v) => set("date_of_birth", v)} />
-        <Field label="Mobile" value={String(p.mobile_number || "")} onChangeText={(v) => set("mobile_number", v)} keyboardType="phone-pad" />
+        <Field label={t("mobile.fullName")} value={String(p.full_name || "")} onChangeText={(v) => set("full_name", v)} />
+        <Field label={t("mobile.fatherName")} value={String(p.father_name || "")} onChangeText={(v) => set("father_name", v)} />
+        <Field label={t("mobile.dateOfBirth")} value={String(p.date_of_birth || "").slice(0, 10)} onChangeText={(v) => set("date_of_birth", v)} />
+        <Field label={t("mobile.mobileNumber")} value={String(p.mobile_number || "")} onChangeText={(v) => set("mobile_number", v)} keyboardType="phone-pad" />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <AppText>WhatsApp same as mobile</AppText>
+          <AppText>{t("mobile.whatsappSame")}</AppText>
           <Switch value={sameWa} onValueChange={setSameWa} />
         </View>
         {!sameWa ? (
-          <Field label="WhatsApp" value={String(p.whatsapp_number || "")} onChangeText={(v) => set("whatsapp_number", v)} keyboardType="phone-pad" />
+          <Field label={t("mobile.whatsapp")} value={String(p.whatsapp_number || "")} onChangeText={(v) => set("whatsapp_number", v)} keyboardType="phone-pad" />
         ) : null}
-        <Field label="Gotra" value={String(p.gotra || "")} onChangeText={(v) => set("gotra", v)} />
-        <Field label="Pravara" value={String(p.pravara || "")} onChangeText={(v) => set("pravara", v)} />
-        <Field label="Native place" value={String(p.native_place || "")} onChangeText={(v) => set("native_place", v)} />
-        <Field label="Permanent address" value={String(p.permanent_address || "")} onChangeText={(v) => set("permanent_address", v)} />
-        <Field label="Present address" value={String(p.present_address || "")} onChangeText={(v) => set("present_address", v)} />
-        <AppText variant="small">Qualifications</AppText>
+        <Field label={t("mobile.gotra")} value={String(p.gotra || "")} onChangeText={(v) => set("gotra", v)} />
+        <Field label={t("mobile.pravara")} value={String(p.pravara || "")} onChangeText={(v) => set("pravara", v)} />
+        <Field label={t("mobile.nativePlace")} value={String(p.native_place || "")} onChangeText={(v) => set("native_place", v)} />
+        <Field label={t("mobile.permanentAddress")} value={String(p.permanent_address || "")} onChangeText={(v) => set("permanent_address", v)} />
+        <Field label={t("mobile.presentAddress")} value={String(p.present_address || "")} onChangeText={(v) => set("present_address", v)} />
+        <AppText variant="small">{t("mobile.qualifications")}</AppText>
         <ChoiceChips multiple options={PUJARI_QUALS.map((x) => ({ id: x.id, label: x.label }))} value={quals} onChange={(v) => set("qualifications", v)} />
         <Field
-          label="Qualification year"
+          label={t("mobile.qualificationYear")}
           value={String(p.qualification_year || "")}
           onChangeText={(v) => set("qualification_year", Number(v) || undefined)}
           keyboardType="number-pad"
         />
         <ChoiceChips options={SAMPRADAYA_OPTS.map((s) => ({ id: s, label: s }))} value={String(p.sampradaya || "")} onChange={(v) => set("sampradaya", v)} />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <AppText style={{ flex: 1 }}>Allow listing on BSeva website</AppText>
+          <AppText style={{ flex: 1 }}>{t("mobile.allowWebsite")}</AppText>
           <Switch value={!!p.website_publication_consent} onValueChange={(v) => set("website_publication_consent", v)} />
         </View>
         <PrimaryButton
-          title={busy ? "Saving..." : "Save"}
+          title={busy ? t("mobile.saving") : t("mobile.save")}
           loading={busy}
           onPress={async () => {
             setBusy(true);
@@ -179,7 +181,7 @@ export default function PujariProfile() {
               });
               await q.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             } finally {
               setBusy(false);
             }

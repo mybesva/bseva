@@ -12,6 +12,7 @@ import {
   validateSettlement,
 } from "@/lib/fieldValidation";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type BankDraft = {
   upiId: string;
@@ -55,6 +56,7 @@ function buildPayload(draft: BankDraft): Record<string, string> {
 }
 
 export default function PujariBankPage() {
+  const { t } = useI18n();
   const { active: onboardingActive } = usePujariOnboardingGate("bank");
   const [draft, setDraft] = useState<BankDraft>(empty);
   const [baseline, setBaseline] = useState<BankDraft>(empty);
@@ -126,13 +128,13 @@ export default function PujariBankPage() {
     });
     setErrors(errs);
     if (Object.keys(errs).length) {
-      toast.error(errs.settlement || "Please add UPI ID or complete bank details correctly");
+      toast.error(t(errs.settlement || "web.validation.settlement"));
       return false;
     }
 
     const payload = buildPayload(draft);
     if (!Object.keys(payload).length) {
-      toast.error("Add a UPI ID or complete bank account details");
+      toast.error(t("web.validation.settlement"));
       return false;
     }
 
@@ -154,10 +156,10 @@ export default function PujariBankPage() {
       setBaseline(saved);
       setEditing(onboardingActive);
       setErrors({});
-      if (!onboardingActive) toast.success("Settlement details saved");
+      if (!onboardingActive) toast.success(t("web.bank.saved"));
       return true;
     } catch (err: any) {
-      toast.error(err.message || "Could not save settlement details");
+      toast.error(err.message || t("web.bank.saveFailed"));
       return false;
     } finally {
       setSaving(false);
@@ -167,7 +169,7 @@ export default function PujariBankPage() {
   async function persistBank(): Promise<boolean> {
     if (!editing) {
       if (!hasSettlementMethod(baseline)) {
-        toast.error("Add a UPI ID or bank account details");
+        toast.error(t("web.validation.settlement"));
         return false;
       }
       return true;
@@ -180,7 +182,7 @@ export default function PujariBankPage() {
     e.preventDefault();
     if (onboardingActive) return;
     if (!(await persistBank())) return;
-    toast.success("Settlement details saved");
+    toast.success(t("web.bank.saved"));
   }
 
   const bankSectionActive = bankDraftTouched(draft);
@@ -189,22 +191,22 @@ export default function PujariBankPage() {
     <PujariPortal>
       <Card className="max-w-lg">
         <CardHeader>
-          <CardTitle>Bank / UPI settlement</CardTitle>
+          <CardTitle>{t("web.bank.title")}</CardTitle>
           <p className="text-sm text-muted-foreground font-normal">
-            Add a UPI ID or bank account details. At least one is required for payouts.
+            {t("web.bank.description")}
           </p>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground">Loading…</p>
+            <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <form className="space-y-4" onSubmit={save}>
               {errors.settlement && (
-                <p className="text-sm text-destructive">{errors.settlement}</p>
+                <p className="text-sm text-destructive">{t(errors.settlement)}</p>
               )}
 
               <div className="space-y-1">
-                <Label>UPI ID</Label>
+                <Label>{t("web.bank.upi")}</Label>
                 <Input
                   value={draft.upiId}
                   onChange={(e) => setField("upiId", e.target.value.trim().toLowerCase())}
@@ -212,7 +214,7 @@ export default function PujariBankPage() {
                   autoComplete="off"
                   disabled={!inputsEnabled}
                 />
-                {errors.upiId && <p className="text-sm text-destructive">{errors.upiId}</p>}
+                {errors.upiId && <p className="text-sm text-destructive">{t(errors.upiId)}</p>}
               </div>
 
               <div className="relative py-2">
@@ -220,28 +222,28 @@ export default function PujariBankPage() {
                   <span className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or bank account</span>
+                  <span className="bg-card px-2 text-muted-foreground">{t("web.bank.orAccount")}</span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label>Account holder name{bankSectionActive ? " *" : ""}</Label>
+                <Label>{t("web.bank.holder")}{bankSectionActive ? " *" : ""}</Label>
                 <Input
                   value={draft.holder}
                   onChange={(e) => setField("holder", e.target.value)}
                   disabled={!inputsEnabled}
                 />
-                {errors.holder && <p className="text-sm text-destructive">{errors.holder}</p>}
+                {errors.holder && <p className="text-sm text-destructive">{t(errors.holder)}</p>}
               </div>
               <div className="space-y-1">
-                <Label>Bank name{bankSectionActive ? " *" : ""}</Label>
+                <Label>{t("web.bank.name")}{bankSectionActive ? " *" : ""}</Label>
                 <Input
                   value={draft.bankName}
                   onChange={(e) => setField("bankName", e.target.value)}
-                  placeholder="e.g. State Bank of India"
+                  placeholder={t("web.bank.namePlaceholder")}
                   disabled={!inputsEnabled}
                 />
-                {errors.bankName && <p className="text-sm text-destructive">{errors.bankName}</p>}
+                {errors.bankName && <p className="text-sm text-destructive">{t(errors.bankName)}</p>}
               </div>
               <div className="space-y-1">
                 <Label>IFSC{bankSectionActive ? " *" : ""}</Label>
@@ -251,10 +253,10 @@ export default function PujariBankPage() {
                   maxLength={11}
                   disabled={!inputsEnabled}
                 />
-                {errors.ifsc && <p className="text-sm text-destructive">{errors.ifsc}</p>}
+                {errors.ifsc && <p className="text-sm text-destructive">{t(errors.ifsc)}</p>}
               </div>
               <div className="space-y-1">
-                <Label>Account number{bankSectionActive ? " *" : ""}</Label>
+                <Label>{t("web.bank.account")}{bankSectionActive ? " *" : ""}</Label>
                 <Input
                   value={draft.accountNumber}
                   onChange={(e) => setField("accountNumber", e.target.value.replace(/\D/g, "").slice(0, 18))}
@@ -262,10 +264,10 @@ export default function PujariBankPage() {
                   autoComplete="off"
                   disabled={!inputsEnabled}
                 />
-                {errors.accountNumber && <p className="text-sm text-destructive">{errors.accountNumber}</p>}
+                {errors.accountNumber && <p className="text-sm text-destructive">{t(errors.accountNumber)}</p>}
               </div>
               <div className="space-y-1">
-                <Label>Confirm account number{bankSectionActive ? " *" : ""}</Label>
+                <Label>{t("web.bank.confirmAccount")}{bankSectionActive ? " *" : ""}</Label>
                 <Input
                   value={draft.accountConfirm}
                   onChange={(e) => setField("accountConfirm", e.target.value.replace(/\D/g, "").slice(0, 18))}
@@ -274,7 +276,7 @@ export default function PujariBankPage() {
                   disabled={!inputsEnabled}
                 />
                 {errors.accountConfirm && (
-                  <p className="text-sm text-destructive">{errors.accountConfirm}</p>
+                  <p className="text-sm text-destructive">{t(errors.accountConfirm)}</p>
                 )}
               </div>
 
@@ -282,15 +284,15 @@ export default function PujariBankPage() {
                 <div className="flex flex-wrap gap-2">
                   {!editing ? (
                     <Button type="button" variant="outline" onClick={() => setEditing(true)}>
-                      Edit
+                      {t("common.edit")}
                     </Button>
                   ) : (
                     <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                   )}
                   <Button type="submit" disabled={saving || !editing || !dirty}>
-                    {saving ? "Saving…" : "Save"}
+                    {saving ? t("web.common.saving") : t("common.save")}
                   </Button>
                 </div>
               ) : null}

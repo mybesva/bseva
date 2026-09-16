@@ -20,7 +20,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
         rows = session.execute(
             text(
                 """
-                SELECT b.id, b.booking_number, b.pujari_id, b.customer_id, b.booking_date, b.start_time,
+                SELECT b.id, b.booking_number, b.pujari_id, b.customer_id, b.service_id, b.booking_date, b.start_time,
                        b.samagri_requested, s.name AS service_name
                 FROM bookings b
                 JOIN services s ON s.id = b.service_id
@@ -77,7 +77,10 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         link="/pujari/bookings",
                         extra_data={"booking_id": str(b["id"])},
                         message_key="samagriReminder" if samagri else "reminder",
-                        message_vars={"number": booking_num, "service": service_name, "hours": hours_ahead},
+                        message_vars={
+                            "number": booking_num, "service": service_name,
+                            "service_id": str(b["service_id"]), "hours": hours_ahead,
+                        },
                     )
                     created += 1
 
@@ -112,7 +115,12 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         link="/customer/bookings",
                         extra_data={"booking_id": str(b["id"])},
                         message_key="reminder",
-                        message_vars={"service": service_name, "number": booking_num, "hours": hours_ahead},
+                        message_vars={
+                            "service": service_name,
+                            "service_id": str(b["service_id"]),
+                            "number": booking_num,
+                            "hours": hours_ahead,
+                        },
                     )
                     created += 1
 
@@ -275,7 +283,7 @@ def notify_location_unlocked(db: Session | None = None) -> dict:
         rows = session.execute(
             text(
                 """
-                SELECT b.id, b.booking_number, b.pujari_id, b.booking_date, b.start_time,
+                SELECT b.id, b.booking_number, b.pujari_id, b.service_id, b.booking_date, b.start_time,
                        s.name AS service_name
                 FROM bookings b
                 JOIN services s ON s.id = b.service_id
@@ -320,7 +328,11 @@ def notify_location_unlocked(db: Session | None = None) -> dict:
                 link="/pujari/bookings",
                 extra_data={"booking_id": str(b["id"])},
                 message_key="locationUnlocked",
-                message_vars={"service": b.get("service_name") or "Puja", "number": num},
+                message_vars={
+                    "service": b.get("service_name") or "Puja",
+                    "service_id": str(b["service_id"]),
+                    "number": num,
+                },
             )
             created += 1
         session.commit()

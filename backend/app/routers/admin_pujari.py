@@ -602,8 +602,8 @@ def assign_pujari_to_booking(
             text("SELECT id, email, name FROM users WHERE id = CAST(:id AS uuid)"),
             {"id": body.pujari_id},
         ).mappings().first()
-        svc_name = load_service_name(db, str(b["service_id"]))
         ctx = load_customer_email_context(db, str(b["customer_id"]))
+        svc_name = load_service_name(db, str(b["service_id"]), ctx.get("language") or "en")
         data = booking_email_data_from_row(
             dict(b),
             customer_name=ctx.get("name") or "",

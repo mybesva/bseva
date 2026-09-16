@@ -63,11 +63,11 @@ export function validateAddress(v: {
   pincode?: string;
 }): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!isMeaningfulText(v.address_line1 || "", 3)) errors.address_line1 = "Enter a valid address (min 3 characters)";
-  if (!isMeaningfulText(v.city || "", 2)) errors.city = "Enter a valid city";
-  if (!isMeaningfulText(v.district || "", 2)) errors.district = "Enter a valid district";
-  if (!isMeaningfulText(v.state || "", 2)) errors.state = "Enter a valid state";
-  if (!isValidPincode(v.pincode || "")) errors.pincode = "PIN code must be exactly 6 digits";
+  if (!isMeaningfulText(v.address_line1 || "", 3)) errors.address_line1 = "web.validation.address";
+  if (!isMeaningfulText(v.city || "", 2)) errors.city = "web.validation.city";
+  if (!isMeaningfulText(v.district || "", 2)) errors.district = "web.validation.district";
+  if (!isMeaningfulText(v.state || "", 2)) errors.state = "web.validation.state";
+  if (!isValidPincode(v.pincode || "")) errors.pincode = "web.validation.pincode";
   return errors;
 }
 
@@ -87,20 +87,20 @@ export function validateBank(v: {
   last4?: string;
 }): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!isMeaningfulText(v.holder || "", 2)) errors.holder = "Account holder name is required";
-  if (!isMeaningfulText(v.bankName || "", 2)) errors.bankName = "Bank name is required";
-  if (!isValidIfsc(v.ifsc || "")) errors.ifsc = "Enter a valid IFSC (e.g. SBIN0001234)";
+  if (!isMeaningfulText(v.holder || "", 2)) errors.holder = "web.validation.bankHolder";
+  if (!isMeaningfulText(v.bankName || "", 2)) errors.bankName = "web.validation.bankName";
+  if (!isValidIfsc(v.ifsc || "")) errors.ifsc = "web.validation.ifsc";
   const acct = String(v.accountNumber || "").replace(/\D/g, "");
   const confirm = String(v.accountConfirm || "").replace(/\D/g, "");
   if (acct || v.accountConfirm != null || !v.last4) {
     if (acct.length < 9 || acct.length > 18) {
-      errors.accountNumber = "Enter full account number (9–18 digits)";
+      errors.accountNumber = "web.validation.accountNumber";
     }
     if (confirm !== acct) {
-      errors.accountConfirm = "Account number and confirmation do not match";
+      errors.accountConfirm = "web.validation.accountMatch";
     }
   } else if (!/^\d{4}$/.test(String(v.last4 || "").trim())) {
-    errors.last4 = "Enter exactly 4 account digits";
+    errors.last4 = "web.validation.accountLast4";
   }
   return errors;
 }
@@ -132,7 +132,7 @@ export function validateSettlement(v: {
   const bankOn = bankDraftTouched(v);
 
   if (upi && !isValidUpiId(upi)) {
-    errors.upiId = "Enter a valid UPI ID (e.g. name@oksbi)";
+    errors.upiId = "web.validation.upi";
   }
 
   if (bankOn) {
@@ -140,7 +140,7 @@ export function validateSettlement(v: {
   }
 
   if (!upi && !bankOn) {
-    errors.settlement = "Add a UPI ID or complete bank account details";
+    errors.settlement = "web.validation.settlement";
     return errors;
   }
 
@@ -181,29 +181,29 @@ export function validateQualificationYear(
   raw: unknown,
   yearNow = new Date().getFullYear(),
 ): string | undefined {
-  if (raw === "" || raw == null) return "Qualification year is required";
+  if (raw === "" || raw == null) return "web.validation.qualificationYear";
   const y = Number(raw);
-  if (!Number.isFinite(y) || !Number.isInteger(y)) return "Enter a valid year";
+  if (!Number.isFinite(y) || !Number.isInteger(y)) return "web.validation.validYear";
   if (y < PUJARI_QUALIFICATION_YEAR_MIN) {
-    return `Year must be ${PUJARI_QUALIFICATION_YEAR_MIN} or later`;
+    return "web.validation.yearMinimum";
   }
-  if (y > yearNow) return "Qualification year cannot be in the future";
+  if (y > yearNow) return "web.validation.yearFuture";
   return undefined;
 }
 
 export function validateExperienceYears(raw: unknown): string | undefined {
   if (raw === "" || raw == null || (typeof raw === "string" && !String(raw).trim())) {
-    return "Years of experience is required";
+    return "web.validation.experienceRequired";
   }
   const n = Number(raw);
-  if (!Number.isFinite(n)) return "Enter a valid number of years";
-  if (n < 0) return "Experience cannot be negative";
-  if (n > PUJARI_EXPERIENCE_MAX) return `Experience cannot exceed ${PUJARI_EXPERIENCE_MAX} years`;
+  if (!Number.isFinite(n)) return "web.validation.experienceNumber";
+  if (n < 0) return "web.validation.experienceNegative";
+  if (n > PUJARI_EXPERIENCE_MAX) return "web.validation.experienceMaximum";
   return undefined;
 }
 
 export function validatePujariLanguages(langs: string[] | undefined): string | undefined {
-  if (!langs?.length) return "Select at least one language";
+  if (!langs?.length) return "web.validation.languages";
   return undefined;
 }
 
@@ -233,7 +233,7 @@ export function validatePujariProfileForm(
   const yearNow = opts?.yearNow ?? new Date().getFullYear();
 
   if (!input.profile_photo_path && !input.hasPhotoUrl) {
-    errors.profile_photo_path = "Profile photo is required";
+    errors.profile_photo_path = "web.validation.profilePhoto";
   }
 
   Object.assign(
@@ -249,24 +249,24 @@ export function validatePujariProfileForm(
   );
 
   const dob = String(input.date_of_birth || "").trim();
-  if (!dob) errors.date_of_birth = "Date of birth is required";
+  if (!dob) errors.date_of_birth = "web.validation.dob";
   else if (!isValidPujariDob(dob)) {
-    errors.date_of_birth = "You must be at least 18 years old (date cannot be in the future)";
+    errors.date_of_birth = "web.validation.adult";
   }
 
   const phoneErr = validatePhoneNational(input.countryCode || "+91", input.phoneNational || "");
   if (phoneErr) errors.mobile_number = phoneErr;
 
-  if (!String(input.gotra || "").trim()) errors.gotra = "Gotra is required";
-  if (!String(input.pravara || "").trim()) errors.pravara = "Pravara is required";
+  if (!String(input.gotra || "").trim()) errors.gotra = "web.validation.gotra";
+  if (!String(input.pravara || "").trim()) errors.pravara = "web.validation.pravara";
 
   const quals = input.qualifications || [];
-  if (quals.length === 0) errors.qualifications = "Select at least one qualification";
+  if (quals.length === 0) errors.qualifications = "web.validation.qualifications";
 
   const qyErr = validateQualificationYear(input.qualification_year, yearNow);
   if (qyErr) errors.qualification_year = qyErr;
 
-  if (!String(input.sampradaya || "").trim()) errors.sampradaya = "Sampradaya is required";
+  if (!String(input.sampradaya || "").trim()) errors.sampradaya = "web.validation.sampradaya";
 
   const expErr = validateExperienceYears(input.experience_years);
   if (expErr) errors.experience_years = expErr;
@@ -279,7 +279,7 @@ export function validatePujariProfileForm(
 
 export function validateSupport(subject: string, description: string): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!isMeaningfulText(subject, 5)) errors.subject = "Subject must contain at least 5 meaningful characters";
-  if (!isMeaningfulText(description, 10)) errors.description = "Description must contain at least 10 meaningful characters";
+  if (!isMeaningfulText(subject, 5)) errors.subject = "web.support.subjectValidation";
+  if (!isMeaningfulText(description, 10)) errors.description = "web.support.descriptionValidation";
   return errors;
 }

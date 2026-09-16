@@ -89,7 +89,7 @@ export default function PujariAvailabilityPage() {
       setBlocks(rows);
     } catch (err: any) {
       if (!String(err.message || "").includes("404")) {
-        toast.error(err.message || "Could not load blocked dates");
+        toast.error(err.message || t("web.pujariAvailability.loadFailed"));
       }
       setBlocks([]);
     }
@@ -138,10 +138,10 @@ export default function PujariAvailabilityPage() {
     e.preventDefault();
     if (onboardingActive) return;
     if (!radius || Number(radius) <= 0) {
-      toast.error("Enter your service radius (km)");
+      toast.error(t("web.validation.serviceRadius"));
       return;
     }
-    if (await persistAvailabilityDraft()) toast.success("Availability settings saved");
+    if (await persistAvailabilityDraft()) toast.success(t("web.pujariAvailability.saved"));
   }
 
   function closeDialog() {
@@ -153,7 +153,7 @@ export default function PujariAvailabilityPage() {
   function openDateDialog(day: Date | undefined) {
     if (!day) return;
     if (day < startOfDay(new Date())) {
-      toast.error("You can only block today or future dates");
+      toast.error(t("web.pujariAvailability.futureOnly"));
       return;
     }
     setSelectedDate(day);
@@ -174,7 +174,7 @@ export default function PujariAvailabilityPage() {
         }),
       });
       await loadBlocks();
-      toast.success("Date blocked");
+      toast.success(t("web.pujariAvailability.blocked"));
       closeDialog();
     } catch (err: any) {
       toast.error(err.message);
@@ -189,7 +189,7 @@ export default function PujariAvailabilityPage() {
     try {
       await api(`/pujari/availability/blocks/${selectedBlock.id}`, { method: "DELETE" });
       await loadBlocks();
-      toast.success("Date unblocked — available for bookings again");
+      toast.success(t("web.pujariAvailability.unblockedAvailable"));
       closeDialog();
     } catch (err: any) {
       toast.error(err.message);
@@ -203,7 +203,7 @@ export default function PujariAvailabilityPage() {
     try {
       await api(`/pujari/availability/blocks/${blockId}`, { method: "DELETE" });
       await loadBlocks();
-      toast.success("Date unblocked");
+      toast.success(t("web.pujariAvailability.unblocked"));
       if (selectedBlock?.id === blockId) closeDialog();
     } catch (err: any) {
       toast.error(err.message);
@@ -220,7 +220,7 @@ export default function PujariAvailabilityPage() {
         <section className="bg-sidebar text-sidebar-foreground rounded-xl px-5 py-7 md:px-8 md:py-9 border border-[#D4AF37]/20 shadow-sm">
           <h1 className="text-h1">{t("pujari.availabilityTitle")}</h1>
           <p className="mt-2 text-sm md:text-base text-sidebar-foreground/75 max-w-2xl">
-            Manage when customers can book you, your service area, and dates you want blocked on your calendar.
+            {t("web.pujariAvailability.description")}
           </p>
         </section>
 
@@ -234,9 +234,9 @@ export default function PujariAvailabilityPage() {
                   <Clock size={20} strokeWidth={2} />
                 </span>
                 <div>
-                  <CardTitle className="text-foreground text-lg md:text-xl">Booking settings</CardTitle>
+                  <CardTitle className="text-foreground text-lg md:text-xl">{t("web.pujariAvailability.settings")}</CardTitle>
                   <CardDescription className="mt-1 text-sm leading-relaxed">
-                    Control whether customers can discover and book you for new pujas.
+                    {t("web.pujariAvailability.settingsDescription")}
                   </CardDescription>
                 </div>
               </div>
@@ -264,9 +264,9 @@ export default function PujariAvailabilityPage() {
                       className="border-[#D4AF37]/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
                     <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-semibold text-foreground">Available for new bookings</span>
+                      <span className="block text-sm font-semibold text-foreground">{t("web.pujariAvailability.availableNew")}</span>
                       <span className="block text-xs text-muted-foreground mt-0.5">
-                        {available ? "Customers can request bookings with you" : "You are hidden from new booking requests"}
+                        {available ? t("web.pujariAvailability.visible") : t("web.pujariAvailability.hidden")}
                       </span>
                     </span>
                   </label>
@@ -274,7 +274,7 @@ export default function PujariAvailabilityPage() {
                   <div className="space-y-2">
                     <Label htmlFor="service-radius" className="text-foreground text-sm font-medium flex items-center gap-1.5">
                       <MapPin size={14} className="text-primary shrink-0" />
-                      Service radius (km)
+                      {t("web.pujariAvailability.radius")}
                     </Label>
                     <Input
                       id="service-radius"
@@ -284,9 +284,9 @@ export default function PujariAvailabilityPage() {
                       value={radius}
                       onChange={(e) => setRadius(e.target.value)}
                       className="max-w-[160px] border-border bg-background focus-visible:ring-primary/30"
-                      placeholder="e.g. 10"
+                      placeholder={t("web.pujariAvailability.radiusPlaceholder")}
                     />
-                    <p className="text-xs text-muted-foreground">Maximum distance you are willing to travel for bookings.</p>
+                    <p className="text-xs text-muted-foreground">{t("web.pujariAvailability.radiusDescription")}</p>
                   </div>
 
                   {!onboardingActive ? (
@@ -295,7 +295,7 @@ export default function PujariAvailabilityPage() {
                       disabled={saving}
                       className="w-full sm:w-auto min-w-[140px] bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
                     >
-                      {saving ? "Saving…" : "Save settings"}
+                      {saving ? t("web.common.saving") : t("web.pujariAvailability.saveSettings")}
                     </Button>
                   ) : null}
                   <PujariOnboardingWalkthrough
@@ -319,9 +319,9 @@ export default function PujariAvailabilityPage() {
                   <CalendarDays size={20} strokeWidth={2} />
                 </span>
                 <div>
-                  <CardTitle className="text-foreground text-lg md:text-xl">Block calendar dates</CardTitle>
+                  <CardTitle className="text-foreground text-lg md:text-xl">{t("web.pujariAvailability.blockDates")}</CardTitle>
                   <CardDescription className="mt-1 text-sm leading-relaxed">
-                    Tap a date to block it with an optional note. Tap a blocked date again to unblock.
+                    {t("web.pujariAvailability.blockDescription")}
                   </CardDescription>
                 </div>
               </div>
@@ -355,23 +355,23 @@ export default function PujariAvailabilityPage() {
                 />
 
                 <div className="mt-5 pt-4 border-t border-[#D4AF37]/20 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
-                  <LegendSwatch label="Available">
+                  <LegendSwatch label={t("status.available")}>
                     <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-[11px] font-medium text-foreground">
                       12
                     </span>
                   </LegendSwatch>
-                  <LegendSwatch label="Blocked">
+                  <LegendSwatch label={t("web.pujariAvailability.legendBlocked")}>
                     <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-[#F4E4C1]/80 text-[11px] font-medium text-foreground/55 line-through decoration-sidebar/50">
                       15
                       <Ban className="absolute -top-1 -right-1 size-3 text-primary stroke-[2.5]" aria-hidden />
                     </span>
                   </LegendSwatch>
-                  <LegendSwatch label="Selected">
+                  <LegendSwatch label={t("common.selected")}>
                     <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-[11px] font-semibold text-primary-foreground">
                       18
                     </span>
                   </LegendSwatch>
-                  <LegendSwatch label="Today">
+                  <LegendSwatch label={t("web.pujariAvailability.today")}>
                     <span className="flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-[#D4AF37]/80 bg-sidebar/[0.06] text-[11px] font-medium text-foreground">
                       26
                     </span>
@@ -383,7 +383,7 @@ export default function PujariAvailabilityPage() {
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Ban size={14} className="text-primary" />
-                    Upcoming blocked dates
+                    {t("web.pujariAvailability.upcomingBlocked")}
                     <span className="text-xs font-normal text-muted-foreground">({upcomingBlocks.length})</span>
                   </p>
                   <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -402,7 +402,7 @@ export default function PujariAvailabilityPage() {
                               b.reason ? "text-muted-foreground" : "text-muted-foreground/70 italic"
                             )}
                           >
-                            {b.reason || "No reason provided"}
+                            {b.reason || t("web.pujariAvailability.noReason")}
                           </p>
                         </div>
                         <div className="flex shrink-0 gap-2 self-end sm:self-auto">
@@ -418,7 +418,7 @@ export default function PujariAvailabilityPage() {
                               setDialogOpen(true);
                             }}
                           >
-                            Edit
+                            {t("common.edit")}
                           </Button>
                           <Button
                             type="button"
@@ -428,7 +428,7 @@ export default function PujariAvailabilityPage() {
                             disabled={blockBusy}
                             onClick={() => void quickUnblock(b.id)}
                           >
-                            Unblock
+                            {t("web.pujariAvailability.unblock")}
                           </Button>
                         </div>
                       </li>
@@ -437,7 +437,7 @@ export default function PujariAvailabilityPage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-2 rounded-lg bg-secondary/20 border border-dashed border-border">
-                  No blocked dates yet. Select a date on the calendar above to block it.
+                  {t("web.pujariAvailability.none")}
                 </p>
               )}
             </CardContent>
@@ -462,24 +462,24 @@ export default function PujariAvailabilityPage() {
           >
             <DialogHeader className="space-y-2">
               <DialogTitle className="text-foreground text-xl">
-                {selectedBlock ? "Blocked date" : "Block this date?"}
+                {selectedBlock ? t("web.pujariAvailability.blockedDate") : t("web.pujariAvailability.blockQuestion")}
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed">
                 {selectedDate ? (
                   <span className="font-medium text-foreground">{formatDisplayDate(selectedDate)}</span>
                 ) : null}
                 {selectedBlock
-                  ? " Update the note below or unblock to make this date available again."
-                  : " Add an optional note, then confirm to block this date."}
+                  ? t("web.pujariAvailability.updateNote")
+                  : t("web.pujariAvailability.addNote")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 py-3">
               <Label htmlFor="block-reason" className="text-foreground text-sm font-medium">
-                Reason <span className="font-normal text-muted-foreground">(optional)</span>
+                {t("web.pujariAvailability.reason")} <span className="font-normal text-muted-foreground">({t("common.optional")})</span>
               </Label>
               <Textarea
                 id="block-reason"
-                placeholder="e.g. Personal leave, temple duty, travel…"
+                placeholder={t("web.pujariAvailability.reasonPlaceholder")}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
@@ -489,7 +489,7 @@ export default function PujariAvailabilityPage() {
             </div>
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2">
               <Button type="button" variant="outline" onClick={closeDialog} className="border-border">
-                Cancel
+                {t("common.cancel")}
               </Button>
               {selectedBlock ? (
                 <>
@@ -500,14 +500,14 @@ export default function PujariAvailabilityPage() {
                     disabled={blockBusy}
                     onClick={() => void unblockSelectedDate()}
                   >
-                    {blockBusy ? "Unblocking…" : "Unblock date"}
+                    {blockBusy ? t("web.pujariAvailability.unblocking") : t("web.pujariAvailability.unblockDate")}
                   </Button>
                   <Button
                     type="submit"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     disabled={blockBusy}
                   >
-                    {blockBusy ? "Saving…" : "Save"}
+                    {blockBusy ? t("web.common.saving") : t("common.save")}
                   </Button>
                 </>
               ) : (
@@ -516,7 +516,7 @@ export default function PujariAvailabilityPage() {
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={blockBusy}
                 >
-                  {blockBusy ? "Blocking…" : "Block date"}
+                  {blockBusy ? t("web.pujariAvailability.blocking") : t("web.pujariAvailability.blockDate")}
                 </Button>
               )}
             </DialogFooter>

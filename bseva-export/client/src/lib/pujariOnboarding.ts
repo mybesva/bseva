@@ -61,19 +61,19 @@ export function nextOnboardingStep(
 export function stepLabel(step: number): string {
   switch (step) {
     case 1:
-      return "My Profile";
+      return "web.onboarding.step.profile";
     case 2:
-      return "Address";
+      return "web.onboarding.step.address";
     case 3:
-      return "My Profile (professional)";
+      return "web.onboarding.step.professional";
     case 4:
-      return "Documents";
+      return "web.onboarding.step.documents";
     case 5:
-      return "Services, availability & bank";
+      return "web.onboarding.step.setup";
     case 6:
-      return "Review & submit";
+      return "web.onboarding.step.review";
     default:
-      return `Step ${step}`;
+      return "web.onboarding.step";
   }
 }
 
@@ -128,15 +128,15 @@ export async function validateOnboardingStep(
         pincode: profile.pincode,
       }),
     );
-    miss("latitude", "Pin your location on the map", profile.latitude != null && profile.longitude != null);
+    miss("latitude", "web.validation.mapPin", profile.latitude != null && profile.longitude != null);
   }
 
   if (step === 3) {
     const quals: string[] = profile.qualifications || [];
-    miss("qualifications", "Select at least one qualification", quals.length > 0);
+    miss("qualifications", "web.validation.qualifications", quals.length > 0);
     const qyErr = validateQualificationYear(profile.qualification_year);
     if (qyErr) errors.qualification_year = qyErr;
-    miss("sampradaya", "Sampradaya is required", !!String(profile.sampradaya || "").trim());
+    miss("sampradaya", "web.validation.sampradaya", !!String(profile.sampradaya || "").trim());
     const langErr = validatePujariLanguages(profile.languages || []);
     if (langErr) errors.languages = langErr;
   }
@@ -145,14 +145,14 @@ export async function validateOnboardingStep(
     try {
       const docs = await api<any[]>("/pujari/documents");
       const hasAadhaar = docs.some((d) => d.document_type === "identity");
-      miss("identity", "Upload Aadhaar (identity document)", hasAadhaar);
+      miss("identity", "web.validation.aadhaar", hasAadhaar);
       let licenceType = String(profile.licence_type || "").toLowerCase();
       if (licenceType === "driving_licence" || licenceType === "cab_commercial") {
         const hasDl = docs.some((d) => d.document_type === "driving_licence");
-        miss("driving_licence", "Upload driving licence", hasDl);
+        miss("driving_licence", "web.validation.drivingLicence", hasDl);
       }
     } catch {
-      errors.identity = "Could not verify documents — upload Aadhaar and try again";
+      errors.identity = "web.validation.documentsVerify";
     }
   }
 
@@ -165,13 +165,13 @@ export async function validateOnboardingStep(
         );
         const hasService =
           (offers.applied_count ?? 0) > 0 || (offers.services || []).some((s) => s.applied);
-        miss("services", "Apply for at least one puja service from the catalog", hasService);
+        miss("services", "web.validation.services", hasService);
       } catch {
-        errors.services = "Could not verify service applications — try again";
+        errors.services = "web.validation.servicesVerify";
       }
     }
     if (from === "availability") {
-      miss("service_radius_km", "Set service radius (km)", !!profile.service_radius_km);
+      miss("service_radius_km", "web.validation.serviceRadius", !!profile.service_radius_km);
     }
     if (from === "bank") {
       const hasUpi = !!String(profile.upi_id || "").trim();
@@ -182,14 +182,14 @@ export async function validateOnboardingStep(
         !!String(profile.bank_account_number || "").replace(/\D/g, "");
       miss(
         "settlement",
-        "Add a UPI ID or complete bank account details",
+        "web.validation.settlement",
         hasUpi || hasBank,
       );
     }
   }
 
   if (step === 6) {
-    miss("consent", "Accept final submission consent", !!opts.consent);
+    miss("consent", "web.validation.finalConsent", !!opts.consent);
   }
 
   return errors;

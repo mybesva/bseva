@@ -95,9 +95,9 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
     if (!msgs.length) return null;
     return (
       <div className="rounded-md border border-red-300 bg-red-50 text-red-700 text-sm px-3 py-2 space-y-0.5">
-        <p className="font-semibold">Please fix the following:</p>
+        <p className="font-semibold">{t("web.validation.fixFollowing")}</p>
         {msgs.map((msg) => (
-          <p key={msg}>• {msg}</p>
+          <p key={msg}>• {t(msg)}</p>
         ))}
       </div>
     );
@@ -318,7 +318,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             )}
           </div>
           {fieldErrors.profile_photo_path ? (
-            <p className="text-xs text-red-600 mt-1">{fieldErrors.profile_photo_path}</p>
+            <p className="text-xs text-red-600 mt-1">{t(fieldErrors.profile_photo_path)}</p>
           ) : null}
         </div>
         <PersonNameFields
@@ -365,7 +365,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
               onChange={(e) => setField("date_of_birth", e.target.value)}
             />
             {fieldErrors.date_of_birth ? (
-              <p className="text-xs text-red-600 mt-1">{fieldErrors.date_of_birth}</p>
+              <p className="text-xs text-red-600 mt-1">{t(fieldErrors.date_of_birth)}</p>
             ) : null}
           </div>
           <PhoneWithCountryCode
@@ -434,7 +434,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
                 placeholder="e.g. Bharadwaja"
                 required
               />
-              {fieldErrors.gotra ? <p className="text-xs text-red-600 mt-1">{fieldErrors.gotra}</p> : null}
+              {fieldErrors.gotra ? <p className="text-xs text-red-600 mt-1">{t(fieldErrors.gotra)}</p> : null}
             </div>
             <div>
               <Label htmlFor="pujari-pravara" className={fieldErrors.pravara ? "text-red-600" : undefined}>
@@ -456,7 +456,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
                 placeholder="e.g. Angirasa, Barhaspatya, Bharadwaja"
                 required
               />
-              {fieldErrors.pravara ? <p className="text-xs text-red-600 mt-1">{fieldErrors.pravara}</p> : null}
+              {fieldErrors.pravara ? <p className="text-xs text-red-600 mt-1">{t(fieldErrors.pravara)}</p> : null}
             </div>
           </div>
         </div>
@@ -534,7 +534,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
           </label>
         ))}
         {fieldErrors.qualifications ? (
-          <p className="text-xs text-red-600">{fieldErrors.qualifications}</p>
+          <p className="text-xs text-red-600">{t(fieldErrors.qualifications)}</p>
         ) : null}
         <div className="max-w-xs">
           <Label className={fieldErrors.qualification_year ? "text-red-600" : undefined}>
@@ -554,7 +554,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             Enter a year from {PUJARI_QUALIFICATION_YEAR_MIN} to {yearNow}
           </p>
           {fieldErrors.qualification_year ? (
-            <p className="text-xs text-red-600 mt-1">{fieldErrors.qualification_year}</p>
+            <p className="text-xs text-red-600 mt-1">{t(fieldErrors.qualification_year)}</p>
           ) : null}
         </div>
       </section>
@@ -577,7 +577,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             {t(`pujari.${s}`)}
           </label>
         ))}
-        {fieldErrors.sampradaya ? <p className="text-xs text-red-600">{fieldErrors.sampradaya}</p> : null}
+        {fieldErrors.sampradaya ? <p className="text-xs text-red-600">{t(fieldErrors.sampradaya)}</p> : null}
       </section>
 
       <section
@@ -610,7 +610,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             placeholder="e.g. 5"
           />
           {fieldErrors.experience_years ? (
-            <p className="text-xs text-red-600 mt-1">{fieldErrors.experience_years}</p>
+            <p className="text-xs text-red-600 mt-1">{t(fieldErrors.experience_years)}</p>
           ) : (
             <p className="text-xs text-muted-foreground mt-1">0–{PUJARI_EXPERIENCE_MAX} years</p>
           )}
@@ -647,7 +647,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             ))}
           </div>
           {fieldErrors.languages ? (
-            <p className="text-xs text-red-600">{fieldErrors.languages}</p>
+            <p className="text-xs text-red-600">{t(fieldErrors.languages)}</p>
           ) : null}
         </div>
       </section>

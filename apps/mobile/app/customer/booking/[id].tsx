@@ -254,7 +254,7 @@ export default function BookingDetail() {
   if (q.isLoading) {
     return (
       <Screen>
-        <ScreenHeader title="Booking" back />
+        <ScreenHeader title={t("mobile.bookingTitle")} back />
         <LoadingBlock />
       </Screen>
     );
@@ -262,9 +262,9 @@ export default function BookingDetail() {
   if (!b) {
     return (
       <Screen>
-        <ScreenHeader title="Booking" back />
+        <ScreenHeader title={t("mobile.bookingTitle")} back />
         <View style={{ padding: 16 }}>
-          <ErrorBanner message={q.error instanceof Error ? q.error.message : "Booking not found"} />
+          <ErrorBanner message={q.error instanceof Error ? q.error.message : t("mobile.bookingNotFound")} />
         </View>
       </Screen>
     );
@@ -276,7 +276,7 @@ export default function BookingDetail() {
 
   return (
     <Screen>
-      <ScreenHeader title={b.booking_number || "Booking"} back />
+      <ScreenHeader title={b.booking_number || t("mobile.bookingTitle")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }}>
         <ErrorBanner message={error} />
         <Card style={{ gap: 6 }}>
@@ -288,12 +288,12 @@ export default function BookingDetail() {
           </View>
           <AppText>{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
           <AppText color={colors.mutedForeground}>{b.location_label || b.address}</AppText>
-          {pujari && b.customer_name ? <AppText>Customer: {b.customer_name}</AppText> : null}
-          {!pujari && b.pujari_name ? <AppText>Pujari: {b.pujari_name}</AppText> : null}
+          {pujari && b.customer_name ? <AppText>{t("mobile.customer", { name: b.customer_name })}</AppText> : null}
+          {!pujari && b.pujari_name ? <AppText>{t("mobile.pujari", { name: b.pujari_name })}</AppText> : null}
           <AppText variant="price" color={colors.primary} style={{ marginTop: 4 }}>
             {rupees(b.total_paise)}
           </AppText>
-          <AppText variant="small">Payment: {b.payment_status || "—"}</AppText>
+          <AppText variant="small">{t("mobile.paymentStatus", { status: b.payment_status || "—" })}</AppText>
           {pujari && destReady && (b.status === "confirmed" || b.status === "in_progress") ? (
             <View style={{ gap: 8, marginTop: 4 }}>
               <AppText variant="h3">{t("detail.serviceLocation")}</AppText>
@@ -321,7 +321,7 @@ export default function BookingDetail() {
             <PrimaryButton title={t("mobile.joinMeet")} variant="outline" onPress={() => void Linking.openURL(String(b.meeting_url))} />
           ) : null}
           {b.public_invite_url ? (
-            <PrimaryButton title="Invite link" variant="ghost" onPress={() => void Linking.openURL(String(b.public_invite_url))} />
+            <PrimaryButton title={t("mobile.inviteLink")} variant="ghost" onPress={() => void Linking.openURL(String(b.public_invite_url))} />
           ) : null}
         </Card>
 
@@ -334,7 +334,7 @@ export default function BookingDetail() {
 
         {prep.data ? (
           <Card>
-            <AppText variant="h3">Preparation</AppText>
+            <AppText variant="h3">{t("mobile.preparation")}</AppText>
             {prepLines(prep.data)
               .slice(0, 12)
               .map((line) => (
@@ -346,18 +346,18 @@ export default function BookingDetail() {
         ) : null}
 
         {b.invoice_id ? (
-          <PrimaryButton title="View invoice" variant="outline" onPress={() => router.push(`/customer/invoice/${b.invoice_id}`)} />
+          <PrimaryButton title={t("mobile.viewInvoice")} variant="outline" onPress={() => router.push(`/customer/invoice/${b.invoice_id}`)} />
         ) : null}
 
         {!pujari && b.payment_status === "pending" ? (
-          <PrimaryButton title="Pay from wallet" disabled={busy} onPress={() => void run(() => apiClient.payBooking(b.id))} />
+          <PrimaryButton title={t("mobile.payWallet")} disabled={busy} onPress={() => void run(() => apiClient.payBooking(b.id))} />
         ) : null}
 
         {!pujari && ["pending", "pending_acceptance", "confirmed"].includes(b.status) ? (
           <>
-            <Field label="Cancel reason (optional)" value={cancelReason} onChangeText={setCancelReason} />
+            <Field label={t("mobile.cancelReasonOptional")} value={cancelReason} onChangeText={setCancelReason} />
             <PrimaryButton
-              title="Cancel booking"
+              title={t("booking.cancel")}
               variant="outline"
               disabled={busy}
               onPress={() =>
@@ -370,12 +370,12 @@ export default function BookingDetail() {
                       allowed?: boolean;
                     };
                     Alert.alert(
-                      "Cancel booking?",
+                      t("mobile.cancelBookingQuestion"),
                       preview.message || `Fee ${rupees(preview.fee_paise)} · Refund ${rupees(preview.refund_paise)}. Fees are calculated by the server.`,
                       [
-                        { text: "Keep" },
+                        { text: t("mobile.keepBooking") },
                         {
-                          text: "Cancel booking",
+                          text: t("booking.cancel"),
                           style: "destructive",
                           onPress: () => void run(() => apiClient.cancelBooking(b.id, cancelReason || undefined)),
                         },
@@ -391,11 +391,11 @@ export default function BookingDetail() {
         ) : null}
 
         {!pujari && b.recurring_series_id ? (
-          <PrimaryButton title="Cancel series" variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.cancelRecurring(String(b.recurring_series_id)))} />
+          <PrimaryButton title={t("mobile.cancelSeries")} variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.cancelRecurring(String(b.recurring_series_id)))} />
         ) : null}
 
         {!pujari && b.pujari_id ? (
-          <PrimaryButton title="View pujari" variant="outline" onPress={() => router.push(`/pujari-public/${b.pujari_id}`)} />
+          <PrimaryButton title={t("mobile.viewPujari")} variant="outline" onPress={() => router.push(`/pujari-public/${b.pujari_id}`)} />
         ) : null}
 
         {!pujari && b.status === "in_progress" ? (
@@ -404,7 +404,7 @@ export default function BookingDetail() {
             <AppText variant="small" color={colors.mutedForeground}>
               {t("otp.completeEnter")}
             </AppText>
-            <Field label="OTP" value={completeCode} onChangeText={setCompleteCode} keyboardType="number-pad" maxLength={8} />
+            <Field label={t("mobile.otp")} value={completeCode} onChangeText={setCompleteCode} keyboardType="number-pad" maxLength={8} />
             <PrimaryButton
               title={t("mobile.completePuja")}
               disabled={busy || completeCode.trim().length < 4}
@@ -415,34 +415,34 @@ export default function BookingDetail() {
 
         {!pujari && b.status === "completed" ? (
           <>
-            <AppText variant="small">Rating</AppText>
+            <AppText variant="small">{t("mobile.rating")}</AppText>
             <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
-            <Field label="Comment" value={comment} onChangeText={setComment} />
-            <PrimaryButton title="Submit rating" disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { stars: Number(stars), comment }))} />
-            <PrimaryButton title="Skip rating" variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { skip: true }))} />
+            <Field label={t("mobile.comment")} value={comment} onChangeText={setComment} />
+            <PrimaryButton title={t("mobile.submitRating")} disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { stars: Number(stars), comment }))} />
+            <PrimaryButton title={t("mobile.skipRating")} variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { skip: true }))} />
           </>
         ) : null}
 
         {pujari && b.status === "pending_acceptance" ? (
           <>
-            <PrimaryButton title="Accept booking (agree to terms)" disabled={busy} onPress={() => void run(() => apiClient.acceptBooking(b.id))} />
-            <Field label="Reject reason" value={rejectReason} onChangeText={setRejectReason} />
-            <PrimaryButton title="Reject" variant="outline" disabled={busy} onPress={() => void run(() => apiClient.rejectBooking(b.id, rejectReason))} />
+            <PrimaryButton title={t("mobile.acceptBooking")} disabled={busy} onPress={() => void run(() => apiClient.acceptBooking(b.id))} />
+            <Field label={t("mobile.rejectReason")} value={rejectReason} onChangeText={setRejectReason} />
+            <PrimaryButton title={t("mobile.reject")} variant="outline" disabled={busy} onPress={() => void run(() => apiClient.rejectBooking(b.id, rejectReason))} />
           </>
         ) : null}
 
         {pujari && b.status === "confirmed" ? (
           <>
-            <Field label="Customer OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={8} />
-            <PrimaryButton title="Verify OTP & start" disabled={busy || otp.trim().length < 4} onPress={() => void run(() => apiClient.verifyStartOtp(b.id, otp.trim()))} />
+            <Field label={t("mobile.customerOtp")} value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={8} />
+            <PrimaryButton title={t("mobile.verifyStart")} disabled={busy || otp.trim().length < 4} onPress={() => void run(() => apiClient.verifyStartOtp(b.id, otp.trim()))} />
             <PrimaryButton
               title={resendWait > 0 ? t("otp.cooldown", { seconds: resendWait }) : t("otp.resend")}
               variant="outline"
               disabled={busy || resendWait > 0}
               onPress={() => void resendOtp("start")}
             />
-            <Field label="Cancel reason" value={cancelReason} onChangeText={setCancelReason} />
-            <PrimaryButton title="Cancel (server policy)" variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.cancelBooking(b.id, cancelReason || undefined))} />
+            <Field label={t("mobile.cancelReasonOptional")} value={cancelReason} onChangeText={setCancelReason} />
+            <PrimaryButton title={t("mobile.cancelServerPolicy")} variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.cancelBooking(b.id, cancelReason || undefined))} />
           </>
         ) : null}
 
@@ -463,12 +463,12 @@ export default function BookingDetail() {
         {pujari && b.status === "completed" ? (
           <>
             <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
-            <Field label="Comment" value={comment} onChangeText={setComment} />
-            <PrimaryButton title="Rate customer" disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { stars: Number(stars), comment }))} />
+            <Field label={t("mobile.comment")} value={comment} onChangeText={setComment} />
+            <PrimaryButton title={t("mobile.rateCustomer")} disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { stars: Number(stars), comment }))} />
           </>
         ) : null}
 
-        <PrimaryButton title="Back to list" variant="ghost" onPress={() => router.back()} />
+        <PrimaryButton title={t("mobile.backToList")} variant="ghost" onPress={() => router.back()} />
       </ScrollView>
     </Screen>
   );

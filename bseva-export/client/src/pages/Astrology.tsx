@@ -83,10 +83,10 @@ export default function AstrologyPage() {
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 font-bold"
                   disabled={bookingBlocked}
-                  title={bookingBlocked ? BOOKING_UNAVAILABLE_HINT : undefined}
+                  title={bookingBlocked ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
                   onClick={() => startBooking(s.slug)}
                 >
-                  {checking ? "Checking…" : bookingBlocked ? BOOKING_UNAVAILABLE_HINT : t("nav.bookPuja")}
+                  {checking ? t("web.availability.checking") : bookingBlocked ? t(BOOKING_UNAVAILABLE_HINT) : t("nav.bookPuja")}
                 </Button>
               </CardContent>
             </Card>

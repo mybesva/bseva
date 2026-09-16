@@ -791,7 +791,7 @@ def create_booking(
                 customer_name=str(cust.get("name") or ""),
                 booking_number=number,
                 booking_id=booking_id,
-                service_name=str(svc.get("name") or "Puja"),
+                service_name=str(prep_view.get("display_name") or svc.get("name") or "Puja"),
                 booking_date=str(body.booking_date),
                 start_time=str(body.start_time),
                 preparation=prep_view if (opted_samagri or opted_alan) else {**prep_view, "verified": False, "skip_samagri_cta": True},
@@ -1030,6 +1030,7 @@ def create_booking(
                     pujari_ids=invited_pujari_ids,
                     booking_number=number,
                     service_name=str(svc.get("name") or "Puja"),
+                    service_id=str(body.service_id),
                 )
             else:
                 notify_ops_staff(
@@ -1311,7 +1312,14 @@ def list_bookings(
             {"id": pid, "lim": limit, "off": offset},
         ).mappings().all()
         items = [booking_for_role(db, dict(r), user) for r in rows]
+        from app.catalog import localized_service_name
+        from app.i18n import user_preferred_lang
+
+        user_lang = user_preferred_lang(db, str(user["id"]))
         for item in items:
+            item["service_name"] = localized_service_name(
+                db, str(item["service_id"]), user_lang, str(item.get("service_name") or "Puja")
+            )
             item["schedule_display"] = display_pair(item.get("start_at_utc"), item.get("customer_timezone"))
     else:
         total = int(
@@ -1336,7 +1344,14 @@ def list_bookings(
             {"id": user["id"], "lim": limit, "off": offset},
         ).mappings().all()
         items = [booking_for_role(db, dict(r), user) for r in rows]
+        from app.catalog import localized_service_name
+        from app.i18n import user_preferred_lang
+
+        user_lang = user_preferred_lang(db, str(user["id"]))
         for item in items:
+            item["service_name"] = localized_service_name(
+                db, str(item["service_id"]), user_lang, str(item.get("service_name") or "Puja")
+            )
             item["schedule_display"] = display_pair(item.get("start_at_utc"), item.get("customer_timezone"))
 
     out = {
@@ -1537,7 +1552,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
 
         ctx = load_customer_email_context(db, str(b["customer_id"]))
         if ctx.get("email"):
-            svc_name = load_service_name(db, str(b["service_id"]))
+            svc_name = load_service_name(db, str(b["service_id"]), ctx["language"])
             data = booking_email_data_from_row(
                 dict(b),
                 customer_name=ctx["name"],
@@ -1672,7 +1687,7 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
 
         ctx = load_customer_email_context(db, str(user["id"]))
         if ctx.get("email"):
-            svc_name = load_service_name(db, str(b["service_id"]))
+            svc_name = load_service_name(db, str(b["service_id"]), ctx["language"])
             data = booking_email_data_from_row(
                 dict(b),
                 customer_name=ctx["name"],

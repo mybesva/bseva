@@ -456,27 +456,27 @@ export default function BookingWizard({
     return (
       <div className="space-y-2 text-sm">
         <p className="text-xs text-muted-foreground pb-2 border-b border-border/60">
-          {pujarisIncludedShort(selectedPujariCount)}
+          {pujarisIncludedShort(selectedPujariCount, t)}
         </p>
         <div className="flex justify-between gap-4">
-          <span className="text-muted-foreground">Service ({tierDetails[tier].name})</span>
+          <span className="text-muted-foreground">{t("booking.service")} ({tierDetails[tier].name})</span>
           <span className="font-medium tabular-nums">{formatInr(bill.basePrice)}</span>
         </div>
         {includeSamagri && samagriAmt > 0 && (
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Samagri Kit</span>
+            <span className="text-muted-foreground">{t("booking.samagri")}</span>
             <span className="font-medium tabular-nums">{formatInr(samagriAmt)}</span>
           </div>
         )}
         {includeAlankaram && alankaramAmt > 0 && (
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Alankaram</span>
+            <span className="text-muted-foreground">{t("booking.alankaram")}</span>
             <span className="font-medium tabular-nums">{formatInr(alankaramAmt)}</span>
           </div>
         )}
         {includeFood && foodAmt > 0 && (
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Food / Prasadam</span>
+            <span className="text-muted-foreground">{t("booking.food")}</span>
             <span className="font-medium tabular-nums">{formatInr(foodAmt)}</span>
           </div>
         )}
@@ -530,12 +530,11 @@ export default function BookingWizard({
             <div>
               <p className="font-semibold text-foreground tracking-tight">
                 {alankaramOffered || showAlankaramComingSoon
-                  ? "Samagri & Alankaram (Optional)"
-                  : "Samagri (Optional)"}
+                  ? t("booking.samagriAlankaramOptional")
+                  : t("booking.samagriOptional")}
               </p>
               <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                Add optional arrangements to your puja booking. Selected items will be included in your booking
-                total.
+                {t("web.booking.addonsDescription")}
               </p>
             </div>
             {showSamagri && (
@@ -554,8 +553,8 @@ export default function BookingWizard({
               />
               <div className="flex-1 min-w-0 flex justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium text-foreground">Samagri Kit</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Puja materials arranged for you</p>
+                  <p className="font-medium text-foreground">{t("booking.samagri")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("web.booking.samagriArrangedShort")}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p
@@ -567,7 +566,7 @@ export default function BookingWizard({
                     {samagriListPaise > 0 ? formatPlusPrice(samagriListPaise) : "—"}
                   </p>
                   {includeSamagri && samagriListPaise > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1">Included in total booking</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{t("booking.includedInTotal")}</p>
                   )}
                 </div>
               </div>
@@ -589,13 +588,13 @@ export default function BookingWizard({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2 flex-wrap">
-                    <span className="font-medium">Alankaram</span>
+                    <span className="font-medium">{t("booking.alankaram")}</span>
                     <span className="text-sm font-semibold shrink-0 tabular-nums">
                       {formatPlusPrice(alankaramPrice)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Flowers and decoration arranged for your puja
+                    {t("web.booking.alankaramDescription")}
                   </p>
                 </div>
               </label>
@@ -608,13 +607,13 @@ export default function BookingWizard({
                 <Checkbox checked={false} disabled className="mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2 flex-wrap">
-                    <span className="font-medium text-muted-foreground">Alankaram</span>
+                    <span className="font-medium text-muted-foreground">{t("booking.alankaram")}</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 shrink-0">
-                      COMING SOON
+                      {t("common.comingSoon")}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Flowers and decoration services will be available soon.
+                    {t("web.booking.alankaramComingSoon")}
                   </p>
                 </div>
               </div>
@@ -635,16 +634,16 @@ export default function BookingWizard({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2">
-                    <span className="font-medium">Food / Prasadam</span>
+                    <span className="font-medium">{t("booking.food")}</span>
                     <span className="font-semibold text-primary shrink-0 tabular-nums">
                       {formatPlusPrice(foodPrice)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Prasadam / food arrangement for this puja (when offered)
+                    {t("web.booking.foodDescription")}
                   </p>
                   {includeFood && foodPrice > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1 text-right">Included in total booking</p>
+                    <p className="text-[11px] text-muted-foreground mt-1 text-right">{t("booking.includedInTotal")}</p>
                   )}
                 </div>
               </label>
@@ -656,24 +655,24 @@ export default function BookingWizard({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {addonConfirm === "food" ? "Add Food / Prasadam?" : "Add Samagri to your booking?"}
+                {addonConfirm === "food" ? t("booking.addFoodQ") : t("booking.addSamagriQ")}
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2 text-left">
                 <span className="block">
                   {(addonConfirm === "food" ? foodPrice : samagriListPaise) > 0
-                    ? `${formatPlusPrice(addonConfirm === "food" ? foodPrice : samagriListPaise)} included in total booking.`
-                    : "Included in total booking."}
+                    ? t("web.booking.addonIncluded", { amount: formatPlusPrice(addonConfirm === "food" ? foodPrice : samagriListPaise) })
+                    : t("booking.includedInTotal")}
                 </span>
                 <span className="block text-muted-foreground">
                   {addonConfirm === "food"
-                    ? "Food / Prasadam will be arranged as part of your booking."
-                    : "BSeva arranges puja materials; you pay now as part of your booking payment."}
+                    ? t("booking.foodArranged")
+                    : t("booking.samagriArranged")}
                 </span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmAddon}>OK</AlertDialogAction>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmAddon}>{t("common.ok")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -684,18 +683,18 @@ export default function BookingWizard({
   const tierDetails = {
     basic: {
       name: t("booking.basic"),
-      description: "Essential rites for a focused home ceremony",
-      features: ["Core rites as per the chosen service", "About 1.5–2 hours", "Essential guidance"],
+      description: t("booking.basicDesc"),
+      features: [t("booking.feat.coreRites"), t("booking.feat.durationShort"), t("booking.feat.guidance")],
     },
     standard: {
       name: t("booking.standard"),
-      description: "Traditional home puja with essential samagri",
-      features: ["Core rites as per the chosen service", "Essential samagri kit", "About 2 hours", "Guidance after the puja"],
+      description: t("booking.standardDesc"),
+      features: [t("booking.feat.coreRites"), t("booking.feat.samagriKit"), t("booking.feat.durationStd"), t("booking.feat.afterGuidance")],
     },
     premium: {
       name: t("booking.premium"),
-      description: "Extended ceremony with deluxe kit and prasad",
-      features: ["Full ceremonial rites", "Deluxe samagri kit", "About 3 hours", "Video of the ceremony", "Prasad packed for family"],
+      description: t("booking.premiumDesc"),
+      features: [t("booking.feat.fullRites"), t("booking.feat.deluxeKit"), t("booking.feat.durationLong"), t("booking.feat.video"), t("booking.feat.prasadPacked")],
     },
   };
 
@@ -750,10 +749,7 @@ export default function BookingWizard({
         if (cancelled) return;
         if (r.blocked) {
           setVpnBlocked(true);
-          setVpnMessage(
-            r.message ||
-              "Virtual Puja cannot be booked while a VPN or proxy is active. Please turn off your VPN/proxy and try again.",
-          );
+          setVpnMessage(r.message || t("booking.vpnBlocked"));
         } else {
           setVpnBlocked(false);
           setVpnMessage("");
@@ -805,7 +801,7 @@ export default function BookingWizard({
 
   function validateStep2(): boolean {
     const err: Step2FieldErrors = {};
-    if (!bookingDate) err.bookingDate = "Select a booking date";
+    if (!bookingDate) err.bookingDate = t("booking.needDate");
     else if (isCalendarDayDisabled(bookingDate, bookingLeadHours)) {
       err.bookingDate = bookingLeadHint(bookingLeadHours);
     } else {
@@ -815,23 +811,23 @@ export default function BookingWizard({
       }
     }
     if (serviceMode === "virtual") {
-      if (!customerTimezone.trim()) err.customerTimezone = "Select your timezone";
-      if (!customerCountry.trim()) err.customerCountry = "Select your country";
+      if (!customerTimezone.trim()) err.customerTimezone = t("booking.needTimezone");
+      if (!customerCountry.trim()) err.customerCountry = t("booking.needCountry");
     } else {
-      if (!city.trim()) err.city = "Enter city";
+      if (!city.trim()) err.city = t("booking.needCity");
       if (addressMode === "saved") {
         const addr = composedServiceAddress();
-        if (!savedAddress || !addr.trim()) err.address = "Choose a saved address or add a new one";
-        if (lat == null || lng == null) err.mapLocation = "Address must include map location";
+        if (!savedAddress || !addr.trim()) err.address = t("booking.needAddress");
+        if (lat == null || lng == null) err.mapLocation = t("booking.needMap");
       } else {
-        if (!doorNumber.trim()) err.doorNumber = "Enter door / flat / house number";
-        if (!locationText.trim()) err.locationText = "Enter street / area";
-        if (lat == null || lng == null) err.mapLocation = "Set the pin on the map";
+        if (!doorNumber.trim()) err.doorNumber = t("booking.needDoor");
+        if (!locationText.trim()) err.locationText = t("booking.needStreet");
+        if (lat == null || lng == null) err.mapLocation = t("booking.needPin");
       }
     }
     setStep2Errors(err);
     if (Object.keys(err).length > 0) {
-      toast.error("Please complete all required fields highlighted below.");
+      toast.error(t("booking.completeFields"));
       return false;
     }
     return true;
@@ -840,11 +836,11 @@ export default function BookingWizard({
   function handleNextStep() {
     if (currentStep === 1) {
       if (!tier || !serviceMode) {
-        toast.error("Please select a package and puja mode.");
+        toast.error(t("booking.needPackageMode"));
         return;
       }
       if (serviceMode === "virtual" && vpnBlocked) {
-        toast.error(vpnMessage || "Please turn off your VPN/proxy to continue with Virtual Puja.");
+        toast.error(vpnMessage || t("booking.vpnBlocked"));
         return;
       }
     }
@@ -857,16 +853,16 @@ export default function BookingWizard({
 
   const handleSubmit = async () => {
     if (!bookingDate) {
-      toast.error("Please select a booking date");
+      toast.error(t("booking.needDate"));
       return;
     }
     const isVirtual = serviceMode === "virtual";
     if (isVirtual && vpnBlocked) {
-      toast.error(vpnMessage || "Please turn off your VPN/proxy to continue with Virtual Puja.");
+      toast.error(vpnMessage || t("booking.vpnBlocked"));
       return;
     }
     if (!isVirtual && (lat == null || lng == null)) {
-      toast.error("Please set the service location on the map before booking");
+      toast.error(t("booking.needLocation"));
       return;
     }
     try {
@@ -882,7 +878,7 @@ export default function BookingWizard({
           setVpnMessage(pre.message || "");
           toast.error(
             pre.message ||
-              "Virtual Puja cannot be booked while a VPN or proxy is active. Please turn off your VPN/proxy and try again.",
+              t("booking.vpnBlocked"),
           );
           return;
         }
@@ -914,7 +910,7 @@ export default function BookingWizard({
           `/service-availability?lat=${lat}&lng=${lng}`
         );
         if (!avail.service_available) {
-          toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
+          toast.error(t(COMING_SOON_TITLE), { description: t(COMING_SOON_BODY) });
           return;
         }
       }
@@ -962,16 +958,16 @@ export default function BookingWizard({
       toast.success(
         result.awaiting_pujari_assignment
           ? Number((result as { offers_sent?: number }).offers_sent || 0) > 0
-            ? "Booking confirmed — nearby pujaris have been notified to accept."
-            : "Booking confirmed — our team will assign a pujari shortly."
-          : "Booking confirmed and paid from wallet",
+            ? t("booking.confirmedNearby")
+            : t("booking.confirmedAssign")
+          : t("booking.confirmedWallet"),
       );
       setLocation(`/booking/${result.id || result.booking_number}`);
     } catch (error: any) {
       if (isServiceAreaUnavailableError(error?.message)) {
-        toast.error(COMING_SOON_TITLE, { description: COMING_SOON_BODY });
+        toast.error(t(COMING_SOON_TITLE), { description: t(COMING_SOON_BODY) });
       } else {
-        toast.error(friendlyBookingError(error?.message) || "Failed to create booking");
+        toast.error(friendlyBookingError(error?.message, t) || t("booking.failed"));
       }
     } finally {
       setSubmitting(false);
@@ -1025,7 +1021,7 @@ export default function BookingWizard({
                 </div>
                 <p className="text-sm text-muted-foreground mb-2 w-full leading-relaxed">{tierDetails[key].description}</p>
                 <p className="text-sm font-medium text-foreground mb-3 w-full">
-                  {pujarisIncludedShort(tierPujariCount(key))}
+                  {pujarisIncludedShort(tierPujariCount(key), t)}
                 </p>
                 <ul className="text-xs text-muted-foreground space-y-1 w-full">
                   {tierDetails[key].features.map((f) => (
@@ -1112,7 +1108,7 @@ export default function BookingWizard({
 
           <div className="space-y-2">
             <Label>
-              Select Date
+              {t("booking.selectDate")}
               <RequiredMark />
             </Label>
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
@@ -1126,7 +1122,7 @@ export default function BookingWizard({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {bookingDate ? formatDisplayDate(bookingDate) : "Select date"}
+                  {bookingDate ? formatDisplayDate(bookingDate) : t("booking.selectDate")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -1154,19 +1150,19 @@ export default function BookingWizard({
                 <CardContent className="p-4 text-sm space-y-1">
                   <p className="font-medium text-foreground">{t("calendar.panchangam")}</p>
                   <p>
-                    <span className="font-medium">Tithi:</span> {panchang.tithi} ({panchang.paksha})
+                    <span className="font-medium">{t("calendar.tithi")}</span> {panchang.tithi} ({panchang.paksha})
                   </p>
                   <p>
-                    <span className="font-medium">Nakshatra:</span> {panchang.nakshatra}
+                    <span className="font-medium">{t("calendar.nakshatra")}</span> {panchang.nakshatra}
                   </p>
                   <p>
-                    <span className="font-medium">Lunar month:</span> {panchang.lunarMonth} — Day {panchang.lunarDay}
+                    <span className="font-medium">{t("calendar.lunarMonth")}</span> {panchang.lunarMonth} — {t("calendar.lunarDay", { day: panchang.lunarDay })}
                   </p>
                   <p>
-                    <span className="font-medium">Rahu Kalam:</span> {panchang.rahukaalam}
+                    <span className="font-medium">{t("calendar.rahuKalam")}</span> {panchang.rahukaalam}
                   </p>
                   {Number(quote?.peakFee || 0) > 0 && (
-                    <Badge className="bg-orange-100 text-orange-800 mt-1">Weekend / festival surge applies</Badge>
+                    <Badge className="bg-orange-100 text-orange-800 mt-1">{t("booking.weekendSurge")}</Badge>
                   )}
                 </CardContent>
               </Card>
@@ -1177,7 +1173,7 @@ export default function BookingWizard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>
-                  Your country
+                  {t("booking.yourCountry")}
                   <RequiredMark />
                 </Label>
                 <Select
@@ -1188,12 +1184,12 @@ export default function BookingWizard({
                   }}
                 >
                   <SelectTrigger className={cn(fieldHasError(step2Errors, "customerCountry") && inputErrorClass)}>
-                    <SelectValue placeholder="Select country" />
+                    <SelectValue placeholder={t("booking.selectCountry")} />
                   </SelectTrigger>
                   <SelectContent>
                     {VIRTUAL_COUNTRIES.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.label}
+                        {t(`web.country.${c.id}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1204,7 +1200,7 @@ export default function BookingWizard({
               </div>
               <div className="space-y-2">
                 <Label>
-                  Your timezone
+                  {t("booking.yourTimezone")}
                   <RequiredMark />
                 </Label>
                 <Select
@@ -1215,12 +1211,12 @@ export default function BookingWizard({
                   }}
                 >
                   <SelectTrigger className={cn(fieldHasError(step2Errors, "customerTimezone") && inputErrorClass)}>
-                    <SelectValue placeholder="Select timezone" />
+                    <SelectValue placeholder={t("booking.selectTimezone")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(publicConfig.customer_timezones?.length
                       ? publicConfig.customer_timezones
-                      : [{ id: "Asia/Kolkata", label: "India (IST)" }]
+                      : [{ id: "Asia/Kolkata", label: t("booking.timezoneIndia") }]
                     )
                       .concat(
                         customerTimezone &&
@@ -1238,9 +1234,7 @@ export default function BookingWizard({
                 {step2Errors.customerTimezone && (
                   <p className="text-xs text-destructive">{step2Errors.customerTimezone}</p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Choose the date and time in your local timezone. Pujari availability is checked in India time (IST).
-                </p>
+                <p className="text-xs text-muted-foreground">{t("booking.timezoneVirtualHint")}</p>
               </div>
             </div>
           )}
@@ -1248,11 +1242,11 @@ export default function BookingWizard({
           {serviceMode !== "virtual" && (
           <div className="space-y-3">
             <Label>
-              Address
+              {t("booking.address")}
               <RequiredMark />
             </Label>
             {savedAddressLoading ? (
-              <p className="text-sm text-muted-foreground">Loading saved address…</p>
+              <p className="text-sm text-muted-foreground">{t("booking.loadingSavedAddress")}</p>
             ) : (
               <Select
                 value={addressMode === "saved" && savedAddress ? "saved" : "new"}
@@ -1265,10 +1259,10 @@ export default function BookingWizard({
                 <SelectTrigger
                   className={cn(fieldHasError(step2Errors, "address") && inputErrorClass)}
                 >
-                  <SelectValue placeholder="Select address" />
+                  <SelectValue placeholder={t("booking.selectAddress")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new">Add new address</SelectItem>
+                  <SelectItem value="new">{t("booking.addNewAddress")}</SelectItem>
                   {savedAddress ? (
                     <SelectItem value="saved">
                       {savedAddress.label.length > 80
@@ -1302,7 +1296,7 @@ export default function BookingWizard({
                 <p className="text-sm text-muted-foreground">New address for this booking</p>
                 <div className="space-y-2">
                   <Label htmlFor="booking-door">
-                    Door / flat / house no.
+                    {t("booking.doorNumber")}
                     <RequiredMark />
                   </Label>
                   <Input
@@ -1312,7 +1306,7 @@ export default function BookingWizard({
                       setDoorNumber(e.target.value);
                       if (e.target.value.trim()) setStep2Errors((er) => ({ ...er, doorNumber: undefined }));
                     }}
-                    placeholder="e.g. Flat 302, Door 12-A"
+                    placeholder={t("booking.doorNumber")}
                     aria-invalid={fieldHasError(step2Errors, "doorNumber")}
                     className={cn(fieldHasError(step2Errors, "doorNumber") && inputErrorClass)}
                   />
@@ -1322,7 +1316,7 @@ export default function BookingWizard({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="booking-street">
-                    Street / area
+                    {t("booking.streetPh")}
                     <RequiredMark />
                   </Label>
                   <Textarea
@@ -1332,7 +1326,7 @@ export default function BookingWizard({
                       setLocationText(e.target.value);
                       if (e.target.value.trim()) setStep2Errors((er) => ({ ...er, locationText: undefined }));
                     }}
-                    placeholder="Street, colony, area"
+                    placeholder={t("booking.streetPh")}
                     rows={3}
                     aria-invalid={fieldHasError(step2Errors, "locationText")}
                     className={cn(fieldHasError(step2Errors, "locationText") && inputErrorClass)}
@@ -1347,7 +1341,7 @@ export default function BookingWizard({
                     id="booking-landmark"
                     value={landmark}
                     onChange={(e) => setLandmark(e.target.value)}
-                    placeholder="Near temple / society gate"
+                    placeholder={t("booking.landmarkPh")}
                   />
                 </div>
                 <div
@@ -1409,7 +1403,7 @@ export default function BookingWizard({
                   setCity(e.target.value);
                   if (e.target.value.trim()) setStep2Errors((er) => ({ ...er, city: undefined }));
                 }}
-                placeholder="City"
+                placeholder={t("address.city")}
                 aria-invalid={fieldHasError(step2Errors, "city")}
                 className={cn(fieldHasError(step2Errors, "city") && inputErrorClass)}
               />
@@ -1529,30 +1523,28 @@ export default function BookingWizard({
                     {tierDetails[tier].name} ·{" "}
                     {serviceMode === "virtual" ? t("booking.virtual") : t("booking.physical")}
                   </Badge>
-                  <p className="text-sm text-muted-foreground mt-2">{pujarisIncludedShort(selectedPujariCount)}</p>
+                  <p className="text-sm text-muted-foreground mt-2">{pujarisIncludedShort(selectedPujariCount, t)}</p>
                 </div>
               </div>
               <p>
-                <span className="text-muted-foreground">Date: </span>
+                <span className="text-muted-foreground">{t("booking.reviewDate")} </span>
                 {bookingDate ? formatDisplayDate(bookingDate) : "—"} {bookingTime}
                 {serviceMode === "virtual" ? ` (${customerTimezone})` : ""}
               </p>
               {serviceMode === "virtual" ? (
                 <p>
-                  <span className="text-muted-foreground">Country / timezone: </span>
-                  {(VIRTUAL_COUNTRIES.find((c) => c.id === customerCountry)?.label || customerCountry)} · {customerTimezone}
+                  <span className="text-muted-foreground">{t("booking.reviewCountryTimezone")} </span>
+                  {t(`web.country.${customerCountry}`)} · {customerTimezone}
                 </p>
               ) : (
               <p>
-                <span className="text-muted-foreground">Location: </span>
+                <span className="text-muted-foreground">{t("booking.reviewLocation")} </span>
                 {composedServiceAddress()}, {city}
               </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Pujari details will be shared closer to the puja (notification / Ongoing bookings).
-              </p>
+              <p className="text-xs text-muted-foreground">{t("booking.pujariSharedLater")}</p>
               <div className="bg-primary/5 border border-orange-200 rounded-md p-3 text-xs space-y-1">
-                <p className="font-medium">{cancellationPolicy?.title || "Cancellation Policy"}</p>
+                <p className="font-medium">{cancellationPolicy?.title || t("booking.cancellationPolicy")}</p>
                 {(cancellationPolicy?.points || []).map((p, i) => (
                   <p key={i}>
                     {p.title ? <strong>{p.title}: </strong> : null}
@@ -1586,7 +1578,7 @@ export default function BookingWizard({
           {!isAuthenticated && !authLoading && (
             <Card className="border-orange-200 bg-primary/5">
               <CardContent className="p-6">
-                <p className="mb-4 text-sm">Please login as a customer to pay from wallet and confirm booking.</p>
+                <p className="mb-4 text-sm">{t("booking.loginToPayWallet")}</p>
                 <Button
                   onClick={() =>
                     setLocation(
@@ -1598,7 +1590,7 @@ export default function BookingWizard({
                   }
                   className="bg-primary"
                 >
-                  <LogIn className="w-4 h-4 mr-2" /> Login
+                  <LogIn className="w-4 h-4 mr-2" /> {t("auth.signIn")}
                 </Button>
               </CardContent>
             </Card>
@@ -1616,19 +1608,19 @@ export default function BookingWizard({
                   <span>{t("booking.total")}</span>
                   <span className="text-primary">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Paid from the same wallet as mobile (Supabase via FastAPI)</p>
+                <p className="text-xs text-muted-foreground">{t("booking.walletPaidVia")}</p>
                 <div className="flex items-start gap-2 pt-2">
                   <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(v) => setTermsAccepted(!!v)} />
                   <label htmlFor="terms" className="text-sm leading-snug">
-                    I agree to the{" "}
+                    {t("booking.agreeTermsPrefix")}{" "}
                     <button type="button" className="underline text-primary" onClick={() => setShowTerms(true)}>
-                      Terms & Conditions and Cancellation Policy
+                      {t("booking.termsAndCancellation")}
                     </button>
                   </label>
                 </div>
                 {serviceMode === "virtual" && (
                   <p className="text-sm">
-                    {t("booking.meetingLink")}: Google Meet invite is created for virtual bookings; join link unlocks in Ongoing within 24 hours
+                    {t("booking.meetingLink")}: {t("booking.meetingUnlockHint")}
                   </p>
                 )}
               </CardContent>
@@ -1665,7 +1657,7 @@ export default function BookingWizard({
             >
               {submitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" /> {t("booking.processing")}
                 </>
               ) : (
                 t("booking.payWallet")
@@ -1677,7 +1669,7 @@ export default function BookingWizard({
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Terms & Conditions and Cancellation Policy</DialogTitle>
+            <DialogTitle>{t("booking.termsAndCancellation")}</DialogTitle>
           </DialogHeader>
           <div className="text-sm text-muted-foreground space-y-6">
             {[bookingTerms, cancellationPolicy].filter(Boolean).map((policy) => (

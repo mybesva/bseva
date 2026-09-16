@@ -42,28 +42,28 @@ export default function PujariHome() {
       >
         {profile.isLoading ? <LoadingBlock /> : null}
         <Card>
-          <AppText variant="small">Verification</AppText>
+          <AppText variant="small">{t("mobile.verification")}</AppText>
           <AppText variant="h3">{String(p.verification_status || "pending")}</AppText>
           <AppText variant="small">
             Level requested {String(p.requested_level || "—")} · approved {String(p.approved_level || "—")}
           </AppText>
           {!p.profile_submitted_at ? (
             <View style={{ marginTop: 10 }}>
-              <PrimaryButton title="Continue onboarding" onPress={() => router.push("/pujari/onboarding")} />
+              <PrimaryButton title={t("mobile.continueOnboarding")} onPress={() => router.push("/pujari/onboarding")} />
             </View>
           ) : null}
           {String(p.joining_fee_status) === "pending" ? (
             <View style={{ marginTop: 10 }}>
-              <PrimaryButton title="Pay joining fee" variant="outline" onPress={() => void apiClient.payJoiningFee().then(() => profile.refetch())} />
+              <PrimaryButton title={t("mobile.payJoiningFeeShort")} variant="outline" onPress={() => void apiClient.payJoiningFee().then(() => profile.refetch())} />
             </View>
           ) : null}
         </Card>
         <Card>
-          <AppText variant="small">Completed earnings</AppText>
+          <AppText variant="small">{t("mobile.completedEarnings")}</AppText>
           <AppText variant="h2" color={colors.primary}>{rupees(earned)}</AppText>
           <AppText variant="small">Wallet {rupees(Number(wallet.data?.wallet?.balance_paise || 0))}</AppText>
         </Card>
-        <AppText variant="h2">Awaiting acceptance</AppText>
+        <AppText variant="h2">{t("mobile.awaitingAcceptance")}</AppText>
         {incoming.map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
             <Card>
@@ -77,7 +77,7 @@ export default function PujariHome() {
             </Card>
           </Pressable>
         ))}
-        {ready.length > 0 ? <AppText variant="h2">Ready to start</AppText> : null}
+        {ready.length > 0 ? <AppText variant="h2">{t("mobile.readyToStart")}</AppText> : null}
         {ready.map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
             <Card>

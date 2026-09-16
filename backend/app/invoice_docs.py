@@ -740,7 +740,10 @@ def email_customer_invoice(db: Session, *, booking_id: str, to_email: str | None
     ctx = load_customer_email_context(db, str(booking["customer_id"]))
     to = to_email or ctx.get("email") or ""
     snap = _parse_snap(inv)
-    svc_name = str(snap.get("service_name") or load_service_name(db, str(booking["service_id"])))
+    svc_name = str(
+        snap.get("service_name")
+        or load_service_name(db, str(booking["service_id"]), ctx.get("language") or "en")
+    )
     pdf_bytes = None
     try:
         from app.invoice_pdf import render_invoice_pdf

@@ -32,8 +32,8 @@ export default function ServiceDetail() {
   if (!s) {
     return (
       <Screen>
-        <ScreenHeader title="Service" back />
-        <AppText style={{ padding: 20 }}>Service not found.</AppText>
+        <ScreenHeader title={t("services.title")} back />
+        <AppText style={{ padding: 20 }}>{t("mobile.serviceNotFound")}</AppText>
       </Screen>
     );
   }
@@ -50,25 +50,25 @@ export default function ServiceDetail() {
         </AppText>
         {s.standard_price_paise != null ? (
           <Card>
-            <AppText variant="small">Standard</AppText>
+            <AppText variant="small">{t("booking.standard")}</AppText>
             <AppText variant="price" color={colors.primary}>
               {rupees(s.standard_price_paise)}
             </AppText>
             {s.premium_price_paise ? (
               <>
                 <AppText variant="small" style={{ marginTop: 8 }}>
-                  Premium
+                  {t("booking.premium")}
                 </AppText>
                 <AppText variant="price">{rupees(s.premium_price_paise)}</AppText>
               </>
             ) : null}
           </Card>
         ) : (
-          <AppText>This service is not yet available for booking.</AppText>
+          <AppText>{t("mobile.notBookable")}</AppText>
         )}
         {s.bookable ? (
           <PrimaryButton
-            title={user ? "Book this puja" : "Sign in to book"}
+            title={user ? t("mobile.bookPuja") : t("mobile.signInBook")}
             onPress={() => {
               if (!user) router.push({ pathname: "/login", params: { role: "customer" } });
               else router.push(`/customer/book/${s.slug}`);

@@ -29,12 +29,12 @@ export default function InvoiceHtmlScreen() {
         path,
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
-      if (result.status >= 400) throw new Error("Could not download PDF");
+      if (result.status >= 400) throw new Error(t("mobile.invoiceDownloadFailed"));
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(result.uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
       }
     } catch (e: unknown) {
-      Alert.alert("Invoice", e instanceof Error ? e.message : "Could not share PDF");
+      Alert.alert(t("mobile.invoice"), e instanceof Error ? e.message : t("mobile.invoiceShareFailed"));
     }
   }
 
@@ -45,7 +45,7 @@ export default function InvoiceHtmlScreen() {
         <PrimaryButton title={t("mobile.downloadPdf")} variant="outline" onPress={() => void sharePdf()} />
       </View>
       {q.isLoading ? <LoadingBlock /> : null}
-      {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : "Could not load invoice"} /> : null}
+      {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : t("mobile.invoiceLoadFailed")} /> : null}
       {q.data ? <WebView originWhitelist={["*"]} source={{ html: q.data }} style={{ flex: 1 }} /> : null}
     </Screen>
   );

@@ -243,22 +243,19 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const samagriSelected =
     Boolean(booking.samagri_requested) || Number(booking.samagri_charge_paise || 0) > 0;
   const teamSize = Math.max(1, Number(booking.pujaris_required || 1));
-  const teamLabel = booking.pujaris_included_label || pujarisIncludedShort(teamSize);
+  const teamLabel = pujarisIncludedShort(teamSize, t);
   const teamCustomerNote =
-    booking.pujari_team_customer_note ||
-    (teamSize > 1 ? `This package includes ${teamSize} Pujaris for your ritual.` : null);
-  const teamPujariNotice =
-    booking.pujari_team_notice || pujariTeamAcceptNotice(teamSize);
-  const teamPaymentNotice =
-    booking.pujari_payment_notice || pujariTeamPaymentNotice(teamSize);
+    teamSize > 1 ? t("web.booking.teamCustomerNote", { count: teamSize }) : null;
+  const teamPujariNotice = pujariTeamAcceptNotice(teamSize, t);
+  const teamPaymentNotice = pujariTeamPaymentNotice(teamSize, t);
 
   async function downloadSamagri() {
     try {
       setBusy(true);
       await downloadSamagriListForBooking(bookingId);
-      toast.success("Samagri list downloaded");
+      toast.success(t("web.booking.samagriDownloaded"));
     } catch (e: any) {
-      toast.error(e?.message || "Could not download Samagri list");
+      toast.error(e?.message || t("web.booking.samagriDownloadFailed"));
     } finally {
       setBusy(false);
     }
@@ -272,7 +269,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       setCancelPreview(await api(`/bookings/${bookingId}/cancel-preview`));
     } catch (e: any) {
       setCancelPreview(null);
-      toast.error(e.message || "Could not load cancellation charges");
+      toast.error(e.message || t("web.booking.cancelPreviewFailed"));
       setCancelOpen(false);
     } finally {
       setCancelLoading(false);
@@ -292,13 +289,13 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className={statusColor(status)}>{status.replace(/_/g, " ")}</Badge>
-        {booking.mode && <Badge variant="outline">{booking.mode}</Badge>}
-        {booking.package_type && <Badge variant="secondary" className="capitalize">{booking.package_type}</Badge>}
+        <Badge className={statusColor(status)}>{t(`status.${status}`)}</Badge>
+        {booking.mode && <Badge variant="outline">{t(`booking.${booking.mode === "physical" ? "physical" : booking.mode}`)}</Badge>}
+        {booking.package_type && <Badge variant="secondary">{t(`booking.${booking.package_type}`)}</Badge>}
         {viewerRole === "pujari" && samagriSelected && (
-          <Badge className="bg-orange-100 text-orange-900 border-orange-200">Samagri Selected</Badge>
+          <Badge className="bg-orange-100 text-orange-900 border-orange-200">{t("web.pujariBookings.samagriSelected")}</Badge>
         )}
-        {booking.needs_reassignment && <Badge variant="destructive">needs reassignment</Badge>}
+        {booking.needs_reassignment && <Badge variant="destructive">{t("web.booking.needsReassignment")}</Badge>}
         <Badge variant="outline" className="font-normal">
           {teamLabel}
         </Badge>
@@ -319,17 +316,17 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
       {booking.mode === "virtual" && (booking.meeting_url || booking.public_invite_url) && (
         <div className="rounded-lg border-2 border-blue-300 bg-blue-50 px-3 py-3 space-y-2">
-          <p className="text-sm font-semibold text-foreground">Google Meet — Virtual Puja</p>
+          <p className="text-sm font-semibold text-foreground">{t("web.booking.virtualMeet")}</p>
           {booking.meeting_url ? (
             <Button asChild size="sm" className="w-full sm:w-auto">
               <a href={booking.meeting_url} target="_blank" rel="noopener noreferrer">
-                Join Google Meet
+                {t("web.meeting.join")}
               </a>
             </Button>
           ) : null}
           {booking.public_invite_url ? (
             <p className="text-xs text-muted-foreground break-all">
-              Public invite: {booking.public_invite_url}
+              {t("web.booking.publicInvite")}: {booking.public_invite_url}
             </p>
           ) : null}
         </div>
@@ -348,11 +345,11 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       {status === "rejected" && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
           {booking.rejection_reason
-            ? `Rejected: ${booking.rejection_reason}`
-            : "Rejected by the assigned pujari."}{" "}
+            ? t("web.booking.rejectedReason", { reason: booking.rejection_reason })
+            : t("web.booking.rejectedByPujari")}{" "}
           {viewerRole === "customer"
-            ? "Our team is finding another pujari for you."
-            : "Admin will assign another pujari."}
+            ? t("web.booking.findingPujari")
+            : t("web.booking.adminReassign")}
         </div>
       )}
 
@@ -360,18 +357,18 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         <div className="grid grid-cols-2 gap-3 text-sm">
           {booking.service_name && (
             <div className="col-span-2">
-              <div className="text-muted-foreground">Service</div>
+              <div className="text-muted-foreground">{t("booking.service")}</div>
               <div className="font-medium">{booking.service_name}</div>
             </div>
           )}
           <div>
-            <div className="text-muted-foreground">Date & time</div>
+            <div className="text-muted-foreground">{t("web.muhurta.dateTime")}</div>
             <div className="font-medium">
               {formatDisplayDate(booking.booking_date)} {booking.start_time || ""}
             </div>
           </div>
           <div>
-            <div className="text-muted-foreground">{viewerRole === "pujari" ? "Customer" : "Pujari"}</div>
+            <div className="text-muted-foreground">{viewerRole === "pujari" ? t("auth.customer") : t("auth.pujari")}</div>
             <div className="font-medium">
               {viewerRole === "pujari" ? booking.customer_name || "—" : booking.pujari_name || "—"}
             </div>
@@ -412,12 +409,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           )}
           {viewerRole === "pujari" && booking.details_level === "basic" && (
             <div className="col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Full customer address and contact unlock within the configured hours before the puja (default 20h).
+              {t("web.booking.contactUnlock")}
             </div>
           )}
           {booking.special_instructions && (
             <div className="col-span-2">
-              <div className="text-muted-foreground">Special instructions</div>
+              <div className="text-muted-foreground">{t("booking.special")}</div>
               <div className="font-medium whitespace-pre-wrap">{booking.special_instructions}</div>
             </div>
           )}
@@ -431,7 +428,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 Boolean((booking as any).alankaram_requested)
               ) ? (
                 <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                  Customer will arrange Samagri / Alankaram themselves. No pujari purchase or reimbursement for this booking.
+                  {t("web.booking.customerArranges")}
                 </div>
               ) : (
                 <PreparationChecklist
@@ -440,8 +437,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                   interactive={false}
                   title={
                     viewerRole === "pujari"
-                      ? "Samagri / items to arrange (customer requested)"
-                      : "Puja preparation & Samagri"
+                      ? t("web.booking.itemsToArrange")
+                      : t("web.preparation.title")
                   }
                 />
               )}
@@ -452,12 +449,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               Number(booking.samagri_charge_paise || 0) > 0 ||
               Boolean((booking as any).samagri_requested)) ? (
             <div className="col-span-2">
-              <div className="text-muted-foreground mb-1">Recommended List</div>
+              <div className="text-muted-foreground mb-1">{t("web.preparation.recommended")}</div>
               <ul className="list-disc pl-5 space-y-0.5">
                 {booking.samagri.map((it, i) => (
                   <li key={`${it.name}-${i}`}>
                     {it.name}
-                    {it.required ? " (required)" : ""}
+                    {it.required ? ` (${t("common.required")})` : ""}
                     {it.instructions ? ` — ${it.instructions}` : ""}
                   </li>
                 ))}
@@ -469,24 +466,24 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
       <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1.5 text-sm">
         <div className="font-medium text-foreground mb-1">
-          {viewerRole === "pujari" ? "Dakshina" : "Pricing"}
+          {viewerRole === "pujari" ? t("web.earnings.title") : t("web.booking.pricing")}
         </div>
         {viewerRole === "pujari" ? (
           <>
             {Number(booking.samagri_charge_paise || 0) > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Samagri (buy & reimbursed)</span>
+                <span className="text-muted-foreground">{t("web.booking.samagriReimbursed")}</span>
                 <span>{rupees(Number(booking.samagri_charge_paise))}</span>
               </div>
             )}
             {Number(booking.alankaram_charge_paise || 0) > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Alankaram (buy & reimbursed)</span>
+                <span className="text-muted-foreground">{t("web.booking.alankaramReimbursed")}</span>
                 <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold text-primary border-t border-border pt-1.5">
-              <span>Dakshina</span>
+              <span>{t("web.earnings.title")}</span>
               <span>
                 {rupees(
                   Number(
@@ -501,37 +498,37 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         ) : (
           <>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Base</span>
+              <span className="text-muted-foreground">{t("web.booking.base")}</span>
               <span>{rupees(base)}</span>
             </div>
             {Number(booking.samagri_charge_paise || 0) > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Samagri</span>
+                <span className="text-muted-foreground">{t("booking.samagri")}</span>
                 <span>{rupees(Number(booking.samagri_charge_paise))}</span>
               </div>
             )}
             {Number(booking.alankaram_charge_paise || 0) > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Alankaram</span>
+                <span className="text-muted-foreground">{t("booking.alankaram")}</span>
                 <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
               </div>
             )}
             {Number(booking.peak_fee_paise || 0) > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Weekend / festival surge</span>
+                <span className="text-muted-foreground">{t("booking.peakFee")}</span>
                 <span>{rupees(Number(booking.peak_fee_paise))}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Platform fee</span>
+              <span className="text-muted-foreground">{t("web.booking.platformFee")}</span>
               <span>{rupees(platform)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">GST</span>
+              <span className="text-muted-foreground">{t("booking.gst")}</span>
               <span>{rupees(gst)}</span>
             </div>
             <div className="flex justify-between font-semibold border-t border-border pt-1.5">
-              <span>Total</span>
+              <span>{t("common.total")}</span>
               <span>{rupees(total)}</span>
             </div>
           </>

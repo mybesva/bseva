@@ -29,6 +29,7 @@ export default function CustomerAddressPage() {
   const { refresh } = useServiceAvailability();
   const [value, setValue] = useState<AddressValue>(empty);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [gstin, setGstin] = useState("");
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function CustomerAddressPage() {
     e.preventDefault();
     const errs = validateAddress(value);
     if (Object.keys(errs).length) {
-      toast.error(Object.values(errs)[0]);
+      toast.error(t(Object.values(errs)[0]));
       return;
     }
     if (value.latitude == null || value.longitude == null) {

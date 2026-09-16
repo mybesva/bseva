@@ -5,8 +5,10 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function HeadRatings() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const allowed = user?.role === "head_pujari" || user?.role === "admin" || user?.role === "super_admin";
   const q = useQuery({
@@ -21,23 +23,23 @@ export default function HeadRatings() {
   if (!allowed) {
     return (
       <Screen>
-        <ScreenHeader title="Head ratings" back />
-        <AppText style={{ padding: 16 }}>This screen is for Head Pujari accounts. Your role comes from the server.</AppText>
+        <ScreenHeader title={t("mobile.headRatings")} back />
+        <AppText style={{ padding: 16 }}>{t("mobile.headOnly")}</AppText>
       </Screen>
     );
   }
   const rows = Array.isArray(q.data) ? q.data : [];
   return (
     <Screen>
-      <ScreenHeader title="Assess pujaris" back />
+      <ScreenHeader title={t("mobile.assessPujaris")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
-        <Field label="Pujari user id" value={pujariId} onChangeText={setPujariId} autoCapitalize="none" />
-        <AppText variant="small">Stars</AppText>
+        <Field label={t("mobile.pujariUserId")} value={pujariId} onChangeText={setPujariId} autoCapitalize="none" />
+        <AppText variant="small">{t("mobile.stars")}</AppText>
         <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
-        <Field label="Comments" value={comments} onChangeText={setComments} />
+        <Field label={t("mobile.comments")} value={comments} onChangeText={setComments} />
         <PrimaryButton
-          title="Submit rating"
+          title={t("mobile.submitRating")}
           onPress={async () => {
             setError(null);
             try {
@@ -45,15 +47,15 @@ export default function HeadRatings() {
               setComments("");
               await q.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             }
           }}
         />
-        {rows.length === 0 ? <EmptyState title="No ratings yet." /> : null}
+        {rows.length === 0 ? <EmptyState title={t("mobile.noRatings")} /> : null}
         {rows.map((row, i) => (
           <Card key={row.id || i}>
-            <AppText>Pujari {row.pujari_id}</AppText>
-            <AppText>{row.stars} stars</AppText>
+            <AppText>{t("mobile.pujariValue", { id: row.pujari_id || "" })}</AppText>
+            <AppText>{t("mobile.starCount", { count: row.stars || 0 })}</AppText>
             <AppText variant="small">{row.comments}</AppText>
           </Card>
         ))}

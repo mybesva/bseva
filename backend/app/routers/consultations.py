@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -20,7 +21,7 @@ router = APIRouter(tags=["consultations"])
 
 
 class RecommendationTranslationIn(BaseModel):
-    language_code: str = Field(pattern="^(hi|te|mr|ta|kn)$")
+    language_code: Literal["hi", "te", "mr", "ta", "kn"]
     title: str = Field(min_length=2, max_length=200)
     description: str | None = None
     recurrence_hint: str | None = None

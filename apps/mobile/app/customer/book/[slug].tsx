@@ -17,7 +17,7 @@ export default function BookService() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useAppTheme();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const serviceQ = useQuery({ queryKey: ["service", slug, lang], queryFn: () => apiClient.getService(slug), enabled: !!slug });
   const profileQ = useQuery({ queryKey: ["customer-profile"], queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>> });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
@@ -110,11 +110,11 @@ export default function BookService() {
   async function submit() {
     if (!svc) return;
     if (!pujariId) {
-      setError("Select a pujari");
+      setError(t("mobile.selectPujari"));
       return;
     }
     if (!terms) {
-      setError("Please accept the Terms & Conditions and Cancellation Policy");
+      setError(t("mobile.acceptTerms"));
       return;
     }
     if (mode === "virtual") {
@@ -194,7 +194,7 @@ export default function BookService() {
   if (serviceQ.isLoading) {
     return (
       <Screen>
-        <ScreenHeader title="Book" back />
+        <ScreenHeader title={t("mobile.book")} back />
         <LoadingBlock />
       </Screen>
     );
@@ -202,9 +202,9 @@ export default function BookService() {
   if (!svc) {
     return (
       <Screen>
-        <ScreenHeader title="Book" back />
+        <ScreenHeader title={t("mobile.book")} back />
         <View style={{ padding: 16 }}>
-          <ErrorBanner message={serviceQ.error instanceof Error ? serviceQ.error.message : "Service not found"} />
+          <ErrorBanner message={serviceQ.error instanceof Error ? serviceQ.error.message : t("mobile.serviceNotFound")} />
         </View>
       </Screen>
     );
@@ -214,68 +214,68 @@ export default function BookService() {
 
   return (
     <Screen>
-      <ScreenHeader title={`Book ${svc.name}`} back />
+      <ScreenHeader title={t("mobile.bookService", { service: svc.name })} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
-        <AppText variant="small">Step {step} of 4</AppText>
+        <AppText variant="small">{t("mobile.stepOf", { step, total: 4 })}</AppText>
         <ErrorBanner message={error} />
         {step === 1 ? (
           <>
-            <AppText variant="h3">Package & mode</AppText>
+            <AppText variant="h3">{t("mobile.packageMode")}</AppText>
             {svc.basic_price_paise ? (
-              <PrimaryButton title={`Basic ${rupees(svc.basic_price_paise)}`} variant={pkg === "basic" ? "primary" : "outline"} onPress={() => setPkg("basic")} />
+              <PrimaryButton title={`${t("booking.basic")} ${rupees(svc.basic_price_paise)}`} variant={pkg === "basic" ? "primary" : "outline"} onPress={() => setPkg("basic")} />
             ) : null}
-            <PrimaryButton title={`Standard ${svc.standard_price_paise ? rupees(svc.standard_price_paise) : ""}`} variant={pkg === "standard" ? "primary" : "outline"} onPress={() => setPkg("standard")} />
+            <PrimaryButton title={`${t("booking.standard")} ${svc.standard_price_paise ? rupees(svc.standard_price_paise) : ""}`} variant={pkg === "standard" ? "primary" : "outline"} onPress={() => setPkg("standard")} />
             {svc.premium_price_paise ? (
-              <PrimaryButton title={`Premium ${rupees(svc.premium_price_paise)}`} variant={pkg === "premium" ? "primary" : "outline"} onPress={() => setPkg("premium")} />
+              <PrimaryButton title={`${t("booking.premium")} ${rupees(svc.premium_price_paise)}`} variant={pkg === "premium" ? "primary" : "outline"} onPress={() => setPkg("premium")} />
             ) : null}
-            <PrimaryButton title="In-person" variant={mode === "in_person" ? "navy" : "outline"} onPress={() => setMode("in_person")} />
+            <PrimaryButton title={t("mobile.inPerson")} variant={mode === "in_person" ? "navy" : "outline"} onPress={() => setMode("in_person")} />
             {svc.virtual_available ? (
-              <PrimaryButton title="Virtual" variant={mode === "virtual" ? "navy" : "outline"} onPress={() => setMode("virtual")} />
+              <PrimaryButton title={t("mobile.virtual")} variant={mode === "virtual" ? "navy" : "outline"} onPress={() => setMode("virtual")} />
             ) : null}
             {mode === "virtual" ? (
               <>
-                <Field label="Country code (e.g. IN)" value={customerCountry} onChangeText={setCustomerCountry} autoCapitalize="characters" />
-                <Field label="Time zone" value={customerTimezone} onChangeText={setCustomerTimezone} />
+                <Field label={t("mobile.country")} value={customerCountry} onChangeText={setCustomerCountry} autoCapitalize="characters" />
+                <Field label={t("mobile.timezone")} value={customerTimezone} onChangeText={setCustomerTimezone} />
               </>
             ) : null}
-            <PrimaryButton title="Next" onPress={() => setStep(2)} />
+            <PrimaryButton title={t("mobile.next")} onPress={() => setStep(2)} />
           </>
         ) : null}
         {step === 2 ? (
           <>
-            <AppText variant="small">Calendar</AppText>
+            <AppText variant="small">{t("mobile.calendar")}</AppText>
             <ChoiceChips options={CALENDARS.map((c) => ({ id: c, label: c }))} value={calendar} onChange={(v) => setCalendar(String(v))} />
             {panchang.data ? (
               <AppText variant="small" color={colors.mutedForeground}>
                 {String(panchang.data.tithi || panchang.data.summary || JSON.stringify(panchang.data).slice(0, 120))}
               </AppText>
             ) : null}
-            <Field label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} />
-            <Field label="Start time (HH:MM)" value={time} onChangeText={setTime} />
-            <Field label="Address" value={address} onChangeText={setAddress} />
-            <Field label="City" value={city} onChangeText={setCity} />
-            <AppText variant="small">Recurring</AppText>
+            <Field label={t("mobile.date")} value={date} onChangeText={setDate} />
+            <Field label={t("mobile.startTime")} value={time} onChangeText={setTime} />
+            <Field label={t("mobile.address")} value={address} onChangeText={setAddress} />
+            <Field label={t("mobile.city")} value={city} onChangeText={setCity} />
+            <AppText variant="small">{t("mobile.recurring")}</AppText>
             <ChoiceChips
               options={[
-                { id: "none", label: "Once" },
-                { id: "weekly", label: "Weekly" },
-                { id: "monthly", label: "Monthly" },
+                { id: "none", label: t("booking.recurring.none") },
+                { id: "weekly", label: t("booking.recurring.weekly") },
+                { id: "monthly", label: t("booking.recurring.monthly") },
               ]}
               value={recurring}
               onChange={(v) => setRecurring(String(v))}
             />
             {recurring !== "none" ? (
-              <Field label="Repeat count" value={recurringCount} onChangeText={setRecurringCount} keyboardType="number-pad" />
+              <Field label={t("mobile.repeatCount")} value={recurringCount} onChangeText={setRecurringCount} keyboardType="number-pad" />
             ) : null}
-            {muhurtaNeeded ? <Field label="Muhurtham notes (optional)" value={muhurtaNotes} onChangeText={setMuhurtaNotes} /> : null}
-            <Field label="Special instructions" value={instructions} onChangeText={setInstructions} />
+            {muhurtaNeeded ? <Field label={t("mobile.muhurthamNotes")} value={muhurtaNotes} onChangeText={setMuhurtaNotes} /> : null}
+            <Field label={t("mobile.specialInstructions")} value={instructions} onChangeText={setInstructions} />
             <View style={{ flexDirection: "row", gap: 8 }}>
               <View style={{ flex: 1 }}>
-                <PrimaryButton title="Back" variant="outline" onPress={() => setStep(1)} />
+                <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(1)} />
               </View>
               <View style={{ flex: 1 }}>
                 <PrimaryButton
-                  title="Review"
+                  title={t("booking.review")}
                   onPress={async () => {
                     await loadQuoteAndPujaris();
                     setStep(3);
@@ -287,65 +287,65 @@ export default function BookService() {
         ) : null}
         {step === 3 ? (
           <>
-            {previous.length > 0 ? <AppText variant="h3">Previous pujaris</AppText> : null}
+            {previous.length > 0 ? <AppText variant="h3">{t("mobile.previousPujaris")}</AppText> : null}
             {previous.map((p) => (
               <PujariCard key={`p-${p.id}`} p={p} />
             ))}
-            <AppText variant="h3">Available pujaris</AppText>
+            <AppText variant="h3">{t("mobile.availablePujaris")}</AppText>
             {nearby.length === 0 ? (
-              <AppText color={colors.mutedForeground}>No nearby pujaris found. Enable location or try another city.</AppText>
+              <AppText color={colors.mutedForeground}>{t("mobile.noNearbyPujaris")}</AppText>
             ) : null}
             {nearby.map((p) => (
               <PujariCard key={p.id} p={p} />
             ))}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <AppText>Include samagri</AppText>
+              <AppText>{t("mobile.includeSamagri")}</AppText>
               <Switch value={includeSamagri} onValueChange={(v) => { setIncludeSamagri(v); }} />
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <AppText>Include alankaram</AppText>
+              <AppText>{t("mobile.includeAlankaram")}</AppText>
               <Switch value={includeAlankaram} onValueChange={setIncludeAlankaram} />
             </View>
             {svc.food_available ? (
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <AppText>Include food / prasadam</AppText>
+                <AppText>{t("mobile.includeFood")}</AppText>
                 <Switch value={includeFood} onValueChange={setIncludeFood} />
               </View>
             ) : null}
-            <PrimaryButton title="Refresh quote" variant="outline" onPress={() => void loadQuoteAndPujaris()} />
+            <PrimaryButton title={t("mobile.refreshQuote")} variant="outline" onPress={() => void loadQuoteAndPujaris()} />
             {quote ? (
               <Card>
-                <AppText>Puja {rupees(Number(quote.basePrice))}</AppText>
-                {Number(quote.samagri) ? <AppText>Samagri {rupees(Number(quote.samagri))}</AppText> : null}
-                {Number(quote.alankaram) ? <AppText>Alankaram {rupees(Number(quote.alankaram))}</AppText> : null}
-                {Number(quote.foodPrasadam) ? <AppText>Food {rupees(Number(quote.foodPrasadam))}</AppText> : null}
+                <AppText>{t("mobile.puja")} {rupees(Number(quote.basePrice))}</AppText>
+                {Number(quote.samagri) ? <AppText>{t("mobile.samagri")} {rupees(Number(quote.samagri))}</AppText> : null}
+                {Number(quote.alankaram) ? <AppText>{t("mobile.alankaram")} {rupees(Number(quote.alankaram))}</AppText> : null}
+                {Number(quote.foodPrasadam) ? <AppText>{t("mobile.food")} {rupees(Number(quote.foodPrasadam))}</AppText> : null}
                 <AppText>GST {rupees(Number(quote.gstAmount))}</AppText>
-                <AppText variant="h3">Total {rupees(Number(quote.totalAmount))}</AppText>
+                <AppText variant="h3">{t("mobile.total")} {rupees(Number(quote.totalAmount))}</AppText>
               </Card>
             ) : null}
-            <PrimaryButton title="Back" variant="outline" onPress={() => setStep(2)} />
-            <PrimaryButton title="Payment" onPress={() => setStep(4)} />
+            <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(2)} />
+            <PrimaryButton title={t("booking.payment")} onPress={() => setStep(4)} />
           </>
         ) : null}
         {step === 4 ? (
           <>
             <Card>
-              <AppText variant="small">Wallet balance</AppText>
+              <AppText variant="small">{t("mobile.walletBalance")}</AppText>
               <AppText variant="h2" color={colors.primary}>{rupees(Number(balance))}</AppText>
               <AppText variant="small" color={colors.mutedForeground}>
-                The server charges this booking from your wallet. Cancellation fees are also calculated on the server.
+                {t("mobile.walletBookingHelp")}
               </AppText>
             </Card>
-            {quote ? <AppText variant="h3">Pay {rupees(Number(quote.totalAmount))}</AppText> : null}
+            {quote ? <AppText variant="h3">{t("mobile.payAmount", { amount: rupees(Number(quote.totalAmount)) })}</AppText> : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Switch value={terms} onValueChange={setTerms} />
               <AppText variant="small" style={{ flex: 1 }}>
-                I accept the Terms & Conditions and Cancellation Policy.
+                {t("mobile.acceptTerms")}
               </AppText>
             </View>
-            <PrimaryButton title="Read terms" variant="ghost" onPress={() => router.push("/legal/platform_terms")} />
-            <PrimaryButton title="Back" variant="outline" onPress={() => setStep(3)} />
-            <PrimaryButton title={pending ? "Booking..." : "Pay with wallet & book"} loading={pending} onPress={submit} />
+            <PrimaryButton title={t("mobile.readTerms")} variant="ghost" onPress={() => router.push("/legal/platform_terms")} />
+            <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(3)} />
+            <PrimaryButton title={pending ? t("mobile.booking") : t("mobile.payBook")} loading={pending} onPress={submit} />
           </>
         ) : null}
       </ScrollView>

@@ -27,10 +27,9 @@ export default function PujariReferralPage() {
 
   return (
     <PujariPortal>
-      <h1 className="text-h1 mb-2">Referral</h1>
+      <h1 className="text-h1 mb-2">{t("nav.referral")}</h1>
       <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
-        Share your referral code with new customers or pujaris. When they join using your code, you get
-        credit as per B-Seva referral rewards.
+        {t("web.referral.description")}
       </p>
 
       {loading ? (
@@ -41,7 +40,7 @@ export default function PujariReferralPage() {
         <div className="space-y-4 max-w-2xl">
           <Card className="border-primary/40">
             <CardHeader>
-              <CardTitle className="text-base">Your referral code</CardTitle>
+              <CardTitle className="text-base">{t("rewards.yourCode")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -75,7 +74,7 @@ export default function PujariReferralPage() {
                     })
                     .catch((e: unknown) => {
                       if (e instanceof Error && e.name === "AbortError") return;
-                      toast.error(e instanceof Error ? e.message : "Could not share");
+                      toast.error(e instanceof Error ? e.message : t("web.referral.shareFailed"));
                     });
                 }}
               >
@@ -83,24 +82,23 @@ export default function PujariReferralPage() {
                 {t("rewards.share")}
               </Button>
               <p className="text-sm text-muted-foreground">
-                Share your link and code. You earn referral rewards when someone joins and completes their
-                first booking.
+                {t("web.referral.rewardHint")}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">My referrals</CardTitle>
+              <CardTitle className="text-base">{t("web.referral.myReferrals")}</CardTitle>
             </CardHeader>
             <CardContent>
               {myReferrals.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No one has joined with your code yet.</p>
+                <p className="text-sm text-muted-foreground">{t("web.referral.empty")}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead>{t("auth.name")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

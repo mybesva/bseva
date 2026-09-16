@@ -290,6 +290,7 @@ def notify_pujaris_new_offer(
     pujari_ids: list[str],
     booking_number: str,
     service_name: str,
+    service_id: str | None = None,
 ) -> None:
     if not pujari_ids:
         return
@@ -308,7 +309,11 @@ def notify_pujaris_new_offer(
                 category="booking",
                 link="/pujari/bookings",
                 message_key="newRequest",
-                message_vars={"service": service_name or "Puja", "number": booking_number},
+                message_vars={
+                    "service": service_name or "Puja",
+                    "service_id": service_id,
+                    "number": booking_number,
+                },
             )
         except Exception:
             continue
