@@ -32,6 +32,7 @@ const en: Dict = {
   "web.booking.samagriReimbursed": "Samagri (pujari buys · reimbursed)",
   "web.booking.alankaramReimbursed": "Alankaram (pujari buys · reimbursed)",
   "web.booking.platformFee": "Platform fee",
+  "web.booking.pujarisIncluded": "{{count}} pujari(s) included for this package",
   "web.booking.status": "Booking status",
   "web.booking.pujariReveal": "Pujari details will be shared within 20 hours before your scheduled puja.",
   "web.booking.backToBookings": "Back to My Bookings",

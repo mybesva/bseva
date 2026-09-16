@@ -596,13 +596,16 @@ def create_booking(
                 service_id=str(body.service_id),
             )
             if not slot_candidates:
-                raise HTTPException(
-                    400,
-                    "No pujari is available for this date and time near your location. "
-                    "Choose another slot, or ask admin to assign a pujari.",
+                # Area check passed earlier; slot may be busy or no verified pujari for this service.
+                # Still take payment — admin assigns or cron refreshes offers.
+                logger.warning(
+                    "booking_no_slot_candidates customer=%s service=%s date=%s time=%s",
+                    user["id"],
+                    body.service_id,
+                    ist_date,
+                    start,
                 )
-            # Multiple eligible pujaris at the same area → broadcast offers to all (first accept wins).
-            # Auto-assign only when exactly one pujari can take this slot (not "repeat customer → same pujari").
+            # Multiple eligible pujaris → broadcast offers. Auto-assign only when exactly one can take the slot.
             preferred_id: str | None = None
             if len(slot_candidates) == 1:
                 preferred_id = slot_candidates[0][0]
