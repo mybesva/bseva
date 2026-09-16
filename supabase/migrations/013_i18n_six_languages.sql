@@ -44,5 +44,8 @@ BEGIN
     LOOP
       EXECUTE format('ALTER TABLE samagri_item_translations DROP CONSTRAINT IF EXISTS %I', r.conname);
     END LOOP;
+    ALTER TABLE samagri_item_translations
+      ADD CONSTRAINT samagri_item_translations_language_code_check
+      CHECK (language_code IN ('en', 'hi', 'te', 'mr', 'ta', 'kn'));
   END IF;
 END $$;

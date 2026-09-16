@@ -270,6 +270,9 @@ CONTENT: dict[str, dict[str, dict[str, str]]] = {
 
 
 def _default_content(slug: str, display_en: str) -> dict[str, dict[str, str]]:
+    from app.catalog_i18n_seed import SERVICES
+
+    translated_names = SERVICES.get(slug, {})
     if slug in CONTENT:
         base = CONTENT[slug]
     else:
@@ -282,22 +285,71 @@ def _default_content(slug: str, display_en: str) -> dict[str, dict[str, str]]:
                 "venue_notes": "Provide mats, water, plates, and a calm seating space.",
             },
             "hi": {
-                "display_name": display_en,
+                "display_name": translated_names.get("hi", (display_en, ""))[0],
                 "preparation_notes": "निर्धारित समय से पहले पूजा स्थान साफ़ और तैयार रखें।",
                 "special_instructions": "नियुक्त पुजारी के अंतिम निर्देशों का पालन करें।",
                 "prasadam_notes": "पारिवारिक रीति के अनुसार सरल प्रसाद/नैवेद्य रखें।",
                 "venue_notes": "आसन, पानी और बर्तन तैयार रखें।",
             },
             "te": {
-                "display_name": display_en,
+                "display_name": translated_names.get("te", (display_en, ""))[0],
                 "preparation_notes": "నిర్ణీత సమయం/ముహూర్తానికి ముందు పూజా ప్రాంతాన్ని శుభ్రంగా సిద్ధం చేయండి.",
                 "special_instructions": "కేటాయించిన పుజారి ఇచ్చే తుది సూచనలను పాటించండి.",
                 "prasadam_notes": "కుటుంబ ఆచారం ప్రకారం సాధారణ ప్రసాదం/నైవేద్యం ఏర్పాటు చేయండి.",
                 "venue_notes": "ఆసనాలు, నీరు, పాత్రలు సిద్ధంగా ఉంచండి.",
             },
+            "mr": {
+                "display_name": translated_names.get("mr", (display_en, ""))[0],
+                "preparation_notes": "नियोजित वेळ किंवा मुहूर्तापूर्वी पूजेची जागा स्वच्छ आणि तयार ठेवा.",
+                "special_instructions": "नेमलेल्या पुजाऱ्याच्या अंतिम सूचनांचे पालन करा.",
+                "prasadam_notes": "कुटुंबाच्या परंपरेनुसार साधा प्रसाद किंवा नैवेद्य तयार ठेवा.",
+                "venue_notes": "आसने, पाणी, ताटे आणि शांत बसण्याची जागा तयार ठेवा.",
+            },
+            "kn": {
+                "display_name": translated_names.get("kn", (display_en, ""))[0],
+                "preparation_notes": "ನಿಗದಿತ ಸಮಯ ಅಥವಾ ಮುಹೂರ್ತಕ್ಕೂ ಮೊದಲು ಪೂಜಾ ಸ್ಥಳವನ್ನು ಸ್ವಚ್ಛವಾಗಿ ಸಿದ್ಧಪಡಿಸಿ.",
+                "special_instructions": "ನಿಯೋಜಿತ ಪೂಜಾರಿಯ ಅಂತಿಮ ಸೂಚನೆಗಳನ್ನು ಪಾಲಿಸಿ.",
+                "prasadam_notes": "ಕುಟುಂಬದ ಸಂಪ್ರದಾಯದಂತೆ ಸರಳ ಪ್ರಸಾದ ಅಥವಾ ನೈವೇದ್ಯ ಸಿದ್ಧಪಡಿಸಿ.",
+                "venue_notes": "ಆಸನ, ನೀರು, ತಟ್ಟೆ ಮತ್ತು ಶಾಂತವಾಗಿ ಕುಳಿತುಕೊಳ್ಳುವ ಸ್ಥಳ ಸಿದ್ಧಪಡಿಸಿ.",
+            },
+            "ta": {
+                "display_name": translated_names.get("ta", (display_en, ""))[0],
+                "preparation_notes": "குறிப்பிட்ட நேரம் அல்லது முகூர்த்தத்திற்கு முன் பூஜை இடத்தைச் சுத்தமாகத் தயார் செய்யவும்.",
+                "special_instructions": "நியமிக்கப்பட்ட பூசாரியின் இறுதி வழிமுறைகளைப் பின்பற்றவும்.",
+                "prasadam_notes": "குடும்ப வழக்கப்படி எளிய பிரசாதம் அல்லது நைவேத்தியம் தயார் செய்யவும்.",
+                "venue_notes": "பாய், தண்ணீர், தட்டுகள் மற்றும் அமைதியான அமரும் இடத்தைத் தயார் செய்யவும்.",
+            },
         }
-    for lang in ("en", "hi", "te"):
+    regional_defaults = {
+        "mr": (
+            "नियोजित वेळ किंवा मुहूर्तापूर्वी पूजेची जागा स्वच्छ आणि तयार ठेवा.",
+            "नेमलेल्या पुजाऱ्याच्या अंतिम सूचनांचे पालन करा.",
+            "कुटुंबाच्या परंपरेनुसार साधा प्रसाद किंवा नैवेद्य तयार ठेवा.",
+            "आसने, पाणी, ताटे आणि शांत बसण्याची जागा तयार ठेवा.",
+        ),
+        "kn": (
+            "ನಿಗದಿತ ಸಮಯ ಅಥವಾ ಮುಹೂರ್ತಕ್ಕೂ ಮೊದಲು ಪೂಜಾ ಸ್ಥಳವನ್ನು ಸ್ವಚ್ಛವಾಗಿ ಸಿದ್ಧಪಡಿಸಿ.",
+            "ನಿಯೋಜಿತ ಪೂಜಾರಿಯ ಅಂತಿಮ ಸೂಚನೆಗಳನ್ನು ಪಾಲಿಸಿ.",
+            "ಕುಟುಂಬದ ಸಂಪ್ರದಾಯದಂತೆ ಸರಳ ಪ್ರಸಾದ ಅಥವಾ ನೈವೇದ್ಯ ಸಿದ್ಧಪಡಿಸಿ.",
+            "ಆಸನ, ನೀರು, ತಟ್ಟೆ ಮತ್ತು ಶಾಂತವಾಗಿ ಕುಳಿತುಕೊಳ್ಳುವ ಸ್ಥಳ ಸಿದ್ಧಪಡಿಸಿ.",
+        ),
+        "ta": (
+            "குறிப்பிட்ட நேரம் அல்லது முகூர்த்தத்திற்கு முன் பூஜை இடத்தைச் சுத்தமாகத் தயார் செய்யவும்.",
+            "நியமிக்கப்பட்ட பூசாரியின் இறுதி வழிமுறைகளைப் பின்பற்றவும்.",
+            "குடும்ப வழக்கப்படி எளிய பிரசாதம் அல்லது நைவேத்தியம் தயார் செய்யவும்.",
+            "பாய், தண்ணீர், தட்டுகள் மற்றும் அமைதியான அமரும் இடத்தைத் தயார் செய்யவும்.",
+        ),
+    }
+    for lang in ("en", "hi", "te", "mr", "kn", "ta"):
         base.setdefault(lang, {})
+        if lang != "en":
+            base[lang].setdefault("display_name", translated_names.get(lang, (display_en, ""))[0])
+        if lang in regional_defaults:
+            prep, special, prasadam, venue = regional_defaults[lang]
+            base[lang].setdefault("preparation_notes", prep)
+            base[lang].setdefault("special_instructions", special)
+            base[lang].setdefault("prasadam_notes", prasadam)
+            base[lang].setdefault("venue_notes", venue)
         base[lang]["disclaimer"] = DISCLAIMER[lang]
     return base
 

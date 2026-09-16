@@ -170,6 +170,12 @@ class LegalPolicyUpdateIn(BaseModel):
     points: list[LegalPointIn]
 
 
+class LegalPolicyTranslationIn(BaseModel):
+    language_code: Literal["hi", "te", "mr", "ta", "kn"]
+    title: str = Field(min_length=2, max_length=200)
+    points: list[LegalPointIn]
+
+
 class ServiceIn(BaseModel):
     name: str
     slug: str

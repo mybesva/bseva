@@ -8,10 +8,12 @@ import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function CustomerBookings() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const { t } = useI18n();
   const q = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   const rows = q.data || [];
   const upcoming = rows.filter((b) => !DONE_BOOKING_STATUSES.includes(b.status as never));
@@ -19,14 +21,14 @@ export default function CustomerBookings() {
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">My Bookings</AppText>
+        <AppText variant="h2">{t("mobile.myBookings")}</AppText>
       </SafeAreaView>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10 }}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
       >
         {q.isLoading ? <LoadingBlock /> : null}
-        {!q.isLoading && rows.length === 0 ? <EmptyState title="No bookings yet." subtitle="Book a puja from Services." /> : null}
+        {!q.isLoading && rows.length === 0 ? <EmptyState title={t("mobile.noBookings")} subtitle={t("mobile.bookFromServices")} /> : null}
         {upcoming.map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
             <Card>
@@ -41,7 +43,7 @@ export default function CustomerBookings() {
             </Card>
           </Pressable>
         ))}
-        {past.length > 0 ? <AppText variant="h3">History</AppText> : null}
+        {past.length > 0 ? <AppText variant="h3">{t("mobile.history")}</AppText> : null}
         {past.map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
             <Card>

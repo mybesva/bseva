@@ -14,10 +14,10 @@ export default function BrowseServices() {
   const { q, slug } = useLocalSearchParams<{ q?: string; slug?: string }>();
   const [query, setQuery] = useState(q || "");
   const { colors } = useAppTheme();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const router = useRouter();
-  const list = useQuery({ queryKey: ["services"], queryFn: () => apiClient.listServices() });
-  const cats = useQuery({ queryKey: ["service-categories"], queryFn: () => apiClient.serviceCategories() });
+  const list = useQuery({ queryKey: ["services", lang], queryFn: () => apiClient.listServices() });
+  const cats = useQuery({ queryKey: ["service-categories", lang], queryFn: () => apiClient.serviceCategories() });
   const [cat, setCat] = useState<string>("all");
 
   const filtered = useMemo(() => {
@@ -45,7 +45,7 @@ export default function BrowseServices() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search services"
+          placeholder={t("mobile.search")}
           placeholderTextColor={colors.mutedForeground}
           style={{
             backgroundColor: colors.input,
@@ -76,7 +76,7 @@ export default function BrowseServices() {
         </ScrollView>
         <ScrollView contentContainerStyle={{ gap: 10, paddingBottom: 32 }}>
           {list.isLoading ? <LoadingBlock /> : null}
-          {!list.isLoading && filtered.length === 0 ? <EmptyState title="No services found" /> : null}
+          {!list.isLoading && filtered.length === 0 ? <EmptyState title={t("mobile.noServices")} /> : null}
           {filtered.map((s: CatalogService) => (
             <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
               <Card>

@@ -10,8 +10,10 @@ import { Calendar, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function MyBookings() {
+  const { t } = useI18n();
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [bookings, setBookings] = useState<any[]>([]);
@@ -33,9 +35,9 @@ export default function MyBookings() {
         <div className="min-h-[50vh] flex items-center justify-center">
           <Card className="max-w-md">
             <CardContent className="pt-6 text-center space-y-4">
-              <h2 className="text-h1">Login required</h2>
+              <h2 className="text-h1">{t("web.auth.loginRequired")}</h2>
               <Button onClick={() => setLocation(getLoginUrl({ role: "customer", returnPath: "/my-bookings" }))}>
-                Login
+                {t("nav.login")}
               </Button>
             </CardContent>
           </Card>
@@ -49,8 +51,8 @@ export default function MyBookings() {
   return (
     <Layout>
       <div className="container py-10 space-y-4">
-        <h1 className="text-h1">My bookings</h1>
-        {bookings.length === 0 && <p className="text-muted-foreground">No bookings yet.</p>}
+        <h1 className="text-h1">{t("nav.bookings")}</h1>
+        {bookings.length === 0 && <p className="text-muted-foreground">{t("booking.noneYet")}</p>}
         {bookings.map((b) => (
           <Card
             key={b.id}
@@ -60,7 +62,7 @@ export default function MyBookings() {
             <CardHeader>
               <CardTitle className="flex flex-wrap items-center justify-between gap-2">
                 <span>{b.service_name || b.booking_number}</span>
-                <Badge>{String(b.status || "").replace(/_/g, " ")}</Badge>
+                <Badge>{t(`status.${String(b.status || "pending")}`)}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4 text-sm items-center" onClick={(e) => e.stopPropagation()}>
@@ -72,7 +74,7 @@ export default function MyBookings() {
               </span>
               <span>{rupees(b.total_paise)}</span>
               <Button size="sm" variant="secondary" onClick={() => setLocation(`/booking/${b.id}`)}>
-                Details / Receipt
+                {t("web.booking.detailsReceipt")}
               </Button>
               {["confirmed", "pending_acceptance"].includes(b.status) && role === "customer" && (
                 <Button
@@ -83,7 +85,7 @@ export default function MyBookings() {
                     setBusy(b.id);
                     try {
                       await api(`/bookings/${b.id}/cancel`, { method: "POST" });
-                      toast.success("Cancelled");
+                      toast.success(t("status.cancelled"));
                       await load();
                     } catch (e: any) {
                       toast.error(e.message);
@@ -92,7 +94,7 @@ export default function MyBookings() {
                     }
                   }}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               )}
             </CardContent>

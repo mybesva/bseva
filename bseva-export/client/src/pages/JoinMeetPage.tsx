@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiBase } from "@/lib/api";
 import { formatDisplaySlot } from "@/lib/formatDate";
 import { Loader2, Video } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type InvitePayload = {
   booking_number?: string;
@@ -19,6 +20,7 @@ type InvitePayload = {
 };
 
 export default function JoinMeetPage() {
+  const { t } = useI18n();
   const params = useParams();
   const token = String(params.token || "");
   const [data, setData] = useState<InvitePayload | null>(null);
@@ -27,7 +29,7 @@ export default function JoinMeetPage() {
 
   useEffect(() => {
     if (!token) {
-      setError("Invalid invite link");
+      setError(t("web.meeting.invalidInvite"));
       setLoading(false);
       return;
     }
@@ -36,13 +38,13 @@ export default function JoinMeetPage() {
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(typeof body?.detail === "string" ? body.detail : "Invite not found");
+          throw new Error(typeof body?.detail === "string" ? body.detail : t("web.meeting.inviteNotFound"));
         }
         setData(body as InvitePayload);
       })
-      .catch((e: Error) => setError(e.message || "Could not load invite"))
+      .catch((e: Error) => setError(e.message || t("web.meeting.loadFailed")))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, t]);
 
   return (
     <Layout>
@@ -51,7 +53,7 @@ export default function JoinMeetPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Video className="text-primary" size={22} />
-              Virtual Puja Meeting
+              {t("booking.meetingLink")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -65,24 +67,24 @@ export default function JoinMeetPage() {
               <>
                 <div className="text-sm space-y-1 text-muted-foreground">
                   {data?.service_name ? <p className="text-base font-medium text-foreground">{data.service_name}</p> : null}
-                  {data?.booking_number ? <p>Booking #{data.booking_number}</p> : null}
+                  {data?.booking_number ? <p>{t("web.booking.numberValue", { number: data.booking_number })}</p> : null}
                   <p>
                     {formatDisplaySlot(data?.booking_date, data?.start_time)}
                   </p>
                 </div>
                 {data?.ready && data.meeting_url ? (
                   <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-4 space-y-3">
-                    <p className="text-sm font-medium text-foreground">Your Google Meet is ready</p>
+                    <p className="text-sm font-medium text-foreground">{t("web.meeting.ready")}</p>
                     <Button asChild className="w-full" size="lg">
                       <a href={data.meeting_url} target="_blank" rel="noopener noreferrer">
-                        Join Google Meet
+                        {t("web.meeting.join")}
                       </a>
                     </Button>
                     <p className="text-xs text-muted-foreground break-all">{data.meeting_url}</p>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    {data?.message || "Meeting link will appear here when ready."}
+                    {data?.message || t("web.meeting.pending")}
                   </p>
                 )}
               </>

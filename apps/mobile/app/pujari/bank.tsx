@@ -4,8 +4,10 @@ import { ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function BankScreen() {
+  const { t } = useI18n();
   const q = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const [holder, setHolder] = useState("");
   const [ifsc, setIfsc] = useState("");
@@ -19,15 +21,15 @@ export default function BankScreen() {
   }, [q.data]);
   return (
     <Screen>
-      <ScreenHeader title="Bank" back />
+      <ScreenHeader title={t("mobile.bank")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
         <ErrorBanner message={error} />
-        <AppText variant="small">Used for settlements. Only the last 4 digits of the account are stored.</AppText>
-        <Field label="Account holder" value={holder} onChangeText={setHolder} />
-        <Field label="IFSC" value={ifsc} onChangeText={setIfsc} autoCapitalize="characters" />
-        <Field label="Account last 4" value={last4} onChangeText={setLast4} keyboardType="number-pad" maxLength={4} />
+        <AppText variant="small">{t("mobile.bankHelp")}</AppText>
+        <Field label={t("mobile.accountHolder")} value={holder} onChangeText={setHolder} />
+        <Field label={t("mobile.ifsc")} value={ifsc} onChangeText={setIfsc} autoCapitalize="characters" />
+        <Field label={t("mobile.accountLast4")} value={last4} onChangeText={setLast4} keyboardType="number-pad" maxLength={4} />
         <PrimaryButton
-          title="Save"
+          title={t("mobile.save")}
           onPress={async () => {
             setError(null);
             try {
@@ -38,7 +40,7 @@ export default function BankScreen() {
               });
               await q.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             }
           }}
         />

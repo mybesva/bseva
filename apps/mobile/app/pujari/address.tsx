@@ -6,8 +6,10 @@ import { AddressForm, type AddressFormValue } from "@/components/AddressForm";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function PujariAddress() {
+  const { t } = useI18n();
   const q = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const [form, setForm] = useState<AddressFormValue>({
     address_line1: "",
@@ -38,14 +40,14 @@ export default function PujariAddress() {
   if (q.isLoading) {
     return (
       <Screen>
-        <ScreenHeader title="Address" back />
+        <ScreenHeader title={t("mobile.address")} back />
         <LoadingBlock />
       </Screen>
     );
   }
   return (
     <Screen>
-      <ScreenHeader title="Address" back />
+      <ScreenHeader title={t("mobile.address")} back />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <ErrorBanner message={error} />
         <AddressForm
@@ -55,7 +57,7 @@ export default function PujariAddress() {
           onSave={async (parsed) => {
             const check = addressSchema.safeParse(parsed);
             if (!check.success) {
-              setError(check.error.issues[0]?.message || "Check address");
+              setError(t("mobile.checkAddress"));
               return;
             }
             setBusy(true);
@@ -67,7 +69,7 @@ export default function PujariAddress() {
               });
               await q.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             } finally {
               setBusy(false);
             }

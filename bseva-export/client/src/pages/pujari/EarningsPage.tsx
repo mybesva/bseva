@@ -8,6 +8,7 @@ import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { Wallet, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 import { isSameMonth, parseISO, startOfMonth } from "date-fns";
+import { useI18n } from "@/i18n/I18nProvider";
 
 function priestShare(b: any) {
   if (b.pujari_payable_paise != null) return Number(b.pujari_payable_paise);
@@ -15,6 +16,7 @@ function priestShare(b: any) {
 }
 
 export default function PujariEarningsPage() {
+  const { t } = useI18n();
   const [bookings, setBookings] = useState<any[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export default function PujariEarningsPage() {
         setBookings(b.items || []);
         setSettlements(s || []);
       })
-      .catch((e) => toast.error(e.message || "Could not load earnings"))
+      .catch((e) => toast.error(e.message || t("web.earnings.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -61,9 +63,9 @@ export default function PujariEarningsPage() {
   return (
     <PujariPortal>
       <section className="mb-6">
-        <h1 className="text-h1 mb-1">Dakshina</h1>
+        <h1 className="text-h1 mb-1">{t("web.earnings.title")}</h1>
         <p className="text-muted-foreground text-sm">
-          Track your Dakshina from completed pujas, wallet balance, and settlement status.
+          {t("web.earnings.description")}
         </p>
       </section>
 
@@ -74,7 +76,7 @@ export default function PujariEarningsPage() {
               <TrendingUp size={18} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">This month</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.thisMonth")}</p>
               <p className="text-xl font-semibold">{loading ? "…" : rupees(stats.thisMonth)}</p>
             </div>
           </CardContent>
@@ -85,7 +87,7 @@ export default function PujariEarningsPage() {
               <CheckCircle2 size={18} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Completed Dakshina</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.completed")}</p>
               <p className="text-xl font-semibold">{loading ? "…" : rupees(stats.completed)}</p>
             </div>
           </CardContent>
@@ -96,7 +98,7 @@ export default function PujariEarningsPage() {
               <Clock size={18} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">In progress / confirmed</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.inProgress")}</p>
               <p className="text-xl font-semibold">{loading ? "…" : rupees(stats.pending)}</p>
             </div>
           </CardContent>
@@ -107,7 +109,7 @@ export default function PujariEarningsPage() {
               <Wallet size={18} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Settlement pending</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.settlementPending")}</p>
               <p className="text-xl font-semibold">{loading ? "…" : rupees(stats.settlementPending)}</p>
             </div>
           </CardContent>
@@ -118,19 +120,19 @@ export default function PujariEarningsPage() {
         <WalletPanel variant="priest" />
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Settlements</CardTitle>
+            <CardTitle className="text-base">{t("web.earnings.settlements")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Already settled / paid</span>
+              <span className="text-muted-foreground">{t("web.earnings.settled")}</span>
               <span className="font-medium">{rupees(stats.settled)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Awaiting settlement</span>
+              <span className="text-muted-foreground">{t("web.earnings.awaiting")}</span>
               <span className="font-medium">{rupees(stats.settlementPending)}</span>
             </div>
             {!loading && settlements.length === 0 && (
-              <p className="text-muted-foreground pt-2">No settlement records yet. They appear after completed pujas.</p>
+              <p className="text-muted-foreground pt-2">{t("web.earnings.noSettlements")}</p>
             )}
             {settlements.slice(0, 8).map((s) => (
               <div key={s.id} className="flex items-center justify-between border-t border-border pt-2">
@@ -139,11 +141,11 @@ export default function PujariEarningsPage() {
                     {rupees(Number(s.status === "blocked" ? s.blocked_paise || 0 : s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0))}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {s.booking_number || s.booking_id?.slice?.(0, 8) || "Booking"}
+                    {s.booking_number || s.booking_id?.slice?.(0, 8) || t("web.common.booking")}
                   </p>
                 </div>
                 <Badge variant="outline" className="capitalize">
-                  {s.status === "blocked" ? "Blocked · no-show" : s.status || "pending"}
+                  {s.status === "blocked" ? t("web.earnings.blocked") : t(`status.${s.status || "pending"}`)}
                 </Badge>
               </div>
             ))}
@@ -153,12 +155,12 @@ export default function PujariEarningsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Completed puja Dakshina</CardTitle>
+          <CardTitle className="text-base">{t("web.earnings.completedPuja")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {loading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}
           {!loading && stats.rows.length === 0 && (
-            <p className="text-sm text-muted-foreground">No completed pujas yet.</p>
+            <p className="text-sm text-muted-foreground">{t("web.earnings.noCompleted")}</p>
           )}
           {stats.rows.map((b) => (
             <div
@@ -166,7 +168,7 @@ export default function PujariEarningsPage() {
               className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 py-2 last:border-0"
             >
               <div>
-                <p className="font-medium text-sm">{b.service_name || "Puja"}</p>
+                <p className="font-medium text-sm">{b.service_name || t("web.common.puja")}</p>
                 <p className="text-xs text-muted-foreground">
                   {b.booking_number}
                   {b.booking_date

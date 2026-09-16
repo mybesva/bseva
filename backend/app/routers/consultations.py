@@ -4,7 +4,8 @@ from __future__ import annotations
 from datetime import date
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -18,27 +19,51 @@ from app.schemas import MuhurtaConsultationIn, ServiceRecommendationIn
 router = APIRouter(tags=["consultations"])
 
 
+class RecommendationTranslationIn(BaseModel):
+    language_code: str = Field(pattern="^(hi|te|mr|ta|kn)$")
+    title: str = Field(min_length=2, max_length=200)
+    description: str | None = None
+    recurrence_hint: str | None = None
+
+
 @router.get("/recommendations")
 def list_recommendations(
+    request: Request,
     month: int | None = Query(default=None, ge=1, le=12),
+    lang: str | None = None,
     db: Session = Depends(get_db),
     user=Depends(current_user),
 ):
     """Active recommended pujas for customers (rule-based; AI can plug in later)."""
+    from app.i18n import resolve_request_lang
+
     m = month or date.today().month
+    code = resolve_request_lang(lang, request)
     rows = db.execute(
         text(
             """
-            SELECT r.*, s.name AS service_name, s.slug AS service_slug, s.category,
+            SELECT r.id, r.service_id,
+                   COALESCE(NULLIF(rt.title, ''), r.title) AS title,
+                   COALESCE(rt.description, r.description) AS description,
+                   r.audience, r.month_number,
+                   COALESCE(rt.recurrence_hint, r.recurrence_hint) AS recurrence_hint,
+                   r.active, r.sort_order, r.created_at, r.updated_at,
+                   COALESCE(NULLIF(st.name, ''), s.name) AS service_name,
+                   s.slug AS service_slug, s.category,
+                   :lang AS locale,
                    s.standard_price_paise, s.active AS service_active
             FROM service_recommendations r
             JOIN services s ON s.id = r.service_id
+            LEFT JOIN recommendation_translations rt
+              ON rt.recommendation_id = r.id AND rt.language_code = :lang
+            LEFT JOIN service_translations st
+              ON st.service_id = s.id AND st.language_code = :lang
             WHERE r.active = TRUE AND s.active = TRUE
               AND (r.month_number IS NULL OR r.month_number = :m)
             ORDER BY r.sort_order, r.title
             """
         ),
-        {"m": m},
+        {"m": m, "lang": code},
     ).mappings().all()
     return {"month": m, "items": [row_dict(r) for r in rows]}
 
@@ -127,6 +152,63 @@ def admin_update_recommendation(
     if result.rowcount == 0:
         raise HTTPException(404, "Recommendation not found")
     write_audit(db, str(admin["id"]), "recommendation_update", "service_recommendation", rec_id)
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/admin/recommendations/{rec_id}/translations")
+def admin_list_recommendation_translations(
+    rec_id: str,
+    admin=Depends(require_permission("manage_services")),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text(
+            """
+            SELECT language_code, title, description, recurrence_hint, updated_at
+            FROM recommendation_translations
+            WHERE recommendation_id = CAST(:id AS uuid)
+            ORDER BY language_code
+            """
+        ),
+        {"id": rec_id},
+    ).mappings().all()
+    return [row_dict(r) for r in rows]
+
+
+@router.put("/admin/recommendations/{rec_id}/translations")
+def admin_upsert_recommendation_translation(
+    rec_id: str,
+    body: RecommendationTranslationIn,
+    admin=Depends(require_permission("manage_services")),
+    db: Session = Depends(get_db),
+):
+    result = db.execute(
+        text(
+            """
+            INSERT INTO recommendation_translations (
+              recommendation_id, language_code, title, description, recurrence_hint
+            )
+            SELECT id, :lang, :title, :description, :recurrence
+            FROM service_recommendations WHERE id = CAST(:id AS uuid)
+            ON CONFLICT (recommendation_id, language_code) DO UPDATE SET
+              title = EXCLUDED.title,
+              description = EXCLUDED.description,
+              recurrence_hint = EXCLUDED.recurrence_hint,
+              updated_at = NOW()
+            """
+        ),
+        {
+            "id": rec_id,
+            "lang": body.language_code,
+            "title": body.title,
+            "description": body.description,
+            "recurrence": body.recurrence_hint,
+        },
+    )
+    if result.rowcount == 0:
+        raise HTTPException(404, "Recommendation not found")
+    write_audit(db, str(admin["id"]), "recommendation_translation_update", "service_recommendation", rec_id)
     db.commit()
     return {"ok": True}
 

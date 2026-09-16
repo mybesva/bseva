@@ -35,8 +35,10 @@ _ALIAS_EXPAND = {
 
 
 def normalize_search(q: str) -> str:
-    s = (q or "").strip().lower()
-    s = re.sub(r"[^a-z0-9\s\-_/]", " ", s)
+    # ``\w`` is Unicode-aware in Python, so native-script searches survive
+    # normalization (the old ASCII-only expression erased them completely).
+    s = (q or "").strip().casefold()
+    s = re.sub(r"[^\w\s\-_/]", " ", s, flags=re.UNICODE)
     s = re.sub(r"\s+", " ", s).strip()
     parts = []
     for tok in s.split():
@@ -44,18 +46,42 @@ def normalize_search(q: str) -> str:
     return " ".join(parts)
 
 
-def service_categories(db: Session, service_id: str) -> list[dict]:
+def localized_service_name(db: Session, service_id: str, lang: str | None, fallback: str = "Puja") -> str:
+    """Resolve a customer-facing service name without changing the canonical row."""
+    code = normalize_lang(lang)
+    try:
+        name = db.execute(
+            text(
+                """
+                SELECT COALESCE(NULLIF(st.name, ''), s.name)
+                FROM services s
+                LEFT JOIN service_translations st
+                  ON st.service_id = s.id AND st.language_code = :lang
+                WHERE s.id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": service_id, "lang": code},
+        ).scalar()
+        return str(name or fallback)
+    except Exception:
+        return fallback
+
+
+def service_categories(db: Session, service_id: str, lang: str | None = None) -> list[dict]:
+    code = normalize_lang(lang)
     rows = db.execute(
         text(
             """
-            SELECT c.id, c.slug, c.name, c.sort_order
+            SELECT c.id, c.slug, COALESCE(ct.name, c.name) AS name, c.sort_order
             FROM service_category_map m
             JOIN service_categories c ON c.id = m.category_id
+            LEFT JOIN category_translations ct
+              ON ct.category_id = c.id AND ct.language_code = :lang
             WHERE m.service_id = CAST(:sid AS uuid) AND c.active = TRUE
             ORDER BY c.sort_order, c.name
             """
         ),
-        {"sid": service_id},
+        {"sid": service_id, "lang": code},
     ).mappings().all()
     return [row_dict(r) for r in rows]
 
@@ -70,7 +96,7 @@ def enrich_service(
     data = row_dict(row)
     sid = str(data["id"])
     try:
-        data["categories"] = service_categories(db, sid)
+        data["categories"] = service_categories(db, sid, lang)
     except Exception:
         data["categories"] = []
     aliases = data.get("search_aliases") or []

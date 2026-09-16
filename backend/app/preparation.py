@@ -89,12 +89,16 @@ def load_service_preparation_master(db: Session, service_id: str, lang: str) -> 
     svc = db.execute(
         text(
             """
-            SELECT id, name, slug, samagri_review_status, samagri_provider, alankaram_provider, food_provider,
-                   samagri_price_paise, alankaram_price_paise, food_price_paise
-            FROM services WHERE id = CAST(:id AS uuid)
+            SELECT s.id, COALESCE(NULLIF(st.name, ''), s.name) AS name, s.slug,
+                   s.samagri_review_status, s.samagri_provider, s.alankaram_provider, s.food_provider,
+                   s.samagri_price_paise, s.alankaram_price_paise, s.food_price_paise
+            FROM services s
+            LEFT JOIN service_translations st
+              ON st.service_id = s.id AND st.language_code = :lang
+            WHERE s.id = CAST(:id AS uuid)
             """
         ),
-        {"id": service_id},
+        {"id": service_id, "lang": lang},
     ).mappings().first()
     if not svc:
         return {"ok": False, "error": "service_not_found"}
@@ -286,7 +290,7 @@ def create_booking_preparation_snapshot(
             pass
 
     view = build_preparation_view(master, samagri_purchased=flags["samagri_purchased"], lang=lang)
-    svc_name = (master.get("service") or {}).get("name") or booking.get("service_name")
+    svc_name = view.get("display_name") or (master.get("service") or {}).get("name") or booking.get("service_name")
     review = (master.get("service") or {}).get("samagri_review_status") or "UNVERIFIED"
     verified = bool(view.get("verified"))
 

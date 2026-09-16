@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const ALLOWED = new Set([
   "/pujari/onboarding",
@@ -25,6 +26,7 @@ const ALLOWED = new Set([
 ]);
 
 export default function PujariProfileGate({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   const [profile, setProfile] = useState<any>(null);
   const [open, setOpen] = useState(false);
   const path = typeof window !== "undefined" ? window.location.pathname : "";
@@ -47,15 +49,15 @@ export default function PujariProfileGate({ children }: { children: React.ReactN
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle className="">Complete Your Profile</DialogTitle>
+              <DialogTitle className="">{t("web.profile.completeTitle")}</DialogTitle>
               <DialogDescription>
-                Please complete your BSeva Pujari profile before continuing. Your profile information and required documents are needed for verification and to receive bookings.
+                {t("web.profile.completeDescription")}
               </DialogDescription>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground">Progress: {profile.profile_completion_percentage ?? 0}% complete</p>
+            <p className="text-sm text-muted-foreground">{t("web.profile.progress", { percent: profile.profile_completion_percentage ?? 0 })}</p>
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setOpen(false)}>Later</Button>
-              <Link href="/pujari/onboarding"><Button>Complete Profile</Button></Link>
+              <Button variant="outline" onClick={() => setOpen(false)}>{t("web.profile.later")}</Button>
+              <Link href="/pujari/onboarding"><Button>{t("web.profile.completeAction")}</Button></Link>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -4,8 +4,10 @@ import { ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function ChangePasswordScreen() {
+  const { t } = useI18n();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -14,15 +16,15 @@ export default function ChangePasswordScreen() {
   const [busy, setBusy] = useState(false);
   return (
     <Screen>
-      <ScreenHeader title="Change password" back />
+      <ScreenHeader title={t("mobile.changePassword")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         <ErrorBanner message={error} />
-        {ok ? <AppText>Password updated.</AppText> : null}
-        <Field label="Current password" value={current} onChangeText={setCurrent} secureTextEntry />
-        <Field label="New password" value={next} onChangeText={setNext} secureTextEntry />
-        <Field label="Confirm" value={confirm} onChangeText={setConfirm} secureTextEntry />
+        {ok ? <AppText>{t("mobile.passwordUpdated")}</AppText> : null}
+        <Field label={t("mobile.currentPassword")} value={current} onChangeText={setCurrent} secureTextEntry />
+        <Field label={t("mobile.newPassword")} value={next} onChangeText={setNext} secureTextEntry />
+        <Field label={t("mobile.confirmPassword")} value={confirm} onChangeText={setConfirm} secureTextEntry />
         <PrimaryButton
-          title={busy ? "Saving..." : "Update password"}
+          title={busy ? t("mobile.saving") : t("mobile.updatePassword")}
           loading={busy}
           onPress={async () => {
             const parsed = changePasswordSchema.safeParse({
@@ -31,7 +33,7 @@ export default function ChangePasswordScreen() {
               confirm,
             });
             if (!parsed.success) {
-              setError(parsed.error.issues[0]?.message || "Check passwords");
+              setError(t("mobile.checkPasswords"));
               setOk(false);
               return;
             }
@@ -44,7 +46,7 @@ export default function ChangePasswordScreen() {
               setNext("");
               setConfirm("");
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             } finally {
               setBusy(false);
             }

@@ -64,7 +64,7 @@ export default function ServiceDetail() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { canBook, checking, status } = useServiceAvailability();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const [svc, setSvc] = useState<Svc | null>(null);
   const [loading, setLoading] = useState(true);
   const [prep, setPrep] = useState<PreparationView | null>(null);
@@ -88,7 +88,7 @@ export default function ServiceDetail() {
         }
       })
       .catch((e) => {
-        toast.error(e.message || "Service not found");
+        toast.error(e.message || t("errors.serviceNotFound"));
         setSvc(null);
       })
       .finally(() => setLoading(false));
@@ -146,13 +146,13 @@ export default function ServiceDetail() {
                 </div>
                 {!svc.bookable && (
                   <p className="mb-3 text-sm font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
-                    This puja is not open for booking yet. Top available pujas can be booked from Services; Admin will mark this Available when ready.
+                    {t("services.bookingSoon")}
                   </p>
                 )}
                 <h1 className="text-h1 text-primary mb-2">{svc.name}</h1>
                 {svc.local_name && <p className="text-muted-foreground mb-4">{svc.local_name}</p>}
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  {svc.short_description || svc.description || "Authentic Vedic ritual through BSeva."}
+                  {svc.short_description || svc.description || t("app.tagline")}
                 </p>
               </div>
 
@@ -160,37 +160,37 @@ export default function ServiceDetail() {
                 <div className="space-y-4 bg-secondary/20 rounded-xl p-6">
                   {svc.full_description && (
                     <div>
-                      <h2 className="font-bold text-xl mb-2">About this puja</h2>
+                      <h2 className="font-bold text-xl mb-2">{t("booking.details")}</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.full_description}</p>
                     </div>
                   )}
                   {svc.spiritual_meaning && (
                     <div>
-                      <h2 className="font-bold text-xl mb-2">What this puja represents</h2>
+                      <h2 className="font-bold text-xl mb-2">{t("service.spiritualMeaning")}</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.spiritual_meaning}</p>
                     </div>
                   )}
                   {svc.common_occasions && (
                     <div>
-                      <h2 className="font-bold text-xl mb-2">Common occasions</h2>
+                      <h2 className="font-bold text-xl mb-2">{t("service.commonOccasions")}</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.common_occasions}</p>
                     </div>
                   )}
                   {svc.whats_included && (
                     <div>
-                      <h2 className="font-bold text-xl mb-2">What&apos;s included</h2>
+                      <h2 className="font-bold text-xl mb-2">{t("services.includes")}</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.whats_included}</p>
                     </div>
                   )}
                   {svc.tradition_notes && (
                     <div>
-                      <h2 className="font-bold text-xl mb-2">Tradition notes</h2>
+                      <h2 className="font-bold text-xl mb-2">{t("service.traditionNotes")}</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.tradition_notes}</p>
                     </div>
                   )}
                   {svc.benefits && (
                     <div>
-                      <h2 className="font-bold text-xl mb-2">Intention / purpose</h2>
+                      <h2 className="font-bold text-xl mb-2">{t("service.intention")}</h2>
                       <p className="text-muted-foreground whitespace-pre-line">{svc.benefits}</p>
                     </div>
                   )}
@@ -198,29 +198,29 @@ export default function ServiceDetail() {
               )}
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <Meta label="Duration" value={svc.duration_minutes ? `${svc.duration_minutes} min` : "—"} />
+                <Meta label={t("services.duration")} value={svc.duration_minutes ? t("service.minutes", { count: svc.duration_minutes }) : "—"} />
                 <Meta
-                  label="Priests"
+                  label={t("services.priests")}
                   value={
                     svc.priests_min && svc.priests_max && svc.priests_min !== svc.priests_max
                       ? `${svc.priests_min}–${svc.priests_max}`
                       : String(svc.priests_min || svc.pujaris_required || 1)
                   }
                 />
-                <Meta label="Deity" value={svc.deity || "—"} />
-                <Meta label="Location" value={svc.location_notes || "Home / Temple"} />
-                <Meta label="Muhurtham" value={svc.requires_muhurta ? "Required" : "Optional"} />
-                <Meta label="Homa / Havan" value={svc.homa_included ? "Included option" : "As configured"} />
-                <Meta label="Languages" value={(svc.languages || ["en"]).join(", ").toUpperCase()} />
+                <Meta label={t("service.deity")} value={svc.deity || "—"} />
+                <Meta label={t("service.location")} value={svc.location_notes || t("service.homeTemple")} />
+                <Meta label={t("booking.muhurtham")} value={svc.requires_muhurta ? t("common.required") : t("common.optional")} />
+                <Meta label={t("services.havans")} value={svc.homa_included ? t("service.includedOption") : t("service.asConfigured")} />
+                <Meta label={t("pujari.public.languages")} value={(svc.languages || ["en"]).join(", ").toUpperCase()} />
                 <Meta
-                  label="Price"
-                  value={formatStartingFrom(svc) || (svc.bookable ? "Set by Admin" : "Coming soon")}
+                  label={t("service.price")}
+                  value={formatStartingFrom(svc, lang) || (svc.bookable ? t("service.setByAdmin") : t("services.comingSoonLabel"))}
                 />
               </div>
 
               {!!(svc.process_steps && svc.process_steps.length) && (
                 <div className="rounded-xl border bg-card p-6">
-                  <h2 className="font-bold text-xl mb-3">Puja process</h2>
+                  <h2 className="font-bold text-xl mb-3">{t("service.process")}</h2>
                   <ol className="space-y-2 list-decimal list-inside text-muted-foreground">
                     {[...svc.process_steps]
                       .sort((a, b) => (a.order || 0) - (b.order || 0))

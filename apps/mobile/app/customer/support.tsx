@@ -7,8 +7,10 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function SupportScreen() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const cats = isPujariRole(user?.role) ? PUJARI_SUPPORT_CATS : CUSTOMER_SUPPORT_CATS;
   const q = useQuery({ queryKey: ["tickets"], queryFn: () => apiClient.listSupportTickets() });
@@ -19,24 +21,24 @@ export default function SupportScreen() {
   const [busy, setBusy] = useState(false);
   return (
     <Screen>
-      <ScreenHeader title="Support" back />
+      <ScreenHeader title={t("mobile.support")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
-        <AppText variant="small">Category</AppText>
+        <AppText variant="small">{t("mobile.category")}</AppText>
         <ChoiceChips
           options={cats.map((c) => ({ id: c, label: c }))}
           value={category}
           onChange={(v) => setCategory(String(v))}
         />
-        <Field label="Subject" value={subject} onChangeText={setSubject} />
-        <Field label="Description" value={body} onChangeText={setBody} multiline />
+        <Field label={t("mobile.subject")} value={subject} onChangeText={setSubject} />
+        <Field label={t("mobile.description")} value={body} onChangeText={setBody} multiline />
         <PrimaryButton
-          title={busy ? "Submitting..." : "Submit ticket"}
+          title={busy ? t("mobile.submitting") : t("mobile.submitTicket")}
           loading={busy}
           onPress={async () => {
             const parsed = supportSchema.safeParse({ subject, body });
             if (!parsed.success) {
-              setError(parsed.error.issues[0]?.message || "Check the form");
+              setError(t("mobile.checkForm"));
               return;
             }
             setBusy(true);
@@ -47,13 +49,13 @@ export default function SupportScreen() {
               setBody("");
               await q.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             } finally {
               setBusy(false);
             }
           }}
         />
-        {!q.isLoading && (q.data || []).length === 0 ? <EmptyState title="No tickets yet." /> : null}
+        {!q.isLoading && (q.data || []).length === 0 ? <EmptyState title={t("mobile.noTickets")} /> : null}
         {(q.data || []).map((t) => (
           <Card key={t.id}>
             <AppText variant="h3">{t.subject}</AppText>

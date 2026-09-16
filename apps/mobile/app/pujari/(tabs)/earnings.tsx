@@ -5,9 +5,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function PujariEarnings() {
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   const wallet = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number } }> });
   const settlements = useQuery({
@@ -23,7 +25,7 @@ export default function PujariEarnings() {
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">Earnings</AppText>
+        <AppText variant="h2">{t("mobile.earnings")}</AppText>
       </SafeAreaView>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12 }}
@@ -31,20 +33,20 @@ export default function PujariEarnings() {
       >
         {bookings.isLoading ? <LoadingBlock /> : null}
         <Card>
-          <AppText variant="small">Completed payable</AppText>
+          <AppText variant="small">{t("mobile.completedPayable")}</AppText>
           <AppText variant="h1" color={colors.primary}>
             {rupees(earned)}
           </AppText>
         </Card>
         <Card>
-          <AppText variant="small">In progress / upcoming</AppText>
+          <AppText variant="small">{t("mobile.upcomingPayable")}</AppText>
           <AppText variant="h2">{rupees(pendingAmt)}</AppText>
         </Card>
         <Card>
-          <AppText variant="small">Wallet</AppText>
+          <AppText variant="small">{t("mobile.wallet")}</AppText>
           <AppText variant="h2">{rupees(Number(wallet.data?.wallet?.balance_paise || 0))}</AppText>
         </Card>
-        <AppText variant="h3">Settlements</AppText>
+        <AppText variant="h3">{t("mobile.settlements")}</AppText>
         {settleRows.map((s, i) => (
           <Card key={s.id || i}>
             <AppText>{rupees(Number(s.amount_paise || 0))}</AppText>
@@ -52,7 +54,7 @@ export default function PujariEarnings() {
           </Card>
         ))}
         <AppText variant="small" color={colors.mutedForeground}>
-          Settlement amounts are calculated by FastAPI after completion.
+          {t("mobile.settlementHelp")}
         </AppText>
       </ScrollView>
     </Screen>

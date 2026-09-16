@@ -14,6 +14,7 @@ from app.schemas import (
     AdminCustomerUpdateIn,
     AdminUserIn,
     BlockIn,
+    LegalPolicyTranslationIn,
     LegalPolicyUpdateIn,
     PricingIn,
     PujariLevelIn,
@@ -1292,6 +1293,60 @@ def update_legal_policy(slug: str, body: LegalPolicyUpdateIn, user=Depends(requi
     db.commit()
     row = db.execute(text("SELECT * FROM legal_policies WHERE slug = :slug"), {"slug": slug}).mappings().one()
     return _serialize_legal_policy(row)
+
+
+@router.get("/legal/{slug}/translations")
+def list_legal_policy_translations(
+    slug: str,
+    user=Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text(
+            """
+            SELECT t.language_code, t.title, t.points, t.updated_at
+            FROM legal_policy_translations t
+            JOIN legal_policies p ON p.id = t.policy_id
+            WHERE p.slug = :slug
+            ORDER BY t.language_code
+            """
+        ),
+        {"slug": slug},
+    ).mappings().all()
+    return [_serialize_legal_policy(r) for r in rows]
+
+
+@router.put("/legal/{slug}/translations")
+def upsert_legal_policy_translation(
+    slug: str,
+    body: LegalPolicyTranslationIn,
+    user=Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+):
+    import json
+
+    points = [{"title": p.title.strip(), "body": p.body.strip()} for p in body.points if p.body.strip()]
+    result = db.execute(
+        text(
+            """
+            INSERT INTO legal_policy_translations (policy_id, language_code, title, points)
+            SELECT id, :lang, :title, CAST(:points AS jsonb)
+            FROM legal_policies WHERE slug = :slug
+            ON CONFLICT (policy_id, language_code) DO UPDATE SET
+              title = EXCLUDED.title, points = EXCLUDED.points, updated_at = NOW()
+            """
+        ),
+        {
+            "slug": slug,
+            "lang": body.language_code,
+            "title": body.title,
+            "points": json.dumps(points),
+        },
+    )
+    if result.rowcount == 0:
+        raise HTTPException(404, "Policy not found")
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/email/test-templates")

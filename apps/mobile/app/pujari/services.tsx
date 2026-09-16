@@ -25,14 +25,14 @@ type OffersPayload = {
 
 export default function PujariServicesScreen() {
   const { colors } = useAppTheme();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const profile = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const roles = useQuery({
     queryKey: ["pujari-roles"],
     queryFn: () => apiClient.pujariRoles() as Promise<{ level: number; title: string; summary?: string }[]>,
   });
   const offers = useQuery({
-    queryKey: ["pujari-offers"],
+    queryKey: ["pujari-offers", lang],
     queryFn: () => apiClient.pujariServiceOffers() as Promise<OffersPayload>,
   });
   const approved = Number(profile.data?.approved_level || 0);
@@ -50,8 +50,8 @@ export default function PujariServicesScreen() {
       <ScreenHeader title={t("mobile.serviceOffers")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }}>
         <ErrorBanner message={error} />
-        <AppText variant="h3">Capable services</AppText>
-        <Field label="Search" value={q} onChangeText={setQ} />
+        <AppText variant="h3">{t("mobile.capableServices")}</AppText>
+        <Field label={t("mobile.search")} value={q} onChangeText={setQ} />
         {offers.data?.note ? <AppText variant="small">{offers.data.note}</AppText> : null}
         {services.map((s) => (
           <Card key={s.id}>
@@ -77,7 +77,7 @@ export default function PujariServicesScreen() {
                     await apiClient.applyPujariServiceOffer(s.id);
                     await offers.refetch();
                   } catch (e: unknown) {
-                    setError(e instanceof Error ? e.message : "Could not apply");
+                    setError(e instanceof Error ? e.message : t("mobile.couldNotApplyService"));
                   } finally {
                     setApplying(null);
                   }
@@ -88,25 +88,25 @@ export default function PujariServicesScreen() {
         ))}
 
         <View style={{ height: 8 }} />
-        <AppText variant="h3">Upgrade role</AppText>
-        <AppText>Approved level: {approved || "—"}</AppText>
-        <AppText>Requested: {String(profile.data?.requested_level || "—")}</AppText>
+        <AppText variant="h3">{t("mobile.upgradeRole")}</AppText>
+        <AppText>{t("mobile.approvedLevel", { level: approved || "—" })}</AppText>
+        <AppText>{t("mobile.requestedLevel", { level: String(profile.data?.requested_level || "—") })}</AppText>
         {rows.map((r) => (
           <Pressable key={r.level} onPress={() => r.level > approved && setLevel(r.level)}>
             <Card style={{ borderWidth: level === r.level ? 2 : 0.5, borderColor: level === r.level ? colors.primary : colors.border }}>
               <AppText variant="h3">
-                Level {r.level}: {r.title}
+                {t("mobile.levelTitle", { level: r.level, title: r.title })}
               </AppText>
               <AppText variant="small">{r.summary}</AppText>
-              {r.level <= approved ? <AppText variant="small">Already at or below this level</AppText> : null}
+              {r.level <= approved ? <AppText variant="small">{t("mobile.alreadyLevel")}</AppText> : null}
             </Card>
           </Pressable>
         ))}
         <PrimaryButton
-          title="Request selected level"
+          title={t("mobile.requestLevel")}
           onPress={async () => {
             if (!level) {
-              setError("Select a higher level");
+              setError(t("mobile.selectHigherLevel"));
               return;
             }
             setError(null);
@@ -114,7 +114,7 @@ export default function PujariServicesScreen() {
               await apiClient.applyPujariLevel(level);
               await profile.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             }
           }}
         />

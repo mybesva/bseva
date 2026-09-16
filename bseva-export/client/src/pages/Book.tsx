@@ -10,13 +10,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
-import {
-  COMING_SOON_BODY,
-  COMING_SOON_TITLE,
-} from "@/lib/serviceAvailabilityMessages";
 import { Loader2 } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function Book() {
+  const { t } = useI18n();
   const params = useParams();
   const pujaSlug = params.slug as string;
   const [, setLocation] = useLocation();
@@ -60,10 +58,10 @@ export default function Book() {
       <Layout>
         <div className="min-h-[40vh] flex items-center justify-center">
           <div className="text-center space-y-4">
-            <h1 className="text-h1 text-foreground mb-2">Service Not Found</h1>
-            <p className="text-muted-foreground">The requested puja service could not be found.</p>
+            <h1 className="text-h1 text-foreground mb-2">{t("common.notFound")}</h1>
+            <p className="text-muted-foreground">{t("web.book.serviceNotFound")}</p>
             <Button onClick={() => setLocation(inCustomerPortal ? "/customer" : "/services")}>
-              {inCustomerPortal ? "Back to dashboard" : "Browse services"}
+              {inCustomerPortal ? t("home.goDashboard") : t("web.book.browseServices")}
             </Button>
           </div>
         </div>
@@ -89,8 +87,8 @@ export default function Book() {
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{pujaType.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {publicConfig?.virtual_puja_enabled
-              ? "Book Standard or Premium · In-person or Virtual"
-              : "Book Standard or Premium · In-person"}
+              ? t("web.book.subtitleVirtual")
+              : t("web.book.subtitleInPerson")}
           </p>
         </div>
       ) : (
@@ -99,8 +97,8 @@ export default function Book() {
             <h1 className="text-h1 text-primary">{pujaType.name}</h1>
             <p className="text-sidebar-foreground/80 mt-1">
               {publicConfig?.virtual_puja_enabled
-                ? "Book Standard or Premium · In-person or Virtual"
-                : "Book Standard or Premium · In-person"}
+                ? t("web.book.subtitleVirtual")
+                : t("web.book.subtitleInPerson")}
             </p>
           </div>
         </section>
@@ -111,29 +109,28 @@ export default function Book() {
       {serviceNotBookable ? (
         <div className="pb-8 max-w-2xl space-y-4">
           <div className="rounded-xl border border-border bg-muted/30 px-5 py-5">
-            <h2 className="text-lg font-semibold text-foreground mb-2">Not open for booking yet</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-2">{t("web.book.notOpen")}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              This puja is listed for information only. Choose another service from your dashboard or ask
-              admin to activate pricing for this puja.
+              {t("web.book.notOpenBody")}
             </p>
           </div>
           <Button variant="outline" onClick={() => setLocation(inCustomerPortal ? "/customer" : "/services")}>
-            {inCustomerPortal ? "Back to dashboard" : "Browse services"}
+            {inCustomerPortal ? t("home.goDashboard") : t("web.book.browseServices")}
           </Button>
         </div>
       ) : blockBooking ? (
         <div className="pb-8 max-w-2xl space-y-4">
           {status === "unavailable" ? (
             <div className="rounded-xl border border-primary/25 bg-orange-50/80 dark:bg-orange-950/30 px-5 py-5">
-              <h2 className="text-lg font-bold text-[#1A2B4A] dark:text-primary mb-2">{COMING_SOON_TITLE}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{COMING_SOON_BODY}</p>
+              <h2 className="text-lg font-bold text-[#1A2B4A] dark:text-primary mb-2">{t("web.availability.comingSoonTitle")}</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">{t("web.availability.comingSoonBody")}</p>
             </div>
           ) : null}
           <p className="text-sm text-muted-foreground">
-            You can still browse this puja and other services. Booking will unlock when service is available in your area.
+            {t("web.book.areaUnavailableBody")}
           </p>
           <Button variant="outline" onClick={() => setLocation(inCustomerPortal ? "/customer" : "/services")}>
-            {inCustomerPortal ? "Back to dashboard" : "Browse services"}
+            {inCustomerPortal ? t("home.goDashboard") : t("web.book.browseServices")}
           </Button>
         </div>
       ) : (

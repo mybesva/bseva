@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { serviceImageUrl } from "@/lib/serviceImage";
 import { formatStartingFrom } from "@/lib/servicePricing";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
-import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
 import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 
 const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
@@ -36,7 +35,7 @@ type Svc = {
 };
 
 export default function Services() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [, setLocation] = useLocation();
   const searchStr = useSearch();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -54,7 +53,7 @@ export default function Services() {
     api<Cat[]>("/service-categories")
       .then(setCategories)
       .catch(() => setCategories([]));
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     const qs = new URLSearchParams();
@@ -66,7 +65,7 @@ export default function Services() {
       .then(setServices)
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
-  }, [q, category]);
+  }, [q, category, lang]);
 
   function openService(slug: string, bookable?: boolean) {
     if (!bookable) {
@@ -101,8 +100,12 @@ export default function Services() {
   }
 
   const chips = useMemo(
-    () => [{ slug: "all", name: "All" }, { slug: "popular", name: "Popular" }, ...categories.map((c) => ({ slug: c.slug, name: c.name }))],
-    [categories]
+    () => [
+      { slug: "all", name: t("common.all") },
+      { slug: "popular", name: t("services.popular") },
+      ...categories.map((c) => ({ slug: c.slug, name: c.name })),
+    ],
+    [categories, t]
   );
 
   const available = useMemo(() => services.filter((s) => s.bookable), [services]);
@@ -131,7 +134,7 @@ export default function Services() {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search Pujas, Homams, Vrathams..."
+              placeholder={t("services.searchPujas")}
               className="h-12 pl-11 bg-card text-foreground border-none shadow-lg selection:bg-transparent focus:ring-0 focus-visible:ring-1 focus-visible:ring-primary/30"
             />
           </div>
@@ -162,7 +165,7 @@ export default function Services() {
               <Loader2 className="w-10 h-10 animate-spin text-primary" />
             </div>
           ) : services.length === 0 ? (
-            <p className="text-center text-muted-foreground py-16">No pujas match your search.</p>
+            <p className="text-center text-muted-foreground py-16">{t("services.noPujas")}</p>
           ) : (
             <div className="space-y-10">
               {(() => {
@@ -171,12 +174,12 @@ export default function Services() {
                     {list.map((s, i) => {
                       const Icon = ICONS[i % ICONS.length];
                       const img = serviceImageUrl(s);
-                      const starting = formatStartingFrom(s);
+                      const starting = formatStartingFrom(s, lang);
                       const desc =
                         s.short_description ||
                         s.description ||
                         starting ||
-                        (s.bookable ? "Pricing set by Admin soon" : "Coming soon");
+                        (s.bookable ? t("services.pricingSoon") : t("services.comingSoonLabel"));
                       return (
                         <div key={s.id} onClick={() => openService(s.slug, s.bookable)} className="cursor-pointer">
                           <ServiceCard
@@ -187,7 +190,7 @@ export default function Services() {
                             icon={<Icon size={24} />}
                             comingSoon={!s.bookable}
                             bookingDisabled={Boolean(s.bookable && isAuthenticated && user?.role === "customer" && (!canBook || checking))}
-                            bookingDisabledLabel={checking ? "Checking availability…" : BOOKING_UNAVAILABLE_HINT}
+                            bookingDisabledLabel={checking ? t("services.checkingAvailability") : t("services.bookingUnavailableArea")}
                           />
                         </div>
                       );
@@ -198,22 +201,22 @@ export default function Services() {
                   <>
                     {pageAvailable.length > 0 && (
                       <div>
-                        <h2 className="text-h3 text-foreground mb-4">Available pujas</h2>
+                        <h2 className="text-h3 text-foreground mb-4">{t("services.availablePujas")}</h2>
                         {renderGrid(pageAvailable)}
                       </div>
                     )}
                     {pageUpcoming.length > 0 && (
                       <div>
-                        <h2 className="text-h3 text-foreground mb-2">Upcoming services</h2>
+                        <h2 className="text-h3 text-foreground mb-2">{t("services.upcomingServices")}</h2>
                         <p className="text-sm text-muted-foreground mb-4">
-                          These pujas are listed as <span className="font-semibold text-amber-600">Coming Soon</span> and will open for booking when Admin marks them Available.
+                          {t("services.upcomingDescription")}
                         </p>
                         {renderGrid(pageUpcoming)}
                       </div>
                     )}
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>Show</span>
+                        <span>{t("services.show")}</span>
                         <select
                           value={pageSize}
                           onChange={(e) => {
@@ -221,7 +224,7 @@ export default function Services() {
                             setPage(1);
                           }}
                           className="h-9 rounded-md border border-border bg-card px-2 text-foreground"
-                          aria-label="Items per page"
+                          aria-label={t("services.itemsPerPage")}
                         >
                           {[6, 9, 12, 24].map((n) => (
                             <option key={n} value={n}>
@@ -229,7 +232,7 @@ export default function Services() {
                             </option>
                           ))}
                         </select>
-                        <span>per page · {combined.length} total</span>
+                        <span>{t("services.perPageTotal", { count: combined.length })}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
@@ -239,10 +242,10 @@ export default function Services() {
                           disabled={pageSafe <= 1}
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
                         >
-                          Previous
+                          {t("services.previous")}
                         </Button>
                         <span className="text-sm text-muted-foreground tabular-nums px-2">
-                          Page {pageSafe} of {totalPages}
+                          {t("services.pageOf", { page: pageSafe, pages: totalPages })}
                         </span>
                         <Button
                           type="button"
@@ -251,7 +254,7 @@ export default function Services() {
                           disabled={pageSafe >= totalPages}
                           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         >
-                          Next
+                          {t("common.next")}
                         </Button>
                       </div>
                     </div>

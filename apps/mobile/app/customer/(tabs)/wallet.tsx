@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 type WalletPayload = {
   wallet?: { balance_paise?: number };
@@ -17,6 +18,7 @@ type WalletPayload = {
 export default function WalletScreen() {
   const { colors } = useAppTheme();
   const qc = useQueryClient();
+  const { t: tr } = useI18n();
   const q = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<WalletPayload> });
   const [rupee, setRupee] = useState("500");
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export default function WalletScreen() {
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">Wallet</AppText>
+        <AppText variant="h2">{tr("mobile.wallet")}</AppText>
       </SafeAreaView>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12 }}
@@ -45,25 +47,25 @@ export default function WalletScreen() {
       >
         {q.isLoading ? <LoadingBlock /> : null}
         <Card>
-          <AppText variant="small">Balance</AppText>
+          <AppText variant="small">{tr("mobile.balance")}</AppText>
           <AppText variant="h1" color={colors.primary}>
             {rupees(Number(balance))}
           </AppText>
         </Card>
         <Card>
-          <AppText variant="h3">Load wallet</AppText>
+          <AppText variant="h3">{tr("mobile.loadWallet")}</AppText>
           <AppText variant="small" color={colors.mutedForeground} style={{ marginVertical: 8 }}>
-            Amounts are processed by the BSeva API (demo gateway until production payments are enabled).
+            {tr("mobile.walletHelp")}
           </AppText>
           <ErrorBanner message={error} />
-          <Field label="Amount (₹)" value={rupee} onChangeText={setRupee} keyboardType="numeric" />
+          <Field label={tr("mobile.amount")} value={rupee} onChangeText={setRupee} keyboardType="numeric" />
           <View style={{ height: 10 }} />
-          <PrimaryButton title={load.isPending ? "Loading..." : "Add money"} loading={load.isPending} onPress={() => load.mutate()} />
+          <PrimaryButton title={load.isPending ? tr("mobile.loading") : tr("mobile.addMoney")} loading={load.isPending} onPress={() => load.mutate()} />
         </Card>
-        <AppText variant="h3">Transactions</AppText>
+        <AppText variant="h3">{tr("mobile.transactions")}</AppText>
         {txns.map((t) => (
           <Card key={t.id || `${t.created_at}-${t.amount_paise}`}>
-            <AppText>{t.note || t.type || t.kind || "Transaction"}</AppText>
+            <AppText>{t.note || t.type || t.kind || tr("mobile.transaction")}</AppText>
             <AppText color={Number(t.amount_paise) < 0 ? colors.destructive : colors.success}>
               {rupees(t.amount_paise)}
             </AppText>

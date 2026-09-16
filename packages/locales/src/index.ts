@@ -6,6 +6,7 @@ import te from "./resources/te";
 import mr from "./resources/mr";
 import kn from "./resources/kn";
 import ta from "./resources/ta";
+import { coverage } from "./resources/coverage";
 
 export {
   DEFAULT_LANG,
@@ -41,15 +42,21 @@ export { ERROR_CODE_KEYS, errorKeyForCode, parseApiErrorDetail } from "./errors"
 
 /** English is copied first so missing locale keys fall back without showing raw keys. */
 export const dictionaries: Record<Lang, Record<string, string>> = {
-  en,
-  hi: { ...en, ...hi },
-  te: { ...en, ...te },
-  mr: { ...en, ...mr },
-  kn: { ...en, ...kn },
-  ta: { ...en, ...ta },
+  en: { ...en, ...coverage.en },
+  hi: { ...en, ...coverage.en, ...hi, ...coverage.hi },
+  te: { ...en, ...coverage.en, ...te, ...coverage.te },
+  mr: { ...en, ...coverage.en, ...mr, ...coverage.mr },
+  kn: { ...en, ...coverage.en, ...kn, ...coverage.kn },
+  ta: { ...en, ...coverage.en, ...ta, ...coverage.ta },
 };
 
-export const localeOverrides: Record<Exclude<Lang, "en">, Record<string, string>> = { hi, te, mr, kn, ta };
+export const localeOverrides: Record<Exclude<Lang, "en">, Record<string, string>> = {
+  hi: { ...hi, ...coverage.hi },
+  te: { ...te, ...coverage.te },
+  mr: { ...mr, ...coverage.mr },
+  kn: { ...kn, ...coverage.kn },
+  ta: { ...ta, ...coverage.ta },
+};
 
 export function translate(lang: Lang | string, key: string, vars?: TranslateVars): string {
   return translateWith(dictionaries, lang, key, vars);

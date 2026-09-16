@@ -8,22 +8,24 @@ import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { formatDisplaySlot } from "@/utils/formatDate";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function PujariJobs() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const { t } = useI18n();
   const q = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">Jobs</AppText>
+        <AppText variant="h2">{t("mobile.jobs")}</AppText>
       </SafeAreaView>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10 }}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
       >
         {q.isLoading ? <LoadingBlock /> : null}
-        {(q.data || []).length === 0 ? <EmptyState title="No jobs yet." /> : null}
+        {(q.data || []).length === 0 ? <EmptyState title={t("mobile.noJobs")} /> : null}
         {(q.data || []).map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
             <Card>

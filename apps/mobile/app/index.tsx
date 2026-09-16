@@ -22,13 +22,13 @@ import { useAppTheme } from "@/theme/ThemeContext";
 
 export default function LandingScreen() {
   const { user, loading } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
   const [q, setQ] = useState("");
 
   const popular = useQuery({
-    queryKey: ["services", "featured"],
+    queryKey: ["services", "featured", lang],
     queryFn: () => apiClient.listServices({ featured: 1 }),
   });
 

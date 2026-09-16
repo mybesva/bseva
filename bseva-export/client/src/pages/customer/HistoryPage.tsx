@@ -7,6 +7,7 @@ import { apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const HISTORY = new Set(["completed", "cancelled", "refunded"]);
 
@@ -23,6 +24,7 @@ function statusColor(status: string) {
 }
 
 export default function CustomerHistoryPage() {
+  const { t } = useI18n();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,18 +48,18 @@ export default function CustomerHistoryPage() {
     <CustomerPortal>
       <Card>
         <CardHeader>
-          <CardTitle className="">Booking History</CardTitle>
+          <CardTitle className="">{t("web.booking.history")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading && <Skeleton className="h-24 w-full" />}
           {!loading && history.length === 0 && (
-            <p className="text-sm text-muted-foreground py-6 text-center">No completed or cancelled bookings yet.</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">{t("web.booking.noHistory")}</p>
           )}
           {history.map((booking) => (
             <div key={booking.id} className="border rounded-lg p-4 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-semibold">{booking.service_name}</h3>
-                <Badge className={statusColor(booking.status)}>{booking.status}</Badge>
+                <Badge className={statusColor(booking.status)}>{t(`status.${booking.status}`)}</Badge>
               </div>
               <p className="text-sm text-muted-foreground">#{booking.booking_number}</p>
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">

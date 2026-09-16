@@ -85,7 +85,7 @@ export default function PujariBookingsPage() {
       setBookings(res.items || []);
     } catch (e: any) {
       setBookings([]);
-      toast.error(e.message || "Could not load bookings");
+      toast.error(e.message || t("web.booking.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -173,79 +173,78 @@ export default function PujariBookingsPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">{t("nav.bookings")}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Filter by status, date, or search. Cancelled and expired are separate from Completed.
+            {t("web.pujariBookings.description")}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <div className="space-y-1 lg:col-span-2">
-              <Label>Search</Label>
+              <Label>{t("common.search")}</Label>
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Service, booking #, location"
+                placeholder={t("web.pujariBookings.searchPlaceholder")}
               />
             </div>
             <div className="space-y-1">
-              <Label>List</Label>
+              <Label>{t("web.pujariBookings.list")}</Label>
               <Select value={segment} onValueChange={(v) => setSegment(v as Segment)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="all">{t("common.all")}</SelectItem>
+                  <SelectItem value="upcoming">{t("web.pujariBookings.upcoming")}</SelectItem>
+                  <SelectItem value="completed">{t("status.completed")}</SelectItem>
+                  <SelectItem value="cancelled">{t("status.cancelled")}</SelectItem>
+                  <SelectItem value="expired">{t("web.status.expired")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Status</Label>
+              <Label>{t("common.status")}</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="in_progress">In progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">{t("web.pujariBookings.allStatuses")}</SelectItem>
+                  <SelectItem value="pending">{t("status.pending")}</SelectItem>
+                  <SelectItem value="confirmed">{t("status.confirmed")}</SelectItem>
+                  <SelectItem value="in_progress">{t("status.in_progress")}</SelectItem>
+                  <SelectItem value="completed">{t("status.completed")}</SelectItem>
+                  <SelectItem value="expired">{t("web.status.expired")}</SelectItem>
+                  <SelectItem value="cancelled">{t("status.cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>From</Label>
+              <Label>{t("common.from")}</Label>
               <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label>To</Label>
+              <Label>{t("common.to")}</Label>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
-              Clear filters
+              {t("web.pujariBookings.clearFilters")}
             </Button>
             <p className="text-sm text-muted-foreground self-center">
-              {loading ? "Loading…" : `${filtered.length} booking${filtered.length === 1 ? "" : "s"}`}
+              {loading ? t("common.loading") : t("web.pujariBookings.count", { count: filtered.length })}
             </p>
           </div>
 
           {loading && <Skeleton className="h-24 w-full" />}
           {!loading && rows.length === 0 && (
             <p className="text-sm text-muted-foreground py-8 text-center max-w-md mx-auto leading-relaxed">
-              No bookings yet. New customer requests will appear here for you to review, accept, or
-              decline.
+              {t("web.pujariBookings.none")}
             </p>
           )}
           {!loading && rows.length > 0 && filtered.length === 0 && (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              No bookings match your filters. Try Clear filters.
+              {t("web.pujariBookings.noMatches")}
             </p>
           )}
           <div className="space-y-3">
@@ -266,13 +265,13 @@ export default function PujariBookingsPage() {
                           {row.booking.offerInvited ? (
                             <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-[10px] uppercase tracking-wide">
                               {row.booking.offerDistanceKm != null
-                                ? `Open · ${row.booking.offerDistanceKm} km`
-                                : "Open request"}
+                                ? t("web.pujariBookings.openDistance", { distance: row.booking.offerDistanceKm })
+                                : t("web.pujariBookings.openRequest")}
                             </Badge>
                           ) : null}
                           {row.booking.samagriRequested ? (
                             <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[10px] uppercase tracking-wide">
-                              Samagri Selected
+                              {t("web.pujariBookings.samagriSelected")}
                             </Badge>
                           ) : null}
                         </div>
@@ -294,7 +293,7 @@ export default function PujariBookingsPage() {
                           </span>
                         </div>
                         <div className="text-sm font-medium text-primary mt-2">
-                          Dakshina: {formatPaise(row.booking.priestAmount || 0)}
+                          {t("web.services.dakshina", { amount: formatPaise(row.booking.priestAmount || 0) })}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {row.booking.pujarisIncludedLabel ||
@@ -308,16 +307,16 @@ export default function PujariBookingsPage() {
                           </p>
                         ) : null}
                       </div>
-                      <Badge className={statusBadgeClass(shown)}>{shown.replace(/_/g, " ")}</Badge>
+                      <Badge className={statusBadgeClass(shown)}>{shown === "expired" ? t("web.status.expired") : t(`status.${shown}`)}</Badge>
                     </div>
                   </button>
                   {canAccept && (
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/60">
                       <Button size="sm" onClick={() => openDetail(row, "accept")}>
-                        Accept
+                        {t("web.pujariBookings.accept")}
                       </Button>
                       <Button size="sm" variant="destructive" onClick={() => openDetail(row, "reject")}>
-                        Reject
+                        {t("web.pujariBookings.reject")}
                       </Button>
                     </div>
                   )}
@@ -340,7 +339,7 @@ export default function PujariBookingsPage() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {detailIntent === "reject" ? "Reject booking" : selected?.pujaType.name}
+              {detailIntent === "reject" ? t("web.pujariBookings.rejectBooking") : selected?.pujaType.name}
             </DialogTitle>
             <DialogDescription>#{selected?.booking.bookingNumber}</DialogDescription>
           </DialogHeader>

@@ -7,12 +7,14 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, EmptyState, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function AstrologyScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const { t, lang } = useI18n();
   const q = useQuery({
-    queryKey: ["astrology"],
+    queryKey: ["astrology", lang],
     queryFn: async () => {
       const astro = await apiClient.astrologyServices();
       const list = Array.isArray(astro) ? astro : (astro as { items?: CatalogService[] })?.items;
@@ -29,13 +31,13 @@ export default function AstrologyScreen() {
   });
   return (
     <Screen>
-      <ScreenHeader title="Astrology" back />
+      <ScreenHeader title={t("mobile.astrology")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
         {q.isLoading ? <LoadingBlock /> : null}
         <AppText color={colors.mutedForeground}>
-          Muhurtham and astrology services use the same booking and wallet rules as pujas.
+          {t("mobile.astrologyHelp")}
         </AppText>
-        {!q.isLoading && !(q.data || []).length ? <EmptyState title="No astrology services listed." /> : null}
+        {!q.isLoading && !(q.data || []).length ? <EmptyState title={t("mobile.noAstrology")} /> : null}
         {(q.data || []).map((s) => (
           <Pressable key={s.id || s.slug} onPress={() => router.push(s.slug ? `/service/${s.slug}` : "/customer/services")}>
             <Card>

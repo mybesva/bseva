@@ -12,6 +12,7 @@ import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2 } from "lucide-rea
 import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
+import { useI18n } from "@/i18n/I18nProvider";
 
 function statusColor(status: string) {
   switch (status) {
@@ -33,6 +34,7 @@ function statusColor(status: string) {
 }
 
 export default function BookingReceipt() {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const search = useSearch();
   const qs = new URLSearchParams(search);
@@ -61,7 +63,7 @@ export default function BookingReceipt() {
     api<any>(`/bookings/${encodeURIComponent(idOrNumber)}`)
       .then(setBooking)
       .catch((e) => {
-        toast.error(e.message || "Could not load booking");
+        toast.error(e.message || t("web.booking.loadFailed"));
         setBooking(null);
       })
       .finally(() => setLoading(false));
@@ -81,8 +83,8 @@ export default function BookingReceipt() {
     return (
       <Layout>
         <div className="container py-16 text-center space-y-4">
-          <h1 className="text-h1">Booking not found</h1>
-          <Button onClick={() => setLocation("/customer/bookings")}>My Bookings</Button>
+          <h1 className="text-h1">{t("web.booking.notFound")}</h1>
+          <Button onClick={() => setLocation("/customer/bookings")}>{t("nav.bookings")}</Button>
         </div>
       </Layout>
     );
@@ -95,7 +97,7 @@ export default function BookingReceipt() {
     ["pending", "pending_acceptance", "confirmed"].includes(String(booking.status || ""));
 
   async function cancelBooking() {
-    const reason = window.prompt("Reason for cancellation? (optional)");
+    const reason = window.prompt(t("web.booking.cancelReason"));
     if (reason === null) return;
     try {
       await api(
@@ -104,11 +106,11 @@ export default function BookingReceipt() {
         }`,
         { method: "POST" }
       );
-      toast.success("Booking cancelled");
+      toast.success(t("web.booking.cancelled"));
       const refreshed = await api<any>(`/bookings/${booking.id}`);
       setBooking(refreshed);
     } catch (e: any) {
-      toast.error(e.message || "Could not cancel");
+      toast.error(e.message || t("web.booking.cancelFailed"));
     }
   }
 
@@ -117,14 +119,14 @@ export default function BookingReceipt() {
       <div className="container max-w-3xl py-10 print:py-4">
         <div className="flex flex-wrap gap-2 mb-6 print:hidden">
           <Button variant="outline" size="sm" onClick={() => setLocation("/customer/bookings")}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> My Bookings
+            <ArrowLeft className="w-4 h-4 mr-1" /> {t("nav.bookings")}
           </Button>
           <Button size="sm" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-1" /> Print receipt
+            <Printer className="w-4 h-4 mr-1" /> {t("web.booking.printReceipt")}
           </Button>
           {canCancel && (
             <Button size="sm" variant="destructive" onClick={() => void cancelBooking()}>
-              Cancel booking
+              {t("booking.cancel")}
             </Button>
           )}
         </div>
@@ -133,93 +135,93 @@ export default function BookingReceipt() {
           <CardHeader className="border-b bg-secondary/20 print:bg-transparent">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Booking receipt</p>
-                <CardTitle className="text-2xl mt-1">{booking.service_name ||"Puja"}</CardTitle>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("web.booking.receipt")}</p>
+                <CardTitle className="text-2xl mt-1">{booking.service_name || t("web.common.puja")}</CardTitle>
               </div>
               <Badge className={statusColor(String(booking.status ||""))}>
-                {String(booking.status || "").replace(/_/g, " ")}
+                {t(`status.${String(booking.status || "pending")}`)}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-6 text-sm">
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-muted-foreground">Booking ID</p>
+                <p className="text-muted-foreground">{t("booking.id")}</p>
                 <p className="font-mono font-semibold text-base">{booking.booking_number}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Internal ref</p>
+                <p className="text-muted-foreground">{t("web.booking.internalRef")}</p>
                 <p className="font-mono text-xs break-all">{booking.id}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Puja / Service</p>
+                <p className="text-muted-foreground">{t("booking.service")}</p>
                 <p className="font-medium">{booking.service_name}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Package</p>
+                <p className="text-muted-foreground">{t("booking.package")}</p>
                 <p className="font-medium capitalize">{booking.package_type ||"—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
-                  <Calendar size={14} /> Booking date
+                  <Calendar size={14} /> {t("web.booking.date")}
                 </p>
                 <p className="font-medium">{formatDisplayDate(booking.booking_date)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
-                  <Clock size={14} /> Booking time
+                  <Clock size={14} /> {t("web.booking.time")}
                 </p>
                 <p className="font-medium">{booking.start_time ||"—"}</p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-muted-foreground">Puja slot (date & time)</p>
+                <p className="text-muted-foreground">{t("web.booking.slot")}</p>
                 <p className="font-semibold text-base">{slot}</p>
                 {booking.end_time && (
-                  <p className="text-xs text-muted-foreground mt-0.5">Ends approx. {booking.end_time}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("web.booking.endsApprox", { time: booking.end_time })}</p>
                 )}
               </div>
               <div>
-                <p className="text-muted-foreground">Mode</p>
-                <p className="font-medium capitalize">{String(booking.mode ||"").replace(/_/g,"") ||"—"}</p>
+                <p className="text-muted-foreground">{t("booking.mode")}</p>
+                <p className="font-medium">{booking.mode ? t(`booking.${booking.mode}`) : "—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
-                  <MapPin size={14} /> Location
+                  <MapPin size={14} /> {t("service.location")}
                 </p>
                 <p className="font-medium">{booking.location_label || booking.address ||"—"}</p>
               </div>
             </div>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h3 className="font-semibold">Payment</h3>
+              <h3 className="font-semibold">{t("booking.payment")}</h3>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Status</span>
-                <span className="font-medium capitalize">{String(booking.payment_status ||"—").replace(/_/g,"")}</span>
+                <span className="text-muted-foreground">{t("common.status")}</span>
+                <span className="font-medium">{booking.payment_status ? t(`status.${booking.payment_status}`) : "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Base</span>
+                <span className="text-muted-foreground">{t("web.booking.base")}</span>
                 <span>{rupees(booking.base_price_paise)}</span>
               </div>
               {Number(booking.samagri_charge_paise || 0) > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Samagri (pujari buys · reimbursed)</span>
+                  <span className="text-muted-foreground">{t("web.booking.samagriReimbursed")}</span>
                   <span>{rupees(booking.samagri_charge_paise)}</span>
                 </div>
               )}
               {Number(booking.alankaram_charge_paise || 0) > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Alankaram (pujari buys · reimbursed)</span>
+                  <span className="text-muted-foreground">{t("web.booking.alankaramReimbursed")}</span>
                   <span>{rupees(booking.alankaram_charge_paise)}</span>
                 </div>
               )}
               {Number(booking.peak_fee_paise || 0) > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Weekend / festival surge</span>
+                  <span className="text-muted-foreground">{t("booking.peakFee")}</span>
                   <span>{rupees(booking.peak_fee_paise)}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Platform fee</span>
+                <span className="text-muted-foreground">{t("web.booking.platformFee")}</span>
                 <span>{rupees(booking.platform_fee_paise)}</span>
               </div>
               <div className="flex justify-between">
@@ -227,24 +229,24 @@ export default function BookingReceipt() {
                 <span>{rupees(booking.gst_amount_paise)}</span>
               </div>
               <div className="flex justify-between font-semibold border-t pt-2">
-                <span>Total</span>
+                <span>{t("common.total")}</span>
                 <span>{rupees(booking.total_paise)}</span>
               </div>
             </div>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h3 className="font-semibold">Booking status</h3>
-              <p className="capitalize">{String(booking.status ||"").replace(/_/g,"")}</p>
+              <h3 className="font-semibold">{t("web.booking.status")}</h3>
+              <p>{t(`status.${String(booking.status || "pending")}`)}</p>
               {booking.special_instructions && (
                 <div>
-                  <p className="text-muted-foreground text-xs">Special instructions</p>
+                  <p className="text-muted-foreground text-xs">{t("booking.special")}</p>
                   <p>{booking.special_instructions}</p>
                 </div>
               )}
             </div>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h3 className="font-semibold">Pujari</h3>
+              <h3 className="font-semibold">{t("booking.pujari")}</h3>
               {showPujari ? (
                 <div className="space-y-1">
                   <p className="font-medium">{booking.pujari_name}</p>
@@ -253,7 +255,7 @@ export default function BookingReceipt() {
               ) : (
                 <p className="text-muted-foreground">
                   {booking.pujari_reveal_note ||
-                    "Pujari details will be shared within 20 hours before your scheduled puja."}
+                    t("web.booking.pujariReveal")}
                 </p>
               )}
             </div>
@@ -274,12 +276,12 @@ export default function BookingReceipt() {
               <PreparationChecklist preparation={booking.preparation} interactive={false} />
             ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
               <div className="rounded-lg border p-4 space-y-2">
-                <h3 className="font-semibold">Recommended List</h3>
+                <h3 className="font-semibold">{t("web.preparation.recommended")}</h3>
                 <ul className="list-disc pl-5 space-y-1">
                   {booking.samagri.map((it: any, i: number) => (
                     <li key={i}>
                       {it.name}
-                      {it.required ? " (required)" : ""}
+                      {it.required ? ` (${t("common.required")})` : ""}
                     </li>
                   ))}
                 </ul>
@@ -288,10 +290,10 @@ export default function BookingReceipt() {
 
             <div className="print:hidden flex flex-wrap gap-2 pt-2">
               <Button onClick={() => window.print()}>
-                <Printer className="w-4 h-4 mr-1" /> Print
+                <Printer className="w-4 h-4 mr-1" /> {t("common.print")}
               </Button>
               <Button variant="outline" onClick={() => setLocation("/customer/bookings")}>
-                Back to My Bookings
+                {t("web.booking.backToBookings")}
               </Button>
             </div>
           </CardContent>

@@ -98,7 +98,7 @@ def list_services(
 
     nq = normalize_search(q or "")
     if nq:
-        # Match name, slug, description, aliases (case-insensitive)
+        # Match canonical and translated customer-facing catalog text.
         where.append(
             """
             (
@@ -111,6 +111,18 @@ def list_services(
               OR EXISTS (
                 SELECT 1 FROM service_slug_aliases a
                 WHERE a.service_id = s.id AND a.alias_slug ILIKE :like
+              )
+              OR EXISTS (
+                SELECT 1 FROM service_translations st
+                WHERE st.service_id = s.id
+                  AND (
+                    COALESCE(st.name, '') ILIKE :like
+                    OR COALESCE(st.short_description, '') ILIKE :like
+                    OR COALESCE(st.full_description, '') ILIKE :like
+                    OR COALESCE(st.spiritual_meaning, '') ILIKE :like
+                    OR COALESCE(st.common_occasions, '') ILIKE :like
+                    OR COALESCE(st.benefits, '') ILIKE :like
+                  )
               )
             )
             """
@@ -213,9 +225,23 @@ def _normalize_legal_points(slug: str, points):
 
 
 @router.get("/legal")
-def list_legal_public(db: Session = Depends(get_db)):
+def list_legal_public(request: Request, lang: str | None = None, db: Session = Depends(get_db)):
+    from app.i18n import resolve_request_lang
+
+    code = resolve_request_lang(lang, request)
     rows = db.execute(
-        text("SELECT slug, title, version, sort_order, points, updated_at FROM legal_policies ORDER BY sort_order ASC")
+        text(
+            """
+            SELECT p.slug, COALESCE(NULLIF(t.title, ''), p.title) AS title,
+                   p.version, p.sort_order, COALESCE(t.points, p.points) AS points,
+                   p.updated_at, :lang AS locale
+            FROM legal_policies p
+            LEFT JOIN legal_policy_translations t
+              ON t.policy_id = p.id AND t.language_code = :lang
+            ORDER BY p.sort_order ASC
+            """
+        ),
+        {"lang": code},
     ).mappings().all()
     out = []
     for r in rows:
@@ -231,10 +257,23 @@ def list_legal_public(db: Session = Depends(get_db)):
 
 
 @router.get("/legal/{slug}")
-def get_legal_public(slug: str, db: Session = Depends(get_db)):
+def get_legal_public(slug: str, request: Request, lang: str | None = None, db: Session = Depends(get_db)):
+    from app.i18n import resolve_request_lang
+
+    code = resolve_request_lang(lang, request)
     row = db.execute(
-        text("SELECT slug, title, version, sort_order, points, updated_at FROM legal_policies WHERE slug = :slug"),
-        {"slug": slug},
+        text(
+            """
+            SELECT p.slug, COALESCE(NULLIF(t.title, ''), p.title) AS title,
+                   p.version, p.sort_order, COALESCE(t.points, p.points) AS points,
+                   p.updated_at, :lang AS locale
+            FROM legal_policies p
+            LEFT JOIN legal_policy_translations t
+              ON t.policy_id = p.id AND t.language_code = :lang
+            WHERE p.slug = :slug
+            """
+        ),
+        {"slug": slug, "lang": code},
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Policy not found")

@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { cn } from "@/lib/utils";
 import { Ban, FileText, Scale } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   platform_terms: Scale,
@@ -12,6 +13,7 @@ const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; classNa
 };
 
 function PortalTermsContent() {
+  const { t } = useI18n();
   const { policies, loading } = useLegalPolicies([
     "platform_terms",
     "booking_terms",
@@ -29,9 +31,9 @@ function PortalTermsContent() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Terms &amp; Conditions</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t("legal.terms")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Choose a section to read. Only one section is shown at a time.
+          {t("web.legal.chooseSection")}
         </p>
       </div>
 
@@ -79,7 +81,7 @@ function PortalTermsContent() {
           <div>
             <h2 className="text-xl text-foreground mb-1">{selected.title}</h2>
             {selected.version && (
-              <p className="text-sm text-muted-foreground mb-4">Version {selected.version}</p>
+              <p className="text-sm text-muted-foreground mb-4">{t("common.version", { version: selected.version })}</p>
             )}
           </div>
           {selected.points.map((s, i) => (

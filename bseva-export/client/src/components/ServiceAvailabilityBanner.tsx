@@ -2,16 +2,7 @@ import { MapPin, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
-import {
-  AVAILABILITY_ERROR_BODY,
-  AVAILABILITY_ERROR_TITLE,
-  COMING_SOON_BODY,
-  COMING_SOON_TITLE,
-  ENABLE_LOCATION_BODY,
-  ENABLE_LOCATION_TITLE,
-  MY_ADDRESS_BODY,
-  MY_ADDRESS_TITLE,
-} from "@/lib/serviceAvailabilityMessages";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type Props = {
   /** When true, also show a subtle checking strip while availability is loading. */
@@ -19,6 +10,7 @@ type Props = {
 };
 
 export default function ServiceAvailabilityBanner({ showChecking = true }: Props) {
+  const { t } = useI18n();
   const { status, checking, refresh } = useServiceAvailability();
 
   if (status === "available" || status === "idle") return null;
@@ -32,7 +24,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
         aria-live="polite"
       >
         <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-        <span>Checking service availability for your saved address…</span>
+        <span>{t("services.checkingAvailability")}</span>
       </div>
     );
   }
@@ -46,9 +38,9 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
           </div>
           <div className="min-w-0 space-y-1.5">
             <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
-              {COMING_SOON_TITLE}
+              {t("web.availability.comingSoonTitle")}
             </h2>
-            <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{COMING_SOON_BODY}</p>
+            <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{t("web.availability.comingSoonBody")}</p>
           </div>
         </div>
       </div>
@@ -65,14 +57,14 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
             </div>
             <div className="min-w-0 space-y-1.5">
               <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
-                {MY_ADDRESS_TITLE}
+                {t("web.availability.addressTitle")}
               </h2>
-              <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{MY_ADDRESS_BODY}</p>
+              <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{t("web.availability.addressBody")}</p>
             </div>
           </div>
           <Link href="/customer/address">
             <Button type="button" className="shrink-0 bg-primary hover:bg-primary/90 font-semibold">
-              My Address
+              {t("web.availability.myAddress")}
             </Button>
           </Link>
         </div>
@@ -90,12 +82,12 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
             </div>
             <div className="min-w-0 space-y-1.5">
               <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
-                {ENABLE_LOCATION_TITLE}
+                {t("web.availability.enableTitle")}
               </h2>
               <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
                 {status === "unsupported"
-                  ? "Location services aren't supported in this browser. Please try another device or browser to check availability."
-                  : ENABLE_LOCATION_BODY}
+                  ? t("web.availability.unsupported")
+                  : t("web.availability.enableBody")}
               </p>
             </div>
           </div>
@@ -105,7 +97,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
               className="shrink-0 bg-primary hover:bg-primary/90 font-semibold"
               onClick={() => void refresh()}
             >
-              Check location
+              {t("web.availability.checkLocation")}
             </Button>
           ) : null}
         </div>
@@ -118,8 +110,8 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
     <div className="mb-6 rounded-xl border border-border bg-card shadow-sm px-5 py-5 md:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <div className="space-y-1.5 min-w-0">
-          <h2 className="text-lg font-bold text-foreground">{AVAILABILITY_ERROR_TITLE}</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">{AVAILABILITY_ERROR_BODY}</p>
+          <h2 className="text-lg font-bold text-foreground">{t("web.availability.errorTitle")}</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">{t("web.availability.errorBody")}</p>
         </div>
         <Button
           type="button"
@@ -127,7 +119,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
           className="shrink-0 font-semibold border-primary/40 text-primary"
           onClick={() => void refresh()}
         >
-          Try again
+          {t("common.tryAgain")}
         </Button>
       </div>
     </div>

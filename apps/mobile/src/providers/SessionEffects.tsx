@@ -16,7 +16,10 @@ export function SessionEffects() {
   useEffect(() => {
     const pref = user?.preferred_language;
     if (isLangCode(pref) && pref !== lang) setLang(pref);
-  }, [user?.preferred_language, lang, setLang]);
+    // Sync only when the account preference changes. Depending on `lang` here
+    // re-applies a stale server value while LanguagePicker is saving a new one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.preferred_language, setLang]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

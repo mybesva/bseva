@@ -319,33 +319,52 @@ def link_samagri(service_id: str, body: ServiceSamagriIn, user=Depends(require_p
 
 
 @router.get("/services/{service_id}/samagri")
-def service_samagri(service_id: str, db: Session = Depends(get_db)):
+def service_samagri(
+    service_id: str,
+    request: Request,
+    lang: str | None = None,
+    db: Session = Depends(get_db),
+):
+    from app.i18n import resolve_request_lang
+
+    code = resolve_request_lang(lang, request)
     rows = db.execute(
         text(
             """
-            SELECT ss.*, si.name, si.unit AS item_unit, si.item_key, si.description AS item_description
+            SELECT ss.*, COALESCE(sit.item_name, si.name) AS name,
+                   si.unit AS item_unit, si.item_key,
+                   si.description AS item_description
             FROM service_samagri ss
             JOIN samagri_items si ON si.id = ss.samagri_item_id
+            LEFT JOIN samagri_item_translations sit
+              ON sit.samagri_item_id = si.id AND sit.language_code = :lang
             WHERE ss.service_id = CAST(:s AS uuid) AND si.active = TRUE
               AND COALESCE(ss.active, TRUE) = TRUE
             ORDER BY ss.sort_order, si.name
             """
         ),
-        {"s": service_id},
+        {"s": service_id, "lang": code},
     ).mappings().all()
     return [row_dict(r) for r in rows]
 
 
 @router.get("/services/{service_id}/preparation")
-def service_preparation_public(service_id: str, lang: str = "en", db: Session = Depends(get_db)):
+def service_preparation_public(
+    service_id: str,
+    request: Request,
+    lang: str | None = None,
+    db: Session = Depends(get_db),
+):
     """Typical preparation preview — VERIFIED content only for customers."""
-    from app.preparation import build_preparation_view, load_service_preparation_master, normalize_lang
+    from app.i18n import resolve_request_lang
+    from app.preparation import build_preparation_view, load_service_preparation_master
 
-    master = load_service_preparation_master(db, service_id, normalize_lang(lang))
+    code = resolve_request_lang(lang, request)
+    master = load_service_preparation_master(db, service_id, code)
     if not master.get("ok"):
         raise HTTPException(404, "Service not found")
     # Public: assume no package purchased → customer-arrange heavy view
-    view = build_preparation_view(master, samagri_purchased=False, lang=normalize_lang(lang))
+    view = build_preparation_view(master, samagri_purchased=False, lang=code)
     view["review_status"] = (master.get("service") or {}).get("samagri_review_status")
     return view
 

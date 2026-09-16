@@ -10,13 +10,15 @@ import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryBu
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useAuth } from "@/providers/AuthProvider";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function BookService() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useAppTheme();
-  const serviceQ = useQuery({ queryKey: ["service", slug], queryFn: () => apiClient.getService(slug), enabled: !!slug });
+  const { lang } = useI18n();
+  const serviceQ = useQuery({ queryKey: ["service", slug, lang], queryFn: () => apiClient.getService(slug), enabled: !!slug });
   const profileQ = useQuery({ queryKey: ["customer-profile"], queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>> });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const svc = serviceQ.data;

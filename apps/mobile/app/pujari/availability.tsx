@@ -4,8 +4,10 @@ import { ScrollView, Switch, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function AvailabilityScreen() {
+  const { t } = useI18n();
   const profile = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const q = useQuery({ queryKey: ["availability"], queryFn: () => apiClient.availabilityBlocks() });
   const [available, setAvailable] = useState(true);
@@ -20,31 +22,31 @@ export default function AvailabilityScreen() {
   }, [profile.data]);
   return (
     <Screen>
-      <ScreenHeader title="Availability" back />
+      <ScreenHeader title={t("mobile.availability")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <AppText>Available for new bookings</AppText>
+          <AppText>{t("mobile.availableBookings")}</AppText>
           <Switch value={available} onValueChange={setAvailable} />
         </View>
-        <Field label="Service radius (km)" value={radius} onChangeText={setRadius} keyboardType="number-pad" />
+        <Field label={t("mobile.serviceRadius")} value={radius} onChangeText={setRadius} keyboardType="number-pad" />
         <PrimaryButton
-          title="Save availability"
+          title={t("mobile.saveAvailability")}
           onPress={async () => {
             setError(null);
             try {
               await apiClient.patchPujariProfile({ available, service_radius_km: radius ? Number(radius) : null });
               await profile.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             }
           }}
         />
-        <AppText variant="h3">Blocked dates</AppText>
-        <Field label="Blocked date (YYYY-MM-DD)" value={date} onChangeText={setDate} />
-        <Field label="Reason" value={reason} onChangeText={setReason} />
+        <AppText variant="h3">{t("mobile.blockedDates")}</AppText>
+        <Field label={t("mobile.blockedDate")} value={date} onChangeText={setDate} />
+        <Field label={t("mobile.reason")} value={reason} onChangeText={setReason} />
         <PrimaryButton
-          title="Add block"
+          title={t("mobile.addBlock")}
           onPress={async () => {
             setError(null);
             try {
@@ -52,7 +54,7 @@ export default function AvailabilityScreen() {
               setDate("");
               await q.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Failed");
+              setError(e instanceof Error ? e.message : t("mobile.failed"));
             }
           }}
         />
@@ -61,7 +63,7 @@ export default function AvailabilityScreen() {
             <AppText variant="h3">{b.blocked_date}</AppText>
             <AppText variant="small">{b.reason}</AppText>
             <PrimaryButton
-              title="Remove"
+              title={t("mobile.remove")}
               variant="outline"
               onPress={async () => {
                 await apiClient.deleteAvailabilityBlock(b.id);

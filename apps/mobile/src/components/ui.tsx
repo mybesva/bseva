@@ -11,6 +11,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const { colors } = useAppTheme();
@@ -183,6 +184,8 @@ export function ChoiceChips({
 
 export function StatusBadge({ status }: { status: string }) {
   const { colors } = useAppTheme();
+  const { t } = useI18n();
+  const normalized = status.trim().toLowerCase().replace(/[\s-]+/g, "_");
   const map: Record<string, string> = {
     confirmed: colors.success,
     completed: colors.mutedForeground,
@@ -192,11 +195,13 @@ export function StatusBadge({ status }: { status: string }) {
     cancelled: colors.destructive,
     rejected: colors.destructive,
   };
-  const color = map[status] || colors.mutedForeground;
+  const color = map[normalized] || colors.mutedForeground;
+  const key = `status.${normalized}`;
+  const translated = t(key);
   return (
     <View style={{ backgroundColor: color + "22", paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill }}>
       <Text style={{ color, fontSize: 11, fontWeight: "700", textTransform: "uppercase" }}>
-        {status.replace(/_/g, " ")}
+        {translated === key ? t("status.pending") : translated}
       </Text>
     </View>
   );

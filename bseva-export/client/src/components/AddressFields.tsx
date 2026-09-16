@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { MapPin, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 function toastError(msg: string) {
   toast.error(msg);
@@ -90,6 +91,7 @@ function loadMaps() {
 }
 
 export function MapLocationPicker({ value, onChange }: { value: AddressValue; onChange: (v: AddressValue) => void }) {
+  const { t } = useI18n();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapObj = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -173,7 +175,7 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
         placesService.current = new google.maps.places.PlacesService(mapObj.current);
         setMapError(null);
       })
-      .catch((e) => setMapError(e.message || "Could not load map"));
+      .catch((e) => setMapError(e.message || t("web.address.mapLoadFailed")));
     return () => {
       cancelled = true;
       if (suggestTimer.current) window.clearTimeout(suggestTimer.current);
@@ -244,7 +246,7 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ address: q, componentRestrictions: { country: "IN" } }, (results, status) => {
       if (status !== "OK" || !results?.[0]?.geometry?.location) {
-        setMapError("Location not found — try a fuller address or pick a suggestion");
+        setMapError(t("web.address.locationNotFound"));
         return;
       }
       setMapError(null);
@@ -257,8 +259,8 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
 
   function useCurrentLocation() {
     if (!navigator.geolocation) {
-      setMapError("Geolocation is not supported by this browser");
-      toastError("Geolocation is not supported by this browser");
+      setMapError(t("web.address.geolocationUnsupported"));
+      toastError(t("web.address.geolocationUnsupported"));
       return;
     }
     setMapError(null);
@@ -272,10 +274,10 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
       (err) => {
         const msg =
           err.code === err.PERMISSION_DENIED
-            ? "Location permission denied. Enable location access in your browser settings."
+            ? t("web.address.permissionDenied")
             : err.code === err.POSITION_UNAVAILABLE
-              ? "Current location is unavailable. Try again or enter the address manually."
-              : "Could not access current location. Try again or enter the address manually.";
+              ? t("web.address.currentUnavailable")
+              : t("web.address.currentFailed");
         setMapError(msg);
         toastError(msg);
       },
@@ -285,7 +287,7 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
 
   return (
     <div className="space-y-3">
-      <Label>Location on map</Label>
+      <Label>{t("web.address.mapLocation")}</Label>
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1 min-w-0">
           <Input
@@ -309,7 +311,7 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
                 else geocodeSearch();
               }
             }}
-            placeholder="Start typing address (suggestions appear)"
+            placeholder={t("web.address.searchPlaceholder")}
             autoComplete="off"
           />
           {suggestOpen && suggestions.length > 0 && (
@@ -330,10 +332,10 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
           )}
         </div>
         <Button type="button" variant="secondary" onClick={() => geocodeSearch()}>
-          Search
+          {t("common.search")}
         </Button>
         <Button type="button" variant="outline" onClick={useCurrentLocation} className="gap-1">
-          <Navigation size={16} /> Current location
+          <Navigation size={16} /> {t("web.address.currentLocation")}
         </Button>
       </div>
       {mapError && <p className="text-sm text-destructive">{mapError}</p>}
@@ -346,7 +348,7 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
       <div ref={mapRef} className={cn("w-full h-64 rounded-md border bg-muted", !MAPS_KEY && "hidden")} />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Latitude</Label>
+          <Label>{t("web.address.latitude")}</Label>
           <Input
             type="number"
             step="any"
@@ -355,7 +357,7 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
           />
         </div>
         <div>
-          <Label>Longitude</Label>
+          <Label>{t("web.address.longitude")}</Label>
           <Input
             type="number"
             step="any"
@@ -369,6 +371,7 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
 }
 
 export default function AddressFields({ value, onChange, className }: Props) {
+  const { t } = useI18n();
   function set<K extends keyof AddressValue>(key: K, v: AddressValue[K]) {
     onChange({ ...value, [key]: v });
   }
@@ -377,39 +380,39 @@ export default function AddressFields({ value, onChange, className }: Props) {
     <div className={cn("space-y-4", className)}>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <Label>Address line 1 / House or flat number *</Label>
+          <Label>{t("web.address.line1Required")}</Label>
           <Input value={value.address_line1} onChange={(e) => set("address_line1", e.target.value)} required />
         </div>
         <div className="md:col-span-2">
-          <Label>Address line 2 / Street / Locality</Label>
+          <Label>{t("web.address.line2")}</Label>
           <Input value={value.address_line2} onChange={(e) => set("address_line2", e.target.value)} />
         </div>
         <div>
-          <Label>City / Village *</Label>
+          <Label>{t("web.address.cityRequired")}</Label>
           <Input value={value.city} onChange={(e) => set("city", e.target.value)} required />
         </div>
         <div>
-          <Label>District *</Label>
+          <Label>{t("web.address.districtRequired")}</Label>
           <Input value={value.district} onChange={(e) => set("district", e.target.value)} required />
         </div>
         <div>
-          <Label>State *</Label>
+          <Label>{t("web.address.stateRequired")}</Label>
           <Input value={value.state} onChange={(e) => set("state", e.target.value)} required />
         </div>
         <div>
-          <Label>PIN code *</Label>
+          <Label>{t("web.address.pincodeRequired")}</Label>
           <Input value={value.pincode} onChange={(e) => set("pincode", e.target.value)} required />
         </div>
         <div>
-          <Label>Country</Label>
+          <Label>{t("address.country")}</Label>
           <Input value={value.country || "India"} onChange={(e) => set("country", e.target.value)} />
         </div>
         <div>
-          <Label>Location label</Label>
+          <Label>{t("web.address.locationLabel")}</Label>
           <Input
             value={value.location_label}
             onChange={(e) => set("location_label", e.target.value)}
-            placeholder="e.g. Koramangala, Bengaluru"
+            placeholder={t("web.address.labelPlaceholder")}
           />
         </div>
       </div>

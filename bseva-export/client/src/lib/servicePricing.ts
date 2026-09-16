@@ -1,3 +1,5 @@
+import { formatCurrencyPaise, translate, type Lang } from "@bseva/locales";
+
 /** Lowest bookable package price (Standard vs Premium only — no Basic). */
 export function startingPricePaise(service: {
   standard_price_paise?: number | null;
@@ -14,9 +16,11 @@ export function formatStartingFrom(service: {
   standard_price_paise?: number | null;
   premium_price_paise?: number | null;
   bookable?: boolean;
-}): string | null {
+}, lang: Lang | string = "en"): string | null {
   if (service.bookable === false) return null;
   const paise = startingPricePaise(service);
   if (paise == null) return null;
-  return `Starting from ₹${(paise / 100).toLocaleString("en-IN")}`;
+  return translate(lang, "services.startingFromPrice", {
+    price: formatCurrencyPaise(paise, lang),
+  });
 }

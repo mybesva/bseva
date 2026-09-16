@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { api, rupees } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type CatalogService = {
   id: string;
@@ -31,6 +32,7 @@ type OffersPayload = {
 };
 
 export default function PujariServicesPage() {
+  const { t } = useI18n();
   const { active: onboardingActive } = usePujariOnboardingGate("services");
   const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
   const [data, setData] = useState<OffersPayload | null>(null);
@@ -48,7 +50,7 @@ export default function PujariServicesPage() {
       setData(out);
       setSection("all");
     } catch (e: any) {
-      const msg = e?.message || "Could not load services";
+      const msg = e?.message || t("web.services.loadFailed");
       setLoadError(msg);
       toast.error(msg);
     } finally {
@@ -68,9 +70,9 @@ export default function PujariServicesPage() {
         body: JSON.stringify({ service_id: serviceId }),
       });
       setData(out);
-      if (!onboardingActive) toast.success("Applied");
+      if (!onboardingActive) toast.success(t("web.services.applied"));
     } catch (err: any) {
-      toast.error(err.message || "Could not apply");
+      toast.error(err.message || t("web.services.applyFailed"));
     } finally {
       setApplyingId(null);
     }
@@ -79,7 +81,7 @@ export default function PujariServicesPage() {
   async function persistServiceSelection(): Promise<boolean> {
     const count = data?.applied_count ?? data?.services.filter((s) => s.applied).length ?? 0;
     if (count === 0) {
-      toast.error("Apply for at least one puja service");
+      toast.error(t("web.services.applyOne"));
       return false;
     }
     return true;
@@ -142,15 +144,15 @@ export default function PujariServicesPage() {
       if (bucket.items.length) ordered.push(bucket);
     }
     if (uncategorized.length) {
-      ordered.push({ slug: "uncategorized", name: "Other pujas", items: uncategorized });
+      ordered.push({ slug: "uncategorized", name: t("web.services.otherPujas"), items: uncategorized });
     }
-    return ordered.length ? ordered : [{ slug: "all", name: "All pujas", items: filtered }];
-  }, [filtered, section, sections]);
+    return ordered.length ? ordered : [{ slug: "all", name: t("web.services.allPujas"), items: filtered }];
+  }, [filtered, section, sections, t]);
 
   if (loading && !data) {
     return (
       <PujariPortal>
-        <p className="text-muted-foreground">Loading services…</p>
+        <p className="text-muted-foreground">{t("web.services.loading")}</p>
       </PujariPortal>
     );
   }
@@ -160,12 +162,12 @@ export default function PujariServicesPage() {
       <PujariPortal>
         <Card className="max-w-lg border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Could not load services</CardTitle>
+            <CardTitle className="text-xl">{t("web.services.loadFailed")}</CardTitle>
             <CardDescription>{loadError}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button type="button" onClick={() => void load()}>
-              Retry
+              {t("common.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -176,7 +178,7 @@ export default function PujariServicesPage() {
   if (!data) {
     return (
       <PujariPortal>
-        <p className="text-muted-foreground">Loading services…</p>
+        <p className="text-muted-foreground">{t("web.services.loading")}</p>
       </PujariPortal>
     );
   }
@@ -188,11 +190,11 @@ export default function PujariServicesPage() {
       <div className="w-full max-w-none space-y-6">
         <div className="sticky top-14 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">Services &amp; Dakshina</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">{t("web.services.title")}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               {appliedCount > 0
-                ? `${appliedCount} service${appliedCount === 1 ? "" : "s"} applied`
-                : `${data.services.length} catalog pujas — tap Apply for each service you can perform`}
+                ? t("web.services.appliedCount", { count: appliedCount })
+                : t("web.services.catalogCount", { count: data.services.length })}
             </p>
           </div>
         </div>
@@ -205,7 +207,7 @@ export default function PujariServicesPage() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search all pujas…"
+          placeholder={t("web.services.search")}
           className="max-w-md bg-background"
         />
 
@@ -225,7 +227,7 @@ export default function PujariServicesPage() {
 
         <div className="space-y-8 pb-8">
           {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">No services match your filters.</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">{t("web.services.noMatches")}</p>
           ) : (
             grouped.map((group) => (
               <section key={group.slug} className="space-y-3">
@@ -242,7 +244,7 @@ export default function PujariServicesPage() {
                       <div className="flex-1 min-w-0 space-y-0.5">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                           <p className="font-medium text-foreground">{s.name}</p>
-                          <p className="text-sm font-semibold text-primary">Dakshina {rupees(s.dakshina_paise)}</p>
+                          <p className="text-sm font-semibold text-primary">{t("web.services.dakshina", { amount: rupees(s.dakshina_paise) })}</p>
                         </div>
                         {s.short_description ? (
                           <p className="text-xs text-muted-foreground line-clamp-2">{s.short_description}</p>
@@ -259,7 +261,7 @@ export default function PujariServicesPage() {
                         )}
                         onClick={() => void applyForService(s.id)}
                       >
-                        {s.applied ? "Applied" : applyingId === s.id ? "Applying…" : "Apply"}
+                        {s.applied ? t("web.services.applied") : applyingId === s.id ? t("web.services.applying") : t("web.services.apply")}
                       </Button>
                     </div>
                   ))}

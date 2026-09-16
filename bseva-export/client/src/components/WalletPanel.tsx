@@ -7,6 +7,7 @@ import { api, rupees } from "@/lib/api";
 import { toast } from "sonner";
 import { Wallet } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type WalletResp = {
   wallet: { balance_paise: number };
@@ -14,6 +15,7 @@ type WalletResp = {
 };
 
 export default function WalletPanel({ variant = "customer" }: { variant?: "customer" | "priest" }) {
+  const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const [data, setData] = useState<WalletResp | null>(null);
   const [amount, setAmount] = useState("1000");
@@ -38,29 +40,29 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Wallet size={20} className="text-primary" />
-          {variant === "priest" ? "Pujari wallet" : "Customer wallet"}
+          {variant === "priest" ? t("web.wallet.pujari") : t("web.wallet.customer")}
         </CardTitle>
-        <CardDescription>Live Supabase balance — same as mobile</CardDescription>
+        <CardDescription>{t("web.wallet.liveBalance")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 rounded-lg bg-orange-50">
-            <p className="text-xs text-muted-foreground">Balance</p>
+            <p className="text-xs text-muted-foreground">{t("wallet.balance")}</p>
             <p className="text-price text-primary">{rupees(balance)}</p>
           </div>
           <div className="p-3 rounded-lg bg-green-50">
-            <p className="text-xs text-muted-foreground">Credits</p>
+            <p className="text-xs text-muted-foreground">{t("web.wallet.credits")}</p>
             <p className="text-xl font-semibold text-green-700">{rupees(credits)}</p>
           </div>
           <div className="p-3 rounded-lg bg-blue-50">
-            <p className="text-xs text-muted-foreground">Debits</p>
+            <p className="text-xs text-muted-foreground">{t("web.wallet.debits")}</p>
             <p className="text-xl font-semibold text-blue-700">{rupees(debits)}</p>
           </div>
         </div>
         {variant === "customer" && (
           <div className="flex gap-2 items-end">
             <div className="space-y-1">
-              <Label>Add money (₹)</Label>
+              <Label>{t("wallet.amount")}</Label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                 <Input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-40 pl-7" />
@@ -73,14 +75,14 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
                     method: "POST",
                     body: JSON.stringify({ amount_paise: Math.round(Number(amount) * 100) }),
                   });
-                  toast.success("Money added");
+                  toast.success(t("wallet.loaded"));
                   await load();
                 } catch (e: any) {
                   toast.error(e.message);
                 }
               }}
             >
-              Add Money
+              {t("wallet.load")}
             </Button>
           </div>
         )}

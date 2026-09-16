@@ -111,12 +111,12 @@ export default function Home() {
                   value={heroQ}
                   onChange={(e) => setHeroQ(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && goSearch()}
-                  placeholder="Search Pujas, Homams, Vrathams..."
+                  placeholder={t("services.searchPujas")}
                   className="h-12 pl-10 border-none bg-secondary/30 focus-visible:ring-0 font-bold text-foreground placeholder:font-semibold placeholder:text-foreground/55"
                 />
               </div>
               <Button className="h-12 px-8 w-full md:w-auto bg-primary text-white font-bold" onClick={goSearch}>
-                Search
+                {t("common.search")}
               </Button>
             </div>
           </div>
@@ -127,14 +127,14 @@ export default function Home() {
       <section className="py-16 bg-secondary/10">
         <div className="container">
           <SectionHeader
-            subtitle="Get started"
-            title="Choose your BSeva portal"
-            description="Customers book pujas and Pujaris manage services through their portals."
+            subtitle={t("home.getStarted")}
+            title={t("home.choosePortal")}
+            description={t("home.choosePortalDescription")}
           />
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {[
-              { role: "customer", title: "Customer", desc: "Book pujas, manage wallet, and track bookings.", icon: Users, href: "/customer" },
-              { role: "pujari", title: "Pujari", desc: "Complete your profile, upload documents, and receive bookings.", icon: UserCheck, href: "/pujari" },
+              { role: "customer", title: t("auth.customer"), desc: t("home.customerBlurb"), icon: Users, href: "/customer" },
+              { role: "pujari", title: t("auth.pujari"), desc: t("home.pujariBlurb"), icon: UserCheck, href: "/pujari" },
             ].map((card) => (
               <Card key={card.role} className="border-border shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader>
@@ -146,13 +146,13 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   {user?.role === card.role ? (
-                    <Link href={dashboardPath(card.role)}><Button className="w-full">Go to dashboard</Button></Link>
+                    <Link href={dashboardPath(card.role)}><Button className="w-full">{t("home.goDashboard")}</Button></Link>
                   ) : user ? (
-                    <Button className="w-full" variant="outline" disabled>Signed in as {user.role}</Button>
+                    <Button className="w-full" variant="outline" disabled>{t("home.signedInAs", { role: user.role })}</Button>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      <Link href={card.href}><Button className="w-full">Sign in</Button></Link>
-                      <Link href={`/register?role=${card.role}`}><Button variant="outline" className="w-full">Register</Button></Link>
+                      <Link href={card.href}><Button className="w-full">{t("auth.signIn")}</Button></Link>
+                      <Link href={`/register?role=${card.role}`}><Button variant="outline" className="w-full">{t("auth.register")}</Button></Link>
                     </div>
                   )}
                 </CardContent>
@@ -201,7 +201,7 @@ export default function Home() {
         <div className="container">
           <SectionHeader
             subtitle={t("home.offerings")}
-            title="Popular Pujas"
+            title={t("home.popularPujas")}
             description={t("home.servicesDesc")}
           />
 
@@ -214,12 +214,12 @@ export default function Home() {
               {popular.map((s, i) => {
                 const Icon = ICONS[i % ICONS.length];
                 const img = serviceImageUrl(s);
-                const starting = formatStartingFrom(s);
+                const starting = formatStartingFrom(s, lang);
                 const desc =
                   s.short_description ||
                   s.description ||
                   starting ||
-                  (s.bookable ? "Available soon" : "Coming soon");
+                  (s.bookable ? t("home.availableSoon") : t("services.comingSoonLabel"));
                 return (
                   <div
                     key={s.id}
@@ -247,7 +247,7 @@ export default function Home() {
               className="border-primary text-primary hover:bg-primary hover:text-white font-bold px-8"
               onClick={() => setLocation("/services")}
             >
-              View More Pujas
+              {t("home.viewMorePujas")}
             </Button>
           </div>
         </div>

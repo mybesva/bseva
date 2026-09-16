@@ -7,14 +7,16 @@ import { AppText, Card, LoadingBlock, PrimaryButton, Screen } from "@/components
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function ServiceDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useAppTheme();
+  const { t, lang } = useI18n();
   const q = useQuery({
-    queryKey: ["service", slug],
+    queryKey: ["service", slug, lang],
     queryFn: () => apiClient.getService(slug),
     enabled: !!slug,
   });
@@ -22,7 +24,7 @@ export default function ServiceDetail() {
   if (q.isLoading) {
     return (
       <Screen>
-        <ScreenHeader title="Service" back />
+        <ScreenHeader title={t("services.title")} back />
         <LoadingBlock />
       </Screen>
     );

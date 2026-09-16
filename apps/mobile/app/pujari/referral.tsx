@@ -4,8 +4,10 @@ import { Alert, ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function PujariReferral() {
+  const { t } = useI18n();
   const q = useQuery({
     queryKey: ["pujari-referral"],
     queryFn: () => apiClient.pujariReferral() as Promise<{ code?: string; referral_code?: string }>,
@@ -13,18 +15,18 @@ export default function PujariReferral() {
   const code = q.data?.code || q.data?.referral_code || "";
   return (
     <Screen>
-      <ScreenHeader title="Referral" back />
+      <ScreenHeader title={t("mobile.referral")} back />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Card>
-          <AppText variant="small">Your referral code</AppText>
+          <AppText variant="small">{t("mobile.referralCode")}</AppText>
           <AppText variant="h1">{code || "—"}</AppText>
           <PrimaryButton
-            title="Copy"
+            title={t("mobile.copy")}
             variant="outline"
             onPress={async () => {
               if (!code) return;
               await Clipboard.setStringAsync(code);
-              Alert.alert("Copied", code);
+              Alert.alert(t("mobile.copied"), code);
             }}
           />
         </Card>

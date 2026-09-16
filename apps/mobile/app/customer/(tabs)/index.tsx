@@ -13,13 +13,13 @@ import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
 
 export default function CustomerHome() {
   const { user, refresh } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const calendar = String(user?.calendar_preference || "north");
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
-  const services = useQuery({ queryKey: ["services"], queryFn: () => apiClient.listServices() });
+  const services = useQuery({ queryKey: ["services", lang], queryFn: () => apiClient.listServices() });
   const wallet = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const panchang = useQuery({ queryKey: ["panchang", today, calendar], queryFn: () => apiClient.panchang(today, calendar) as Promise<Record<string, unknown>> });
   const recs = useQuery({ queryKey: ["recommendations"], queryFn: () => apiClient.recommendations() });
@@ -144,9 +144,9 @@ export default function CustomerHome() {
           </Pressable>
         ))}
         {(services.data || []).length === 0 && !services.isLoading ? (
-          <EmptyState title={t("customer.noBookings")} subtitle="Browse services to book a puja." />
+          <EmptyState title={t("mobile.noServices")} subtitle={t("mobile.bookFromServices")} />
         ) : null}
-        <PrimaryButton title="View all services" variant="outline" onPress={() => router.push("/customer/services")} />
+        <PrimaryButton title={t("home.viewAllServices")} variant="outline" onPress={() => router.push("/customer/services")} />
       </ScrollView>
     </Screen>
   );

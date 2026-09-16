@@ -3,6 +3,7 @@ import * as Location from "expo-location";
 import { useState } from "react";
 import { View } from "react-native";
 import { AppText, ErrorBanner, Field, PrimaryButton } from "./ui";
+import { useI18n } from "@/providers/I18nProvider";
 
 export type AddressFormValue = {
   address_line1: string;
@@ -28,6 +29,7 @@ export function AddressForm({
   onSave: (parsed: AddressFormValue) => Promise<void>;
   busy?: boolean;
 }) {
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   function set<K extends keyof AddressFormValue>(key: K, v: AddressFormValue[K]) {
     onChange({ ...value, [key]: v });
@@ -35,26 +37,26 @@ export function AddressForm({
   return (
     <View style={{ gap: 10 }}>
       <ErrorBanner message={error} />
-      <Field label="Address line 1" value={value.address_line1} onChangeText={(v) => set("address_line1", v)} />
-      <Field label="Address line 2" value={value.address_line2 || ""} onChangeText={(v) => set("address_line2", v)} />
-      <Field label="City" value={value.city} onChangeText={(v) => set("city", v)} />
-      <Field label="District" value={value.district} onChangeText={(v) => set("district", v)} />
-      <Field label="State" value={value.state} onChangeText={(v) => set("state", v)} />
-      <Field label="Pincode" value={value.pincode} onChangeText={(v) => set("pincode", v)} keyboardType="number-pad" />
-      <Field label="Country" value={value.country || "India"} onChangeText={(v) => set("country", v)} />
-      <Field label="Location label" value={value.location_label || ""} onChangeText={(v) => set("location_label", v)} />
+      <Field label={t("mobile.addressLine1")} value={value.address_line1} onChangeText={(v) => set("address_line1", v)} />
+      <Field label={t("mobile.addressLine2")} value={value.address_line2 || ""} onChangeText={(v) => set("address_line2", v)} />
+      <Field label={t("mobile.city")} value={value.city} onChangeText={(v) => set("city", v)} />
+      <Field label={t("mobile.district")} value={value.district} onChangeText={(v) => set("district", v)} />
+      <Field label={t("mobile.state")} value={value.state} onChangeText={(v) => set("state", v)} />
+      <Field label={t("mobile.pincode")} value={value.pincode} onChangeText={(v) => set("pincode", v)} keyboardType="number-pad" />
+      <Field label={t("mobile.country")} value={value.country || "India"} onChangeText={(v) => set("country", v)} />
+      <Field label={t("mobile.locationLabel")} value={value.location_label || ""} onChangeText={(v) => set("location_label", v)} />
       {value.latitude != null ? (
         <AppText variant="small">
           GPS: {value.latitude.toFixed(5)}, {value.longitude?.toFixed(5)}
         </AppText>
       ) : null}
       <PrimaryButton
-        title="Use current location"
+        title={t("mobile.useCurrentLocation")}
         variant="outline"
         onPress={async () => {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== "granted") {
-            setError("Location permission denied");
+            setError(t("mobile.locationPermissionDenied"));
             return;
           }
           const pos = await Location.getCurrentPositionAsync({});
@@ -66,12 +68,12 @@ export function AddressForm({
         }}
       />
       <PrimaryButton
-        title={busy ? "Saving..." : "Save address"}
+        title={busy ? t("mobile.saving") : t("mobile.saveAddress")}
         loading={busy}
         onPress={async () => {
           const parsed = addressSchema.safeParse({ ...value, country: value.country || "India" });
           if (!parsed.success) {
-            setError(parsed.error.issues[0]?.message || "Check address");
+            setError(t("mobile.checkAddress"));
             return;
           }
           setError(null);

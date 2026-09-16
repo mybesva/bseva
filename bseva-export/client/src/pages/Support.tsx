@@ -49,7 +49,7 @@ function SupportForm({ categories }: { categories: string[] }) {
     e.preventDefault();
     const errs = validateSupport(subject, description);
     if (Object.keys(errs).length) {
-      toast.error(Object.values(errs)[0]);
+      toast.error(errs.subject ? t("web.support.subjectValidation") : t("web.support.descriptionValidation"));
       return;
     }
     setSaving(true);
@@ -73,12 +73,12 @@ function SupportForm({ categories }: { categories: string[] }) {
     <div className="grid lg:grid-cols-2 gap-6 max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Raise a ticket</CardTitle>
+          <CardTitle className="text-base">{t("web.support.raiseTicket")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>
             <div className="space-y-1">
-              <Label>Category</Label>
+              <Label>{t("support.category")}</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
                   <SelectValue />
@@ -86,18 +86,18 @@ function SupportForm({ categories }: { categories: string[] }) {
                 <SelectContent>
                   {categories.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {c}
+                      {t(`web.support.category.${c.toLowerCase().replace(/[^a-z]+/g, "_")}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Subject *</Label>
+              <Label>{t("support.subject")} *</Label>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} required minLength={5} />
             </div>
             <div className="space-y-1">
-              <Label>Description *</Label>
+              <Label>{t("support.message")} *</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -108,7 +108,7 @@ function SupportForm({ categories }: { categories: string[] }) {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={saving}>
-                {saving ? "Sending…" : "Submit ticket"}
+                {saving ? t("web.support.sending") : t("support.submit")}
               </Button>
             </div>
           </form>
@@ -117,17 +117,17 @@ function SupportForm({ categories }: { categories: string[] }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Your tickets</CardTitle>
+          <CardTitle className="text-base">{t("web.support.yourTickets")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {tickets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No tickets yet.</p>
+            <p className="text-sm text-muted-foreground">{t("support.empty")}</p>
           ) : (
             tickets.map((ticket) => (
               <div key={ticket.id} className="rounded-md border p-3 text-sm">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium">{ticket.subject}</span>
-                  <Badge variant="secondary">{ticket.status}</Badge>
+                  <Badge variant="secondary">{t(`status.${ticket.status}`)}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {ticket.ticket_number} · {ticket.category}
@@ -167,11 +167,12 @@ function isPujariRole(role?: string | null) {
 
 /** Public contact-adjacent page for logged-out users (uses Layout). */
 export default function SupportPage() {
+  const { t } = useI18n();
   const { user, loading } = useAuth();
   if (loading) {
     return (
       <Layout>
-        <div className="container py-10">Loading…</div>
+        <div className="container py-10">{t("common.loading")}</div>
       </Layout>
     );
   }
@@ -180,10 +181,10 @@ export default function SupportPage() {
   return (
     <Layout>
       <div className="container py-10 max-w-lg">
-        <h1 className="text-h1 mb-2">Support</h1>
-        <p className="text-muted-foreground mb-4">Please sign in to raise a support ticket.</p>
+        <h1 className="text-h1 mb-2">{t("support.title")}</h1>
+        <p className="text-muted-foreground mb-4">{t("web.support.signInPrompt")}</p>
         <Link href={getLoginUrl({ role: "pujari", returnPath: "/pujari/support" })}>
-          <Button>Sign in</Button>
+          <Button>{t("nav.login")}</Button>
         </Link>
       </div>
     </Layout>

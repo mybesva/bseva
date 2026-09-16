@@ -11,6 +11,8 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Sparkles } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
+import { errorKeyForCode } from "@bseva/locales";
 
 type PortalRole = "customer" | "priest" | "admin";
 
@@ -18,12 +20,12 @@ function apiRole(role: PortalRole) {
   return role === "priest" ? "pujari" : role;
 }
 
-function portalCopy(role: PortalRole) {
+function portalCopy(role: PortalRole, t: (key: string, vars?: Record<string, string>) => string) {
   if (role === "priest") {
     return {
-      title: "Pujari Login",
-      description: "Sign in with your pujari account to manage bookings, profile, and dakshina.",
-      hint: "For priests and head pujaris only. Use the header to switch portals.",
+      title: t("auth.pujariLogin"),
+      description: t("auth.pujariLoginDescription"),
+      hint: t("auth.pujariLoginHint"),
       Icon: Sparkles,
     };
   }
@@ -36,9 +38,9 @@ function portalCopy(role: PortalRole) {
     };
   }
   return {
-    title: "Customer Login",
-    description: "Sign in with your customer account to book pujas and manage bookings.",
-    hint: "For devotees and customers only. Use the header to switch portals.",
+    title: t("auth.customerLogin"),
+    description: t("auth.customerLoginDescription"),
+    hint: t("auth.customerLoginHint"),
     Icon: Users,
   };
 }
@@ -54,12 +56,13 @@ export default function RolePortalGate({
   allowAdminBypass?: boolean;
 }) {
   const { user, loading, refresh, logout } = useAuth();
+  const { t } = useI18n();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const expected = apiRole(role);
-  const copy = portalCopy(role);
+  const copy = portalCopy(role, t);
   const isAdminLike = (r: string) => r === "admin" || r === "super_admin";
   const matchesPortal =
     user &&
@@ -91,11 +94,9 @@ export default function RolePortalGate({
         <div className="container py-16 max-w-md">
           <Card>
             <CardContent className="pt-6 space-y-4 text-center">
-              <p>
-                You are logged in as <strong>{user.role}</strong>. This portal is for {expected}s only.
-              </p>
+              <p>{t("auth.loggedInWrongPortal", { actual: user.role, expected })}</p>
               <Button variant="outline" onClick={() => logout()}>
-                Logout
+                {t("nav.logout")}
               </Button>
             </CardContent>
           </Card>
@@ -114,14 +115,15 @@ export default function RolePortalGate({
         (expected === "pujari" && out.user.role === "head_pujari") ||
         (allowAdminBypass && isAdminLike(out.user.role) && role === "admin");
       if (!roleOk) {
-        toast.error(`This portal is for ${expected}s. Your account is ${out.user.role}.`);
+        toast.error(t("auth.wrongRole", { expected, actual: out.user.role }));
         await logout();
         return;
       }
       await refresh();
-      toast.success("Logged in");
+      toast.success(t("auth.loggedIn"));
     } catch (err: any) {
-      toast.error(err.message || "Login failed");
+      const key = errorKeyForCode(err?.code);
+      toast.error(key ? t(key) : err.message || t("errors.loginFailed"));
     } finally {
       setPending(false);
     }
@@ -155,35 +157,39 @@ export default function RolePortalGate({
           <CardContent>
             <form key={expected} className="space-y-3" onSubmit={onLogin} autoComplete="off">
               <div className="space-y-2">
-                <Label>Email or phone</Label>
+                <Label>{t("auth.emailOrPhone")}</Label>
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
               </div>
               <div className="space-y-2">
-                <Label>Password</Label>
+                <Label>{t("auth.password")}</Label>
                 <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
               </div>
               <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
                 {pending
-                  ? "Logging in…"
-                  : `Login as ${expected === "pujari" ? "Pujari" : expected === "admin" ? "Admin" : "Customer"}`}
+                  ? t("auth.loggingIn")
+                  : expected === "pujari"
+                    ? t("auth.loginAsPujari")
+                    : expected === "admin"
+                      ? "Login as Admin"
+                      : t("auth.loginAsCustomer")}
               </Button>
             </form>
             {registerHref && (
               <p className="text-sm text-muted-foreground mt-4 text-center">
-                New here?{" "}
+                {t("auth.newHere")}{" "}
                 <Link href={registerHref} className="text-primary underline">
-                  Create a {expected === "pujari" ? "pujari" : "customer"} account
+                  {expected === "pujari" ? t("auth.createPujariAccount") : t("auth.createCustomerAccount")}
                 </Link>
               </p>
             )}
             <p className="text-xs text-muted-foreground mt-3 text-center">
-              Or use the shared{" "}
+              {t("auth.orUseShared")}{" "}
               <button
                 type="button"
                 className="underline text-primary"
                 onClick={() => setLocation(`/login?role=${expected}`)}
               >
-                Login page
+                {t("auth.loginPage")}
               </button>
             </p>
           </CardContent>

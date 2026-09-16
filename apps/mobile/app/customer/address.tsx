@@ -5,8 +5,10 @@ import { AddressForm, type AddressFormValue } from "@/components/AddressForm";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function CustomerAddress() {
+  const { t } = useI18n();
   const q = useQuery({
     queryKey: ["customer-profile"],
     queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>>,
@@ -43,7 +45,7 @@ export default function CustomerAddress() {
   if (q.isLoading) {
     return (
       <Screen>
-        <ScreenHeader title="Address" back />
+        <ScreenHeader title={t("mobile.address")} back />
         <LoadingBlock />
       </Screen>
     );
@@ -51,7 +53,7 @@ export default function CustomerAddress() {
 
   return (
     <Screen>
-      <ScreenHeader title="Address" back />
+      <ScreenHeader title={t("mobile.address")} back />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <ErrorBanner message={error} />
         <AddressForm
@@ -68,7 +70,7 @@ export default function CustomerAddress() {
               });
               await q.refetch();
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : "Save failed");
+              setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
             } finally {
               setBusy(false);
             }

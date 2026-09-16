@@ -14,7 +14,7 @@ import { useAppTheme } from "@/theme/ThemeContext";
 
 export default function CustomerProfile() {
   const { user, refresh } = useAuth();
-  const { setLang } = useI18n();
+  const { setLang, t } = useI18n();
   const { colors } = useAppTheme();
   const qc = useQueryClient();
   const profileQ = useQuery({
@@ -55,7 +55,7 @@ export default function CustomerProfile() {
 
   return (
     <Screen>
-      <ScreenHeader title="Profile" back />
+      <ScreenHeader title={t("mobile.profile")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error || profileErr} />
         <Card>
@@ -89,13 +89,13 @@ export default function CustomerProfile() {
                 await apiClient.uploadCustomerPhoto(file);
                 await loadPhoto();
               } catch (e: unknown) {
-                setError(e instanceof Error ? e.message : "Upload failed");
+                setError(e instanceof Error ? e.message : t("mobile.uploadFailed"));
               }
             }}
           />
         </Card>
         <Card>
-          <Field label="Name" value={name} onChangeText={setName} />
+          <Field label={t("mobile.name")} value={name} onChangeText={setName} />
           <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
             {user?.email || "—"}
           </AppText>
@@ -103,7 +103,7 @@ export default function CustomerProfile() {
             {user?.phone || "—"}
           </AppText>
           <AppText variant="small" style={{ marginTop: 12, marginBottom: 8 }}>
-            Language
+            {t("mobile.language")}
           </AppText>
           <ChoiceChips
             options={LANGS.map((code) => ({ id: code, label: LANG_LABELS[code] }))}
@@ -112,7 +112,7 @@ export default function CustomerProfile() {
           />
           <View style={{ height: 12 }} />
           <PrimaryButton
-            title={busy ? "Saving..." : "Save"}
+            title={busy ? t("mobile.saving") : t("mobile.save")}
             loading={busy}
             onPress={async () => {
               setBusy(true);
@@ -128,7 +128,7 @@ export default function CustomerProfile() {
                 await refresh();
                 void qc.invalidateQueries({ queryKey: ["customer-profile"] });
               } catch (e: unknown) {
-                setError(e instanceof Error ? e.message : "Save failed");
+                setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
               } finally {
                 setBusy(false);
               }

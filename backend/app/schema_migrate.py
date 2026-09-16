@@ -1135,6 +1135,20 @@ def ensure_schema(*, quiet: bool = False) -> None:
                 failed.append(("puja catalog import", str(e).split("\n")[0][:180]))
         except Exception as e:
             log(f"  ! puja catalog import skipped: {e}")
+        try:
+            from app.catalog_i18n_seed import ensure_catalog_translations
+
+            log("  → six-language catalog translations")
+            conn.execute(text("SAVEPOINT bseva_catalog_i18n"))
+            try:
+                ensure_catalog_translations(conn)
+                conn.execute(text("RELEASE SAVEPOINT bseva_catalog_i18n"))
+                ok += 1
+            except Exception as e:
+                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_catalog_i18n"))
+                failed.append(("catalog i18n seed", str(e).split("\n")[0][:180]))
+        except Exception as e:
+            log(f"  ! catalog i18n seed skipped: {e}")
         log("  → seeds (roles, legal, settings)")
         _seed_pujari_roles(conn)
         _seed_legal_policies(conn)

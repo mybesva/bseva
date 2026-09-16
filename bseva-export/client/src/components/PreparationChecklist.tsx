@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export type PrepItem = {
   name?: string;
@@ -26,13 +27,7 @@ export type PreparationView = {
   items?: PrepItem[];
 };
 
-const SECTION_META: { key: string; title: string }[] = [
-  { key: "included_bseva", title: "Included with your Samagri package" },
-  { key: "customer_arrange", title: "Please arrange" },
-  { key: "prasadam", title: "Prasadam / Naivedyam" },
-  { key: "home_venue", title: "Home / venue setup" },
-  { key: "optional", title: "Optional" },
-];
+const SECTION_KEYS = ["included_bseva", "customer_arrange", "prasadam", "home_venue", "optional"] as const;
 
 function itemLabel(it: PrepItem): string {
   if (it.label) return it.label;
@@ -44,7 +39,7 @@ function itemLabel(it: PrepItem): string {
 
 export default function PreparationChecklist({
   preparation,
-  title = "Puja preparation & Samagri",
+  title,
   interactive = false,
   compact = false,
 }: {
@@ -54,25 +49,28 @@ export default function PreparationChecklist({
   interactive?: boolean;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
+  const resolvedTitle = title || t("web.preparation.title");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   const sections = useMemo(() => {
     if (!preparation?.verified) return [];
     const src = preparation.sections || {};
-    return SECTION_META.map((s) => ({
-      ...s,
-      items: src[s.key] || [],
+    return SECTION_KEYS.map((key) => ({
+      key,
+      title: t(`web.preparation.section.${key}`),
+      items: src[key] || [],
     })).filter((s) => s.items.length > 0);
-  }, [preparation]);
+  }, [preparation, t]);
 
   if (!preparation) return null;
 
   if (!preparation.verified) {
     return (
       <div className={compact ?"space-y-1" :"rounded-lg border p-4 space-y-2"}>
-        <h3 className="font-semibold">{title}</h3>
+        <h3 className="font-semibold">{resolvedTitle}</h3>
         <p className="text-sm text-muted-foreground">
-          {preparation.pending_message || "Your detailed Samagri checklist will be confirmed shortly."}
+          {preparation.pending_message || t("web.preparation.pending")}
         </p>
         {preparation.disclaimer && (
           <p className="text-xs text-muted-foreground">{preparation.disclaimer}</p>
@@ -84,7 +82,7 @@ export default function PreparationChecklist({
   return (
     <div className={compact ?"space-y-3" :"rounded-lg border p-4 space-y-4"}>
       <div>
-        <h3 className="font-semibold">{title}</h3>
+        <h3 className="font-semibold">{resolvedTitle}</h3>
         {preparation.display_name && (
           <p className="text-sm text-muted-foreground">{preparation.display_name}</p>
         )}
@@ -123,7 +121,7 @@ export default function PreparationChecklist({
                     <div>
                       {label}
                       {it.optional ? (
-                        <span className="text-muted-foreground"> (optional)</span>
+                        <span className="text-muted-foreground"> ({t("common.optional")})</span>
                       ) : null}
                     </div>
                     {it.notes && <div className="text-xs text-muted-foreground">{it.notes}</div>}

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface ServiceCardProps {
   title: string;
@@ -25,12 +26,13 @@ export default function ServiceCard({
   bookingDisabled,
   bookingDisabledLabel,
 }: ServiceCardProps) {
+  const { t } = useI18n();
   return (
     <Card className="group border-none shadow-md hover:shadow-xl transition-all duration-300 bg-card h-full flex flex-col relative overflow-visible min-w-0 w-full">
       {comingSoon && (
         <div className="absolute top-0 right-0 z-30 max-w-[calc(100%-0.5rem)]">
           <div className="bg-amber-500 text-white font-extrabold text-[11px] sm:text-xs uppercase tracking-wider shadow-lg px-3 py-1.5 rounded-bl-lg">
-            Coming Soon
+            {t("services.comingSoonLabel")}
           </div>
         </div>
       )}
@@ -75,7 +77,7 @@ export default function ServiceCard({
         </p>
         {comingSoon && (
           <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
-            This puja will be available for booking soon.
+            {t("services.bookingSoon")}
           </p>
         )}
       </CardContent>
@@ -83,15 +85,15 @@ export default function ServiceCard({
       <CardFooter className="pt-0 pb-6 px-4 sm:px-6">
         {comingSoon ? (
           <span className="text-sm font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
-            Coming Soon
+            {t("services.comingSoonLabel")}
           </span>
         ) : bookingDisabled ? (
           <span className="text-sm font-semibold text-muted-foreground">
-            {bookingDisabledLabel || "Booking unavailable in your area"}
+            {bookingDisabledLabel || t("services.bookingUnavailableArea")}
           </span>
         ) : (
           <Button variant="link" className="p-0 h-auto text-primary font-bold group-hover:translate-x-1 transition-transform">
-            Book Now <ArrowRight size={16} className="ml-1" />
+            {t("customer.bookNow")} <ArrowRight size={16} className="ml-1" />
           </Button>
         )}
       </CardFooter>

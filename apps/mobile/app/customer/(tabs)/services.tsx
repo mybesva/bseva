@@ -8,12 +8,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, EmptyState, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useI18n } from "@/providers/I18nProvider";
 
 export default function CustomerServices() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const { t, lang } = useI18n();
   const [q, setQ] = useState("");
-  const list = useQuery({ queryKey: ["services"], queryFn: () => apiClient.listServices() });
+  const list = useQuery({ queryKey: ["services", lang], queryFn: () => apiClient.listServices() });
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return list.data || [];
@@ -22,11 +24,11 @@ export default function CustomerServices() {
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">Services</AppText>
+        <AppText variant="h2">{t("mobile.services")}</AppText>
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Search"
+          placeholder={t("mobile.search")}
           placeholderTextColor={colors.mutedForeground}
           style={{ marginTop: 12, backgroundColor: colors.input, borderRadius: 8, padding: 12, color: colors.foreground, borderWidth: 1, borderColor: colors.border }}
         />
@@ -36,7 +38,7 @@ export default function CustomerServices() {
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
       >
         {list.isLoading ? <LoadingBlock /> : null}
-        {filtered.length === 0 && !list.isLoading ? <EmptyState title="No services" /> : null}
+        {filtered.length === 0 && !list.isLoading ? <EmptyState title={t("mobile.noServices")} /> : null}
         {filtered.map((s: CatalogService) => (
           <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
             <Card>
