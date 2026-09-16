@@ -601,26 +601,10 @@ def create_booking(
                     "No pujari is available for this date and time near your location. "
                     "Choose another slot, or ask admin to assign a pujari.",
                 )
-            candidate_ids = {pid for pid, _dist in slot_candidates}
+            # Multiple eligible pujaris at the same area → broadcast offers to all (first accept wins).
+            # Auto-assign only when exactly one pujari can take this slot (not "repeat customer → same pujari").
             preferred_id: str | None = None
-            prev_rows = db.execute(
-                text(
-                    """
-                    SELECT b.pujari_id::text
-                    FROM bookings b
-                    WHERE b.customer_id = CAST(:cid AS uuid)
-                      AND b.pujari_id IS NOT NULL
-                    ORDER BY b.created_at DESC
-                    """
-                ),
-                {"cid": user["id"]},
-            ).all()
-            for row in prev_rows:
-                pid = str(row[0])
-                if pid in candidate_ids:
-                    preferred_id = pid
-                    break
-            if preferred_id is None and len(slot_candidates) == 1:
+            if len(slot_candidates) == 1:
                 preferred_id = slot_candidates[0][0]
             if preferred_id:
                 body.pujari_id = UUID(preferred_id)
