@@ -16,8 +16,12 @@ backend/scripts
 **/*.pyc
 .pytest_cache
 
-# Monorepo packages (web build uses bseva-export only)
-packages
+# Web build aliases need packages/locales + packages/config (see bseva-export/vite.config.ts)
+packages/api-client
+packages/types
+packages/validation
+packages/tokens
+apps/admin-mobile
 
 # IDE / git / docs
 .git
