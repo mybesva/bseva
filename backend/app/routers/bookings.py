@@ -1,7 +1,9 @@
+import logging
 from datetime import date, datetime, time, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -22,6 +24,35 @@ from app.panchang import panchang_for
 from app.schemas import BookingCreateIn
 
 router = APIRouter(tags=["bookings"])
+logger = logging.getLogger(__name__)
+
+
+def _post_create_booking_side_effects(booking_id: str, email_payload: dict[str, Any] | None) -> None:
+    """Confirmation email + invoice PDF — must not block the booking API response."""
+    from app.db import SessionLocal
+
+    db = SessionLocal()
+    try:
+        if email_payload:
+            try:
+                from app.email_service import send_booking_preparation_email
+
+                send_booking_preparation_email(**email_payload)
+            except Exception:
+                logger.exception("booking_confirmation_email_failed booking=%s", booking_id)
+        try:
+            from app.invoice_docs import issue_paid_booking_invoice
+
+            paid_row = db.execute(
+                text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
+                {"id": booking_id},
+            ).mappings().first()
+            if paid_row:
+                issue_paid_booking_invoice(db, dict(paid_row))
+        except Exception:
+            logger.exception("booking_invoice_failed booking=%s", booking_id)
+    finally:
+        db.close()
 
 # Stable code for clients — map to a friendly consumer message; never show raw geo errors.
 SERVICE_AREA_UNAVAILABLE = "SERVICE_AREA_UNAVAILABLE"
@@ -457,6 +488,7 @@ def virtual_precheck(request: Request, user=Depends(require_roles("customer"))):
 def create_booking(
     body: BookingCreateIn,
     request: Request,
+    background_tasks: BackgroundTasks,
     user=Depends(require_roles("customer")),
     db: Session = Depends(get_db),
 ):
@@ -770,10 +802,8 @@ def create_booking(
         )
     except Exception:
         prep_view = {}
-    # Recommended List email (localized short confirmation + link; full list on page)
-    email_result = {"status": "skipped"}
+    email_payload: dict[str, Any] | None = None
     try:
-        from app.email_service import send_booking_preparation_email
         from app.platform_config import get_setting as _gs
         from app.preparation import customer_preferred_language
 
@@ -782,33 +812,34 @@ def create_booking(
             {"id": user["id"]},
         ).mappings().first()
         lang = customer_preferred_language(db, str(user["id"]))
-        # Only emphasize Samagri checklist when customer opted in for pujari-arranged items
         opted_samagri = bool(body.include_samagri) or int(bill.get("samagri") or 0) > 0
         opted_alan = bool(body.include_alankaram) or int(bill.get("alankaram") or 0) > 0
         if cust and cust.get("email"):
-            email_result = send_booking_preparation_email(
-                to=str(cust["email"]),
-                customer_name=str(cust.get("name") or ""),
-                booking_number=number,
-                booking_id=booking_id,
-                service_name=str(prep_view.get("display_name") or svc.get("name") or "Puja"),
-                booking_date=str(body.booking_date),
-                start_time=str(body.start_time),
-                preparation=prep_view if (opted_samagri or opted_alan) else {**prep_view, "verified": False, "skip_samagri_cta": True},
-                language=lang,
-                from_addr=str(_gs(db, "email_from_accounts", "admin@b-seva.com")),
-                package=str(body.package_type or ""),
-                location=str(body.location_label or body.address or body.city or ""),
-                main_puja_paise=int(bill.get("mainPuja") or bill.get("basePrice") or 0),
-                samagri_paise=int(bill.get("samagri") or 0),
-                alankaram_paise=int(bill.get("alankaram") or 0),
-                food_prasadam_paise=int(bill.get("foodPrasadam") or 0),
-                total_paise=int(bill.get("total") or bill.get("totalPaise") or total or 0),
-                payment_status="paid",
-                booking_status="pending_acceptance",
-            )
-    except Exception as e:
-        email_result = {"status": "failed", "error": str(e)}
+            email_payload = {
+                "to": str(cust["email"]),
+                "customer_name": str(cust.get("name") or ""),
+                "booking_number": number,
+                "booking_id": booking_id,
+                "service_name": str(prep_view.get("display_name") or svc.get("name") or "Puja"),
+                "booking_date": str(body.booking_date),
+                "start_time": str(body.start_time),
+                "preparation": prep_view
+                if (opted_samagri or opted_alan)
+                else {**prep_view, "verified": False, "skip_samagri_cta": True},
+                "language": lang,
+                "from_addr": str(_gs(db, "email_from_accounts", "admin@b-seva.com")),
+                "package": str(body.package_type or ""),
+                "location": str(body.location_label or body.address or body.city or ""),
+                "main_puja_paise": int(bill.get("mainPuja") or bill.get("basePrice") or 0),
+                "samagri_paise": int(bill.get("samagri") or 0),
+                "alankaram_paise": int(bill.get("alankaram") or 0),
+                "food_prasadam_paise": int(bill.get("foodPrasadam") or 0),
+                "total_paise": int(bill.get("total") or bill.get("totalPaise") or total or 0),
+                "payment_status": "paid",
+                "booking_status": "pending_acceptance",
+            }
+    except Exception:
+        email_payload = None
     # Recurring series (first occurrence is this booking; more dates recorded for follow-up)
     series_id = None
     next_dates: list[str] = []
@@ -1051,17 +1082,7 @@ def create_booking(
     except Exception:
         pass
     db.commit()
-    try:
-        from app.invoice_docs import issue_paid_booking_invoice
-
-        paid_row = db.execute(
-            text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
-            {"id": booking_id},
-        ).mappings().first()
-        if paid_row:
-            issue_paid_booking_invoice(db, dict(paid_row))
-    except Exception:
-        pass
+    background_tasks.add_task(_post_create_booking_side_effects, booking_id, email_payload)
     return {
         "id": booking_id,
         "booking_number": number,
@@ -1081,8 +1102,7 @@ def create_booking(
             "gstAmount": gst_amt,
             "totalAmount": total,
         },
-        "recommended_list_email": email_result.get("status", "queued"),
-        "recommended_list_email_detail": email_result,
+        "recommended_list_email": "queued" if email_payload else "skipped",
     }
 
 

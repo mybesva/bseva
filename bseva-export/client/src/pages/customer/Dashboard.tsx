@@ -100,7 +100,16 @@ function CustomerDashboardContent() {
   const [completeBusy, setCompleteBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    const targets = (bookings || []).filter((b) => b.status === "confirmed" || b.status === "in_progress");
+    const now = Date.now();
+    const targets = (bookings || []).filter((b) => {
+      if (b.status === "in_progress") return true;
+      if (b.status !== "confirmed" || !b.booking_date) return false;
+      const start = new Date(
+        `${String(b.booking_date).slice(0, 10)}T${String(b.start_time || "00:00").slice(0, 5)}:00`,
+      );
+      const ms = start.getTime() - now;
+      return ms <= 24 * 60 * 60 * 1000 && ms >= -2 * 60 * 60 * 1000;
+    });
     if (!targets.length) return;
     let cancelled = false;
     async function loadOtps() {

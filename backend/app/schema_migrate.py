@@ -178,6 +178,18 @@ _STMTS = [
       PRIMARY KEY (policy_id, language_code)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS recommendation_translations (
+      recommendation_id UUID NOT NULL REFERENCES service_recommendations(id) ON DELETE CASCADE,
+      language_code TEXT NOT NULL CHECK (language_code IN ('hi', 'te', 'mr', 'ta', 'kn')),
+      title TEXT NOT NULL,
+      description TEXT,
+      recurrence_hint TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (recommendation_id, language_code)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_recommendation_translations_language ON recommendation_translations (language_code)",
 ]
 
 _DEFAULT_PUJARI_ROLES = [
