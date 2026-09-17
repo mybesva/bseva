@@ -1,9 +1,13 @@
 import { isPujariRole, rupees } from "@bseva/config";
-import type { Booking } from "@bseva/types";
+import type { Booking, BookingPreparation, PreparationItem } from "@bseva/types";
+import { normalizePreparationSections, PREPARATION_SECTION_KEYS } from "@bseva/types";
+import { formatPujaDuration } from "@bseva/locales";
 import * as Location from "expo-location";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, ScrollView, View } from "react-native";
+import { Alert, Linking, ScrollView, Share, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { TrackingMap } from "@/components/TrackingMap";
@@ -31,10 +35,10 @@ type LocationPing = {
   stale?: boolean;
 };
 
-function lastUpdatedLabel(iso?: string | null) {
-  if (!iso) return "just now";
+function lastUpdatedLabel(iso: string | null | undefined, justNow: string) {
+  if (!iso) return justNow;
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "just now";
+  if (Number.isNaN(d.getTime())) return justNow;
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
@@ -138,7 +142,7 @@ function LiveTrackCard({ bookingId, role }: { bookingId: string; role: "customer
           <AppText variant="h3">{t("track.title")}</AppText>
           <AppText variant="small" color={colors.mutedForeground}>
             {hasCoords
-              ? `${t("track.lastUpdated")}: ${lastUpdatedLabel(ping?.recorded_at)}`
+              ? `${t("track.lastUpdated")}: ${lastUpdatedLabel(ping?.recorded_at, t("mobile.justNow"))}`
               : t("track.waitingPujari")}
           </AppText>
         </View>
@@ -172,23 +176,16 @@ function LiveTrackCard({ bookingId, role }: { bookingId: string; role: "customer
   );
 }
 
-function prepLines(data: unknown): string[] {
-  if (!data) return [];
-  if (Array.isArray(data)) return data.map((x) => (typeof x === "string" ? x : JSON.stringify(x)));
-  if (typeof data === "object") {
-    const obj = data as Record<string, unknown>;
-    if (Array.isArray(obj.items)) return prepLines(obj.items);
-    if (Array.isArray(obj.checklist)) return prepLines(obj.checklist);
-    return Object.entries(obj).map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v).slice(0, 80)}`);
-  }
-  return [String(data)];
+function prepItemLabel(item: PreparationItem) {
+  const name = item.label || item.name || "";
+  return item.quantity != null ? `${name} — ${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : name;
 }
 
 export default function BookingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { colors } = useAppTheme();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const qc = useQueryClient();
   const router = useRouter();
   const q = useQuery({ queryKey: ["booking", id], queryFn: () => apiClient.getBooking(id), enabled: !!id });
@@ -230,7 +227,7 @@ export default function BookingDetail() {
       void qc.invalidateQueries({ queryKey: ["complete-otp"] });
       void qc.invalidateQueries({ queryKey: ["booking-loc"] });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Action failed");
+      setError(e instanceof Error ? e.message : t("web.booking.actionFailed"));
     } finally {
       setBusy(false);
     }
@@ -249,6 +246,49 @@ export default function BookingDetail() {
         throw e;
       }
     });
+  }
+
+  async function shareBooking() {
+    try {
+      await Share.share({
+        title: b!.booking_number || t("mobile.bookingTitle"),
+        message: `${t("web.booking.confirmed")}\n${b!.service_name || ""}\n${formatDisplaySlot(b!.booking_date, b!.start_time)}\n#${b!.booking_number || b!.id}`,
+      });
+    } catch {
+      Alert.alert(t("mobile.bookingTitle"), t("web.booking.shareFailed"));
+    }
+  }
+
+  async function sharePreparation() {
+    const preparation = prep.data as BookingPreparation | undefined;
+    if (!preparation) return;
+    const sections = normalizePreparationSections(preparation);
+    const lines = [
+      t("app.name"),
+      t("app.tagline"),
+      b!.service_name || t("mobile.samagriList"),
+      b!.booking_number ? `${t("mobile.bookingTitle")}: ${b!.booking_number}` : "",
+      "",
+    ];
+    for (const key of PREPARATION_SECTION_KEYS) {
+      const items = sections[key];
+      if (!items.length) continue;
+      lines.push(t(`web.preparation.section.${key}`));
+      for (const item of items) lines.push(`• ${prepItemLabel(item)}${item.notes ? ` — ${item.notes}` : ""}`);
+      lines.push("");
+    }
+    if (!preparation.verified) lines.push(preparation.pending_message || t("web.preparation.pending"));
+    try {
+      const uri = `${FileSystem.cacheDirectory}samagri-${b!.booking_number || b!.id}.txt`;
+      await FileSystem.writeAsStringAsync(uri, lines.filter(Boolean).join("\n"));
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "text/plain", dialogTitle: t("mobile.samagriList") });
+      } else {
+        await Share.share({ message: lines.filter(Boolean).join("\n") });
+      }
+    } catch {
+      Alert.alert(t("mobile.samagriList"), t("web.booking.shareFailed"));
+    }
   }
 
   if (q.isLoading) {
@@ -273,6 +313,10 @@ export default function BookingDetail() {
   const destLat = b.latitude != null ? Number(b.latitude) : null;
   const destLng = b.longitude != null ? Number(b.longitude) : null;
   const destReady = destLat != null && destLng != null && Number.isFinite(destLat) && Number.isFinite(destLng);
+  const displayStatus = !pujari ? String(b.customer_display_status || b.status) : b.status;
+  const preparation = prep.data as BookingPreparation | undefined;
+  const prepSections = normalizePreparationSections(preparation);
+  const selections = preparation?.selections || preparation?.selected_addons || [];
 
   return (
     <Screen>
@@ -284,9 +328,10 @@ export default function BookingDetail() {
             <AppText variant="h2" style={{ flex: 1 }}>
               {b.service_name}
             </AppText>
-            <StatusBadge status={b.status} />
+            <StatusBadge status={displayStatus} />
           </View>
           <AppText>{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
+          {b.duration_minutes ? <AppText>{t("web.booking.pujaDuration")}: {formatPujaDuration(lang, b.duration_minutes)}</AppText> : null}
           <AppText color={colors.mutedForeground}>{b.location_label || b.address}</AppText>
           {pujari && b.customer_name ? <AppText>{t("mobile.customer", { name: b.customer_name })}</AppText> : null}
           {!pujari && b.pujari_name ? <AppText>{t("mobile.pujari", { name: b.pujari_name })}</AppText> : null}
@@ -323,25 +368,40 @@ export default function BookingDetail() {
           {b.public_invite_url ? (
             <PrimaryButton title={t("mobile.inviteLink")} variant="ghost" onPress={() => void Linking.openURL(String(b.public_invite_url))} />
           ) : null}
+          {!pujari ? <PrimaryButton title={t("mobile.share")} variant="ghost" onPress={() => void shareBooking()} /> : null}
         </Card>
 
-        {!pujari && b.status === "confirmed" ? <CustomerStartOtp bookingId={b.id} /> : null}
+        {!pujari && Boolean(b.pujari_id) && b.status === "confirmed" ? <CustomerStartOtp bookingId={b.id} /> : null}
         {pujari && b.status === "in_progress" ? <PujariCompleteOtp bookingId={b.id} /> : null}
 
-        {b.mode !== "virtual" && b.status === "confirmed" ? (
+        {b.mode !== "virtual" && Boolean(b.pujari_id) && (b.status === "confirmed" || b.status === "in_progress") ? (
           <LiveTrackCard bookingId={b.id} role={pujari ? "pujari" : "customer"} />
         ) : null}
 
-        {prep.data ? (
-          <Card>
+        {preparation ? (
+          <Card style={{ gap: 8 }}>
             <AppText variant="h3">{t("mobile.preparation")}</AppText>
-            {prepLines(prep.data)
-              .slice(0, 12)
-              .map((line) => (
-                <AppText key={line} variant="small" color={colors.mutedForeground}>
-                  {line}
-                </AppText>
-              ))}
+            {selections.some((item) => item.selected) ? (
+              <AppText variant="small">
+                {t("web.preparation.selections")}: {selections.filter((item) => item.selected).map((item) => item.label || item.key).join(" · ")}
+              </AppText>
+            ) : null}
+            {PREPARATION_SECTION_KEYS.map((section) =>
+              prepSections[section]?.length ? (
+                <View key={section} style={{ gap: 4 }}>
+                  <AppText variant="h3">{t(`web.preparation.section.${section}`)}</AppText>
+                  {prepSections[section].map((item, index) => (
+                    <AppText key={`${section}-${index}`} variant="small" color={colors.mutedForeground}>
+                      • {prepItemLabel(item)}{item.notes ? ` — ${item.notes}` : ""}
+                    </AppText>
+                  ))}
+                </View>
+              ) : null
+            )}
+            {!preparation.verified && preparation.pending_message ? (
+              <AppText variant="small" color={colors.mutedForeground}>{preparation.pending_message}</AppText>
+            ) : null}
+            <PrimaryButton title={`${t("mobile.share")} / ${t("web.preparation.print")}`} variant="outline" onPress={() => void sharePreparation()} />
           </Card>
         ) : null}
 

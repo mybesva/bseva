@@ -328,3 +328,23 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-[#D4AF37] to-[#FF9933];
   }
 }
+
+@media print {
+  @page {
+    margin: 14mm;
+    size: A4;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #1a2b4a !important;
+  }
+  .bseva-print-header {
+    break-inside: avoid;
+  }
+  nav,
+  footer,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+}

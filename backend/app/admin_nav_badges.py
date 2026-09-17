@@ -124,6 +124,17 @@ def settlement_tooltip(awaiting: int, blocked: int) -> str:
     )
 
 
+def muhurtham_tooltip(requested: int, in_progress: int) -> str:
+    return format_tooltip(
+        [
+            _qty(requested, "new Muhurtham consultation", "new Muhurtham consultations") if requested else "",
+            _qty(in_progress, "Muhurtham consultation in progress", "Muhurtham consultations in progress")
+            if in_progress
+            else "",
+        ]
+    )
+
+
 def _count(db: Session, sql: str, params: dict | None = None) -> int:
     return int(db.execute(text(sql), params or {}).scalar() or 0)
 
@@ -143,7 +154,11 @@ def _table_exists(db: Session, name: str) -> bool:
 
 
 def _booking_buckets(db: Session, *, virtual: bool) -> tuple[int, int, int, str]:
-    mode_sql = "mode = 'virtual'" if virtual else "COALESCE(mode, 'in_person') <> 'virtual'"
+    mode_sql = (
+        "mode = 'virtual' AND COALESCE(booking_kind, 'puja') = 'puja'"
+        if virtual
+        else "COALESCE(mode, 'in_person') <> 'virtual' AND COALESCE(booking_kind, 'puja') = 'puja'"
+    )
     awaiting = _count(
         db,
         f"""
@@ -173,6 +188,7 @@ def _booking_buckets(db: Session, *, virtual: bool) -> tuple[int, int, int, str]
             """
             SELECT COUNT(*) FROM bookings
             WHERE mode = 'virtual'
+              AND COALESCE(booking_kind, 'puja') = 'puja'
               AND status = 'pending_acceptance'
               AND pujari_id IS NOT NULL
               AND COALESCE(needs_reassignment, FALSE) = FALSE
@@ -253,12 +269,30 @@ def _settlement_queue(db: Session) -> tuple[int, str]:
     return total, settlement_tooltip(awaiting, blocked)
 
 
+def _muhurtham_queue(db: Session) -> tuple[int, str]:
+    if not _table_exists(db, "muhurta_consultations"):
+        return 0, ""
+    by_status = _grouped_counts(
+        db,
+        """
+        SELECT status AS key, COUNT(*) AS n
+        FROM muhurta_consultations
+        WHERE status IN ('requested', 'in_progress')
+        GROUP BY status
+        """,
+    )
+    requested = int(by_status.get("requested") or 0)
+    in_progress = int(by_status.get("in_progress") or 0)
+    return requested + in_progress, muhurtham_tooltip(requested, in_progress)
+
+
 def admin_action_badges(db: Session) -> dict:
     bookings_n, _ba, _br, bookings_tip = _booking_buckets(db, virtual=False)
     virtual_n, _va, _vr, virtual_tip = _booking_buckets(db, virtual=True)
     pujaris_n, pujaris_tip = _pujari_queue(db)
     payments_n, payments_tip = _payment_queue(db)
     settlements_n, settlements_tip = _settlement_queue(db)
+    muhurtham_n, muhurtham_tip = _muhurtham_queue(db)
 
     support_n = _count(
         db,
@@ -275,6 +309,7 @@ def admin_action_badges(db: Session) -> dict:
         "support": _qty(support_n, "open support ticket", "open support tickets") if support_n else "",
         "payments": payments_tip,
         "settlements": settlements_tip,
+        "muhurtham": muhurtham_tip,
     }
     return {
         "pujaris": pujaris_n,
@@ -283,6 +318,7 @@ def admin_action_badges(db: Session) -> dict:
         "support": support_n,
         "payments": payments_n,
         "settlements": settlements_n,
+        "muhurtham": muhurtham_n,
         "customers": 0,
         "tooltips": tooltips,
     }

@@ -36,6 +36,15 @@ def test_booking_confirmation_includes_amounts():
     assert data.booking_id in content.html
 
 
+def test_customer_confirmation_never_exposes_internal_pending_status():
+    data = sample_booking_data(test_mode=True)
+    data.booking_status = "pending_acceptance"
+    content = booking_confirmation_email(data)
+    assert "pending_acceptance" not in content.html
+    assert "pending_acceptance" not in content.text
+    assert "Booking Status" not in content.text
+
+
 def test_invoice_template_has_receipt_fields():
     inv = sample_invoice_data(test_mode=True)
     content = invoice_receipt_email(inv)

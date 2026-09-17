@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, mediaSrc } from "@/lib/api";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export type PromoBannerCardData = {
   id?: string;
@@ -17,27 +18,40 @@ export function PromoBannerCard({
   banner: PromoBannerCardData;
   preview?: boolean;
 }) {
+  const { t } = useI18n();
   const card = (
-    <div className="min-w-[260px] max-w-[320px] w-[280px] snap-start rounded-lg border border-border overflow-hidden bg-card shrink-0">
+    <div
+      className={
+        preview
+          ? "w-full min-w-0 overflow-hidden rounded-lg border border-border bg-card"
+          : "w-[min(84vw,340px)] snap-start rounded-xl border border-border overflow-hidden bg-card shrink-0 shadow-sm"
+      }
+    >
       {banner.image_url ? (
-        <img src={mediaSrc(banner.image_url)} alt="" className="h-28 w-full object-cover" />
+        <div className="aspect-[16/7] w-full overflow-hidden bg-muted flex items-center justify-center">
+          <img
+            src={mediaSrc(banner.image_url)}
+            alt={banner.title || t("web.promo.imageAlt")}
+            className="h-full w-full object-contain"
+          />
+        </div>
       ) : (
-        <div className="h-28 w-full bg-primary/10" />
+        <div className="aspect-[16/7] w-full bg-primary/10" />
       )}
       <div className="p-3 space-y-1">
-        <div className="font-medium text-sm text-foreground line-clamp-2">{banner.title || "Untitled"}</div>
+        <div className="font-medium text-sm text-foreground line-clamp-2">{banner.title || t("web.promo.untitled")}</div>
         {banner.subtitle ? (
           <p className="text-xs text-muted-foreground line-clamp-2">{banner.subtitle}</p>
         ) : null}
         {banner.is_third_party && (
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Sponsored</span>
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t("web.promo.sponsored")}</span>
         )}
       </div>
     </div>
   );
   if (!preview && banner.target_url) {
     return (
-      <a href={banner.target_url} target="_blank" rel="noreferrer" className="shrink-0">
+      <a href={banner.target_url} target="_blank" rel="noopener noreferrer" className="shrink-0" aria-label={banner.title}>
         {card}
       </a>
     );
@@ -47,6 +61,7 @@ export function PromoBannerCard({
 
 /** Horizontally scrollable post-login promo banners (req #89 / #104). */
 export default function PromoBannerCarousel() {
+  const { t } = useI18n();
   const [banners, setBanners] = useState<PromoBannerCardData[]>([]);
 
   useEffect(() => {
@@ -59,7 +74,7 @@ export default function PromoBannerCarousel() {
 
   return (
     <div className="mb-6">
-      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory" aria-label={t("web.promo.promotions")}>
         {banners.map((b) => (
           <PromoBannerCard key={b.id} banner={b} />
         ))}

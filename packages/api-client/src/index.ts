@@ -259,6 +259,12 @@ export function createApiClient(opts: ApiClientOptions) {
       return api<Quote>(`/quote?${qs}`);
     },
 
+    serviceAvailability(lat: number, lng: number, service_id?: string) {
+      return api<{ service_available: boolean }>(
+        `/service-availability${toQuery({ lat, lng, service_id })}`
+      );
+    },
+
     nearbyPujaris(lat: number, lng: number, service_id?: string) {
       const qs = new URLSearchParams({ lat: String(lat), lng: String(lng) });
       if (service_id) qs.set("service_id", service_id);
@@ -277,8 +283,13 @@ export function createApiClient(opts: ApiClientOptions) {
       return api(`/pujaris/${id}/public`);
     },
 
-    createBooking(body: Record<string, unknown>) {
-      return api<Booking>("/bookings", { method: "POST", body: JSON.stringify(body) });
+    createBooking(body: Record<string, unknown>, idempotencyKey?: string) {
+      const key = idempotencyKey || (typeof body.idempotency_key === "string" ? body.idempotency_key : undefined);
+      return api<Booking>("/bookings", {
+        method: "POST",
+        headers: key ? { "Idempotency-Key": key } : undefined,
+        body: JSON.stringify(key ? { ...body, idempotency_key: key } : body),
+      });
     },
 
     async listBookings(params?: Record<string, string | number | boolean | undefined>) {
@@ -647,7 +658,19 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     listMuhurta() {
-      return api("/muhurta-consultations");
+      return api<Record<string, unknown>[]>("/muhurta-consultations").then((d) =>
+        asArray<Record<string, unknown>>(d)
+      );
+    },
+
+    updateMuhurta(
+      id: string,
+      body: { status: string; guidance_notes?: string; linked_booking_id?: string }
+    ) {
+      return api(
+        `/muhurta-consultations/${encodeURIComponent(id)}${toQuery(body)}`,
+        { method: "PATCH" }
+      );
     },
 
     createSupportTicket(body: Record<string, unknown>) {

@@ -31,6 +31,24 @@ def coded_http(status: int, code: str, message: str) -> HTTPException:
     return HTTPException(status_code=status, detail={"code": code, "message": message})
 
 
+CUSTOMER_ERRORS: dict[str, dict[str, str]] = {
+    "SERVICE_AREA_UNAVAILABLE": {
+        "en": "BSeva service is not available at this location yet. Please try another address.",
+        "hi": "इस स्थान पर BSeva सेवा अभी उपलब्ध नहीं है। कृपया दूसरा पता आज़माएँ।",
+        "te": "ఈ ప్రదేశంలో BSeva సేవ ఇంకా అందుబాటులో లేదు. దయచేసి మరో చిరునామాను ప్రయత్నించండి.",
+        "mr": "या ठिकाणी BSeva सेवा अद्याप उपलब्ध नाही. कृपया दुसरा पत्ता वापरून पहा.",
+        "kn": "ಈ ಸ್ಥಳದಲ್ಲಿ BSeva ಸೇವೆ ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಬೇರೆ ವಿಳಾಸವನ್ನು ಪ್ರಯತ್ನಿಸಿ.",
+        "ta": "இந்த இடத்தில் BSeva சேவை இன்னும் கிடைக்கவில்லை. வேறு முகவரியை முயற்சிக்கவும்.",
+    },
+}
+
+
+def customer_error_message(code: str, lang: str | None = None) -> str:
+    pack = CUSTOMER_ERRORS.get(code) or {}
+    loc = normalize_lang(lang)
+    return pack.get(loc) or pack.get(FALLBACK_LANG) or code
+
+
 def resolve_request_lang(explicit: str | None = None, request: Request | None = None) -> str:
     if explicit:
         return normalize_lang(explicit)

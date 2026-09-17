@@ -92,7 +92,6 @@ def _booking_detail_rows(data: BookingEmailData) -> list[tuple[str, str]]:
         (L("food"), format_inr_paise(data.food_prasadam_paise)),
         (L("total"), format_inr_paise(data.total_paise)),
         (L("paymentStatus"), data.payment_status or "—"),
-        (L("bookingStatus"), data.booking_status or "—"),
     ]
     rows.extend(data.extra_rows)
     return [(k, v) for k, v in rows if v not in (None, "")]

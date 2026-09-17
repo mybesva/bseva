@@ -52,7 +52,7 @@ def send_booking_preparation_email(
     food_prasadam_paise: int = 0,
     total_paise: int = 0,
     payment_status: str = "paid",
-    booking_status: str = "pending_acceptance",
+    booking_status: str = "confirmed",
 ) -> dict[str, Any]:
     """Booking confirmation email (HTML template). preparation retained for API compat."""
     _ = preparation, app_base_url

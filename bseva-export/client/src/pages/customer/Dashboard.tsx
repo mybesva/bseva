@@ -82,6 +82,11 @@ function CustomerDashboardContent() {
       default: return "bg-gray-100 text-gray-800";
     }
   };
+  const customerStatus = (booking: any) => booking.customer_display_status || booking.status;
+  const customerStatusLabel = (booking: any) =>
+    customerStatus(booking) === "confirmed"
+      ? t("web.booking.confirmed")
+      : t(`status.${customerStatus(booking)}`);
 
   const ongoingBookings = useMemo(() => {
     const now = Date.now();
@@ -145,7 +150,7 @@ function CustomerDashboardContent() {
           <p className="mt-2 text-sm text-sidebar-foreground/70 font-mono">ID: {user.public_id}</p>
         ) : null}
       </section>
-      <ServiceAvailabilityBanner />
+      <ServiceAvailabilityBanner virtualHref="/services" />
       <PromoBannerCarousel />
       <div className="space-y-12">
         <div>
@@ -162,7 +167,7 @@ function CustomerDashboardContent() {
               {!isLoading && ongoingBookings.length === 0 ? (
                 <Card className="border border-dashed">
                   <CardContent className="p-6 text-sm text-muted-foreground">
-                    No ongoing or upcoming confirmed pujas right now.
+                    {t("web.customer.noOngoing")}
                   </CardContent>
                 </Card>
               ) : null}
@@ -175,7 +180,7 @@ function CustomerDashboardContent() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3 mb-1 flex-wrap">
                           <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
-                          <Badge className={getStatusColor(booking.status)}>{t(`status.${booking.status}`)}</Badge>
+                          <Badge className={getStatusColor(customerStatus(booking))}>{customerStatusLabel(booking)}</Badge>
                           <Badge variant="outline" className="capitalize">{booking.package_type}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">#{booking.booking_number}</p>
@@ -195,7 +200,7 @@ function CustomerDashboardContent() {
                         </div>
                       </div>
                     </div>
-                        {booking.status === "confirmed" && (
+                        {booking.status === "confirmed" && booking.pujari_id && (
                           <div className="rounded-md border border-blue-200 bg-white/70 px-3 py-2">
                             <p className="text-xs font-medium text-foreground mb-1">{t("otp.startTitle")}</p>
                             {otp?.available && otp.code ? (
@@ -269,7 +274,7 @@ function CustomerDashboardContent() {
                             ) : null}
                           </div>
                         )}
-                        {booking.mode !== "virtual" && booking.status === "confirmed" && (
+                        {booking.mode !== "virtual" && Boolean(booking.pujari_id) && booking.status === "confirmed" && (
                           <PujariLiveTrackCard
                             bookingId={String(booking.id)}
                             destinationLat={booking.latitude}
@@ -442,7 +447,7 @@ function CustomerDashboardContent() {
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
-                        <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
+                        <Badge className={getStatusColor(customerStatus(booking))}>{customerStatusLabel(booking)}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">

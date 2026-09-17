@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import AdminPageHeader from "@/components/AdminPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -254,25 +255,24 @@ export default function VirtualPuja() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-        <div>
-          <h1 className="text-h1">Virtual Puja</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Virtual Puja bookings are managed here, separately from in-person bookings. Times below show the customer’s local
-            time and the matching India (IST) time used for pujari assignment.
-          </p>
-        </div>
-        <AdminPager
-          page={page}
-          pages={pages}
-          total={total}
-          pageSize={pageSize}
-          sizes={BOOKING_PAGE_SIZES}
-          sizeLabel="per page"
-          onPage={(p) => updateFilters({ page: p })}
-          onPageSize={(size) => updateFilters({ size })}
-        />
-      </div>
+      <AdminPageHeader
+        title="Virtual Puja"
+        description={
+          <>Virtual Puja bookings are managed here, separately from in-person bookings and Muhurtham consultations. Times below show the customer’s local time and the matching India (IST) time used for pujari assignment.</>
+        }
+        actions={
+          <AdminPager
+            page={page}
+            pages={pages}
+            total={total}
+            pageSize={pageSize}
+            sizes={BOOKING_PAGE_SIZES}
+            sizeLabel="per page"
+            onPage={(p) => updateFilters({ page: p })}
+            onPageSize={(size) => updateFilters({ size })}
+          />
+        }
+      />
       <div className="flex flex-wrap gap-2 mb-3 items-end">
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>

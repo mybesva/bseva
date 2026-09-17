@@ -7,6 +7,7 @@ export const ERROR_CODE_KEYS: Record<string, string> = {
   BOOKING_NOT_AVAILABLE: "errors.bookingNotAvailable",
   BOOKING_CONFLICT: "errors.bookingConflict",
   LOCATION_NOT_SUPPORTED: "errors.locationNotSupported",
+  SERVICE_AREA_UNAVAILABLE: "errors.serviceAreaUnavailable",
   PAYMENT_FAILED: "errors.paymentFailed",
   WALLET_INSUFFICIENT: "errors.walletInsufficient",
   ADDRESS_REQUIRED: "errors.addressRequired",

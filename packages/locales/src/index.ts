@@ -9,6 +9,7 @@ import ta from "./resources/ta";
 import { coverage } from "./resources/coverage";
 import { mobileCoverage } from "./resources/mobileCoverage";
 import { webCoverage } from "./resources/webCoverage";
+import { customerRequirements } from "./resources/customerRequirements";
 
 export {
   DEFAULT_LANG,
@@ -43,10 +44,22 @@ export {
 export { ERROR_CODE_KEYS, errorKeyForCode, parseApiErrorDetail } from "./errors";
 
 /** English is copied first so missing locale keys fall back without showing raw keys. */
-const base: Record<string, string> = { ...en, ...coverage.en, ...webCoverage.en, ...mobileCoverage.en };
+const base: Record<string, string> = {
+  ...en,
+  ...coverage.en,
+  ...webCoverage.en,
+  ...mobileCoverage.en,
+  ...customerRequirements.en,
+};
 
 function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): Record<string, string> {
-  return { ...locale, ...coverage[lang], ...webCoverage[lang], ...mobileCoverage[lang] };
+  return {
+    ...locale,
+    ...coverage[lang],
+    ...webCoverage[lang],
+    ...mobileCoverage[lang],
+    ...customerRequirements[lang],
+  };
 }
 
 export const localeOverrides: Record<Exclude<Lang, "en">, Record<string, string>> = {
@@ -72,6 +85,16 @@ export function translate(lang: Lang | string, key: string, vars?: TranslateVars
 
 export function tFor(lang: Lang | string) {
   return (key: string, vars?: TranslateVars) => translate(lang, key, vars);
+}
+
+export function formatPujaDuration(lang: Lang | string, minutes: number | null | undefined): string {
+  const total = Math.max(0, Math.round(Number(minutes) || 0));
+  if (!total) return "";
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (hours && mins) return translate(lang, "web.booking.durationHoursMinutes", { hours, minutes: mins });
+  if (hours) return translate(lang, "web.booking.durationHours", { count: hours });
+  return translate(lang, "service.minutes", { count: mins });
 }
 
 export { LANG_LABELS as labels };

@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Image,
   ImageBackground,
   Pressable,
   ScrollView,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, LoadingBlock, PrimaryButton } from "@/components/ui";
+import { BrandLockup } from "@/components/BrandLockup";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { LanguagePicker } from "@/components/LanguagePicker";
@@ -56,11 +56,9 @@ export default function LandingScreen() {
         >
           <View style={{ backgroundColor: "rgba(26,43,74,0.72)", paddingTop: 56, paddingBottom: 28, paddingHorizontal: 20 }}>
             <SafeAreaView edges={["top"]}>
-              <Image
-                source={require("../assets/logo.png")}
-                resizeMode="contain"
-                style={{ width: 180, height: 180, marginBottom: 16, alignSelf: "center" }}
-              />
+              <View style={{ marginBottom: 16, alignSelf: "center" }}>
+                <BrandLockup markSize={64} light />
+              </View>
               <View
                 style={{
                   alignSelf: "flex-start",

@@ -9,6 +9,11 @@ from sqlalchemy.orm import Session
 
 _DEFAULTS: dict[str, Any] = {
     "virtual_puja_enabled": False,
+    "service_area_unavailable_heading": "BSeva is not available in this area yet",
+    "service_area_unavailable_description": (
+        "We could not find an eligible BSeva pujari near this location. "
+        "Please try another address or check again soon."
+    ),
     "pujari_settlement_days": 14,
     "loyalty_pujari_puja_count": 10,
     "loyalty_pujari_reward_paise": 50000,

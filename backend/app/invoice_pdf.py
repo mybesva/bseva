@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import io
 import json
+from pathlib import Path
 from typing import Any
+
+from app.invoice_docs import format_duration_minutes
 
 NAVY = (0x1A / 255, 0x2B / 255, 0x4A / 255)
 ORANGE = (1.0, 0x99 / 255, 0x33 / 255)
@@ -24,6 +27,26 @@ def _inr(paise: int | None) -> str:
     return f"Rs {(int(paise or 0) / 100):,.2f}"
 
 
+def _logo_file(configured: str | None) -> Path | None:
+    """Resolve the snapshotted logo without requiring network access."""
+    value = str(configured or "").strip()
+    if value.startswith(("http://", "https://")):
+        return None
+    repo_root = Path(__file__).resolve().parents[2]
+    name = Path(value).name if value else "bseva-mark.png"
+    if name in {"bseva-logo-transparent.png", "bseva-logo.png"}:
+        name = "bseva-mark.png"
+    candidates = [
+        Path(value).expanduser() if value else Path(),
+        repo_root / "bseva-export" / "client" / "public" / name,
+        repo_root / "client" / "public" / name,
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
 def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -31,6 +54,7 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
     from reportlab.lib.units import mm
     from reportlab.platypus import (
         Paragraph,
+        Image,
         SimpleDocTemplate,
         Spacer,
         Table,
@@ -44,7 +68,6 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
     tax = snap.get("tax") or {}
     title = str(snap.get("title") or "INVOICE")
     styles = getSampleStyleSheet()
-    brand = ParagraphStyle("brand", parent=styles["Heading1"], textColor=colors.Color(*NAVY), fontSize=16, leading=20, spaceAfter=0)
     legal = ParagraphStyle("legal", parent=styles["Normal"], textColor=colors.Color(*NAVY), fontSize=9, leading=12)
     muted = ParagraphStyle("muted", parent=styles["Normal"], textColor=colors.Color(*GRAY), fontSize=8, leading=11)
     small = ParagraphStyle("small", parent=styles["Normal"], fontSize=8, leading=11, textColor=colors.Color(*NAVY))
@@ -60,16 +83,60 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
         title=str(inv.get("invoice_number") or "Invoice"),
         author=str(company.get("legal_name") or "BSeva"),
     )
+    word = ParagraphStyle(
+        "word",
+        parent=styles["Normal"],
+        textColor=colors.Color(*ORANGE),
+        fontSize=18,
+        leading=20,
+        fontName="Helvetica-Bold",
+        spaceAfter=1,
+    )
+    motto = ParagraphStyle(
+        "motto",
+        parent=styles["Normal"],
+        textColor=colors.Color(*NAVY),
+        fontSize=8,
+        leading=10,
+        fontName="Helvetica-Oblique",
+    )
     story: list[Any] = []
-    left = [
-        Paragraph(str(company.get("brand_name") or "BSeva"), brand),
+    left = []
+    logo_path = _logo_file(company.get("logo_path"))
+    if logo_path:
+        name_row = Table(
+            [
+                [
+                    Image(str(logo_path), width=14 * mm, height=14 * mm, kind="proportional"),
+                    Paragraph("<font color='#1A2B4A'>-</font>Seva", word),
+                ]
+            ],
+            colWidths=[16 * mm, 40 * mm],
+        )
+        name_row.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ]
+            )
+        )
+        left.append(name_row)
+        left.append(Paragraph("Book, Believe, Bless", motto))
+    else:
+        left.append(Paragraph("<font color='#1A2B4A'>-</font>Seva", word))
+        left.append(Paragraph("Book, Believe, Bless", motto))
+    left.extend([
         Paragraph(str(company.get("legal_name") or ""), legal),
         Paragraph(str(company.get("address") or "").replace("\n", "<br/>"), muted),
         Paragraph(
             f"Email: {company.get('email') or ''} &nbsp; Website: {company.get('website') or ''}",
             muted,
         ),
-    ]
+    ])
     if company.get("gstin"):
         left.append(Paragraph(f"GSTIN: {company.get('gstin')}", muted))
     if company.get("pan"):
@@ -113,6 +180,11 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
             str(snap.get("service_name") or "Puja"),
             f"Package: {snap.get('package_type') or '—'}",
             f"Service date: {snap.get('booking_date') or ''} {str(snap.get('start_time') or '')[:5]}",
+            (
+                f"<b>Puja Duration:</b> {format_duration_minutes(snap.get('duration_minutes'))}"
+                if snap.get("duration_minutes") is not None
+                else ""
+            ),
         ]
     )
     story.append(

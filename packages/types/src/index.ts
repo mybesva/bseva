@@ -68,6 +68,9 @@ export type Quote = {
   pujariReimbursement?: number;
   samagriListPrice?: number;
   alankaramListPrice?: number;
+  subtotal?: number;
+  discount?: number;
+  walletCredit?: number;
   [key: string]: unknown;
 };
 
@@ -84,6 +87,88 @@ export type NearbyPujari = {
   available?: boolean;
   [key: string]: unknown;
 };
+
+export type PreparationItem = {
+  name?: string;
+  label?: string;
+  quantity?: number | null;
+  unit?: string | null;
+  optional?: boolean;
+  required?: boolean;
+  notes?: string | null;
+  section?: string;
+  [key: string]: unknown;
+};
+
+export type BookingPreparation = {
+  verified?: boolean;
+  pending_message?: string | null;
+  preparation_notes?: string | null;
+  special_instructions?: string | null;
+  prasadam_notes?: string | null;
+  venue_notes?: string | null;
+  disclaimer?: string | null;
+  display_name?: string | null;
+  samagri_purchased?: boolean;
+  alankaram_purchased?: boolean;
+  food_purchased?: boolean;
+  selections?: Array<{ key?: string; label?: string; selected?: boolean; provider?: string }>;
+  selected_addons?: Array<{ key?: string; label?: string; selected?: boolean; provider?: string }>;
+  sections?: Record<string, PreparationItem[]>;
+  items?: PreparationItem[];
+  [key: string]: unknown;
+};
+
+export const PREPARATION_SECTION_KEYS = [
+  "included_bseva",
+  "customer_arrange",
+  "prasadam",
+  "home_venue",
+  "optional",
+] as const;
+
+export type PreparationSectionKey = (typeof PREPARATION_SECTION_KEYS)[number];
+
+function preparationItemKey(item: PreparationItem): string {
+  return String(item.name || item.label || "").trim().toLocaleLowerCase();
+}
+
+/**
+ * Normalizes current and legacy preparation payloads into one canonical split.
+ * Items supplied by BSeva/pujari are always removed from customer-arranged items.
+ */
+export function normalizePreparationSections(
+  preparation?: BookingPreparation | null,
+): Record<PreparationSectionKey, PreparationItem[]> {
+  const source = preparation?.sections || {};
+  const included = [
+    ...(source.included_bseva || []),
+    ...(source.provider_supplied || []),
+  ];
+  const customer = [
+    ...(source.customer_arrange || []),
+    ...(source.customer_arranged || []),
+  ];
+  const includedKeys = new Set(included.map(preparationItemKey).filter(Boolean));
+  const unique = (items: PreparationItem[]) => {
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      const key = preparationItemKey(item);
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  return {
+    included_bseva: unique(included),
+    customer_arrange: unique(customer).filter((item) => !includedKeys.has(preparationItemKey(item))),
+    prasadam: unique(source.prasadam || []),
+    home_venue: unique(source.home_venue || source.venue_setup || []),
+    optional: unique(source.optional || []),
+  };
+}
 
 export type Booking = {
   id: string;
@@ -113,6 +198,16 @@ export type Booking = {
   special_instructions?: string | null;
   samagri_requested?: boolean;
   alankaram_requested?: boolean;
+  food_requested?: boolean;
+  customer_display_status?: string;
+  awaiting_pujari_assignment?: boolean;
+  eligible_pujari_found?: boolean;
+  admin_assignment_required?: boolean;
+  assignment_status?: "assigned" | "offers_sent" | "admin_assignment_required" | string;
+  duration_minutes?: number | null;
+  preparation?: BookingPreparation | null;
+  invoice_id?: string | null;
+  invoice_number?: string | null;
   [key: string]: unknown;
 };
 
@@ -212,6 +307,7 @@ export type AdminPermissions = {
 export type NavBadges = {
   bookings?: number;
   virtual_puja?: number;
+  muhurtham?: number;
   pujaris?: number;
   payments?: number;
   settlements?: number;

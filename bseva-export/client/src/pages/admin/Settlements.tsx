@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import AdminPageHeader from "@/components/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -190,25 +191,22 @@ export default function AdminSettlements() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-        <div>
-          <h1 className="text-h1">Settlements</h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-            Pujari earnings settle automatically every <strong>{holdDays} days</strong> after a completed puja.
-            Use <strong>Settle / override</strong> only for early payout or special cases.
-          </p>
-        </div>
-        <AdminPager
-          page={page}
-          pages={pages}
-          total={total}
-          pageSize={pageSize}
-          sizes={BOOKING_PAGE_SIZES}
-          sizeLabel="per page"
-          onPage={(p) => updateFilters({ page: p })}
-          onPageSize={(size) => updateFilters({ size })}
-        />
-      </div>
+      <AdminPageHeader
+        title="Settlements"
+        description={<>Pujari earnings settle automatically every <strong>{holdDays} days</strong> after a completed puja. Use <strong>Settle / override</strong> only for early payout or special cases.</>}
+        actions={
+          <AdminPager
+            page={page}
+            pages={pages}
+            total={total}
+            pageSize={pageSize}
+            sizes={BOOKING_PAGE_SIZES}
+            sizeLabel="per page"
+            onPage={(p) => updateFilters({ page: p })}
+            onPageSize={(size) => updateFilters({ size })}
+          />
+        }
+      />
 
       <div className="grid sm:grid-cols-4 gap-3 mb-4">
         <Card>

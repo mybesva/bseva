@@ -21,6 +21,7 @@ export default function AdminMore() {
     { href: "/recommendations", label: t("admin.recommendations"), show: can("manage_services") },
     { href: "/samagri", label: t("admin.samagri"), show: can("manage_samagri") },
     { href: "/virtual-puja", label: t("admin.virtualPuja"), show: can(["view_bookings", "manage_bookings"]), badge: badges.virtual_puja },
+    { href: "/muhurtham", label: t("admin.muhurtham"), show: can(["view_bookings", "manage_bookings"]), badge: badges.muhurtham },
     { href: "/settlements", label: t("admin.settlements"), show: can(["manage_settlements", "view_payments"]), badge: badges.settlements },
     { href: "/invoices", label: t("admin.invoices"), show: can(["view_payments", "manage_settlements", "manage_bookings"]) },
     { href: "/payments", label: t("admin.payments"), show: can(["view_payments", "manage_settlements"]), badge: badges.payments },

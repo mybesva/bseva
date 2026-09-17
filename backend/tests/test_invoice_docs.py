@@ -4,6 +4,7 @@ from app.invoice_docs import (
     _allocate_gst,
     _tax_split,
     amount_in_words,
+    format_duration_minutes,
     indian_fy,
     pdf_filename,
 )
@@ -12,6 +13,11 @@ from app.invoice_docs import (
 def test_amount_in_words_matches_indian_invoice_style():
     assert amount_in_words(499900) == "Rupees Four Thousand Nine Hundred Ninety-Nine Only"
     assert amount_in_words(0) == "Rupees Zero Only"
+
+
+def test_duration_uses_human_hours_and_minutes():
+    assert format_duration_minutes(120) == "2 Hours"
+    assert format_duration_minutes(135) == "2 Hours 15 Minutes"
 
 
 def test_pdf_filename_sanitizes_invoice_number():

@@ -23,31 +23,35 @@ export function SeasonalPopupCard({
   onClose?: () => void;
   preview?: boolean;
 }) {
+  const { t } = useI18n();
   return (
-    <div className="w-full max-w-md rounded-xl border border-border bg-background shadow-lg overflow-hidden">
+    <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-background shadow-xl">
       {popup.image_url ? (
-        <img src={mediaSrc(popup.image_url)} alt="" className="w-full h-40 object-cover" />
+        <div className="aspect-[16/9] w-full bg-muted flex items-center justify-center overflow-hidden">
+          <img src={mediaSrc(popup.image_url)} alt={popup.title || t("web.promo.imageAlt")} className="w-full h-full object-contain" />
+        </div>
       ) : (
-        <div className="w-full h-40 bg-primary/10" />
+        <div className="aspect-[16/9] w-full bg-primary/10" />
       )}
       <div className="p-5 space-y-3">
-        <h3 className="text-lg font-semibold text-foreground">{popup.title || "Untitled"}</h3>
+        <h3 className="text-lg font-semibold text-foreground">{popup.title || t("web.promo.untitled")}</h3>
         {popup.description ? <p className="text-sm text-muted-foreground">{popup.description}</p> : null}
         <div className="flex gap-2 justify-end pt-2">
           <Button variant="outline" type="button" onClick={() => onClose?.()}>
-            Close
+            {t("common.close")}
           </Button>
           {popup.cta_url || popup.cta_label ? (
-            <Button
-              className="bg-primary"
-              type="button"
-              onClick={() => {
-                onClose?.();
-                if (!preview && popup.cta_url) window.location.href = popup.cta_url;
-              }}
-            >
-              {popup.cta_label || "View"}
-            </Button>
+            popup.cta_url && !preview ? (
+              <Button asChild className="bg-primary">
+                <a href={popup.cta_url} onClick={() => onClose?.()}>
+                  {popup.cta_label || t("common.view")}
+                </a>
+              </Button>
+            ) : (
+              <Button className="bg-primary" type="button">
+                {popup.cta_label || t("common.view")}
+              </Button>
+            )
           ) : null}
         </div>
       </div>
@@ -95,7 +99,7 @@ export default function SeasonalPopup() {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={popup.title}>
       <SeasonalPopupCard popup={popup} onClose={dismiss} />
     </div>
   );

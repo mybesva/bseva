@@ -52,7 +52,12 @@ def booking_email_data_from_row(
         food_prasadam_paise=_paise(b, "food_charge_paise", "food_prasadam_paise", "prasadam_paise", "food_paise"),
         total_paise=_paise(b, "total_paise"),
         payment_status=str(b.get("payment_status") or ""),
-        booking_status=str(b.get("status") or ""),
+        booking_status=(
+            "confirmed"
+            if str(b.get("payment_status") or "").lower() in ("paid", "successful", "completed")
+            and str(b.get("status") or "") in ("pending", "pending_acceptance", "confirmed")
+            else str(b.get("status") or "")
+        ),
         language=language or "en",
         test_mode=False,
     )

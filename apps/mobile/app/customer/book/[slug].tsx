@@ -1,5 +1,6 @@
 import { CALENDARS, rupees } from "@bseva/config";
 import type { NearbyPujari, Quote } from "@bseva/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -12,8 +13,35 @@ import { useAppTheme } from "@/theme/ThemeContext";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 
+type BookingDraft = {
+  idempotencyKey: string;
+  step: number;
+  pkg: "basic" | "standard" | "premium";
+  mode: "in_person" | "virtual";
+  calendar: string;
+  date: string;
+  time: string;
+  address: string;
+  city: string;
+  lat: number | null;
+  lng: number | null;
+  includeSamagri: boolean;
+  includeAlankaram: boolean;
+  includeFood: boolean;
+  customerCountry: string;
+  customerTimezone: string;
+  instructions: string;
+  recurring: string;
+  recurringCount: string;
+  muhurtaNotes: string;
+};
+
+function newIdempotencyKey(slug: string) {
+  return `mobile-${slug}-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export default function BookService() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, initialMode } = useLocalSearchParams<{ slug: string; initialMode?: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useAppTheme();
@@ -21,10 +49,11 @@ export default function BookService() {
   const serviceQ = useQuery({ queryKey: ["service", slug, lang], queryFn: () => apiClient.getService(slug), enabled: !!slug });
   const profileQ = useQuery({ queryKey: ["customer-profile"], queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>> });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
+  const configQ = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
   const svc = serviceQ.data;
   const [step, setStep] = useState(1);
   const [pkg, setPkg] = useState<"basic" | "standard" | "premium">("standard");
-  const [mode, setMode] = useState<"in_person" | "virtual">("in_person");
+  const [mode, setMode] = useState<"in_person" | "virtual">(initialMode === "virtual" ? "virtual" : "in_person");
   const [calendar, setCalendar] = useState(String(user?.calendar_preference || "north"));
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -52,6 +81,9 @@ export default function BookService() {
   const [muhurtaNotes, setMuhurtaNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState(() => newIdempotencyKey(slug || "service"));
+  const [serviceAvailable, setServiceAvailable] = useState<boolean | null>(null);
   const panchang = useQuery({
     queryKey: ["panchang", date, calendar],
     queryFn: () => apiClient.panchang(date, calendar) as Promise<Record<string, unknown>>,
@@ -67,6 +99,48 @@ export default function BookService() {
       setLng(pos.coords.longitude);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!slug) return;
+    void AsyncStorage.getItem(`bseva.booking-draft.${slug}`)
+      .then((raw) => {
+        if (!raw) return;
+        const d = JSON.parse(raw) as Partial<BookingDraft>;
+        if (d.idempotencyKey) setIdempotencyKey(d.idempotencyKey);
+        if (d.step) setStep(Math.min(4, Math.max(1, d.step)));
+        if (d.pkg) setPkg(d.pkg);
+        if (initialMode === "virtual") setMode("virtual");
+        else if (d.mode) setMode(d.mode);
+        if (d.calendar) setCalendar(d.calendar);
+        if (d.date) setDate(d.date);
+        if (d.time) setTime(d.time);
+        if (d.address != null) setAddress(d.address);
+        if (d.city != null) setCity(d.city);
+        if (d.lat != null) setLat(d.lat);
+        if (d.lng != null) setLng(d.lng);
+        setIncludeSamagri(Boolean(d.includeSamagri));
+        setIncludeAlankaram(Boolean(d.includeAlankaram));
+        setIncludeFood(Boolean(d.includeFood));
+        if (d.customerCountry) setCustomerCountry(d.customerCountry);
+        if (d.customerTimezone) setCustomerTimezone(d.customerTimezone);
+        if (d.instructions != null) setInstructions(d.instructions);
+        if (d.recurring) setRecurring(d.recurring);
+        if (d.recurringCount) setRecurringCount(d.recurringCount);
+        if (d.muhurtaNotes != null) setMuhurtaNotes(d.muhurtaNotes);
+      })
+      .catch(() => undefined)
+      .finally(() => setHydrated(true));
+  }, [slug, initialMode]);
+
+  useEffect(() => {
+    if (!slug || !hydrated) return;
+    const draft: BookingDraft = {
+      idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng,
+      includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone,
+      instructions, recurring, recurringCount, muhurtaNotes,
+    };
+    void AsyncStorage.setItem(`bseva.booking-draft.${slug}`, JSON.stringify(draft));
+  }, [slug, hydrated, idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng, includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone, instructions, recurring, recurringCount, muhurtaNotes]);
 
   useEffect(() => {
     const p = profileQ.data;
@@ -103,14 +177,36 @@ export default function BookService() {
       setNearby(rows);
       setPrevious(prev);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Could not load quote");
+      setError(e instanceof Error ? e.message : t("mobile.quoteFailed"));
+    }
+  }
+
+  useEffect(() => {
+    if (step < 3 || !svc) return;
+    const timer = setTimeout(() => void loadQuoteAndPujaris(), 250);
+    return () => clearTimeout(timer);
+  }, [step, svc?.id, pkg, mode, city, date, includeSamagri, includeAlankaram, includeFood, customerCountry]);
+
+  async function checkPhysicalAvailability() {
+    if (mode !== "in_person" || lat == null || lng == null || !svc) {
+      setServiceAvailable(null);
+      return true;
+    }
+    try {
+      const result = await apiClient.serviceAvailability(lat, lng, svc.id);
+      setServiceAvailable(result.service_available);
+      return result.service_available;
+    } catch (e: unknown) {
+      setServiceAvailable(false);
+      setError(e instanceof Error ? e.message : t("web.availability.errorBody"));
+      return false;
     }
   }
 
   async function submit() {
     if (!svc) return;
-    if (!pujariId) {
-      setError(t("mobile.selectPujari"));
+    if (mode === "in_person" && serviceAvailable === false) {
+      setError(t("web.availability.bookingUnavailable"));
       return;
     }
     if (!terms) {
@@ -125,11 +221,11 @@ export default function BookService() {
           timezone: customerTimezone,
         });
         if (pre.blocked) {
-          setError(pre.message || "Virtual puja is not available for this country");
+          setError(pre.message || t("mobile.virtualUnavailable"));
           return;
         }
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Virtual puja precheck failed");
+        setError(e instanceof Error ? e.message : t("mobile.virtualUnavailable"));
         return;
       }
     }
@@ -150,7 +246,7 @@ export default function BookService() {
       }
       const created = await apiClient.createBooking({
         service_id: svc.id,
-        pujari_id: pujariId,
+        pujari_id: pujariId || undefined,
         package_type: pkg,
         mode,
         booking_date: date,
@@ -169,10 +265,11 @@ export default function BookService() {
         customer_timezone: mode === "virtual" ? customerTimezone : undefined,
         recurring,
         recurring_count: recurring !== "none" ? Number(recurringCount) || undefined : undefined,
-      });
+      }, idempotencyKey);
+      await AsyncStorage.removeItem(`bseva.booking-draft.${slug}`);
       router.replace(`/customer/booking/${(created as { id: string }).id}`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Booking failed");
+      setError(e instanceof Error ? e.message : t("mobile.bookingFailed"));
     } finally {
       setPending(false);
     }
@@ -184,7 +281,7 @@ export default function BookService() {
         <Card style={{ borderWidth: pujariId === p.id ? 2 : 0.5, borderColor: pujariId === p.id ? colors.primary : colors.border }}>
           <AppText variant="h3">{p.name}</AppText>
           <AppText variant="small" color={colors.mutedForeground}>
-            Level {p.approved_level ?? "—"} · {p.distance_km != null ? `${p.distance_km} km` : p.city || ""}
+            {t("mobile.pujariLevel", { level: String(p.approved_level ?? "—") })} · {p.distance_km != null ? `${p.distance_km} km` : p.city || ""}
           </AppText>
         </Card>
       </Pressable>
@@ -238,7 +335,7 @@ export default function BookService() {
                 <Field label={t("mobile.timezone")} value={customerTimezone} onChangeText={setCustomerTimezone} />
               </>
             ) : null}
-            <PrimaryButton title={t("mobile.next")} onPress={() => setStep(2)} />
+            <PrimaryButton title={t("mobile.next")} onPress={() => { setServiceAvailable(null); setStep(2); }} />
           </>
         ) : null}
         {step === 2 ? (
@@ -277,6 +374,7 @@ export default function BookService() {
                 <PrimaryButton
                   title={t("booking.review")}
                   onPress={async () => {
+                    await checkPhysicalAvailability();
                     await loadQuoteAndPujaris();
                     setStep(3);
                   }}
@@ -287,13 +385,43 @@ export default function BookService() {
         ) : null}
         {step === 3 ? (
           <>
+            {serviceAvailable === false && mode === "in_person" ? (
+              <Card style={{ gap: 8, borderColor: colors.warning }}>
+                <AppText variant="h3">
+                  {String(configQ.data?.service_area_unavailable_heading || t("web.availability.bookingUnavailable"))}
+                </AppText>
+                <AppText color={colors.mutedForeground}>
+                  {String(configQ.data?.service_area_unavailable_description || t("errors.serviceAreaUnavailable"))}
+                </AppText>
+                {svc.virtual_available && configQ.data?.virtual_puja_enabled ? (
+                  <PrimaryButton
+                    title={t("web.availability.bookVirtual")}
+                    onPress={() => { setMode("virtual"); setServiceAvailable(null); }}
+                  />
+                ) : null}
+              </Card>
+            ) : null}
             {previous.length > 0 ? <AppText variant="h3">{t("mobile.previousPujaris")}</AppText> : null}
             {previous.map((p) => (
               <PujariCard key={`p-${p.id}`} p={p} />
             ))}
             <AppText variant="h3">{t("mobile.availablePujaris")}</AppText>
             {nearby.length === 0 ? (
-              <AppText color={colors.mutedForeground}>{t("mobile.noNearbyPujaris")}</AppText>
+              <Card style={{ gap: 8 }}>
+                <AppText variant="h3">{t("web.booking.confirmedAssignmentPending")}</AppText>
+                <AppText color={colors.mutedForeground}>{t("web.booking.assignmentPendingBody")}</AppText>
+                <PrimaryButton
+                  title={t("web.booking.connectAdmin")}
+                  variant="outline"
+                  onPress={() => router.push("/customer/support")}
+                />
+                {svc.virtual_available && configQ.data?.virtual_puja_enabled ? (
+                  <PrimaryButton
+                    title={t("web.availability.bookVirtual")}
+                    onPress={() => { setMode("virtual"); setServiceAvailable(null); }}
+                  />
+                ) : null}
+              </Card>
             ) : null}
             {nearby.map((p) => (
               <PujariCard key={p.id} p={p} />
@@ -312,19 +440,18 @@ export default function BookService() {
                 <Switch value={includeFood} onValueChange={setIncludeFood} />
               </View>
             ) : null}
-            <PrimaryButton title={t("mobile.refreshQuote")} variant="outline" onPress={() => void loadQuoteAndPujaris()} />
             {quote ? (
               <Card>
                 <AppText>{t("mobile.puja")} {rupees(Number(quote.basePrice))}</AppText>
                 {Number(quote.samagri) ? <AppText>{t("mobile.samagri")} {rupees(Number(quote.samagri))}</AppText> : null}
                 {Number(quote.alankaram) ? <AppText>{t("mobile.alankaram")} {rupees(Number(quote.alankaram))}</AppText> : null}
                 {Number(quote.foodPrasadam) ? <AppText>{t("mobile.food")} {rupees(Number(quote.foodPrasadam))}</AppText> : null}
-                <AppText>GST {rupees(Number(quote.gstAmount))}</AppText>
+                <AppText>{t("booking.gst")} {rupees(Number(quote.gstAmount))}</AppText>
                 <AppText variant="h3">{t("mobile.total")} {rupees(Number(quote.totalAmount))}</AppText>
               </Card>
             ) : null}
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(2)} />
-            <PrimaryButton title={t("booking.payment")} onPress={() => setStep(4)} />
+            <PrimaryButton title={t("booking.payment")} disabled={serviceAvailable === false && mode === "in_person"} onPress={() => setStep(4)} />
           </>
         ) : null}
         {step === 4 ? (

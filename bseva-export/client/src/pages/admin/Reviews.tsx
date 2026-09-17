@@ -1,4 +1,5 @@
 import AdminLayout from "@/components/AdminLayout";
+import AdminPageHeader from "@/components/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -129,13 +130,11 @@ export default function Reviews() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-h1 text-foreground">Reviews Management</h1>
-            <p className="text-muted-foreground">Moderate and manage customer reviews</p>
-          </div>
-        </div>
+        <AdminPageHeader
+          title="Reviews Management"
+          description="Moderate and manage customer reviews"
+          className="mb-0"
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

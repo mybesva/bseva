@@ -531,7 +531,7 @@ def my_invoices(user=Depends(current_user), db: Session = Depends(get_db)):
 @router.get("/invoices/{invoice_id}")
 def get_invoice(invoice_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
     row = db.execute(
-        text("SELECT * FROM invoices WHERE id = CAST(:id AS uuid) OR invoice_number = :id"),
+        text("SELECT * FROM invoices WHERE CAST(id AS text) = :id OR invoice_number = :id"),
         {"id": invoice_id},
     ).mappings().first()
     if not row:
@@ -547,7 +547,7 @@ def invoice_html(invoice_id: str, user=Depends(current_user), db: Session = Depe
     from app.invoice_docs import render_invoice_html
 
     row = db.execute(
-        text("SELECT * FROM invoices WHERE id = CAST(:id AS uuid) OR invoice_number = :id"),
+        text("SELECT * FROM invoices WHERE CAST(id AS text) = :id OR invoice_number = :id"),
         {"id": invoice_id},
     ).mappings().first()
     if not row:
@@ -564,7 +564,7 @@ def invoice_pdf(invoice_id: str, user=Depends(current_user), db: Session = Depen
     from app.invoice_pdf import render_invoice_pdf
 
     row = db.execute(
-        text("SELECT * FROM invoices WHERE id = CAST(:id AS uuid) OR invoice_number = :id"),
+        text("SELECT * FROM invoices WHERE CAST(id AS text) = :id OR invoice_number = :id"),
         {"id": invoice_id},
     ).mappings().first()
     if not row:
@@ -588,7 +588,7 @@ def resend_invoice_email(invoice_id: str, user=Depends(require_permission("manag
     from app.invoice_docs import email_customer_invoice
 
     row = db.execute(
-        text("SELECT * FROM invoices WHERE id = CAST(:id AS uuid) OR invoice_number = :id"),
+        text("SELECT * FROM invoices WHERE CAST(id AS text) = :id OR invoice_number = :id"),
         {"id": invoice_id},
     ).mappings().first()
     if not row:

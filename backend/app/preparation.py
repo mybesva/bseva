@@ -63,24 +63,39 @@ def _pick_translation(translations: dict[str, str], lang: str) -> str:
     return translations.get(lang) or translations.get(FALLBACK_LANG) or next(iter(translations.values()), "")
 
 
-def _section_for(category: str, provided_by: str, samagri_purchased: bool) -> str:
+def _category_purchased(
+    category: str,
+    *,
+    samagri_purchased: bool,
+    alankaram_purchased: bool,
+    food_purchased: bool,
+) -> bool:
+    cat = (category or "PUJA_SAMAGRI").upper()
+    if cat in ("PRASADAM", "FOOD", "FOOD_PRASADAM"):
+        return food_purchased
+    if cat in ("ALANKARAM", "DECORATION"):
+        return alankaram_purchased
+    return samagri_purchased
+
+
+def _section_for(category: str, provided_by: str, purchased: bool) -> str:
     cat = (category or "PUJA_SAMAGRI").upper()
     prov = (provided_by or PROVIDER_CUSTOMER).upper()
-    if cat == "PRASADAM":
-        if samagri_purchased and prov in (PROVIDER_INCLUDED, PROVIDER_BSEVA):
+    if cat in ("PRASADAM", "FOOD", "FOOD_PRASADAM"):
+        if purchased and prov in (PROVIDER_INCLUDED, PROVIDER_BSEVA, PROVIDER_PUJARI):
             return SECTION_INCLUDED
         return SECTION_PRASADAM
     if cat == "HOME_VENUE":
         return SECTION_VENUE
     if cat == "OPTIONAL" or prov == PROVIDER_OPTIONAL:
         return SECTION_OPTIONAL
-    if prov in (PROVIDER_INCLUDED, PROVIDER_BSEVA) and samagri_purchased:
+    if prov in (PROVIDER_INCLUDED, PROVIDER_BSEVA) and purchased:
         return SECTION_INCLUDED
-    if prov == PROVIDER_BSEVA and not samagri_purchased:
+    if prov == PROVIDER_BSEVA and not purchased:
         # Kit not purchased — customer must arrange equivalent items
         return SECTION_CUSTOMER
     if prov == PROVIDER_PUJARI:
-        return SECTION_INCLUDED if samagri_purchased else SECTION_CUSTOMER
+        return SECTION_INCLUDED if purchased else SECTION_CUSTOMER
     return SECTION_CUSTOMER
 
 
@@ -184,6 +199,8 @@ def build_preparation_view(
     master: dict[str, Any],
     *,
     samagri_purchased: bool,
+    alankaram_purchased: bool = False,
+    food_purchased: bool = False,
     lang: str,
 ) -> dict[str, Any]:
     lang = normalize_lang(lang)
@@ -192,15 +209,54 @@ def build_preparation_view(
 
     verified = bool(master.get("verified"))
     content = master.get("content") or {}
+    service = master.get("service") or {}
     disclaimer = content.get("disclaimer") or DEFAULT_DISCLAIMER.get(lang, DEFAULT_DISCLAIMER["en"])
+    addon_selections = [
+        {
+            "key": "samagri",
+            "label": "Samagri Package",
+            "selected": samagri_purchased,
+            "provider": str(service.get("samagri_provider") or PROVIDER_BSEVA).upper(),
+        },
+        {
+            "key": "alankaram",
+            "label": "Alankaram",
+            "selected": alankaram_purchased,
+            "provider": str(service.get("alankaram_provider") or PROVIDER_BSEVA).upper(),
+        },
+        {
+            "key": "food",
+            "label": "Food / Prasadam",
+            "selected": food_purchased,
+            "provider": str(service.get("food_provider") or PROVIDER_BSEVA).upper(),
+        },
+    ]
+    selected_addons = [item for item in addon_selections if item["selected"]]
 
     if not verified:
+        provider_supplied = [
+            {**item, "type": "addon"}
+            for item in selected_addons
+            if item["provider"] != PROVIDER_CUSTOMER
+        ]
+        customer_arranged = [
+            {**item, "type": "addon"}
+            for item in selected_addons
+            if item["provider"] == PROVIDER_CUSTOMER
+        ]
         return {
+            "snapshot_version": 2,
             "verified": False,
             "language": lang,
             "pending_message": PENDING_MSG.get(lang, PENDING_MSG["en"]),
             "disclaimer": disclaimer,
             "display_name": content.get("display_name") or (master.get("service") or {}).get("name"),
+            "samagri_purchased": samagri_purchased,
+            "alankaram_purchased": alankaram_purchased,
+            "food_purchased": food_purchased,
+            "selected_addons": selected_addons,
+            "provider_supplied": provider_supplied,
+            "customer_arranged": customer_arranged,
             "sections": {},
             "items": [],
         }
@@ -219,12 +275,36 @@ def build_preparation_view(
         if raw.get("customer_provided") and provided_by == PROVIDER_CUSTOMER:
             provided_by = PROVIDER_CUSTOMER
         category = (raw.get("category") or "PUJA_SAMAGRI").upper()
-        # Kit / pujari-brought lines only when customer opted into Samagri
-        if provided_by == PROVIDER_INCLUDED and not samagri_purchased:
+        purchased = _category_purchased(
+            category,
+            samagri_purchased=samagri_purchased,
+            alankaram_purchased=alankaram_purchased,
+            food_purchased=food_purchased,
+        )
+        # Older master rows defaulted to CUSTOMER even though the selected
+        # add-on supplies that category. Preserve every explicit customer or
+        # venue responsibility, but correct implicit legacy defaults.
+        if (
+            purchased
+            and category != "HOME_VENUE"
+            and provided_by == PROVIDER_CUSTOMER
+            and not bool(raw.get("customer_provided"))
+        ):
+            provider_key = (
+                "food_provider"
+                if category in ("PRASADAM", "FOOD", "FOOD_PRASADAM")
+                else "alankaram_provider"
+                if category in ("ALANKARAM", "DECORATION")
+                else "samagri_provider"
+            )
+            provided_by = str(service.get(provider_key) or PROVIDER_BSEVA).upper()
+        # Provider-only lines do not apply unless their corresponding add-on
+        # was actually purchased/requested.
+        if provided_by == PROVIDER_INCLUDED and not purchased:
             continue
-        if provided_by == PROVIDER_PUJARI and not samagri_purchased:
+        if provided_by == PROVIDER_PUJARI and not purchased:
             continue
-        section = _section_for(category, provided_by, samagri_purchased)
+        section = _section_for(category, provided_by, purchased)
         name = raw.get("translated_name") or raw.get("item_name_en") or raw.get("name") or "Item"
         qty = raw.get("quantity")
         unit = raw.get("unit") or raw.get("item_default_unit") or ""
@@ -253,7 +333,21 @@ def build_preparation_view(
         sections[section].append(item)
         flat.append(item)
 
+    provider_supplied = list(sections[SECTION_INCLUDED])
+    customer_arranged = [
+        *sections[SECTION_CUSTOMER],
+        *sections[SECTION_PRASADAM],
+        *sections[SECTION_VENUE],
+    ]
+    for addon in selected_addons:
+        summary = {**addon, "type": "addon"}
+        if addon["provider"] == PROVIDER_CUSTOMER:
+            customer_arranged.append(summary)
+        else:
+            provider_supplied.append(summary)
+
     return {
+        "snapshot_version": 2,
         "verified": True,
         "language": lang,
         "display_name": content.get("display_name") or (master.get("service") or {}).get("name"),
@@ -263,10 +357,56 @@ def build_preparation_view(
         "venue_notes": content.get("venue_notes"),
         "disclaimer": disclaimer,
         "samagri_purchased": samagri_purchased,
+        "alankaram_purchased": alankaram_purchased,
+        "food_purchased": food_purchased,
+        "selected_addons": selected_addons,
+        "provider_supplied": provider_supplied,
+        "customer_arranged": customer_arranged,
         "sections": sections,
         "items": flat,
         "pending_message": None,
     }
+
+
+def enrich_legacy_preparation_snapshot(
+    payload: dict[str, Any],
+    *,
+    header: dict[str, Any],
+    service: dict[str, Any],
+) -> dict[str, Any]:
+    """Upgrade old frozen payload shape and ownership without changing its copy."""
+    content = {
+        key: payload.get(key) or header.get(key)
+        for key in (
+            "preparation_notes",
+            "special_instructions",
+            "prasadam_notes",
+            "venue_notes",
+            "disclaimer",
+        )
+    }
+    master = {
+        "ok": True,
+        "verified": bool(payload.get("verified", header.get("verified"))),
+        "service": {
+            **service,
+            "name": payload.get("display_name") or header.get("service_name"),
+        },
+        "content": content,
+        "items": list(payload.get("items") or []),
+    }
+    upgraded = build_preparation_view(
+        master,
+        samagri_purchased=bool(
+            payload.get("samagri_purchased", header.get("samagri_purchased"))
+        ),
+        alankaram_purchased=bool(
+            payload.get("alankaram_purchased", header.get("alankaram_purchased"))
+        ),
+        food_purchased=bool(payload.get("food_purchased", header.get("food_purchased"))),
+        lang=str(payload.get("language") or header.get("language_code") or FALLBACK_LANG),
+    )
+    return {**payload, **upgraded}
 
 
 def create_booking_preparation_snapshot(
@@ -289,7 +429,13 @@ def create_booking_preparation_snapshot(
             # only if charge was rolled into total — we don't know; leave false unless charge set
             pass
 
-    view = build_preparation_view(master, samagri_purchased=flags["samagri_purchased"], lang=lang)
+    view = build_preparation_view(
+        master,
+        samagri_purchased=flags["samagri_purchased"],
+        alankaram_purchased=flags["alankaram_purchased"],
+        food_purchased=flags["food_purchased"],
+        lang=lang,
+    )
     svc_name = view.get("display_name") or (master.get("service") or {}).get("name") or booking.get("service_name")
     review = (master.get("service") or {}).get("samagri_review_status") or "UNVERIFIED"
     verified = bool(view.get("verified"))
@@ -425,12 +571,39 @@ def get_booking_preparation(db: Session, booking_id: str, preferred_language: st
                 "venue_notes": header.get("venue_notes"),
                 "disclaimer": header.get("disclaimer"),
                 "samagri_purchased": header.get("samagri_purchased"),
+                "alankaram_purchased": header.get("alankaram_purchased"),
+                "food_purchased": header.get("food_purchased"),
+                "provider_supplied": sections[SECTION_INCLUDED],
+                "customer_arranged": [
+                    *sections[SECTION_CUSTOMER],
+                    *sections[SECTION_PRASADAM],
+                    *sections[SECTION_VENUE],
+                ],
                 "sections": sections,
                 "items": items,
                 "pending_message": None if header.get("verified") else PENDING_MSG.get(
                     normalize_lang(header.get("language_code")), PENDING_MSG["en"]
                 ),
             }
+        if int(out.get("snapshot_version") or 0) < 2 or any(
+            key not in out for key in ("provider_supplied", "customer_arranged", "selected_addons")
+        ):
+            svc = db.execute(
+                text(
+                    """
+                    SELECT s.samagri_provider, s.alankaram_provider, s.food_provider
+                    FROM bookings b
+                    JOIN services s ON s.id = b.service_id
+                    WHERE b.id = CAST(:id AS uuid)
+                    """
+                ),
+                {"id": booking_id},
+            ).mappings().first()
+            out = enrich_legacy_preparation_snapshot(
+                out,
+                header=dict(header),
+                service=dict(svc) if svc else {},
+            )
         out["from_snapshot"] = True
         out["review_status"] = header.get("review_status")
         return out
@@ -442,6 +615,12 @@ def get_booking_preparation(db: Session, booking_id: str, preferred_language: st
     lang = normalize_lang(preferred_language) if preferred_language else customer_preferred_language(db, str(b["customer_id"]))
     master = load_service_preparation_master(db, str(b["service_id"]), lang)
     flags = package_flags_from_booking(dict(b))
-    view = build_preparation_view(master, samagri_purchased=flags["samagri_purchased"], lang=lang)
+    view = build_preparation_view(
+        master,
+        samagri_purchased=flags["samagri_purchased"],
+        alankaram_purchased=flags["alankaram_purchased"],
+        food_purchased=flags["food_purchased"],
+        lang=lang,
+    )
     view["from_snapshot"] = False
     return view

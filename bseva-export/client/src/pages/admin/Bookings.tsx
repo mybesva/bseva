@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import AdminPageHeader from "@/components/AdminPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -254,19 +255,22 @@ export default function Bookings() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h1 className="text-h1">Bookings</h1>
-        <AdminPager
-          page={page}
-          pages={pages}
-          total={total}
-          pageSize={pageSize}
-          sizes={BOOKING_PAGE_SIZES}
-          sizeLabel="per page"
-          onPage={(p) => updateFilters({ page: p })}
-          onPageSize={(size) => updateFilters({ size })}
-        />
-      </div>
+      <AdminPageHeader
+        title="Bookings"
+        description="In-person puja bookings. Virtual Puja and Muhurtham requests are managed in their own queues."
+        actions={
+          <AdminPager
+            page={page}
+            pages={pages}
+            total={total}
+            pageSize={pageSize}
+            sizes={BOOKING_PAGE_SIZES}
+            sizeLabel="per page"
+            onPage={(p) => updateFilters({ page: p })}
+            onPageSize={(size) => updateFilters({ size })}
+          />
+        }
+      />
       <div className="flex flex-wrap gap-2 mb-3 items-end">
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>

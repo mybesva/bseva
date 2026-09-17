@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
+import AdminPageHeader from "@/components/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -89,20 +90,15 @@ export default function AdminInvoices() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-h1">Invoices</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Official tax invoices issued after payment. Issued numbers never change. Company details for
-            new invoices are configured in Settings.
-          </p>
-        </div>
-        <Link href={adminPath("/settings")}>
-          <Button variant="outline" size="sm">
-            Invoice settings
-          </Button>
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="Invoices"
+        description="Official tax invoices issued after payment. Issued numbers never change. Company details for new invoices are configured in Settings."
+        actions={
+          <Link href={adminPath("/settings")}>
+            <Button variant="outline" size="sm">Invoice settings</Button>
+          </Link>
+        }
+      />
       <form
         className="flex gap-2 mb-4 max-w-xl"
         onSubmit={(e) => {

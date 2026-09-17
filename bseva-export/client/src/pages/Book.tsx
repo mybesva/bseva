@@ -73,7 +73,8 @@ export default function Book() {
   const showMuhurta =
     user?.role === "customer" && (pujaType.muhurta_consultation_enabled || pujaType.requires_muhurta);
 
-  const virtualOn = Boolean(publicConfig?.virtual_puja_enabled);
+  const virtualOn =
+    Boolean(publicConfig?.virtual_puja_enabled) && pujaType.virtual_available !== false;
   const inPersonBlocked = user?.role === "customer" && (!canBook || checking);
   const blockBooking = inPersonBlocked && !virtualOn;
   const forceVirtualOnly =
@@ -104,7 +105,11 @@ export default function Book() {
         </section>
       )}
 
-      {user?.role === "customer" && !forceVirtualOnly ? <ServiceAvailabilityBanner /> : null}
+      {user?.role === "customer" ? (
+        <ServiceAvailabilityBanner
+          virtualHref={virtualOn ? `/book/${pujaType.canonical_slug || pujaType.slug || pujaSlug}` : undefined}
+        />
+      ) : null}
 
       {serviceNotBookable ? (
         <div className="pb-8 max-w-2xl space-y-4">
@@ -122,8 +127,12 @@ export default function Book() {
         <div className="pb-8 max-w-2xl space-y-4">
           {status === "unavailable" ? (
             <div className="rounded-xl border border-primary/25 bg-orange-50/80 dark:bg-orange-950/30 px-5 py-5">
-              <h2 className="text-lg font-bold text-[#1A2B4A] dark:text-primary mb-2">{t("web.availability.comingSoonTitle")}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{t("web.availability.comingSoonBody")}</p>
+              <h2 className="text-lg font-bold text-[#1A2B4A] dark:text-primary mb-2">
+                {publicConfig.service_area_unavailable_heading?.trim() || t("web.availability.comingSoonTitle")}
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {publicConfig.service_area_unavailable_description?.trim() || t("web.availability.comingSoonBody")}
+              </p>
             </div>
           ) : null}
           <p className="text-sm text-muted-foreground">
@@ -149,6 +158,7 @@ export default function Book() {
             serviceCategories={pujaType.categories}
             forceVirtualOnly={forceVirtualOnly}
             serviceVirtualAvailable={pujaType.virtual_available !== false}
+            durationMinutes={pujaType.duration_minutes}
             bookingLeadHours={
               pujaType.booking_lead_hours != null ? Number(pujaType.booking_lead_hours) : 48
             }

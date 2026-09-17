@@ -30,7 +30,7 @@ const LANGS: PreferredLang[] = PREFERRED_LANGUAGES.map((l) => l.code);
 
 export default function CustomerProfilePage() {
   const { user, refresh } = useAuth();
-  const { setLang } = useI18n();
+  const { setLang, t } = useI18n();
   const [nameParts, setNameParts] = useState<PersonNameParts>({
     first_name: "",
     middle_name: "",
@@ -163,9 +163,9 @@ export default function CustomerProfilePage() {
       setLang(uiLangFromPreferred(language));
       nameFormDirty.current = false;
       await refresh();
-      toast.success("Profile details updated");
+      toast.success(t("web.customerProfile.updated"));
     } catch (err: any) {
-      toast.error(err.message || "Could not save profile");
+      toast.error(err.message || t("web.customerProfile.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -185,11 +185,11 @@ export default function CustomerProfilePage() {
         body,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((data as { detail?: string }).detail || "Upload failed");
-      toast.success("Photo updated");
+      if (!res.ok) throw new Error((data as { detail?: string }).detail || t("web.customerProfile.uploadFailed"));
+      toast.success(t("web.customerProfile.photoUpdated"));
       await loadPhoto();
     } catch (err: any) {
-      toast.error(err.message || "Upload failed");
+      toast.error(err.message || t("web.customerProfile.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -199,22 +199,22 @@ export default function CustomerProfilePage() {
     <CustomerPortal>
       <Card className="max-w-lg">
         <CardHeader>
-          <CardTitle className="">My Profile</CardTitle>
+          <CardTitle className="">{t("web.customerProfile.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-6" onSubmit={save} autoComplete="off">
             {user?.public_id ? (
               <div className="space-y-1">
-                <Label>Customer ID</Label>
+                <Label>{t("web.customerProfile.customerId")}</Label>
                 <p className="font-mono text-sm">{user.public_id}</p>
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label>Profile photo</Label>
+              <Label>{t("web.customerProfile.photo")}</Label>
               {photoUrl ? (
                 <img src={photoUrl} alt="" className="h-28 w-28 rounded-md object-cover border" />
               ) : (
-                <p className="text-sm text-muted-foreground">No photo uploaded yet.</p>
+                <p className="text-sm text-muted-foreground">{t("web.customerProfile.noPhoto")}</p>
               )}
               <label className="inline-block">
                 <input
@@ -228,7 +228,7 @@ export default function CustomerProfilePage() {
                   }}
                 />
                 <Button type="button" size="sm" variant="outline" disabled={uploading} asChild>
-                  <span>{uploading ? "Uploading…" : photoUrl ? "Replace photo" : "Upload photo"}</span>
+                  <span>{uploading ? t("web.customerProfile.uploading") : photoUrl ? t("web.customerProfile.replacePhoto") : t("web.customerProfile.uploadPhoto")}</span>
                 </Button>
               </label>
             </div>
@@ -243,7 +243,7 @@ export default function CustomerProfilePage() {
             />
             <PhoneWithCountryCode
               id="customer-phone"
-              label="Mobile number"
+              label={t("web.customerProfile.mobile")}
               required
               countryCode={countryCode}
               national={phoneNational}
@@ -259,7 +259,7 @@ export default function CustomerProfilePage() {
               }}
             />
             <div className="space-y-2">
-              <Label>Preferred language</Label>
+              <Label>{t("web.customerProfile.language")}</Label>
               <Select value={language} onValueChange={(v) => setLanguage(v as PreferredLang)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -273,14 +273,14 @@ export default function CustomerProfilePage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Applies to the site language and your notifications.
+                {t("web.customerProfile.languageHint")}
               </p>
             </div>
             <div className="space-y-1 text-sm text-muted-foreground">
-              <p>Email: {user?.email || "—"}</p>
+              <p>{t("web.customerProfile.email")}: {user?.email || "—"}</p>
             </div>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("web.customerProfile.saving") : t("common.save")}
             </Button>
           </form>
         </CardContent>

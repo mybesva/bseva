@@ -174,7 +174,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="container flex h-20 items-center justify-between gap-4">
           <Link href="/">
             <a className="flex items-center shrink-0">
-              <BSevaLogo size="lg" />
+              <BSevaLogo variant="full" size="lg" />
             </a>
           </Link>
 
@@ -225,7 +225,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 <div className="flex flex-col gap-8 mt-8">
                   <Link href="/">
                     <a className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
-                      <BSevaLogo size="md" />
+                      <BSevaLogo variant="full" size="lg" />
                     </a>
                   </Link>
                   <LanguageSelect triggerClassName="w-full" />
@@ -290,7 +290,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <footer className="bg-sidebar text-sidebar-foreground pt-16 pb-8">
         <div className="container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           <div>
-            <BSevaLogo size="md" className="mb-4 h-14 max-w-[10rem]" />
+            <BSevaLogo variant="full" size="md" className="mb-4" />
             <p className="text-sidebar-foreground/70 text-sm leading-relaxed mb-4">
               {t("footer.tagline")}
             </p>

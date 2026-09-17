@@ -62,7 +62,11 @@ export default function MyBookings() {
             <CardHeader>
               <CardTitle className="flex flex-wrap items-center justify-between gap-2">
                 <span>{b.service_name || b.booking_number}</span>
-                <Badge>{t(`status.${String(b.status || "pending")}`)}</Badge>
+                <Badge>
+                  {(b.customer_display_status || b.status) === "confirmed"
+                    ? t("web.booking.confirmed")
+                    : t(`status.${String(b.customer_display_status || b.status || "pending")}`)}
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4 text-sm items-center" onClick={(e) => e.stopPropagation()}>

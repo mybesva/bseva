@@ -740,6 +740,15 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS gstin TEXT",
     "ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_paise INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_reason TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS idempotency_key TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS idempotency_request_hash TEXT",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS idempotency_response JSONB",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_kind TEXT NOT NULL DEFAULT 'puja'",
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS bookings_customer_idempotency_key_uq
+    ON bookings (customer_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL
+    """,
     """
     CREATE UNIQUE INDEX IF NOT EXISTS invoices_one_customer_per_booking
     ON invoices (booking_id)
@@ -861,6 +870,11 @@ def _seed_platform_settings(conn) -> None:
 
     defaults = {
         "virtual_puja_enabled": False,
+        "service_area_unavailable_heading": "BSeva is not available in this area yet",
+        "service_area_unavailable_description": (
+            "We could not find an eligible BSeva pujari near this location. "
+            "Please try another address or check again soon."
+        ),
         "pujari_settlement_days": 14,
         "loyalty_pujari_puja_count": 10,
         "loyalty_pujari_reward_paise": 50000,

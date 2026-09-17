@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
+import AdminPageHeader from "@/components/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
@@ -56,46 +57,30 @@ export default function AdminNotifications() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-h1">Notifications</h1>
-          <p className="text-sm text-muted-foreground">{unread} unread</p>
-        </div>
-        <div className="flex gap-2 items-center">
-          <select
-            className="h-9 border rounded-md px-2 text-sm"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option value="all">All</option>
-            <option value="ops">Ops</option>
-            <option value="booking">Booking</option>
-            <option value="booking_reminder">Reminders</option>
-            <option value="kyc">KYC</option>
-            <option value="support">Support</option>
-            <option value="system">System</option>
-          </select>
-          <Button variant="outline" size="sm" onClick={() => void markAll()}>
-            Mark all read
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              void (async () => {
-                try {
-                  const { sendTestPush } = await import("@/lib/fcm");
-                  const out = await sendTestPush();
-                  toast.success(`Test push sent (${out.success} device${out.success === 1 ? "" : "s"})`);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Test push failed");
-                }
-              })();
-            }}
-          >
-            Send test push
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Notifications"
+        description={`${unread} unread`}
+        actions={
+          <div className="flex gap-2 items-center">
+            <select
+              className="h-9 border rounded-md px-2 text-sm"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="ops">Ops</option>
+              <option value="booking">Booking</option>
+              <option value="booking_reminder">Reminders</option>
+              <option value="kyc">KYC</option>
+              <option value="support">Support</option>
+              <option value="system">System</option>
+            </select>
+            <Button variant="outline" size="sm" onClick={() => void markAll()}>
+              Mark all read
+            </Button>
+          </div>
+        }
+      />
       <div className="space-y-2">
         {items.length === 0 && <p className="text-sm text-muted-foreground">No notifications yet.</p>}
         {items.map((n) => (

@@ -98,6 +98,7 @@ class TokenOut(BaseModel):
 
 
 class BookingCreateIn(BaseModel):
+    idempotency_key: Optional[str] = Field(default=None, max_length=128)
     service_id: UUID
     pujari_id: Optional[UUID] = None
     package_type: Literal["basic", "standard", "premium"]

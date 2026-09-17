@@ -15,6 +15,8 @@ import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { BOOKING_UNAVAILABLE_HINT } from "@/lib/serviceAvailabilityMessages";
 import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 import { formatStartingFrom } from "@/lib/servicePricing";
+import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 
 type Svc = {
   id: string;
@@ -46,6 +48,7 @@ type Svc = {
   samagri_available?: boolean;
   alankaram_available?: boolean;
   food_available?: boolean;
+  virtual_available?: boolean;
   standard_price_paise?: number | null;
   premium_price_paise?: number | null;
   main_puja_price_paise?: number | null;
@@ -65,6 +68,7 @@ export default function ServiceDetail() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { canBook, checking, status } = useServiceAvailability();
   const { lang, t } = useI18n();
+  const { config } = usePublicConfig();
   const [svc, setSvc] = useState<Svc | null>(null);
   const [loading, setLoading] = useState(true);
   const [prep, setPrep] = useState<PreparationView | null>(null);
@@ -102,7 +106,7 @@ export default function ServiceDetail() {
       setLocation(getLoginUrl({ role: "customer", returnPath: path }));
       return;
     }
-    if (!canBook) {
+    if (!canBook && !(config.virtual_puja_enabled && svc.virtual_available !== false)) {
       notifyBookingBlocked(status, t);
       return;
     }
@@ -121,9 +125,9 @@ export default function ServiceDetail() {
             </div>
           ) : !svc ? (
             <div className="text-center py-20 space-y-4">
-              <p className="text-muted-foreground">Puja not found.</p>
+              <p className="text-muted-foreground">{t("errors.serviceNotFound")}</p>
               <Link href="/services">
-                <Button variant="outline">Browse all pujas</Button>
+                <Button variant="outline">{t("web.services.allPujas")}</Button>
               </Link>
             </div>
           ) : (
@@ -131,6 +135,16 @@ export default function ServiceDetail() {
               <div className="rounded-2xl overflow-hidden shadow-lg">
                 <img src={img} alt={svc.name} className="w-full h-56 md:h-72 object-cover" />
               </div>
+              {isAuthenticated && user?.role === "customer" ? (
+                <ServiceAvailabilityBanner
+                  showChecking={false}
+                  virtualHref={
+                    config.virtual_puja_enabled && svc.virtual_available !== false
+                      ? `/book/${svc.canonical_slug || svc.slug}`
+                      : undefined
+                  }
+                />
+              ) : null}
               <div>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {(svc.categories || []).map((c) => (
@@ -140,7 +154,7 @@ export default function ServiceDetail() {
                   ))}
                   {!svc.bookable && (
                     <Badge className="bg-amber-500 text-white font-extrabold uppercase tracking-wider border-0 text-sm px-3 py-1">
-                      Coming Soon
+                      {t("services.comingSoonLabel")}
                     </Badge>
                   )}
                 </div>
@@ -229,17 +243,17 @@ export default function ServiceDetail() {
                       ))}
                   </ol>
                   <p className="text-xs text-muted-foreground mt-3">
-                    Exact sequence may vary by tradition and the performing priest. This is a respectful guide, not a guaranteed outcome.
+                    {t("web.service.processDisclaimer")}
                   </p>
                 </div>
               )}
 
               <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                {svc.samagri_available && <span>Samagri available</span>}
-                {svc.alankaram_available && <span>· Alankaram available</span>}
-                {svc.food_available && <span>· Food / Prasadam available</span>}
-                {svc.prasadam_included && <span>· Prasadam</span>}
-                {svc.sankalpa_required && <span>· Sankalpa details required</span>}
+                {svc.samagri_available && <span>{t("web.service.samagriAvailable")}</span>}
+                {svc.alankaram_available && <span>· {t("web.service.alankaramAvailable")}</span>}
+                {svc.food_available && <span>· {t("web.service.foodAvailable")}</span>}
+                {svc.prasadam_included && <span>· {t("web.service.prasadam")}</span>}
+                {svc.sankalpa_required && <span>· {t("web.service.sankalpaRequired")}</span>}
               </div>
 
               {prep?.verified && (
@@ -249,7 +263,7 @@ export default function ServiceDetail() {
                     className="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"
                     onClick={() => setPrepOpen((o) => !o)}
                   >
-                    <span>Typical Samagri checklist</span>
+                    <span>{t("web.service.typicalSamagri")}</span>
                     {prepOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
                   {prepOpen && (
@@ -261,7 +275,7 @@ export default function ServiceDetail() {
                         compact
                       />
                       <p className="text-xs text-muted-foreground mt-2">
-                        Exact list after booking depends on your package and preferred language.
+                        {t("web.service.samagriDisclaimer")}
                       </p>
                     </div>
                   )}
@@ -272,7 +286,13 @@ export default function ServiceDetail() {
                 <Button
                   size="lg"
                   className="bg-primary text-white font-bold"
-                  disabled={!svc.bookable || (isAuthenticated && user?.role === "customer" && (!canBook || checking))}
+                  disabled={
+                    !svc.bookable ||
+                    (isAuthenticated &&
+                      user?.role === "customer" &&
+                      (!canBook || checking) &&
+                      !(config.virtual_puja_enabled && svc.virtual_available !== false))
+                  }
                   title={
                     svc.bookable && isAuthenticated && user?.role === "customer" && !canBook
                       ? t(BOOKING_UNAVAILABLE_HINT)
@@ -281,16 +301,18 @@ export default function ServiceDetail() {
                   onClick={book}
                 >
                   {!svc.bookable
-                    ? "Coming Soon"
+                      ? t("common.comingSoon")
                     : checking
-                      ? "Checking…"
+                      ? t("services.checkingAvailability")
                       : isAuthenticated && user?.role === "customer" && !canBook
-                        ? t(BOOKING_UNAVAILABLE_HINT)
-                        : "Book this puja"}
+                        ? config.virtual_puja_enabled && svc.virtual_available !== false
+                          ? t("web.availability.bookVirtual")
+                          : t(BOOKING_UNAVAILABLE_HINT)
+                        : t("web.service.bookThisPuja")}
                 </Button>
                 <Link href="/services">
                   <Button size="lg" variant="outline">
-                    View more pujas
+                    {t("home.viewMorePujas")}
                   </Button>
                 </Link>
               </div>

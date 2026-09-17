@@ -34,7 +34,7 @@ export default function CustomerBookings() {
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <AppText variant="h3">{b.service_name}</AppText>
-                <StatusBadge status={b.status} />
+                <StatusBadge status={b.customer_display_status || b.status} />
               </View>
               <AppText variant="small" color={colors.mutedForeground}>
                 #{b.booking_number} · {formatDisplaySlot(b.booking_date, b.start_time)}
@@ -49,7 +49,7 @@ export default function CustomerBookings() {
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <AppText variant="h3">{b.service_name}</AppText>
-                <StatusBadge status={b.status} />
+                <StatusBadge status={b.customer_display_status || b.status} />
               </View>
               <AppText variant="small">{formatDisplayDate(b.booking_date)}</AppText>
             </Card>

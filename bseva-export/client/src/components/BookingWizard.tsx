@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -94,6 +94,7 @@ interface BookingWizardProps {
   forceVirtualOnly?: boolean;
   /** Per-service catalog flag. */
   serviceVirtualAvailable?: boolean;
+  durationMinutes?: number | null;
 }
 
 const VIRTUAL_COUNTRIES: { id: string; label: string }[] = [
@@ -126,6 +127,11 @@ function browserTimezone() {
   } catch {
     return "Asia/Kolkata";
   }
+}
+
+function newIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `web-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 type BookingStep = 1 | 2 | 3 | 4;
@@ -184,6 +190,22 @@ function buildBookingBill(input: {
   const { quote, tier, basePrices, settings, includeSamagri, includeAlankaram, includeFood, addonPrices } =
     input;
   const gstPercent = Number(quote?.gstPercent ?? settings?.gstPercent ?? 18);
+  if (quote && Number.isFinite(Number(quote.totalAmount))) {
+    return {
+      basePrice: Number(quote.basePrice ?? quote.mainPuja ?? 0),
+      locationAdjustment: Number(quote.locationAdjustment ?? 0),
+      samagri: Number(quote.samagri ?? 0),
+      alankaram: Number(quote.alankaram ?? 0),
+      foodPrasadam: Number(quote.foodPrasadam ?? quote.food ?? 0),
+      food: Number(quote.foodPrasadam ?? quote.food ?? 0),
+      peakFee: Number(quote.peakFee ?? 0),
+      subtotal: Number(quote.subtotal ?? 0),
+      gstPercent,
+      gstAmount: Number(quote.gstAmount ?? 0),
+      totalAmount: Number(quote.totalAmount),
+      isPeakDay: Boolean(quote.peakReason || Number(quote.peakFee ?? 0) > 0),
+    };
+  }
   const basePrice = quote
     ? Number(quote.basePrice ?? quote.mainPuja ?? 0)
     : Number(basePrices[tier] || basePrices.standard || 0);
@@ -209,9 +231,8 @@ function buildBookingBill(input: {
     quote?.foodListPrice,
   );
   const discount = quote ? Number(quote.discount ?? 0) : 0;
-  const walletCredit = quote ? Number(quote.walletCredit ?? 0) : 0;
   const adjustedBase = basePrice + locAdj;
-  const subtotal = Math.max(0, adjustedBase + peakFee + samagri + alankaram + food - discount - walletCredit);
+  const subtotal = Math.max(0, adjustedBase + peakFee + samagri + alankaram + food - discount);
   const gstAmount = Math.round((subtotal * gstPercent) / 100);
   const totalAmount = subtotal + gstAmount;
   return {
@@ -240,6 +261,7 @@ export default function BookingWizard({
   pujariTeam,
   forceVirtualOnly = false,
   serviceVirtualAvailable = true,
+  durationMinutes,
 }: BookingWizardProps) {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
@@ -294,11 +316,76 @@ export default function BookingWizard({
   const [customerCountry, setCustomerCountry] = useState("IN");
   const [vpnBlocked, setVpnBlocked] = useState(false);
   const [vpnMessage, setVpnMessage] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
+  const draftReady = useRef(false);
+  const restoredAddress = useRef(false);
+  const bookingCompleted = useRef(false);
+  const lastSubmitSignature = useRef<string | null>(null);
   const { config: publicConfig } = usePublicConfig();
   const settings = {
     virtualPujaEnabled: publicConfig.virtual_puja_enabled ? "true" : "false",
     gstPercent: "18",
   };
+
+  const draftKey = user?.id ? `bseva:booking-draft:${user.id}:${serviceId}` : null;
+
+  useEffect(() => {
+    if (!draftKey || draftReady.current) return;
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.currentStep >= 1 && d.currentStep <= 4) setCurrentStep(d.currentStep);
+        if (["basic", "standard", "premium"].includes(d.tier)) setTier(d.tier);
+        if (["physical", "virtual"].includes(d.serviceMode)) setServiceMode(d.serviceMode);
+        if (["saved", "new"].includes(d.addressMode)) setAddressMode(d.addressMode);
+        if (["north", "south", "lunar"].includes(d.calendarType)) setCalendarType(d.calendarType);
+        if (d.bookingDate) setBookingDate(new Date(`${d.bookingDate}T12:00:00`));
+        if (d.bookingTime) setBookingTime(d.bookingTime);
+        setLocationText(d.locationText || "");
+        setDoorNumber(d.doorNumber || "");
+        setLandmark(d.landmark || "");
+        setCity(d.city || "");
+        setLat(Number.isFinite(d.lat) ? d.lat : null);
+        setLng(Number.isFinite(d.lng) ? d.lng : null);
+        restoredAddress.current = Boolean(d.locationText || d.city || Number.isFinite(d.lat));
+        setSpecialInstructions(d.specialInstructions || "");
+        setIncludeSamagri(Boolean(d.includeSamagri));
+        setIncludeAlankaram(Boolean(d.includeAlankaram));
+        setIncludeFood(Boolean(d.includeFood));
+        setRecurring(d.recurring || "none");
+        setRecurringCount(Number(d.recurringCount || 4));
+        setSelectedDates(Array.isArray(d.selectedDates) ? d.selectedDates.map((x: string) => new Date(`${x}T12:00:00`)) : []);
+        setCustomerTimezone(d.customerTimezone || browserTimezone());
+        setCustomerCountry(d.customerCountry || "IN");
+        if (d.idempotencyKey) setIdempotencyKey(d.idempotencyKey);
+      }
+    } catch {
+      sessionStorage.removeItem(draftKey);
+    }
+    draftReady.current = true;
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || !draftReady.current || submitting || bookingCompleted.current) return;
+    sessionStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        currentStep, tier, serviceMode, addressMode, calendarType,
+        bookingDate: bookingDate ? format(bookingDate, "yyyy-MM-dd") : null,
+        bookingTime, locationText, doorNumber, landmark, city, lat, lng,
+        specialInstructions, includeSamagri, includeAlankaram, includeFood,
+        recurring, recurringCount,
+        selectedDates: selectedDates.map((d) => format(d, "yyyy-MM-dd")),
+        customerTimezone, customerCountry, idempotencyKey,
+      }),
+    );
+  }, [
+    draftKey, currentStep, tier, serviceMode, addressMode, calendarType, bookingDate, bookingTime,
+    locationText, doorNumber, landmark, city, lat, lng, specialInstructions,
+    includeSamagri, includeAlankaram, includeFood, recurring, recurringCount,
+    selectedDates, customerTimezone, customerCountry, idempotencyKey, submitting,
+  ]);
 
   useEffect(() => {
     if (bookingDate && isCalendarDayDisabled(bookingDate, bookingLeadHours)) {
@@ -360,11 +447,13 @@ export default function BookingWizard({
           lng: p.longitude != null ? Number(p.longitude) : null,
         };
         setSavedAddress(saved);
-        setAddressMode("saved");
-        setLocationText(saved.label);
-        setCity(saved.city);
-        setLat(saved.lat);
-        setLng(saved.lng);
+        if (!restoredAddress.current) {
+          setAddressMode("saved");
+          setLocationText(saved.label);
+          setCity(saved.city);
+          setLat(saved.lat);
+          setLng(saved.lng);
+        }
       })
       .catch(() => {
         setSavedAddress(null);
@@ -902,7 +991,7 @@ export default function BookingWizard({
             longitude: lng,
           }),
         });
-        await refreshServiceAvailability({ lat, lng });
+        await refreshServiceAvailability({ lat: Number(lat), lng: Number(lng) });
       }
 
       if (!isVirtual) {
@@ -915,6 +1004,35 @@ export default function BookingWizard({
         }
       }
 
+      const finalQuoteParams = new URLSearchParams({
+        service_id: serviceId,
+        package_type: tier,
+        city: city || "",
+        include_samagri: includeSamagri ? "true" : "false",
+        include_alankaram: includeAlankaram ? "true" : "false",
+        include_food: includeFood ? "true" : "false",
+        booking_date: format(bookingDate, "yyyy-MM-dd"),
+        mode: isVirtual ? "virtual" : "in_person",
+        country: customerCountry,
+      });
+      const finalQuote = await api<any>(`/quote?${finalQuoteParams}`);
+      setQuote(finalQuote);
+      const submitSignature = JSON.stringify({
+        serviceId, tier, serviceMode,
+        bookingDate: format(bookingDate, "yyyy-MM-dd"),
+        bookingTime, locationText: composedServiceAddress(), city, lat, lng,
+        specialInstructions, includeSamagri, includeAlankaram, includeFood,
+        recurring, recurringCount,
+        selectedDates: selectedDates.map((d) => format(d, "yyyy-MM-dd")),
+        customerTimezone, customerCountry,
+      });
+      const requestKey =
+        lastSubmitSignature.current && lastSubmitSignature.current !== submitSignature
+          ? newIdempotencyKey()
+          : idempotencyKey;
+      lastSubmitSignature.current = submitSignature;
+      if (requestKey !== idempotencyKey) setIdempotencyKey(requestKey);
+
       const countryLabel = VIRTUAL_COUNTRIES.find((c) => c.id === customerCountry)?.label || customerCountry;
       const virtualLocation = `Virtual Puja · ${countryLabel} · ${customerTimezone}`;
 
@@ -925,9 +1043,14 @@ export default function BookingWizard({
         total_paise: number;
         meeting_url?: string;
         awaiting_pujari_assignment?: boolean;
+        eligible_pujari_found?: boolean;
+        admin_assignment_required?: boolean;
+        assignment_status?: string;
       }>("/bookings", {
         method: "POST",
+        headers: { "Idempotency-Key": requestKey },
         body: JSON.stringify({
+          idempotency_key: requestKey,
           service_id: serviceId,
           package_type: tier,
           mode: isVirtual ? "virtual" : "in_person",
@@ -962,9 +1085,12 @@ export default function BookingWizard({
             : t("booking.confirmedAssign")
           : t("booking.confirmedWallet"),
       );
+      bookingCompleted.current = true;
+      if (draftKey) sessionStorage.removeItem(draftKey);
+      setIdempotencyKey(newIdempotencyKey());
       setLocation(`/booking/${result.id || result.booking_number}`);
     } catch (error: any) {
-      if (isServiceAreaUnavailableError(error?.message)) {
+      if (error?.code === "SERVICE_AREA_UNAVAILABLE" || isServiceAreaUnavailableError(error?.message)) {
         toast.error(t(COMING_SOON_TITLE), { description: t(COMING_SOON_BODY) });
       } else {
         toast.error(friendlyBookingError(error?.message, t) || t("booking.failed"));
@@ -1035,7 +1161,7 @@ export default function BookingWizard({
           </RadioGroup>
 
           <div className="space-y-3">
-            <Label>Puja Mode</Label>
+            <Label>{t("booking.mode")}</Label>
             <RadioGroup
               value={serviceMode}
               onValueChange={(v) => setServiceMode(v as ServiceMode)}
@@ -1052,7 +1178,7 @@ export default function BookingWizard({
               >
                 <RadioGroupItem value="physical" className="sr-only" />
                 <span className="font-medium">{t("booking.physical")}</span>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">At customer location</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{t("web.booking.atCustomerLocation")}</p>
               </Label>
               )}
               {virtualEnabled && (
@@ -1066,7 +1192,7 @@ export default function BookingWizard({
                 >
                   <RadioGroupItem value="virtual" className="sr-only" />
                   <span className="font-medium">{t("booking.virtual")}</span>
-                  <p className="text-xs text-muted-foreground mt-1">Virtual / online session</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("web.booking.virtualSession")}</p>
                 </Label>
               )}
             </RadioGroup>
@@ -1075,7 +1201,7 @@ export default function BookingWizard({
             )}
             {forceVirtualOnly && virtualEnabled && (
               <p className="text-xs text-muted-foreground">
-                In-person booking is not available at your location. You can continue with Virtual Puja.
+                {t("web.booking.virtualOnlyNotice")}
               </p>
             )}
           </div>
@@ -1101,7 +1227,7 @@ export default function BookingWizard({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Preferred Time</Label>
+              <Label>{t("booking.preferredTime")}</Label>
               <Input type="time" value={bookingTime} onChange={(e) => setBookingTime(e.target.value)} />
             </div>
           </div>
@@ -1284,16 +1410,16 @@ export default function BookingWizard({
               >
                 <p className="font-medium text-foreground">{savedAddress.label}</p>
                 {savedAddress.city ? (
-                  <p className="text-muted-foreground">City: {savedAddress.city}</p>
+                  <p className="text-muted-foreground">{t("web.booking.cityValue", { city: savedAddress.city })}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin size={12} /> Service location for the assigned pujari
+                  <MapPin size={12} /> {t("web.booking.assignedPujariLocation")}
                   {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">New address for this booking</p>
+                <p className="text-sm text-muted-foreground">{t("web.booking.newAddress")}</p>
                 <div className="space-y-2">
                   <Label htmlFor="booking-door">
                     {t("booking.doorNumber")}
@@ -1336,7 +1462,7 @@ export default function BookingWizard({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="booking-landmark">Landmark (optional)</Label>
+                  <Label htmlFor="booking-landmark">{t("web.booking.landmarkOptional")}</Label>
                   <Input
                     id="booking-landmark"
                     value={landmark}
@@ -1385,7 +1511,7 @@ export default function BookingWizard({
                   <p className="text-xs text-destructive">{step2Errors.mapLocation}</p>
                 )}
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin size={12} /> Drag the pin or tap the map to set the exact location for the pujari
+                  <MapPin size={12} /> {t("web.booking.pinHint")}
                   {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
                 </p>
                 {geoError && <p className="text-xs text-destructive">{geoError}</p>}
@@ -1394,7 +1520,7 @@ export default function BookingWizard({
 
             <div className="space-y-2">
               <Label>
-                City
+                {t("address.city")}
                 <RequiredMark />
               </Label>
               <Input
@@ -1413,8 +1539,7 @@ export default function BookingWizard({
           )}
           {serviceMode === "virtual" && (
             <p className="text-sm text-muted-foreground rounded-md border p-3">
-              Date and time above are in your timezone ({customerTimezone}). Pujari assignment uses the matching
-              India Standard Time so there are no scheduling conflicts.
+              {t("web.booking.timezoneNotice", { timezone: customerTimezone })}
             </p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1505,7 +1630,7 @@ export default function BookingWizard({
             </div>
           )}
           <div className="space-y-2">
-            <Label>Special Instructions</Label>
+            <Label>{t("booking.special")}</Label>
             <Textarea value={specialInstructions} onChange={(e) => setSpecialInstructions(e.target.value)} />
           </div>
         </div>
@@ -1531,6 +1656,12 @@ export default function BookingWizard({
                 {bookingDate ? formatDisplayDate(bookingDate) : "—"} {bookingTime}
                 {serviceMode === "virtual" ? ` (${customerTimezone})` : ""}
               </p>
+              {durationMinutes ? (
+                <p>
+                  <span className="text-muted-foreground">{t("services.duration")} </span>
+                  {t("service.minutes", { count: durationMinutes })}
+                </p>
+              ) : null}
               {serviceMode === "virtual" ? (
                 <p>
                   <span className="text-muted-foreground">{t("booking.reviewCountryTimezone")} </span>

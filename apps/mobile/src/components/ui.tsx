@@ -196,7 +196,7 @@ export function StatusBadge({ status }: { status: string }) {
     rejected: colors.destructive,
   };
   const color = map[normalized] || colors.mutedForeground;
-  const key = `status.${normalized}`;
+  const key = normalized === "confirmed" ? "web.booking.confirmed" : `status.${normalized}`;
   const translated = t(key);
   return (
     <View style={{ backgroundColor: color + "22", paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill }}>

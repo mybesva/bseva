@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import type { PujariLevelRow } from "@/hooks/usePujariLevels";
 import { useAuth } from "@/_core/hooks/useAuth";
+import AdminPageHeader from "@/components/AdminPageHeader";
 
 const emptyRoleForm = { title: "", summary: "", examplesText: "" };
 
@@ -40,6 +41,11 @@ type PlatformKey = {
 const SETTING_GROUPS: { id: string; title: string; description?: string }[] = [
   { id: "contact", title: "Contact", description: "How customers reach BSeva." },
   { id: "features", title: "Features", description: "Platform feature flags." },
+  {
+    id: "service_area",
+    title: "Service area unavailable message",
+    description: "Message shown when a customer is outside the locations currently served by BSeva.",
+  },
   { id: "booking", title: "Booking & puja day", description: "When OTP, tracking, and full booking details become available." },
   { id: "pricing", title: "Pricing & surge", description: "GST and date-based surcharges. Puja prices are set per service. Surge is added to the quoted puja total." },
   { id: "pujari", title: "Pujari", description: "Settlement, joining fee, no-show, and assignment rules." },
@@ -62,6 +68,21 @@ const PLATFORM_KEYS: PlatformKey[] = [
     type: "boolean",
     group: "features",
     hint: "Requires VITE_RECAPTCHA_SITE_KEY + RECAPTCHA_SECRET_KEY env vars.",
+  },
+  {
+    key: "service_area_unavailable_heading",
+    label: "Unavailable service area heading",
+    type: "string",
+    group: "service_area",
+    hint: "Short heading shown above the explanation, for example “We’re not in your area yet”.",
+  },
+  {
+    key: "service_area_unavailable_description",
+    label: "Unavailable service area description",
+    type: "string",
+    group: "service_area",
+    multiline: true,
+    hint: "Explain that service is unavailable at this location and how the customer can get help or check back later.",
   },
   { key: "puja_start_otp_before_minutes", label: "Start OTP available minutes before start", type: "number", group: "booking", hint: "Default 15." },
   {
@@ -710,7 +731,7 @@ export default function Settings() {
 
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-6">Settings</h1>
+      <AdminPageHeader title="Settings" />
 
       <div className="space-y-8 max-w-4xl">
         {SETTING_GROUPS.map((group) => {

@@ -232,18 +232,22 @@ function PortalShell({
         </div>
       )}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4 lg:px-6">
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b bg-background px-4 lg:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label={t("nav.openMenu")}>
             <Menu size={22} />
           </Button>
           <Link href="/">
             <a className="flex items-center shrink-0">
-              <BSevaLogo size="sm" />
+              <BSevaLogo
+                size="sm"
+                afterWordmark={
+                  <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    {role === "pujari" ? t("portal.pujariPortal") : t("portal.customerPortal")}
+                  </span>
+                }
+              />
             </a>
           </Link>
-          <span className="text-sm text-muted-foreground">
-            {role === "pujari" ? t("portal.pujariPortal") : t("portal.customerPortal")}
-          </span>
           <div className="ml-auto flex items-center gap-1">
             <LanguageSelector />
             <NotificationBell inboxHref={role === "pujari" ? "/pujari/notifications" : "/customer/notifications"} />

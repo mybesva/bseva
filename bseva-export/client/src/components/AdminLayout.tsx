@@ -8,6 +8,7 @@ import {
   Sparkles,
   Calendar,
   Video,
+  Clock3,
   CreditCard,
   Star,
   Bell,
@@ -42,7 +43,7 @@ interface NavItem {
   nameKey: string;
   /** Path under the private admin base, e.g. "" or "/customers" */
   suffix: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   permissions?: string[];
   superOnly?: boolean;
 }
@@ -50,6 +51,7 @@ interface NavItem {
 type NavBadges = {
   bookings?: number;
   virtual_puja?: number;
+  muhurtham?: number;
   pujaris?: number;
   payments?: number;
   settlements?: number;
@@ -62,6 +64,7 @@ const NAV_BADGE_KEYS: Record<string, keyof Omit<NavBadges, "tooltips">> = {
   "/pujaris": "pujaris",
   "/bookings": "bookings",
   "/virtual-puja": "virtual_puja",
+  "/muhurtham": "muhurtham",
   "/settlements": "settlements",
   "/payments": "payments",
 };
@@ -86,6 +89,7 @@ const navigation: NavItem[] = [
   { nameKey: "admin.samagri", suffix: "/samagri", icon: Flower2, permissions: ["manage_samagri"] },
   { nameKey: "admin.bookings", suffix: "/bookings", icon: Calendar, permissions: ["view_bookings", "manage_bookings"] },
   { nameKey: "admin.virtualPuja", suffix: "/virtual-puja", icon: Video, permissions: ["view_bookings", "manage_bookings"] },
+  { nameKey: "admin.muhurtham", suffix: "/muhurtham", icon: Clock3, permissions: ["view_bookings", "manage_bookings"] },
   {
     nameKey: "admin.settlements",
     suffix: "/settlements",
@@ -198,11 +202,16 @@ function AdminShell({ children }: AdminLayoutProps) {
         )}
       >
         <div className="flex flex-col h-full min-h-0">
-          <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border shrink-0">
+          <div className="h-[4.5rem] flex items-center justify-between px-4 border-b border-sidebar-border shrink-0">
             <Link href={opsBase}>
               <div className="flex items-center gap-2 min-w-0">
-                <BSevaLogo size="xs" />
-                <span className="font-bold text-lg text-sidebar-foreground shrink-0">Admin</span>
+                <BSevaLogo
+                  size="xs"
+                  className="text-sidebar-foreground"
+                  afterWordmark={
+                    <span className="font-bold text-lg text-sidebar-foreground shrink-0">Admin</span>
+                  }
+                />
               </div>
             </Link>
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>

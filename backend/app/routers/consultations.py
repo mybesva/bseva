@@ -296,6 +296,15 @@ def create_muhurta_consultation(
         },
     )
     write_audit(db, str(user["id"]), "muhurta_request", "muhurta_consultation", cid)
+    from app.routers.notifications import notify_ops_staff
+
+    notify_ops_staff(
+        db,
+        title="New Muhurtham consultation",
+        body=f"{cnum} — {svc.get('name') or 'Muhurtham'} on {body.appointment_date.isoformat()} at {raw_time[:5]}.",
+        category="muhurtham",
+        link="/admin/muhurtham",
+    )
     db.commit()
     return {
         "ok": True,

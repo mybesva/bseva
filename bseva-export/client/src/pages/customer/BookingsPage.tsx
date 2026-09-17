@@ -49,6 +49,9 @@ function BookingCard({
   compact?: boolean;
 }) {
   const { t } = useI18n();
+  const displayStatus = booking.customer_display_status || booking.status;
+  const displayLabel =
+    displayStatus === "confirmed" ? t("web.booking.confirmed") : formatStatus(displayStatus, t);
   return (
     <div
       className="border rounded-lg p-4 space-y-2 cursor-pointer hover:border-primary/40"
@@ -57,7 +60,7 @@ function BookingCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-semibold">{booking.service_name}</h3>
-          <Badge className={statusColor(booking.status)}>{formatStatus(booking.status, t)}</Badge>
+          <Badge className={statusColor(displayStatus)}>{displayLabel}</Badge>
         </div>
         <Button
           size="sm"

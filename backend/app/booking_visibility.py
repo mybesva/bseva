@@ -91,6 +91,17 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
             data.pop(secret, None)
         return data
 
+    if role == "customer":
+        paid = str(data.get("payment_status") or "").lower() in ("paid", "successful", "completed")
+        if paid and data.get("status") in ("pending", "pending_acceptance", "confirmed"):
+            data["status"] = "confirmed"
+            data["customer_display_status"] = "confirmed"
+        else:
+            data["customer_display_status"] = data.get("status")
+    else:
+        # Operational roles retain the unmodified workflow state.
+        data["internal_status"] = data.get("status")
+
     if role in ("admin", "super_admin"):
         data["details_level"] = "full"
         data["pujari_details_visible"] = True

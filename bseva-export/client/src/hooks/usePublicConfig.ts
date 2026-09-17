@@ -3,6 +3,8 @@ import { api } from "@/lib/api";
 
 export type PublicConfig = {
   virtual_puja_enabled: boolean;
+  service_area_unavailable_heading?: string;
+  service_area_unavailable_description?: string;
   customer_timezones?: { id: string; label: string }[];
   bseva_whatsapp_number: string;
   pujari_full_booking_details_before_hours: number;
@@ -19,6 +21,8 @@ export type PublicConfig = {
 
 const DEFAULTS: PublicConfig = {
   virtual_puja_enabled: false,
+  service_area_unavailable_heading: "",
+  service_area_unavailable_description: "",
   bseva_whatsapp_number: "919014654994",
   pujari_full_booking_details_before_hours: 20,
   puja_start_otp_before_minutes: 15,

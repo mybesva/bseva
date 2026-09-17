@@ -23,6 +23,7 @@ import AdminRecommendations from "./pages/admin/Recommendations";
 import AdminBulkImport from "./pages/admin/BulkImport";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminVirtualPuja from "./pages/admin/VirtualPuja";
+import AdminMuhurtham from "./pages/admin/Muhurtham";
 import AdminPayments from "./pages/admin/Payments";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminSamagri from "./pages/admin/Samagri";
@@ -156,6 +157,7 @@ function Router() {
       <Route path={`${ops}/bulk-import`} component={AdminBulkImport} />
       <Route path={`${ops}/bookings`} component={AdminBookings} />
       <Route path={`${ops}/virtual-puja`} component={AdminVirtualPuja} />
+      <Route path={`${ops}/muhurtham`} component={AdminMuhurtham} />
       <Route path={`${ops}/settlements`} component={AdminSettlements} />
       <Route path={`${ops}/invoices`} component={AdminInvoices} />
       <Route path={`${ops}/payments`} component={AdminPayments} />

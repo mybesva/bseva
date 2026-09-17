@@ -1,33 +1,15 @@
 import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/i18n/I18nProvider";
+import {
+  normalizePreparationSections,
+  PREPARATION_SECTION_KEYS,
+  type BookingPreparation,
+  type PreparationItem,
+} from "@bseva/types";
 
-export type PrepItem = {
-  name?: string;
-  label?: string;
-  quantity?: number | null;
-  unit?: string | null;
-  optional?: boolean;
-  required?: boolean;
-  notes?: string | null;
-  section?: string;
-};
-
-export type PreparationView = {
-  verified?: boolean;
-  pending_message?: string | null;
-  preparation_notes?: string | null;
-  special_instructions?: string | null;
-  prasadam_notes?: string | null;
-  venue_notes?: string | null;
-  disclaimer?: string | null;
-  display_name?: string | null;
-  samagri_purchased?: boolean;
-  sections?: Record<string, PrepItem[]>;
-  items?: PrepItem[];
-};
-
-const SECTION_KEYS = ["included_bseva", "customer_arrange", "prasadam", "home_venue", "optional"] as const;
+export type PrepItem = PreparationItem;
+export type PreparationView = BookingPreparation;
 
 function itemLabel(it: PrepItem): string {
   if (it.label) return it.label;
@@ -52,14 +34,15 @@ export default function PreparationChecklist({
   const { t } = useI18n();
   const resolvedTitle = title || t("web.preparation.title");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const selections = preparation?.selections || preparation?.selected_addons || [];
 
   const sections = useMemo(() => {
     if (!preparation?.verified) return [];
-    const src = preparation.sections || {};
-    return SECTION_KEYS.map((key) => ({
+    const normalized = normalizePreparationSections(preparation);
+    return PREPARATION_SECTION_KEYS.map((key) => ({
       key,
       title: t(`web.preparation.section.${key}`),
-      items: src[key] || [],
+      items: normalized[key],
     })).filter((s) => s.items.length > 0);
   }, [preparation, t]);
 
@@ -96,6 +79,16 @@ export default function PreparationChecklist({
           )}
         </div>
       )}
+
+      {selections.some((selection) => selection.selected) ? (
+        <div className="rounded-md bg-secondary/30 px-3 py-2 text-sm">
+          <span className="font-semibold">{t("web.preparation.selections")}: </span>
+          {selections
+            .filter((selection) => selection.selected)
+            .map((selection) => selection.label || t(`booking.${selection.key || ""}`))
+            .join(" · ")}
+        </div>
+      ) : null}
 
       {sections.map((sec) => (
         <div key={sec.key} className="space-y-2">

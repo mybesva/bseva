@@ -1,17 +1,20 @@
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Video } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { useI18n } from "@/i18n/I18nProvider";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 
 type Props = {
   /** When true, also show a subtle checking strip while availability is loading. */
   showChecking?: boolean;
+  virtualHref?: string;
 };
 
-export default function ServiceAvailabilityBanner({ showChecking = true }: Props) {
+export default function ServiceAvailabilityBanner({ showChecking = true, virtualHref }: Props) {
   const { t } = useI18n();
   const { status, checking, refresh } = useServiceAvailability();
+  const { config } = usePublicConfig();
 
   if (status === "available" || status === "idle") return null;
 
@@ -36,11 +39,21 @@ export default function ServiceAvailabilityBanner({ showChecking = true }: Props
           <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
             <MapPin className="h-5 w-5" />
           </div>
-          <div className="min-w-0 space-y-1.5">
+          <div className="min-w-0 space-y-3">
             <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
-              {t("web.availability.comingSoonTitle")}
+              {config.service_area_unavailable_heading?.trim() || t("web.availability.comingSoonTitle")}
             </h2>
-            <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{t("web.availability.comingSoonBody")}</p>
+            <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
+              {config.service_area_unavailable_description?.trim() || t("web.availability.comingSoonBody")}
+            </p>
+            {config.virtual_puja_enabled && virtualHref ? (
+              <Link href={virtualHref}>
+                <Button size="sm" className="font-semibold">
+                  <Video className="h-4 w-4 mr-2" />
+                  {t("web.availability.bookVirtual")}
+                </Button>
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

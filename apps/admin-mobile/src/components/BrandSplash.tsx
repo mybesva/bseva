@@ -2,10 +2,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import * as SplashScreen from "expo-splash-screen";
+import { BrandLockup } from "@/components/BrandLockup";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
-
-const logo = require("../../assets/logo.png");
 
 export function BrandSplash({ children }: { children: ReactNode }) {
   const [done, setDone] = useState(false);
@@ -32,7 +31,9 @@ export function BrandSplash({ children }: { children: ReactNode }) {
       {children}
       {done ? null : (
         <View style={styles.overlay}>
-          <Animated.Image source={logo} resizeMode="contain" style={[styles.logo, anim]} />
+          <Animated.View style={anim}>
+            <BrandLockup markSize={72} light />
+          </Animated.View>
         </View>
       )}
     </View>
@@ -46,9 +47,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 99,
-  },
-  logo: {
-    width: 280,
-    height: 280,
   },
 });

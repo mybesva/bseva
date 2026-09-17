@@ -22,10 +22,18 @@ import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
-import { downloadSamagriListForBooking } from "@/lib/downloadSamagriList";
-import { Download } from "lucide-react";
+import {
+  downloadSamagriListForBooking,
+  printSamagriListForBooking,
+  shareSamagriListForBooking,
+  samagriExportLabels,
+} from "@/lib/downloadSamagriList";
+import { formatPujaDuration } from "@bseva/locales";
+import { Download, Printer, Share2 } from "lucide-react";
 import { mapsDirectionsUrl, mapsSearchUrl } from "@/lib/googleMaps";
 import { pujariTeamAcceptNotice, pujariTeamPaymentNotice, pujarisIncludedShort } from "@/lib/pujariTeam";
+import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
+import { shareSafely } from "@/lib/browserActions";
 
 export type BookingDetail = {
   id: string;
@@ -73,6 +81,14 @@ export type BookingDetail = {
   pujari_payment_notice?: string | null;
   invoice_id?: string | null;
   invoice_number?: string | null;
+  customer_display_status?: string;
+  awaiting_pujari_assignment?: boolean;
+  admin_assignment_required?: boolean;
+  eligible_pujari_found?: boolean;
+  duration_minutes?: number | null;
+  service_id?: string;
+  service_slug?: string;
+  virtual_available?: boolean;
 };
 
 function statusColor(status: string) {
@@ -107,7 +123,7 @@ type Props = {
 };
 
 export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, compact, initialIntent }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user } = useAuth();
   const viewerRole = role || (user?.role === "pujari" ? "pujari" : user?.role === "admin" || user?.role === "super_admin" ? "admin" : "customer");
   const [booking, setBooking] = useState<BookingDetail | null>(
@@ -141,6 +157,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const [cancelReason, setCancelReason] = useState("");
   const [cancelPreview, setCancelPreview] = useState<any>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const samagriLabels = samagriExportLabels(t);
 
   async function load() {
     setLoading(true);
@@ -160,7 +177,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         setCompleteOtp(null);
       }
     } catch (e: any) {
-      toast.error(e.message || "Could not load booking");
+      toast.error(e.message || t("web.booking.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -218,14 +235,14 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         onUpdated?.();
       }
     } catch (e: any) {
-      toast.error(e.message || "Action failed");
+      toast.error(e.message || t("web.booking.actionFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   if (!booking && loading) {
-    return <p className="text-sm text-muted-foreground">Loading booking…</p>;
+    return <p className="text-sm text-muted-foreground">{t("mobile.loading")}</p>;
   }
   if (!booking) return null;
 
@@ -234,6 +251,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const gst = Number(booking.gst_amount_paise || 0);
   const total = Number(booking.total_paise || 0);
   const status = booking.status;
+  const displayStatus =
+    viewerRole === "customer" ? booking.customer_display_status || status : status;
+  const displayStatusLabel =
+    viewerRole === "customer" && displayStatus === "confirmed"
+      ? t("web.booking.confirmed")
+      : t(`status.${displayStatus}`);
   const canAccept =
     viewerRole === "pujari" && ["pending", "pending_acceptance"].includes(status);
   const canCancelBooking =
@@ -252,7 +275,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   async function downloadSamagri() {
     try {
       setBusy(true);
-      await downloadSamagriListForBooking(bookingId);
+      await downloadSamagriListForBooking(bookingId, samagriLabels);
       toast.success(t("web.booking.samagriDownloaded"));
     } catch (e: any) {
       toast.error(e?.message || t("web.booking.samagriDownloadFailed"));
@@ -288,8 +311,14 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
+      {viewerRole === "customer" ? (
+        <PrintableBSevaHeader
+          documentTitle={t("web.booking.detailsReceipt")}
+          reference={booking.booking_number}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className={statusColor(status)}>{t(`status.${status}`)}</Badge>
+        <Badge className={`${statusColor(displayStatus)} print:hidden`}>{displayStatusLabel}</Badge>
         {booking.mode && <Badge variant="outline">{t(`booking.${booking.mode === "physical" ? "physical" : booking.mode}`)}</Badge>}
         {booking.package_type && <Badge variant="secondary">{t(`booking.${booking.package_type}`)}</Badge>}
         {viewerRole === "pujari" && samagriSelected && (
@@ -334,7 +363,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
       {viewerRole === "customer" &&
         booking.mode !== "virtual" &&
-        status === "confirmed" && (
+        Boolean(booking.pujari_id) &&
+        ["confirmed", "in_progress"].includes(status) && (
           <PujariLiveTrackCard
             bookingId={bookingId}
             destinationLat={booking.latitude}
@@ -367,6 +397,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               {formatDisplayDate(booking.booking_date)} {booking.start_time || ""}
             </div>
           </div>
+          {booking.duration_minutes ? (
+            <div>
+              <div className="text-muted-foreground">{t("services.duration")}</div>
+              <div className="font-medium">{formatPujaDuration(lang, booking.duration_minutes)}</div>
+            </div>
+          ) : null}
           <div>
             <div className="text-muted-foreground">{viewerRole === "pujari" ? t("auth.customer") : t("auth.pujari")}</div>
             <div className="font-medium">
@@ -482,6 +518,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
               </div>
             )}
+            {Number(booking.food_charge_paise || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t("booking.food")}</span>
+                <span>{rupees(Number(booking.food_charge_paise))}</span>
+              </div>
+            )}
             <div className="flex justify-between font-semibold text-primary border-t border-border pt-1.5">
               <span>{t("web.earnings.title")}</span>
               <span>
@@ -511,6 +553,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("booking.alankaram")}</span>
                 <span>{rupees(Number(booking.alankaram_charge_paise))}</span>
+              </div>
+            )}
+            {Number(booking.food_charge_paise || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t("booking.food")}</span>
+                <span>{rupees(Number(booking.food_charge_paise))}</span>
               </div>
             )}
             {Number(booking.peak_fee_paise || 0) > 0 && (
@@ -599,7 +647,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                   preparation={booking.preparation}
                   compact
                   interactive={false}
-                  title="Samagri list for this booking"
+                  title={t("mobile.samagriList")}
                 />
               ) : Array.isArray(booking.samagri) && booking.samagri.length > 0 ? (
                 <ul className="list-disc pl-5 text-sm space-y-0.5">
@@ -609,12 +657,16 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 </ul>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Samagri details will appear here once confirmed for this puja.
+                  {t("web.preparation.pending")}
                 </p>
               )}
               <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void downloadSamagri()}>
                 <Download className="h-4 w-4 mr-2" />
-                Download Samagri list
+                {t("web.booking.downloadSamagri")}
+              </Button>
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void printSamagriListForBooking(bookingId, samagriLabels)}>
+                <Printer className="h-4 w-4 mr-2" />
+                {t("web.preparation.print")}
               </Button>
             </div>
           )}
@@ -654,12 +706,16 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               preparation={booking.preparation}
               compact
               interactive={false}
-              title="Samagri for this booking"
+              title={t("mobile.samagriList")}
             />
           ) : null}
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void downloadSamagri()}>
             <Download className="h-4 w-4 mr-2" />
-            Download Samagri list
+            {t("web.booking.downloadSamagri")}
+          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void printSamagriListForBooking(bookingId, samagriLabels)}>
+            <Printer className="h-4 w-4 mr-2" />
+            {t("web.preparation.print")}
           </Button>
         </div>
       )}
@@ -882,6 +938,53 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           {booking.invoice_number ? ` · ${booking.invoice_number}` : ""}
         </Button>
       )}
+
+      {viewerRole === "customer" ? (
+        <div className="flex flex-wrap gap-2 print:hidden">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const text = [
+                "BSeva", t("app.tagline"), "",
+                `${t("booking.id")}: ${booking.booking_number || booking.id}`,
+                `${t("booking.service")}: ${booking.service_name || "—"}`,
+                `${t("common.total")}: ${rupees(total)}`,
+              ].join("\n");
+              const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+              const anchor = document.createElement("a");
+              anchor.href = url;
+              anchor.download = `BSeva-${booking.booking_number || booking.id}.txt`;
+              document.body.appendChild(anchor);
+              anchor.click();
+              anchor.remove();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" /> {t("common.download")}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-2" /> {t("common.print")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const value = `${booking.service_name || t("web.common.puja")} · ${booking.booking_number || booking.id}`;
+              void shareSafely({ title: booking.service_name, text: value, url: window.location.href }).then(
+                (result) => result === "copied" && toast.success(t("web.booking.linkCopied")),
+                (error) => {
+                  if ((error as DOMException)?.name !== "AbortError") toast.error(t("web.booking.shareFailed"));
+                },
+              );
+            }}
+          >
+            <Share2 className="h-4 w-4 mr-2" /> {t("common.share")}
+          </Button>
+        </div>
+      ) : null}
 
       {viewerRole === "customer" && booking.payment_status === "pending" && status !== "cancelled" && (
         <Button

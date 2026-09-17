@@ -1,10 +1,13 @@
 import logging
+import hashlib
+import json
 from datetime import date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -56,6 +59,77 @@ def _post_create_booking_side_effects(booking_id: str, email_payload: dict[str, 
 
 # Stable code for clients — map to a friendly consumer message; never show raw geo errors.
 SERVICE_AREA_UNAVAILABLE = "SERVICE_AREA_UNAVAILABLE"
+
+
+def _booking_idempotency(body: BookingCreateIn, request: Request) -> tuple[str | None, str | None]:
+    header_key = (request.headers.get("Idempotency-Key") or "").strip()
+    body_key = (body.idempotency_key or "").strip()
+    if header_key and body_key and header_key != body_key:
+        raise HTTPException(400, "Idempotency-Key header and body value must match")
+    key = header_key or body_key or None
+    if not key:
+        return None, None
+    if len(key) > 128:
+        raise HTTPException(400, "Idempotency key must be 128 characters or fewer")
+    payload = body.model_dump(mode="json", exclude={"idempotency_key"})
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return key, digest
+
+
+def _existing_idempotent_response(
+    db: Session, customer_id: str, key: str, request_hash: str
+) -> dict[str, Any] | None:
+    row = db.execute(
+        text(
+            """
+            SELECT b.id, b.booking_number, b.total_paise, b.status, b.pujari_id,
+                   b.needs_reassignment, b.idempotency_request_hash, b.idempotency_response,
+                   (SELECT COUNT(*) FROM booking_pujari_offers o
+                    WHERE o.booking_id = b.id) AS offers_sent
+            FROM bookings b
+            WHERE b.customer_id = CAST(:cid AS uuid) AND b.idempotency_key = :key
+            """
+        ),
+        {"cid": customer_id, "key": key},
+    ).mappings().first()
+    if not row:
+        return None
+    if row.get("idempotency_request_hash") and row["idempotency_request_hash"] != request_hash:
+        raise HTTPException(
+            409,
+            detail={
+                "code": "IDEMPOTENCY_KEY_REUSED",
+                "message": "This idempotency key was already used for a different booking request.",
+            },
+        )
+    saved = row.get("idempotency_response")
+    if isinstance(saved, str):
+        saved = json.loads(saved)
+    if saved:
+        response = dict(saved)
+        # This endpoint only persists a successful paid booking response.
+        response["status"] = "confirmed"
+        response["customer_display_status"] = "confirmed"
+        return {**response, "idempotent_replay": True}
+    assigned = row.get("pujari_id") is not None
+    offers_sent = int(row.get("offers_sent") or 0)
+    eligible = assigned or offers_sent > 0
+    assignment_status = (
+        "assigned" if assigned else ("offers_sent" if offers_sent else "admin_assignment_required")
+    )
+    return {
+        "id": str(row["id"]),
+        "booking_number": row["booking_number"],
+        "total_paise": int(row.get("total_paise") or 0),
+        "status": "confirmed",
+        "customer_display_status": "confirmed",
+        "awaiting_pujari_assignment": not assigned,
+        "eligible_pujari_found": eligible,
+        "admin_assignment_required": not eligible,
+        "assignment_status": assignment_status,
+        "offers_sent": offers_sent,
+        "idempotent_replay": True,
+    }
 
 
 @router.get("/panchang")
@@ -494,6 +568,20 @@ def create_booking(
 ):
     from app.platform_config import get_setting
 
+    idempotency_key, idempotency_hash = _booking_idempotency(body, request)
+    if idempotency_key:
+        # Serialize same-customer/same-key requests. The unique partial index is
+        # the final guard; this lock avoids a concurrent transaction abort.
+        db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:scope, 0))"),
+            {"scope": f"{user['id']}:{idempotency_key}"},
+        )
+        replay = _existing_idempotent_response(
+            db, str(user["id"]), idempotency_key, str(idempotency_hash)
+        )
+        if replay:
+            return replay
+
     if not body.terms_accepted:
         raise HTTPException(400, "Please accept the Terms & Conditions and Cancellation Policy")
     svc = db.execute(
@@ -538,7 +626,13 @@ def create_booking(
         except Exception:
             raise HTTPException(503, "Unable to verify service availability. Please try again.")
         if not area_ok:
-            raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
+            from app.i18n import coded_http, customer_error_message, resolve_request_lang
+
+            raise coded_http(
+                400,
+                SERVICE_AREA_UNAVAILABLE,
+                customer_error_message(SERVICE_AREA_UNAVAILABLE, resolve_request_lang(request=request)),
+            )
 
     # Per-puja minimum booking notice (default 48h / 2 days)
     lead_hours = int(svc.get("booking_lead_hours") if svc.get("booking_lead_hours") is not None else 48)
@@ -640,7 +734,13 @@ def create_booking(
             if not pujari_covers_location(
                 db, str(body.pujari_id), float(body.latitude), float(body.longitude), SERVICE_RADIUS_KM
             ):
-                raise HTTPException(400, SERVICE_AREA_UNAVAILABLE)
+                from app.i18n import coded_http, customer_error_message, resolve_request_lang
+
+                raise coded_http(
+                    400,
+                    SERVICE_AREA_UNAVAILABLE,
+                    customer_error_message(SERVICE_AREA_UNAVAILABLE, resolve_request_lang(request=request)),
+                )
 
         from app.domain import pujari_blocked_on_slot
 
@@ -715,11 +815,15 @@ def create_booking(
     initial_status = "pending_acceptance"
     needs_reassignment = not has_pujari
     # Paid bookings: with pujari → that pujari accepts; without → broadcast offers within 10 km
-    db.execute(
-        text(
-            """
+    try:
+        # The advisory lock is the fast path. The savepoint is the final guard
+        # for deployments/proxies where concurrent sessions still reach INSERT.
+        with db.begin_nested():
+            db.execute(
+                text(
+                    """
             INSERT INTO bookings (
-              id, booking_number, customer_id, pujari_id, service_id, package_type, mode,
+              id, booking_number, customer_id, pujari_id, service_id, package_type, mode, booking_kind,
               booking_date, start_time, end_time, location_label, address, latitude, longitude,
               meeting_url, status, payment_status, settlement_status, rating_status,
               base_price_paise, peak_fee_paise, platform_fee_paise, pujari_payable_paise,
@@ -727,18 +831,19 @@ def create_booking(
               main_puja_charge_paise, samagri_charge_paise, alankaram_charge_paise, food_charge_paise,
               pujari_reimbursement_paise, samagri_requested, alankaram_requested, food_requested,
               needs_reassignment, pujaris_required,
-              customer_timezone, customer_country, start_at_utc, virtual_price_tier
+              customer_timezone, customer_country, start_at_utc, virtual_price_tier,
+              idempotency_key, idempotency_request_hash
             ) VALUES (
-              CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode,
+              CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode, 'puja',
               :d, :st, :et, :loc, :addr, :lat, :lng, :meet, :bstatus, 'paid', 'pending', 'not_applicable',
               :base, :peak, :plat, :payable, :gstp, :gsta, :total, TRUE, :instr,
               :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq,
               :needs_reassign, :team,
-              :ctz, :ccountry, :start_utc, :vtier
+              :ctz, :ccountry, :start_utc, :vtier, :ikey, :ihash
             )
-            """
-        ),
-        {
+                    """
+                ),
+                {
             "id": booking_id,
             "num": number,
             "cid": user["id"],
@@ -777,8 +882,19 @@ def create_booking(
             "ccountry": (body.customer_country or "").upper() if body.mode == "virtual" else None,
             "start_utc": start_at_utc,
             "vtier": bill.get("virtualPriceTier"),
-        },
-    )
+            "ikey": idempotency_key,
+                    "ihash": idempotency_hash,
+                },
+            )
+    except IntegrityError:
+        if not idempotency_key:
+            raise
+        replay = _existing_idempotent_response(
+            db, str(user["id"]), idempotency_key, str(idempotency_hash)
+        )
+        if replay:
+            return replay
+        raise
     try:
         apply_wallet(db, str(user["id"]), -total, "debit", f"Booking {number}", booking_id, number)
     except ValueError as e:
@@ -876,7 +992,7 @@ def create_booking(
                 "food_prasadam_paise": int(bill.get("foodPrasadam") or 0),
                 "total_paise": int(bill.get("total") or bill.get("totalPaise") or total or 0),
                 "payment_status": "paid",
-                "booking_status": "pending_acceptance",
+                "booking_status": "confirmed",
             }
     except Exception:
         email_payload = None
@@ -884,7 +1000,6 @@ def create_booking(
     series_id = None
     next_dates: list[str] = []
     if has_pujari and body.recurring and body.recurring != "none":
-        import json
         from datetime import timedelta as td
         from app.pricing import compute_quote
 
@@ -1136,17 +1251,22 @@ def create_booking(
             )
     except Exception:
         logger.exception("booking_post_create_notifications_failed booking=%s", booking_id)
-    db.commit()
-    background_tasks.add_task(_post_create_booking_side_effects, booking_id, email_payload)
-    return {
+    response = {
         "id": booking_id,
         "booking_number": number,
         "total_paise": total,
         "meeting_url": meeting,
         "public_invite_url": public_invite,
-        "status": initial_status,
+        "status": "confirmed",
+        "customer_display_status": "confirmed",
         "awaiting_pujari_assignment": not has_pujari,
+        "eligible_pujari_found": bool(has_pujari or invited_pujari_ids),
+        "admin_assignment_required": not has_pujari and not invited_pujari_ids,
+        "assignment_status": (
+            "assigned" if has_pujari else ("offers_sent" if invited_pujari_ids else "admin_assignment_required")
+        ),
         "offers_sent": len(invited_pujari_ids) if not has_pujari else 0,
+        "duration_minutes": duration,
         "recurring_series_id": series_id,
         "recurring_next_dates": next_dates,
         "breakdown": {
@@ -1159,6 +1279,19 @@ def create_booking(
         },
         "recommended_list_email": "queued" if email_payload else "skipped",
     }
+    if idempotency_key:
+        db.execute(
+            text(
+                """
+                UPDATE bookings SET idempotency_response = CAST(:response AS jsonb)
+                WHERE id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": booking_id, "response": json.dumps(response, default=str)},
+        )
+    db.commit()
+    background_tasks.add_task(_post_create_booking_side_effects, booking_id, email_payload)
+    return response
 
 
 
@@ -1173,7 +1306,9 @@ def admin_booking_filters(
     payment_status: str | None = None,
 ) -> tuple[str, dict]:
     """SQL AND-clauses + bind params for the admin booking list."""
-    extra = ""
+    # Consultations live exclusively in muhurta_consultations. Every bookings
+    # list represents a puja, including a physical puja linked to a consultation.
+    extra = " AND COALESCE(b.booking_kind, 'puja') = 'puja' "
     params: dict = {}
     mode_n = (mode or "").strip().lower()
     if mode_n == "virtual":
@@ -1287,7 +1422,7 @@ def list_bookings(
             text(
                 f"""
                 SELECT b.*, cu.name AS customer_name, pu.name AS pujari_name, s.name AS service_name,
-                       cu.email AS customer_email
+                       s.duration_minutes, cu.email AS customer_email
                 FROM bookings b
                 JOIN users cu ON cu.id = b.customer_id
                 LEFT JOIN users pu ON pu.id = b.pujari_id
@@ -1350,13 +1485,16 @@ def list_bookings(
                     FROM bookings b
                     LEFT JOIN booking_pujari_offers o
                       ON o.booking_id = b.id AND o.pujari_id = CAST(:id AS uuid) AND o.status = 'invited'
-                    WHERE b.pujari_id = CAST(:id AS uuid)
-                       OR (
+                    WHERE COALESCE(b.booking_kind, 'puja') = 'puja'
+                      AND (
+                        b.pujari_id = CAST(:id AS uuid)
+                        OR (
                          b.pujari_id IS NULL
                          AND o.id IS NOT NULL
                          AND b.status IN ('pending', 'pending_acceptance')
                          AND b.payment_status = 'paid'
-                       )
+                        )
+                      )
                     """
                 ),
                 {"id": pid},
@@ -1366,20 +1504,23 @@ def list_bookings(
         rows = db.execute(
             text(
                 """
-                SELECT b.*, cu.name AS customer_name, s.name AS service_name,
+                SELECT b.*, cu.name AS customer_name, s.name AS service_name, s.duration_minutes,
                        o.status AS offer_status, o.distance_km AS offer_distance_km
                 FROM bookings b
                 JOIN users cu ON cu.id = b.customer_id
                 JOIN services s ON s.id = b.service_id
                 LEFT JOIN booking_pujari_offers o
                   ON o.booking_id = b.id AND o.pujari_id = CAST(:id AS uuid) AND o.status = 'invited'
-                WHERE b.pujari_id = CAST(:id AS uuid)
-                   OR (
+                WHERE COALESCE(b.booking_kind, 'puja') = 'puja'
+                  AND (
+                    b.pujari_id = CAST(:id AS uuid)
+                    OR (
                      b.pujari_id IS NULL
                      AND o.id IS NOT NULL
                      AND b.status IN ('pending', 'pending_acceptance')
                      AND b.payment_status = 'paid'
-                   )
+                    )
+                  )
                 ORDER BY b.booking_date ASC, b.start_time ASC NULLS LAST, b.created_at DESC
                 LIMIT :lim OFFSET :off
                 """
@@ -1407,11 +1548,12 @@ def list_bookings(
         rows = db.execute(
             text(
                 """
-                SELECT b.*, pu.name AS pujari_name, s.name AS service_name
+                SELECT b.*, pu.name AS pujari_name, s.name AS service_name, s.duration_minutes
                 FROM bookings b
                 LEFT JOIN users pu ON pu.id = b.pujari_id
                 JOIN services s ON s.id = b.service_id
                 WHERE b.customer_id = :id
+                  AND COALESCE(b.booking_kind, 'puja') = 'puja'
                 ORDER BY b.created_at DESC
                 LIMIT :lim OFFSET :off
                 """

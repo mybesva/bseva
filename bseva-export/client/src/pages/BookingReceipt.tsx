@@ -4,15 +4,18 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { api, rupees } from "@/lib/api";
+import { api, downloadInvoicePdf, rupees } from "@/lib/api";
 import { formatDisplayDate, formatDisplaySlot } from "@/lib/formatDate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2, Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { useI18n } from "@/i18n/I18nProvider";
+import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
+import { shareSafely } from "@/lib/browserActions";
+import { formatPujaDuration } from "@bseva/locales";
 
 function statusColor(status: string) {
   switch (status) {
@@ -34,7 +37,7 @@ function statusColor(status: string) {
 }
 
 export default function BookingReceipt() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const params = useParams<{ id: string }>();
   const search = useSearch();
   const qs = new URLSearchParams(search);
@@ -61,7 +64,9 @@ export default function BookingReceipt() {
     }
     setLoading(true);
     api<any>(`/bookings/${encodeURIComponent(idOrNumber)}`)
-      .then(setBooking)
+      .then((row) => {
+        setBooking(row);
+      })
       .catch((e) => {
         toast.error(e.message || t("web.booking.loadFailed"));
         setBooking(null);
@@ -91,6 +96,9 @@ export default function BookingReceipt() {
   }
 
   const showPujari = booking.pujari_details_visible === true && !!booking.pujari_name;
+  const displayStatus = String(booking.customer_display_status || booking.status || "pending");
+  const displayStatusLabel =
+    displayStatus === "confirmed" ? t("web.booking.confirmed") : t(`status.${displayStatus}`);
   const slot = formatDisplaySlot(booking.booking_date, booking.start_time);
   const canCancel =
     user?.role === "customer" &&
@@ -114,15 +122,57 @@ export default function BookingReceipt() {
     }
   }
 
+  async function shareReceipt() {
+    const data = {
+      title: t("web.booking.receipt"),
+      text: `${booking.service_name} · ${booking.booking_number}`,
+      url: window.location.href,
+    };
+    try {
+      const result = await shareSafely(data);
+      if (result === "copied") toast.success(t("web.booking.linkCopied"));
+    } catch (error) {
+      if ((error as DOMException)?.name !== "AbortError") toast.error(t("web.booking.shareFailed"));
+    }
+  }
+
+  function downloadReceipt() {
+    const text = [
+      "BSeva",
+      t("app.tagline"),
+      "",
+      `${t("web.booking.receipt")}: ${booking.booking_number}`,
+      `${t("booking.service")}: ${booking.service_name}`,
+      `${t("web.booking.slot")}: ${slot}`,
+      booking.duration_minutes ? `${t("web.booking.pujaDuration")}: ${formatPujaDuration(lang, booking.duration_minutes)}` : "",
+      `${t("common.total")}: ${rupees(booking.total_paise)}`,
+    ].filter(Boolean).join("\n");
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `BSeva-${booking.booking_number || "booking"}.txt`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <Layout>
       <div className="container max-w-3xl py-10 print:py-4">
+        <PrintableBSevaHeader documentTitle={t("web.booking.receipt")} reference={booking.booking_number} />
         <div className="flex flex-wrap gap-2 mb-6 print:hidden">
           <Button variant="outline" size="sm" onClick={() => setLocation("/customer/bookings")}>
             <ArrowLeft className="w-4 h-4 mr-1" /> {t("nav.bookings")}
           </Button>
           <Button size="sm" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-1" /> {t("web.booking.printReceipt")}
+          </Button>
+          <Button size="sm" variant="outline" onClick={downloadReceipt}>
+            <Download className="w-4 h-4 mr-1" /> {t("common.download")}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void shareReceipt()}>
+            <Share2 className="w-4 h-4 mr-1" /> {t("common.share")}
           </Button>
           {canCancel && (
             <Button size="sm" variant="destructive" onClick={() => void cancelBooking()}>
@@ -138,8 +188,8 @@ export default function BookingReceipt() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("web.booking.receipt")}</p>
                 <CardTitle className="text-2xl mt-1">{booking.service_name || t("web.common.puja")}</CardTitle>
               </div>
-              <Badge className={statusColor(String(booking.status ||""))}>
-                {t(`status.${String(booking.status || "pending")}`)}
+              <Badge className={`${statusColor(displayStatus)} print:hidden`}>
+                {displayStatusLabel}
               </Badge>
             </div>
           </CardHeader>
@@ -173,6 +223,12 @@ export default function BookingReceipt() {
                 </p>
                 <p className="font-medium">{booking.start_time ||"—"}</p>
               </div>
+              {booking.duration_minutes ? (
+                <div>
+                  <p className="text-muted-foreground">{t("web.booking.pujaDuration")}</p>
+                  <p className="font-medium">{formatPujaDuration(lang, booking.duration_minutes)}</p>
+                </div>
+              ) : null}
               <div className="sm:col-span-2">
                 <p className="text-muted-foreground">{t("web.booking.slot")}</p>
                 <p className="font-semibold text-base">{slot}</p>
@@ -192,7 +248,7 @@ export default function BookingReceipt() {
               </div>
             </div>
 
-            <div className="rounded-lg border p-4 space-y-2">
+            <div className="rounded-lg border p-4 space-y-2 print:hidden">
               <h3 className="font-semibold">{t("booking.payment")}</h3>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("common.status")}</span>
@@ -214,6 +270,12 @@ export default function BookingReceipt() {
                   <span>{rupees(booking.alankaram_charge_paise)}</span>
                 </div>
               )}
+              {Number(booking.food_charge_paise || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("booking.food")}</span>
+                  <span>{rupees(booking.food_charge_paise)}</span>
+                </div>
+              )}
               {Number(booking.peak_fee_paise || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t("booking.peakFee")}</span>
@@ -225,7 +287,7 @@ export default function BookingReceipt() {
                 <span>{rupees(booking.platform_fee_paise)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">GST ({booking.gst_percent ?? 18}%)</span>
+                <span className="text-muted-foreground">{t("booking.gst")} ({booking.gst_percent ?? 18}%)</span>
                 <span>{rupees(booking.gst_amount_paise)}</span>
               </div>
               <div className="flex justify-between font-semibold border-t pt-2">
@@ -234,16 +296,12 @@ export default function BookingReceipt() {
               </div>
             </div>
 
-            <div className="rounded-lg border p-4 space-y-2">
-              <h3 className="font-semibold">{t("web.booking.status")}</h3>
-              <p>{t(`status.${String(booking.status || "pending")}`)}</p>
-              {booking.special_instructions && (
-                <div>
-                  <p className="text-muted-foreground text-xs">{t("booking.special")}</p>
-                  <p>{booking.special_instructions}</p>
-                </div>
-              )}
-            </div>
+            {booking.special_instructions ? (
+              <div className="rounded-lg border p-4 space-y-2">
+                <h3 className="font-semibold">{t("booking.special")}</h3>
+                <p>{booking.special_instructions}</p>
+              </div>
+            ) : null}
 
             <div className="rounded-lg border p-4 space-y-2">
               <h3 className="font-semibold">{t("booking.pujari")}</h3>
@@ -262,7 +320,8 @@ export default function BookingReceipt() {
 
             {user?.role === "customer" &&
               booking.mode !== "virtual" &&
-              ["confirmed"].includes(String(booking.status || "")) && (
+              Boolean(booking.pujari_id) &&
+              ["confirmed", "in_progress"].includes(String(booking.status || "")) && (
                 <div className="print:hidden">
                   <PujariLiveTrackCard
                     bookingId={String(booking.id)}
@@ -295,6 +354,14 @@ export default function BookingReceipt() {
               <Button variant="outline" onClick={() => setLocation("/customer/bookings")}>
                 {t("web.booking.backToBookings")}
               </Button>
+              {booking.invoice_id && booking.payment_status === "paid" ? (
+                <Button
+                  variant="outline"
+                  onClick={() => void downloadInvoicePdf(String(booking.invoice_id)).catch((e) => toast.error(e.message))}
+                >
+                  <Download className="w-4 h-4 mr-1" /> {t("invoice.download")}
+                </Button>
+              ) : null}
             </div>
           </CardContent>
         </Card>

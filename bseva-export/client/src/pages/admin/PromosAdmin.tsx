@@ -136,7 +136,9 @@ function PromoImageField({
   return (
     <Field label="Image" required hint={hint || "The picture people will see. JPG, PNG, WebP, or GIF up to 8MB."}>
       {value ? (
-        <img src={mediaSrc(value)} alt="" className="h-28 w-full object-cover rounded-md border bg-muted" />
+        <div className="aspect-[16/7] w-full overflow-hidden rounded-md border bg-muted">
+          <img src={mediaSrc(value)} alt="" className="h-full w-full object-contain" />
+        </div>
       ) : (
         <div className="h-28 w-full rounded-md border border-dashed bg-muted/30 flex items-center justify-center text-xs text-muted-foreground">
           No image selected
@@ -489,6 +491,28 @@ export default function PromosAdmin() {
             >
               <AudienceSelect value={bannerForm.audience} onChange={(audience) => setBannerForm({ ...bannerForm, audience })} />
             </Field>
+            <Field
+              label="Subtitle"
+              hint="Optional supporting text shown below the title."
+            >
+              <Input
+                value={bannerForm.subtitle || ""}
+                onChange={(e) => setBannerForm({ ...bannerForm, subtitle: e.target.value })}
+                placeholder="Limited-time offer"
+              />
+            </Field>
+            <Field
+              label="Display order"
+              hint="Lower numbers appear first when multiple banners are active."
+            >
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={bannerForm.display_order}
+                onChange={(e) => setBannerForm({ ...bannerForm, display_order: Number(e.target.value || 0) })}
+              />
+            </Field>
             <PromoImageField
               value={bannerForm.image_url || ""}
               onChange={(image_url) => setBannerForm({ ...bannerForm, image_url })}
@@ -529,6 +553,7 @@ export default function PromosAdmin() {
               <TableRow>
                 <TableHead>Title</TableHead>
                 <TableHead>Who sees it</TableHead>
+                <TableHead>Order</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
@@ -536,7 +561,7 @@ export default function PromosAdmin() {
             <TableBody>
               {banners.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
                     No banners yet.
                   </TableCell>
                 </TableRow>
@@ -545,6 +570,7 @@ export default function PromosAdmin() {
                   <TableRow key={b.id}>
                     <TableCell>{b.title}</TableCell>
                     <TableCell className="capitalize">{b.audience === "all" ? "All" : b.audience}</TableCell>
+                    <TableCell>{b.display_order}</TableCell>
                     <TableCell>
                       {b.active ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
                     </TableCell>

@@ -68,12 +68,14 @@ def get_booking(booking_id: str, user=Depends(current_user), db: Session = Depen
             text(
                 """
                 SELECT b.*, cu.name AS customer_name, cu.phone AS customer_phone, cu.email AS customer_email,
-                       pu.name AS pujari_name, pu.phone AS pujari_phone, s.name AS service_name, s.slug AS service_slug
+                       pu.name AS pujari_name, pu.phone AS pujari_phone, s.name AS service_name,
+                       s.slug AS service_slug, s.duration_minutes
                 FROM bookings b
                 JOIN users cu ON cu.id = b.customer_id
                 LEFT JOIN users pu ON pu.id = b.pujari_id
                 JOIN services s ON s.id = b.service_id
                 WHERE b.id = CAST(:id AS uuid)
+                  AND COALESCE(b.booking_kind, 'puja') = 'puja'
                 """
             ),
             {"id": booking_id},
@@ -85,12 +87,14 @@ def get_booking(booking_id: str, user=Depends(current_user), db: Session = Depen
             text(
                 """
                 SELECT b.*, cu.name AS customer_name, cu.phone AS customer_phone, cu.email AS customer_email,
-                       pu.name AS pujari_name, pu.phone AS pujari_phone, s.name AS service_name, s.slug AS service_slug
+                       pu.name AS pujari_name, pu.phone AS pujari_phone, s.name AS service_name,
+                       s.slug AS service_slug, s.duration_minutes
                 FROM bookings b
                 JOIN users cu ON cu.id = b.customer_id
                 LEFT JOIN users pu ON pu.id = b.pujari_id
                 JOIN services s ON s.id = b.service_id
                 WHERE b.booking_number = :num
+                  AND COALESCE(b.booking_kind, 'puja') = 'puja'
                 """
             ),
             {"num": booking_id},
@@ -122,12 +126,24 @@ def get_booking(booking_id: str, user=Depends(current_user), db: Session = Depen
 @router.get("/bookings/{booking_id}/preparation")
 def booking_preparation(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
     row = db.execute(
-        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
+        text(
+            """
+            SELECT * FROM bookings
+            WHERE id = CAST(:id AS uuid)
+              AND COALESCE(booking_kind, 'puja') = 'puja'
+            """
+        ),
         {"id": booking_id},
     ).mappings().first()
     if not row:
         row = db.execute(
-            text("SELECT * FROM bookings WHERE booking_number = :num"),
+            text(
+                """
+                SELECT * FROM bookings
+                WHERE booking_number = :num
+                  AND COALESCE(booking_kind, 'puja') = 'puja'
+                """
+            ),
             {"num": booking_id},
         ).mappings().first()
     if not row:
@@ -1163,6 +1179,7 @@ def pujari_tracking_assignments(user=Depends(require_roles("pujari", "head_pujar
             WHERE pujari_id = CAST(:pid AS uuid)
               AND status = 'confirmed'
               AND COALESCE(mode, 'in_person') <> 'virtual'
+              AND COALESCE(booking_kind, 'puja') = 'puja'
             ORDER BY booking_date, start_time
             """
         ),
@@ -1387,6 +1404,16 @@ def public_config(db: Session = Depends(get_db)):
 
     return {
         "virtual_puja_enabled": bool(get_setting(db, "virtual_puja_enabled", False)),
+        "service_area_unavailable_heading": str(
+            get_setting(db, "service_area_unavailable_heading", "BSeva is not available in this area yet")
+        ),
+        "service_area_unavailable_description": str(
+            get_setting(
+                db,
+                "service_area_unavailable_description",
+                "We could not find an eligible BSeva pujari near this location. Please try another address or check again soon.",
+            )
+        ),
         "customer_timezones": __import__("app.timezones", fromlist=["CUSTOMER_TIMEZONES"]).CUSTOMER_TIMEZONES,
         "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919014654994")),
         "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 20)),

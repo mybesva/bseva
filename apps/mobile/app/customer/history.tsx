@@ -22,7 +22,7 @@ export default function HistoryScreen() {
           <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
             <Card>
               <AppText variant="h3">{b.service_name}</AppText>
-              <StatusBadge status={b.status} />
+              <StatusBadge status={b.customer_display_status || b.status} />
               <AppText variant="small">{formatDisplayDate(b.booking_date)}</AppText>
             </Card>
           </Pressable>

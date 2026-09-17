@@ -41,7 +41,7 @@ def company_snapshot(db: Session) -> dict[str, str]:
         "gstin": _s(db, "invoice_gstin", ""),
         "pan": _s(db, "invoice_pan", ""),
         "website": _s(db, "invoice_website", "www.b-seva.com"),
-        "logo_path": _s(db, "invoice_logo_path", ""),
+        "logo_path": _s(db, "invoice_logo_path", "/bseva-mark.png"),
         "prefix_customer": _s(db, "invoice_prefix_customer", "BSEVA"),
         "prefix_settlement": _s(db, "invoice_prefix_settlement", "INV-S"),
         "signatory_name": _s(db, "invoice_signatory_name", ""),
@@ -74,6 +74,19 @@ def company_block(db: Session) -> dict[str, str]:
 def paise_inr(paise: int | None) -> str:
     v = (paise or 0) / 100.0
     return f"₹{v:,.2f}"
+
+
+def format_duration_minutes(minutes: int | None) -> str:
+    if minutes is None:
+        return ""
+    total = max(0, int(minutes))
+    hours, remaining = divmod(total, 60)
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours} Hour" + ("" if hours == 1 else "s"))
+    if remaining or not parts:
+        parts.append(f"{remaining} Minute" + ("" if remaining == 1 else "s"))
+    return " ".join(parts)
 
 
 def indian_fy(d: date | None = None) -> str:
@@ -224,15 +237,17 @@ def _customer_bill_to(db: Session, booking: dict) -> dict[str, str]:
     }
 
 
-def _service_name(db: Session, booking: dict) -> str:
+def _service_snapshot(db: Session, booking: dict) -> tuple[str, int | None]:
     sid = booking.get("service_id")
     if not sid:
-        return "Puja"
-    name = db.execute(
-        text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"),
+        return "Puja", None
+    row = db.execute(
+        text("SELECT name, duration_minutes FROM services WHERE id = CAST(:id AS uuid)"),
         {"id": str(sid)},
-    ).scalar()
-    return str(name or "Puja")
+    ).mappings().first()
+    return str((row or {}).get("name") or "Puja"), (
+        int(row["duration_minutes"]) if row and row.get("duration_minutes") is not None else None
+    )
 
 
 def _customer_lines(booking: dict, service_name: str, sac: str, hsn: str) -> list[dict[str, Any]]:
@@ -378,7 +393,7 @@ def create_customer_invoice(db: Session, *, booking: dict, user_id: str) -> str 
 
     company = company_snapshot(db)
     bill_to = _customer_bill_to(db, booking)
-    service_name = _service_name(db, booking)
+    service_name, duration_minutes = _service_snapshot(db, booking)
     lines = _customer_lines(booking, service_name, company["sac_code"], company["hsn_code"])
     taxable = sum(int(x["taxable_paise"]) for x in lines)
     gst_amt = int(booking.get("gst_amount_paise") or 0)
@@ -402,6 +417,7 @@ def create_customer_invoice(db: Session, *, booking: dict, user_id: str) -> str 
         "booking_id": bid,
         "booking_number": booking.get("booking_number"),
         "service_name": service_name,
+        "duration_minutes": duration_minutes,
         "package_type": booking.get("package_type"),
         "booking_date": str(booking.get("booking_date") or ""),
         "start_time": str(booking.get("start_time") or ""),
@@ -592,6 +608,41 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     )
     brand = html.escape(str(company.get("brand_name") or "BSeva"))
     legal = html.escape(str(company.get("legal_name") or company.get("name") or "BSeva"))
+    raw_logo = str(company.get("logo_path") or "/bseva-mark.png")
+    if raw_logo.rstrip("/").endswith(("bseva-logo-transparent.png", "bseva-logo.png")):
+        raw_logo = "/bseva-mark.png"
+    logo_path = html.escape(raw_logo, quote=True)
+    logo = (
+        "<div class='brand-lockup'>"
+        "<div class='brand-name'>"
+        f"<img class='brand-mark' src='{logo_path}' alt='{brand}'/>"
+        "<span class='brand-word'><span class='brand-hyphen'>-</span>Seva</span>"
+        "</div>"
+        "<div class='brand-motto'>Book, Believe, Bless</div>"
+        "</div>"
+    )
+    duration = snap.get("duration_minutes")
+    if duration is None:
+        bid = inv.get("booking_id") or snap.get("booking_id")
+        if bid:
+            booking_row = db.execute(
+                text(
+                    """
+                    SELECT s.duration_minutes
+                    FROM bookings b
+                    JOIN services s ON s.id = b.service_id
+                    WHERE CAST(b.id AS text) = :id
+                    """
+                ),
+                {"id": str(bid)},
+            ).first()
+            if booking_row and booking_row[0] is not None:
+                duration = booking_row[0]
+    duration_line = (
+        f"<br/><strong>Puja Duration:</strong> {html.escape(format_duration_minutes(duration))}"
+        if duration is not None
+        else ""
+    )
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"/>
 <title>{html.escape(str(inv.get('invoice_number') or ''))}</title>
@@ -600,6 +651,12 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
 body {{ font-family: 'Segoe UI', Helvetica, Arial, sans-serif; color: {NAVY}; margin: 0; font-size: 12px; }}
 .wrap {{ max-width: 210mm; margin: 0 auto; padding: 12px 8px 24px; }}
 .top {{ display: flex; justify-content: space-between; border-bottom: 3px solid {ORANGE}; padding-bottom: 12px; }}
+.brand-lockup {{ margin-bottom: 6px; }}
+.brand-name {{ display: flex; align-items: center; }}
+.brand-mark {{ display: block; width: 48px; height: 48px; object-fit: contain; }}
+.brand-word {{ font-size: 26px; font-weight: 800; color: {ORANGE}; line-height: 1; }}
+.brand-hyphen {{ color: {NAVY}; }}
+.brand-motto {{ font-size: 11px; font-style: italic; color: {NAVY}; margin-top: 4px; }}
 h1 {{ margin: 0; font-size: 22px; letter-spacing: .04em; }}
 .legal {{ color: #334; font-size: 12px; margin-top: 2px; }}
 .muted {{ color: #555; line-height: 1.45; }}
@@ -620,7 +677,7 @@ th {{ background: {NAVY}; color: #fff; font-weight: 600; font-size: 11px; }}
   <p class="noprint"><button onclick="window.print()">Print / Save PDF</button></p>
   <div class="top">
     <div>
-      <h1>{brand}</h1>
+      {logo}
       <div class="legal">{legal}</div>
       <div class="muted">{html.escape(str(company.get('address') or ''))}<br/>
       {html.escape(str(company.get('state') or ''))} {html.escape(str(company.get('pincode') or ''))}<br/>
@@ -663,6 +720,7 @@ th {{ background: {NAVY}; color: #fff; font-weight: 600; font-size: 11px; }}
         Package: {html.escape(str(snap.get('package_type') or '—'))}<br/>
         Service date: {html.escape(str(snap.get('booking_date') or ''))}
         {html.escape(str(snap.get('start_time') or '')[:5])}
+        {duration_line}
       </div>
     </div>
   </div>

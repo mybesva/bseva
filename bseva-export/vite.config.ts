@@ -97,6 +97,7 @@ export default defineConfig({
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
       "@bseva/locales": path.resolve(repoRoot, "packages/locales/src/index.ts"),
       "@bseva/config": path.resolve(repoRoot, "packages/config/src/index.ts"),
+      "@bseva/types": path.resolve(repoRoot, "packages/types/src/index.ts"),
     },
   },
   // Load from repo root `.env` (and local overrides in this package)
