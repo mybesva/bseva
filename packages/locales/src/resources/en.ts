@@ -876,6 +876,7 @@ const en: Record<string, string> = {
   "admin.samagri": "Samagri",
   "admin.bookings": "Bookings",
   "admin.virtualPuja": "Virtual Puja",
+  "admin.muhurtham": "Muhurtham",
   "admin.settlements": "Settlements",
   "admin.invoices": "Invoices",
   "admin.payments": "Payments",
