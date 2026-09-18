@@ -10,6 +10,8 @@ import { coverage } from "./resources/coverage";
 import { mobileCoverage } from "./resources/mobileCoverage";
 import { webCoverage } from "./resources/webCoverage";
 import { customerRequirements } from "./resources/customerRequirements";
+import webUiGaps from "./resources/webUiGaps";
+import { extras } from "./extras";
 
 export {
   DEFAULT_LANG,
@@ -50,6 +52,8 @@ const base: Record<string, string> = {
   ...webCoverage.en,
   ...mobileCoverage.en,
   ...customerRequirements.en,
+  ...webUiGaps,
+  ...extras.en,
 };
 
 function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): Record<string, string> {
@@ -59,6 +63,8 @@ function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): 
     ...webCoverage[lang],
     ...mobileCoverage[lang],
     ...customerRequirements[lang],
+    ...webUiGaps,
+    ...extras[lang],
   };
 }
 
