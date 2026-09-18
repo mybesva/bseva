@@ -120,21 +120,23 @@ export default function AdminInvoices() {
       ) : rows.length === 0 ? (
         <p className="text-muted-foreground">No invoices yet.</p>
       ) : (
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Booking</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Issued</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
+        <Table
+          className="border-separate border-spacing-0"
+          containerClassName="max-h-[calc(100vh-16rem)] overflow-auto rounded-md border bg-card"
+        >
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Invoice</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Type</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Booking</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Customer</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Amount</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Payment</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Email</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Issued</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b" />
+            </TableRow>
+          </TableHeader>
             <TableBody>
               {rows.map((inv) => (
                 <TableRow key={inv.id}>
@@ -171,8 +173,7 @@ export default function AdminInvoices() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-        </div>
+        </Table>
       )}
     </AdminLayout>
   );
