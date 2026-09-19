@@ -63,6 +63,31 @@ function joinUrl(base: string, path: string) {
   return `${b}${p}`;
 }
 
+export function resolveMediaUrl(baseUrl: string, raw?: string | null): string {
+  const url = (raw || "").trim();
+  if (!url) return "";
+  if (/^(https?:|blob:|data:)/i.test(url)) return url;
+  return joinUrl(baseUrl, url);
+}
+
+export function resolveServiceImageUrl(
+  baseUrl: string,
+  svc: { slug?: string; image_url?: string | null; image_path?: string | null } | string | null | undefined
+): string {
+  const row = typeof svc === "string" ? { slug: svc, image_url: null, image_path: null } : svc || {};
+  const raw = String(row.image_url || row.image_path || "").trim();
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("data:")) return raw;
+  if (raw.startsWith("/api/") || raw.startsWith("/images/")) return joinUrl(baseUrl, raw);
+  if (raw.startsWith("/") && !raw.startsWith("/api/")) return joinUrl(baseUrl, raw);
+  if (raw.startsWith("services/") && row.slug) {
+    return joinUrl(baseUrl, `/api/v1/services/${encodeURIComponent(row.slug)}/image`);
+  }
+  if (row.slug) {
+    return joinUrl(baseUrl, `/images/services/${encodeURIComponent(row.slug)}.jpg`);
+  }
+  return joinUrl(baseUrl, "/images/puja-thali.png");
+}
+
 export function toQuery(params?: Record<string, string | number | boolean | undefined | null>): string {
   const qs = new URLSearchParams();
   Object.entries(params || {}).forEach(([k, v]) => {
@@ -232,8 +257,24 @@ export function createApiClient(opts: ApiClientOptions) {
       return asArray<ServiceCategory>(await api<ServiceCategory[]>("/service-categories"));
     },
 
-    serviceImageUrl(slug: string) {
-      return joinUrl(opts.getBaseUrl(), `/api/v1/services/${encodeURIComponent(slug)}/image`);
+    mediaUrl(raw?: string | null) {
+      return resolveMediaUrl(opts.getBaseUrl(), raw);
+    },
+
+    serviceImageUrl(svc: { slug?: string; image_url?: string | null; image_path?: string | null } | string) {
+      return resolveServiceImageUrl(opts.getBaseUrl(), svc);
+    },
+
+    serviceImageCandidates(svc: { slug?: string; image_url?: string | null; image_path?: string | null } | string) {
+      const base = opts.getBaseUrl();
+      const slug = typeof svc === "string" ? svc : svc.slug;
+      const raw = typeof svc === "string" ? "" : String(svc.image_url || svc.image_path || "").trim();
+      const out: string[] = [];
+      if (slug) out.push(joinUrl(base, `/api/v1/services/${encodeURIComponent(slug)}/image`));
+      if (raw.startsWith("http://") || raw.startsWith("https://")) out.push(raw);
+      else if (raw.startsWith("/")) out.push(joinUrl(base, raw));
+      if (slug) out.push(joinUrl(base, `/images/services/${slug}.jpg`));
+      return Array.from(new Set(out.filter(Boolean)));
     },
 
     quote(params: {
@@ -464,6 +505,19 @@ export function createApiClient(opts: ApiClientOptions) {
 
     promoBanners(placement?: string) {
       return api(`/promos/banners${toQuery({ placement })}`).then((d) => asArray<{ id: string; title?: string; subtitle?: string; image_url?: string; target_url?: string }>(d));
+    },
+
+    promoPopups(lang?: string) {
+      return api(`/promos/popups${toQuery({ lang })}`).then((d) =>
+        asArray<{
+          id?: string;
+          title: string;
+          description?: string | null;
+          image_url?: string | null;
+          cta_label?: string | null;
+          cta_url?: string | null;
+        }>(d)
+      );
     },
 
     async listNotifications(params?: Record<string, string | number | boolean | undefined>) {

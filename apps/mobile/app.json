@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1A2B4A"
+      "backgroundColor": "#FFF8E7"
     },
     "ios": {
       "supportsTablet": true,
@@ -35,6 +35,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1A2B4A"
+      },
+      "splash": {
+        "image": "./assets/splash-android.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#FFF8E7"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -75,7 +80,19 @@
       "expo-task-manager",
       "expo-image-picker",
       "expo-document-picker",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFF8E7",
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "imageWidth": 400,
+          "android": {
+            "image": "./assets/splash-android.png",
+            "backgroundColor": "#FFF8E7"
+          }
+        }
+      ],
       [
         "expo-notifications",
         {

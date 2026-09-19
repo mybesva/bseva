@@ -3,9 +3,11 @@ import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Image, Linking, Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { HomeBrandBar } from "@/components/ScreenHeader";
+import { SeasonalPopup } from "@/components/SeasonalPopup";
 import { AppText, Card, ChoiceChips, EmptyState, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { PujaTitle } from "@/components/PujaTitle";
+import { PujaServiceCard } from "@/components/PujaImage";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
@@ -45,14 +47,8 @@ export default function CustomerHome() {
 
   return (
     <Screen>
-      <View style={{ backgroundColor: colors.navy, paddingHorizontal: 20, paddingBottom: 24 }}>
-        <SafeAreaView edges={["top"]}>
-          <AppText variant="h1" color={colors.cream}>
-            {t("customer.welcome")}, {user?.name}
-          </AppText>
-          <AppText color="rgba(255,248,231,0.8)">{t("customer.subtitle")}</AppText>
-        </SafeAreaView>
-      </View>
+      <HomeBrandBar notificationsHref="/customer/notifications" subtitle={user?.name ? `${t("customer.welcome")}, ${user.name}` : undefined} />
+      <SeasonalPopup />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
         refreshControl={
@@ -96,7 +92,7 @@ export default function CustomerHome() {
             <Card style={{ overflow: "hidden", gap: 8 }}>
               {banner.image_url ? (
                 <Image
-                  source={{ uri: banner.image_url }}
+                  source={{ uri: apiClient.mediaUrl(banner.image_url) }}
                   resizeMode="contain"
                   style={{ width: "100%", aspectRatio: 16 / 7, backgroundColor: colors.secondary, borderRadius: 10 }}
                 />
@@ -171,14 +167,7 @@ export default function CustomerHome() {
         ) : null}
         <AppText variant="h2">{t("customer.bookServices")}</AppText>
         {(services.data || []).slice(0, 6).map((s: CatalogService) => (
-          <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
-            <Card>
-              <PujaTitle name={s.name} />
-              <AppText variant="small" color={colors.primary}>
-                {s.standard_price_paise != null ? `${t("customer.from")} ${rupees(s.standard_price_paise)}` : t("services.comingSoonLabel")}
-              </AppText>
-            </Card>
-          </Pressable>
+          <PujaServiceCard key={s.id} service={s} onPress={() => router.push(`/service/${s.slug}`)} />
         ))}
         {(services.data || []).length === 0 && !services.isLoading ? (
           <EmptyState title={t("mobile.noServices")} subtitle={t("mobile.bookFromServices")} />

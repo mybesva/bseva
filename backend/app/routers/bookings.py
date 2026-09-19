@@ -275,21 +275,27 @@ def get_service(slug: str, request: Request, lang: str | None = None, db: Sessio
     return data
 
 
-@router.get("/services/{slug}/image")
+@router.api_route("/services/{slug}/image", methods=["GET", "HEAD"])
 def get_service_image(slug: str, db: Session = Depends(get_db)):
-    """Public cover image for admin-uploaded storage objects (and storage-backed paths)."""
+    """Public cover image: admin uploads in object storage, or catalog files under /images/services."""
     from pathlib import Path
 
+    from fastapi.responses import FileResponse
+
     from app.catalog import resolve_service_by_slug
+    from app.catalog_images import catalog_image_file
     from app.storage import file_response
 
     row = resolve_service_by_slug(db, slug, active_only=False)
     if not row:
         raise HTTPException(404, "Service not found")
-    path = (row.get("image_path") or "").strip()
-    if not path.startswith("services/"):
-        raise HTTPException(404, "No uploaded image")
-    return file_response(path, filename=Path(path).name)
+    stored = (row.get("image_path") or "").strip()
+    if stored.startswith("services/"):
+        return file_response(stored, filename=Path(stored).name)
+    local = catalog_image_file(row.get("slug") or slug, row.get("image_url"), row.get("image_path"))
+    if local and local.is_file():
+        return FileResponse(local)
+    raise HTTPException(404, "No uploaded image")
 
 
 @router.get("/pujari-roles")

@@ -1,8 +1,8 @@
 import { rupees } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, RefreshControl, ScrollView } from "react-native";
+import { HomeBrandBar } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
 import { useAuth } from "@/providers/AuthProvider";
@@ -27,17 +27,7 @@ export default function AdminDashboard() {
   ];
   return (
     <Screen>
-      <View style={{ backgroundColor: colors.navy, paddingHorizontal: 20, paddingBottom: 20 }}>
-        <SafeAreaView edges={["top"]}>
-          <AppText variant="eyebrow" color={colors.primary}>
-            {user?.role === "super_admin" ? "Super Admin" : "Admin"}
-          </AppText>
-          <AppText variant="h1" color={colors.cream}>
-            {t("admin.dashboard")}
-          </AppText>
-          <AppText color="rgba(255,248,231,0.8)">{user?.name}</AppText>
-        </SafeAreaView>
-      </View>
+      <HomeBrandBar subtitle={user?.name} />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
@@ -54,14 +44,14 @@ export default function AdminDashboard() {
             </Card>
           </Pressable>
         ))}
-        <AppText variant="h3">Action required</AppText>
+        <AppText variant="h3">{t("mobile.actionRequired")}</AppText>
         <Card>
-          <AppText>Unassigned bookings: {badges.bookings ?? 0}</AppText>
-          <AppText>Pujari verification: {badges.pujaris ?? ps.pendingVerification ?? 0}</AppText>
-          <AppText>Virtual puja: {badges.virtual_puja ?? 0}</AppText>
-          <AppText>Payments: {badges.payments ?? 0}</AppText>
-          <AppText>Settlements: {badges.settlements ?? 0}</AppText>
-          <AppText>Support: {badges.support ?? 0}</AppText>
+          <AppText>{t("admin.bookings")}: {badges.bookings ?? 0}</AppText>
+          <AppText>{t("admin.pujaris")}: {badges.pujaris ?? ps.pendingVerification ?? 0}</AppText>
+          <AppText>{t("admin.virtualPuja")}: {badges.virtual_puja ?? 0}</AppText>
+          <AppText>{t("admin.payments")}: {badges.payments ?? 0}</AppText>
+          <AppText>{t("admin.settlements")}: {badges.settlements ?? 0}</AppText>
+          <AppText>{t("admin.support")}: {badges.support ?? 0}</AppText>
         </Card>
       </ScrollView>
     </Screen>

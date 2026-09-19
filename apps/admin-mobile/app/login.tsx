@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { BrandLockup } from "@/components/BrandLockup";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -50,14 +51,17 @@ export default function AdminLogin() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 20 }}>
           <Card>
+            <View style={{ alignItems: "center", marginBottom: 16 }}>
+              <BrandLockup height={128} />
+            </View>
             <AppText color={colors.mutedForeground} style={{ marginBottom: 16 }}>
-              Sign in with your Admin or Super Admin account. Role is read from the server.
+              {t("admin.signInHint")}
             </AppText>
             <View style={{ gap: 14 }}>
               <ErrorBanner message={error || rejectedReason} />
-              <Field label="Email or phone" value={identifier} onChangeText={setIdentifier} autoCapitalize="none" />
-              <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-              <PrimaryButton title={pending ? "Signing in..." : t("admin.signIn")} loading={pending} onPress={onSubmit} />
+              <Field label={t("auth.emailOrPhone")} value={identifier} onChangeText={setIdentifier} autoCapitalize="none" />
+              <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              <PrimaryButton title={pending ? t("admin.signingIn") : t("admin.signIn")} loading={pending} onPress={onSubmit} />
             </View>
           </Card>
         </ScrollView>

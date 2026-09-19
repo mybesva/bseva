@@ -1,38 +1,30 @@
-import { Image, Text, View } from "react-native";
+import { Image, StyleSheet, View, type ImageStyle, type StyleProp } from "react-native";
 
-const mark = require("../../assets/logo-mark.png");
+/** Official complete BSeva artwork. Square source — never reconstruct with extra text. */
+const logo = require("../../assets/logo-full.png");
 
 export function BrandLockup({
+  height,
   markSize = 44,
-  light = false,
-  afterWordmark,
+  style,
 }: {
+  height?: number;
   markSize?: number;
   light?: boolean;
   afterWordmark?: string;
+  style?: StyleProp<ImageStyle>;
 }) {
-  const hyphenColor = light ? "#FFF8E7" : "#1A2B4A";
-  const wordSize = Math.round(markSize * 0.48);
+  const h = height ?? Math.round(markSize * 2.2);
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Image source={mark} resizeMode="contain" style={{ width: markSize, height: markSize }} />
-        <Text style={{ color: hyphenColor, fontSize: wordSize, fontWeight: "800", lineHeight: markSize }}>
-          -
-          <Text style={{ color: "#FF9933", fontSize: wordSize, fontWeight: "800" }}>Seva</Text>
-        </Text>
-      </View>
-      {afterWordmark ? (
-        <Text
-          style={{
-            color: light ? "rgba(255,248,231,0.9)" : "#1A2B4A",
-            fontSize: Math.max(13, Math.round(markSize * 0.32)),
-            fontWeight: "600",
-          }}
-        >
-          {afterWordmark}
-        </Text>
-      ) : null}
+    <View accessible accessibilityRole="image" accessibilityLabel="BSeva">
+      <Image source={logo} resizeMode="contain" style={[{ width: h, height: h }, style]} />
     </View>
   );
 }
+
+export const brandLockupStyles = StyleSheet.create({
+  splash: {
+    width: 280,
+    height: 280,
+  },
+});

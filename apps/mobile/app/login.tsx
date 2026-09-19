@@ -7,6 +7,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { BrandLockup } from "@/components/BrandLockup";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { LanguagePicker } from "@/components/LanguagePicker";
 import { useAuth } from "@/providers/AuthProvider";
@@ -67,6 +68,9 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
           <Card>
+            <View style={{ alignItems: "center", marginBottom: 16 }}>
+              <BrandLockup height={128} />
+            </View>
             <AppText color={colors.mutedForeground} style={{ marginBottom: 16, lineHeight: 22 }}>
               {roleHint === "pujari"
                 ? t("auth.pujariLoginDescription")

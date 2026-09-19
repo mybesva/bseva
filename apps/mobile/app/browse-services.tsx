@@ -1,12 +1,11 @@
-import { rupees } from "@bseva/config";
 import type { CatalogService } from "@bseva/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
-import { PujaTitle } from "@/components/PujaTitle";
+import { AppText, EmptyState, LoadingBlock, Screen } from "@/components/ui";
+import { PujaServiceCard } from "@/components/PujaImage";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
@@ -79,22 +78,7 @@ export default function BrowseServices() {
           {list.isLoading ? <LoadingBlock /> : null}
           {!list.isLoading && filtered.length === 0 ? <EmptyState title={t("mobile.noServices")} /> : null}
           {filtered.map((s: CatalogService) => (
-            <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
-              <Card>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <PujaTitle name={s.name} variant="h3" style={{ flex: 1 }} />
-                  {s.bookable ? <StatusBadge status="available" /> : <StatusBadge status="pending" />}
-                </View>
-                <AppText variant="small" color={colors.mutedForeground} numberOfLines={3} style={{ marginTop: 6 }}>
-                  {s.short_description || s.description || ""}
-                </AppText>
-                {s.standard_price_paise != null ? (
-                  <AppText variant="price" color={colors.primary} style={{ marginTop: 8 }}>
-                    From {rupees(s.standard_price_paise)}
-                  </AppText>
-                ) : null}
-              </Card>
-            </Pressable>
+            <PujaServiceCard key={s.id} service={s} onPress={() => router.push(`/service/${s.slug}`)} />
           ))}
         </ScrollView>
       </View>

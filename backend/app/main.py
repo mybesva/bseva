@@ -75,6 +75,16 @@ app.include_router(support.router, prefix="/api/v1")
 app.include_router(tickets.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 
+try:
+    from fastapi.staticfiles import StaticFiles
+    from app.catalog_images import public_images_root
+
+    _images = public_images_root()
+    if _images and _images.is_dir():
+        app.mount("/images", StaticFiles(directory=str(_images)), name="catalog-images")
+except Exception:
+    pass
+
 
 @app.exception_handler(OperationalError)
 async def database_unavailable(_request: Request, _exc: OperationalError):

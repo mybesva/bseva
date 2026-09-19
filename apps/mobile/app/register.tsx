@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from "react-native";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { BrandLockup } from "@/components/BrandLockup";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -102,6 +103,9 @@ export default function RegisterScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
           <Card>
+            <View style={{ alignItems: "center", marginBottom: 16 }}>
+              <BrandLockup height={128} />
+            </View>
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
               <View style={{ flex: 1 }}>
                 <PrimaryButton

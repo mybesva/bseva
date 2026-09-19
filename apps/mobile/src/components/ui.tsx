@@ -10,12 +10,18 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from "react-native";
+import { BrandWatermark } from "@/components/BrandWatermark";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const { colors } = useAppTheme();
-  return <View style={[{ flex: 1, backgroundColor: colors.background }, style]}>{children}</View>;
+  return (
+    <View style={[{ flex: 1, backgroundColor: colors.background }, style]}>
+      <BrandWatermark />
+      {children}
+    </View>
+  );
 }
 
 export function AppText({
@@ -89,6 +95,9 @@ export function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
       style={({ pressed }) => ({
         backgroundColor: bg,
         borderRadius: radius.md,
@@ -96,7 +105,9 @@ export function PrimaryButton({
         borderColor: border,
         paddingVertical: 14,
         paddingHorizontal: 16,
+        minHeight: 48,
         alignItems: "center",
+        justifyContent: "center",
         opacity: disabled || loading ? 0.55 : pressed ? 0.85 : 1,
       })}
     >
@@ -119,6 +130,7 @@ export function Field({
       <Text style={{ color: colors.mutedForeground, fontWeight: "600", fontSize: 13 }}>{label}</Text>
       <TextInput
         placeholderTextColor={colors.mutedForeground}
+        accessibilityLabel={label}
         style={{
           backgroundColor: colors.input,
           borderRadius: radius.md,
@@ -126,6 +138,7 @@ export function Field({
           borderColor: colors.border,
           paddingHorizontal: 12,
           paddingVertical: 12,
+          minHeight: 48,
           color: colors.foreground,
           fontSize: 16,
         }}

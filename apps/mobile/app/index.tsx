@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, LoadingBlock, PrimaryButton } from "@/components/ui";
 import { PujaTitle } from "@/components/PujaTitle";
 import { BrandLockup } from "@/components/BrandLockup";
+import { PujaServiceCard } from "@/components/PujaImage";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { LanguagePicker } from "@/components/LanguagePicker";
@@ -58,7 +59,7 @@ export default function LandingScreen() {
           <View style={{ backgroundColor: "rgba(26,43,74,0.72)", paddingTop: 56, paddingBottom: 28, paddingHorizontal: 20 }}>
             <SafeAreaView edges={["top"]}>
               <View style={{ marginBottom: 16, alignSelf: "center" }}>
-                <BrandLockup markSize={64} light />
+                <BrandLockup height={168} />
               </View>
               <View
                 style={{
@@ -156,19 +157,7 @@ export default function LandingScreen() {
           <AppText variant="h2">{t("home.popularPujas")}</AppText>
           {popular.isLoading ? <LoadingBlock /> : null}
           {services.map((s: CatalogService) => (
-            <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
-              <Card style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.primary + "22", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="flame" size={24} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <PujaTitle name={s.name} />
-                  <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
-                    {s.short_description || s.description || (s.standard_price_paise ? t("home.fromPrice", { price: rupees(s.standard_price_paise) }) : t("home.availableSoon"))}
-                  </AppText>
-                </View>
-              </Card>
-            </Pressable>
+            <PujaServiceCard key={s.id} service={s} onPress={() => router.push(`/service/${s.slug}`)} />
           ))}
           <PrimaryButton title={t("home.viewAllServices")} variant="outline" onPress={() => router.push("/browse-services")} />
         </View>

@@ -3,7 +3,7 @@ import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { HomeBrandBar } from "@/components/ScreenHeader";
 import { AppText, Card, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -28,14 +28,7 @@ export default function PujariHome() {
     .reduce((s, b) => s + Number(b.pujari_payable_paise || 0), 0);
   return (
     <Screen>
-      <View style={{ backgroundColor: colors.navy, paddingHorizontal: 20, paddingBottom: 24 }}>
-        <SafeAreaView edges={["top"]}>
-          <AppText variant="h1" color={colors.cream}>
-            {t("priest.dashboard")}
-          </AppText>
-          <AppText color="rgba(255,248,231,0.8)">{user?.name}</AppText>
-        </SafeAreaView>
-      </View>
+      <HomeBrandBar notificationsHref="/pujari/notifications" subtitle={user?.name} />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={bookings.isRefetching} onRefresh={() => void bookings.refetch()} />}
@@ -45,7 +38,10 @@ export default function PujariHome() {
           <AppText variant="small">{t("mobile.verification")}</AppText>
           <AppText variant="h3">{String(p.verification_status || "pending")}</AppText>
           <AppText variant="small">
-            Level requested {String(p.requested_level || "—")} · approved {String(p.approved_level || "—")}
+            {t("mobile.verificationProgress", {
+              status: String(p.verification_status || "pending"),
+              percent: String(p.profile_completeness_percent || p.completeness_percent || "—"),
+            })}
           </AppText>
           {!p.profile_submitted_at ? (
             <View style={{ marginTop: 10 }}>
@@ -61,7 +57,7 @@ export default function PujariHome() {
         <Card>
           <AppText variant="small">{t("mobile.completedEarnings")}</AppText>
           <AppText variant="h2" color={colors.primary}>{rupees(earned)}</AppText>
-          <AppText variant="small">Wallet {rupees(Number(wallet.data?.wallet?.balance_paise || 0))}</AppText>
+          <AppText variant="small">{t("mobile.wallet")}: {rupees(Number(wallet.data?.wallet?.balance_paise || 0))}</AppText>
         </Card>
         <AppText variant="h2">{t("mobile.awaitingAcceptance")}</AppText>
         {incoming.map((b: Booking) => (

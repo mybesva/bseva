@@ -1,12 +1,11 @@
-import { rupees } from "@bseva/config";
 import type { CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
+import { RefreshControl, ScrollView, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AppText, Card, EmptyState, LoadingBlock, Screen } from "@/components/ui";
-import { PujaTitle } from "@/components/PujaTitle";
+import { AppText, EmptyState, LoadingBlock, Screen } from "@/components/ui";
+import { PujaServiceCard } from "@/components/PujaImage";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
@@ -41,19 +40,7 @@ export default function CustomerServices() {
         {list.isLoading ? <LoadingBlock /> : null}
         {filtered.length === 0 && !list.isLoading ? <EmptyState title={t("mobile.noServices")} /> : null}
         {filtered.map((s: CatalogService) => (
-          <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
-            <Card>
-              <PujaTitle name={s.name} />
-              <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
-                {s.short_description || ""}
-              </AppText>
-              {s.standard_price_paise != null ? (
-                <AppText color={colors.primary} style={{ marginTop: 6, fontWeight: "700" }}>
-                  {rupees(s.standard_price_paise)}
-                </AppText>
-              ) : null}
-            </Card>
-          </Pressable>
+          <PujaServiceCard key={s.id} service={s} onPress={() => router.push(`/service/${s.slug}`)} />
         ))}
       </ScrollView>
     </Screen>

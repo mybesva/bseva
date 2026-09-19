@@ -1,75 +1,90 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AppText, Screen } from "@/components/ui";
+import { MenuProfileHeader } from "@/components/MenuProfileHeader";
+import { MoreAppearanceRow, MoreMenuRow } from "@/components/MoreMenuRow";
+import { Screen } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
-import { useAppTheme } from "@/theme/ThemeContext";
+import { spacing } from "@bseva/tokens";
+import type { MoreMenuIcon } from "@/components/MoreMenuRow";
 
 export default function AdminMore() {
-  const { colors, toggleTheme, theme } = useAppTheme();
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
   const { can, badges } = useAdmin();
   const { t } = useI18n();
   const router = useRouter();
-  const items = [
-    { href: "/customers", label: t("admin.customers"), show: can("view_customers"), badge: 0 },
-    { href: "/temples", label: t("admin.temples"), show: can("manage_services") },
-    { href: "/services", label: t("admin.services"), show: can("manage_services") },
-    { href: "/recommendations", label: t("admin.recommendations"), show: can("manage_services") },
-    { href: "/samagri", label: t("admin.samagri"), show: can("manage_samagri") },
-    { href: "/virtual-puja", label: t("admin.virtualPuja"), show: can(["view_bookings", "manage_bookings"]), badge: badges.virtual_puja },
-    { href: "/muhurtham", label: t("admin.muhurtham"), show: can(["view_bookings", "manage_bookings"]), badge: badges.muhurtham },
-    { href: "/settlements", label: t("admin.settlements"), show: can(["manage_settlements", "view_payments"]), badge: badges.settlements },
-    { href: "/invoices", label: t("admin.invoices"), show: can(["view_payments", "manage_settlements", "manage_bookings"]) },
-    { href: "/payments", label: t("admin.payments"), show: can(["view_payments", "manage_settlements"]), badge: badges.payments },
-    { href: "/pricing", label: t("admin.pricing"), show: can(["manage_config", "manage_services"]) },
-    { href: "/permissions", label: t("admin.permissions"), show: can("manage_admins") },
-    { href: "/reviews", label: t("admin.reviews"), show: can("view_bookings") },
-    { href: "/notifications", label: t("admin.notifications"), show: can("manage_config") },
-    { href: "/promos", label: t("admin.promos"), show: can(["manage_config", "manage_promotions"]) },
-    { href: "/reports", label: t("admin.reports"), show: can("view_reports") },
-    { href: "/settings", label: t("admin.settings"), show: can("manage_config") },
-    { href: "/support", label: t("admin.support"), show: can("manage_support") },
-    { href: "/legal", label: t("admin.legal"), show: can("manage_legal") },
-    { href: "/head-ratings", label: t("admin.headRatings"), show: true },
-  ].filter((i) => i.show);
+  const items: { href: string; label: string; show: boolean; badge?: number; icon: MoreMenuIcon }[] = [
+    { href: "/customers", label: t("admin.customers"), show: can("view_customers"), icon: "people-outline" },
+    { href: "/temples", label: t("admin.temples"), show: can("manage_services"), icon: "business-outline" },
+    { href: "/services", label: t("admin.services"), show: can("manage_services"), icon: "sparkles-outline" },
+    { href: "/recommendations", label: t("admin.recommendations"), show: can("manage_services"), icon: "star-outline" },
+    { href: "/samagri", label: t("admin.samagri"), show: can("manage_samagri"), icon: "leaf-outline" },
+    {
+      href: "/virtual-puja",
+      label: t("admin.virtualPuja"),
+      show: can(["view_bookings", "manage_bookings"]),
+      badge: badges.virtual_puja,
+      icon: "videocam-outline",
+    },
+    {
+      href: "/muhurtham",
+      label: t("admin.muhurtham"),
+      show: can(["view_bookings", "manage_bookings"]),
+      badge: badges.muhurtham,
+      icon: "moon-outline",
+    },
+    {
+      href: "/settlements",
+      label: t("admin.settlements"),
+      show: can(["manage_settlements", "view_payments"]),
+      badge: badges.settlements,
+      icon: "cash-outline",
+    },
+    { href: "/invoices", label: t("admin.invoices"), show: can(["view_payments", "manage_settlements", "manage_bookings"]), icon: "document-text-outline" },
+    { href: "/payments", label: t("admin.payments"), show: can(["view_payments", "manage_settlements"]), badge: badges.payments, icon: "card-outline" },
+    { href: "/pricing", label: t("admin.pricing"), show: can(["manage_config", "manage_services"]), icon: "pricetag-outline" },
+    { href: "/permissions", label: t("admin.permissions"), show: can("manage_admins"), icon: "key-outline" },
+    { href: "/reviews", label: t("admin.reviews"), show: can("view_bookings"), icon: "chatbubbles-outline" },
+    { href: "/notifications", label: t("admin.notifications"), show: can("manage_config"), icon: "notifications-outline" },
+    { href: "/promos", label: t("admin.promos"), show: can(["manage_config", "manage_promotions"]), icon: "megaphone-outline" },
+    { href: "/reports", label: t("admin.reports"), show: can("view_reports"), icon: "stats-chart-outline" },
+    { href: "/bulk-import", label: "Bulk import", show: can("manage_services"), icon: "cloud-upload-outline" },
+    { href: "/settings", label: t("admin.settings"), show: can("manage_config"), icon: "settings-outline" },
+    { href: "/support", label: t("admin.support"), show: can("manage_support"), icon: "help-circle-outline" },
+    { href: "/legal", label: t("admin.legal"), show: can("manage_legal"), icon: "book-outline" },
+    { href: "/head-ratings", label: t("admin.headRatings"), show: true, icon: "ribbon-outline" },
+  ];
 
   return (
     <Screen>
-      <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">{t("mobile.more")}</AppText>
-        <AppText variant="small">
-          {user?.name} · {user?.role}
-        </AppText>
+      <SafeAreaView edges={["top"]} style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xs }}>
+        <MenuProfileHeader />
       </SafeAreaView>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        {items.map((item) => (
-          <Pressable
-            key={item.href}
-            onPress={() => router.push(item.href as never)}
-            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 }}
-          >
-            <AppText style={{ flex: 1 }}>{item.label}</AppText>
-            {item.badge ? <AppText color={colors.primary}>{item.badge}</AppText> : null}
-            <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-          </Pressable>
-        ))}
-        <Pressable onPress={toggleTheme} style={{ paddingVertical: 12 }}>
-          <AppText>
-            {t("mobile.theme")}: {theme === "dark" ? t("mobile.themeDark") : t("mobile.themeLight")}
-          </AppText>
-        </Pressable>
-        <Pressable
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl + spacing.lg }}>
+        {items
+          .filter((item) => item.show)
+          .map((item) => (
+            <MoreMenuRow
+              key={item.href}
+              icon={item.icon}
+              label={item.label}
+              badge={item.badge}
+              onPress={() => router.push(item.href as never)}
+            />
+          ))}
+        <MoreAppearanceRow />
+        <MoreMenuRow
+          icon="log-out-outline"
+          label={t("mobile.logout")}
+          destructive
+          chevron={false}
           onPress={async () => {
             await logout();
             router.replace("/login");
           }}
-        >
-          <AppText color={colors.destructive}>{t("mobile.logout")}</AppText>
-        </Pressable>
+        />
       </ScrollView>
     </Screen>
   );

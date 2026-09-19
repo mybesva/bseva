@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { DateCalendar } from "@/components/DateCalendar";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
 
-export default function AvailabilityScreen() {
+export function PujariAvailabilityScreen({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   const profile = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const q = useQuery({ queryKey: ["availability"], queryFn: () => apiClient.availabilityBlocks() });
@@ -22,7 +24,13 @@ export default function AvailabilityScreen() {
   }, [profile.data]);
   return (
     <Screen>
-      <ScreenHeader title={t("mobile.availability")} back />
+      {embedded ? (
+        <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <AppText variant="h2">{t("nav.availability")}</AppText>
+        </SafeAreaView>
+      ) : (
+        <ScreenHeader title={t("mobile.availability")} back />
+      )}
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -43,7 +51,7 @@ export default function AvailabilityScreen() {
           }}
         />
         <AppText variant="h3">{t("mobile.blockedDates")}</AppText>
-        <Field label={t("mobile.blockedDate")} value={date} onChangeText={setDate} />
+        <DateCalendar value={date || new Date().toISOString().slice(0, 10)} onChange={setDate} leadHours={1} />
         <Field label={t("mobile.reason")} value={reason} onChangeText={setReason} />
         <PrimaryButton
           title={t("mobile.addBlock")}
@@ -75,4 +83,8 @@ export default function AvailabilityScreen() {
       </ScrollView>
     </Screen>
   );
+}
+
+export default function AvailabilityScreen() {
+  return <PujariAvailabilityScreen />;
 }

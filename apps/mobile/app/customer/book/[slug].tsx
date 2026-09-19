@@ -1,4 +1,4 @@
-import { CALENDARS, rupees } from "@bseva/config";
+import { BOOKING_TIME_SLOTS, bookingLeadHint, CALENDARS, isCalendarDayDisabled, rupees } from "@bseva/config";
 import type { NearbyPujari, Quote } from "@bseva/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
@@ -6,6 +6,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Switch, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { DateCalendar } from "@/components/DateCalendar";
+import { MuhurtaConsultation, type MuhurtaReceipt } from "@/components/MuhurtaConsultation";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
@@ -34,7 +36,9 @@ type BookingDraft = {
   instructions: string;
   recurring: string;
   recurringCount: string;
-  muhurtaNotes: string;
+  selectedDates: string[];
+  doorNumber: string;
+  landmark: string;
 };
 
 function newIdempotencyKey(slug: string) {
@@ -79,7 +83,10 @@ export default function BookService() {
   const [instructions, setInstructions] = useState("");
   const [recurring, setRecurring] = useState("none");
   const [recurringCount, setRecurringCount] = useState("4");
-  const [muhurtaNotes, setMuhurtaNotes] = useState("");
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [doorNumber, setDoorNumber] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [muhurtaReceipt, setMuhurtaReceipt] = useState<MuhurtaReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -127,7 +134,9 @@ export default function BookService() {
         if (d.instructions != null) setInstructions(d.instructions);
         if (d.recurring) setRecurring(d.recurring);
         if (d.recurringCount) setRecurringCount(d.recurringCount);
-        if (d.muhurtaNotes != null) setMuhurtaNotes(d.muhurtaNotes);
+        if (d.selectedDates) setSelectedDates(d.selectedDates);
+        if (d.doorNumber != null) setDoorNumber(d.doorNumber);
+        if (d.landmark != null) setLandmark(d.landmark);
       })
       .catch(() => undefined)
       .finally(() => setHydrated(true));
@@ -138,21 +147,28 @@ export default function BookService() {
     const draft: BookingDraft = {
       idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng,
       includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone,
-      instructions, recurring, recurringCount, muhurtaNotes,
+      instructions, recurring, recurringCount, selectedDates, doorNumber, landmark,
     };
     void AsyncStorage.setItem(`bseva.booking-draft.${slug}`, JSON.stringify(draft));
-  }, [slug, hydrated, idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng, includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone, instructions, recurring, recurringCount, muhurtaNotes]);
+  }, [slug, hydrated, idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng, includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone, instructions, recurring, recurringCount, selectedDates, doorNumber, landmark]);
 
   useEffect(() => {
     const p = profileQ.data;
     if (!p) return;
     if (!address) setAddress(String(p.address_line1 || p.address || ""));
+    if (!doorNumber) setDoorNumber(String(p.address_line1 || ""));
+    if (!landmark) setLandmark(String(p.address_line2 || p.landmark || ""));
     if (!city) setCity(String(p.city || ""));
     if (p.latitude != null && lat == null) setLat(Number(p.latitude));
     if (p.longitude != null && lng == null) setLng(Number(p.longitude));
   }, [profileQ.data]);
 
   const muhurtaNeeded = Boolean(svc?.muhurta_consultation_enabled || svc?.requires_muhurta);
+  const leadHours = Number(svc?.booking_lead_hours ?? 48) || 48;
+  function composedAddress() {
+    if (mode === "virtual") return [customerCountry, customerTimezone].filter(Boolean).join(" · ");
+    return [doorNumber.trim(), address.trim(), landmark.trim()].filter(Boolean).join(", ");
+  }
 
   async function loadQuoteAndPujaris() {
     if (!svc) return;
@@ -210,6 +226,19 @@ export default function BookService() {
       setError(t("web.availability.bookingUnavailable"));
       return;
     }
+    if (svc && Boolean(svc.requires_muhurta) && !muhurtaReceipt) {
+      setError(t("web.muhurta.needDate"));
+      return;
+    }
+    if (mode === "in_person" && !doorNumber.trim()) {
+      setError(t("booking.needDoor"));
+      return;
+    }
+    const dateObj = new Date(`${date}T${time.length === 5 ? `${time}:00` : time}`);
+    if (isCalendarDayDisabled(dateObj, leadHours)) {
+      setError(bookingLeadHint(leadHours));
+      return;
+    }
     if (!terms) {
       setError(t("mobile.acceptTerms"));
       return;
@@ -233,18 +262,6 @@ export default function BookService() {
     setPending(true);
     setError(null);
     try {
-      if (muhurtaNeeded && muhurtaNotes) {
-        try {
-          await apiClient.createMuhurta({
-            service_id: svc.id,
-            appointment_date: date,
-            appointment_time: time,
-            notes: muhurtaNotes,
-          });
-        } catch {
-          /* consultation is optional if the service already has a booking slot */
-        }
-      }
       const created = await apiClient.createBooking({
         service_id: svc.id,
         pujari_id: pujariId || undefined,
@@ -252,8 +269,8 @@ export default function BookService() {
         mode,
         booking_date: date,
         start_time: time.length === 5 ? `${time}:00` : time,
-        location_label: [address, city].filter(Boolean).join(", "),
-        address,
+        location_label: mode === "virtual" ? composedAddress() : `${composedAddress()}${city ? `, ${city}` : ""}`,
+        address: composedAddress(),
         city,
         latitude: lat,
         longitude: lng,
@@ -265,7 +282,8 @@ export default function BookService() {
         customer_country: mode === "virtual" ? customerCountry : undefined,
         customer_timezone: mode === "virtual" ? customerTimezone : undefined,
         recurring,
-        recurring_count: recurring !== "none" ? Number(recurringCount) || undefined : undefined,
+        recurring_count: recurring === "none" || recurring === "selected_dates" ? undefined : Number(recurringCount) || undefined,
+        selected_dates: recurring === "selected_dates" ? selectedDates : undefined,
       }, idempotencyKey);
       await AsyncStorage.removeItem(`bseva.booking-draft.${slug}`);
       router.replace(`/customer/booking/${(created as { id: string }).id}`);
@@ -345,27 +363,73 @@ export default function BookService() {
             <ChoiceChips options={CALENDARS.map((c) => ({ id: c, label: c }))} value={calendar} onChange={(v) => setCalendar(String(v))} />
             {panchang.data ? (
               <AppText variant="small" color={colors.mutedForeground}>
-                {String(panchang.data.tithi || panchang.data.summary || JSON.stringify(panchang.data).slice(0, 120))}
+                {String(panchang.data.tithi || panchang.data.summary || JSON.stringify(panchang.data).slice(0, 180))}
               </AppText>
             ) : null}
-            <Field label={t("mobile.date")} value={date} onChangeText={setDate} />
-            <Field label={t("mobile.startTime")} value={time} onChangeText={setTime} />
-            <Field label={t("mobile.address")} value={address} onChangeText={setAddress} />
-            <Field label={t("mobile.city")} value={city} onChangeText={setCity} />
+            <AppText variant="small">{t("mobile.date")}</AppText>
+            <DateCalendar value={date} onChange={setDate} leadHours={leadHours} />
+            <AppText variant="small" color={colors.mutedForeground}>{bookingLeadHint(leadHours)}</AppText>
+            <AppText variant="small">{t("mobile.startTime")}</AppText>
+            <ChoiceChips
+              options={BOOKING_TIME_SLOTS.map((id) => ({ id, label: id }))}
+              value={time.slice(0, 5)}
+              onChange={(v) => setTime(String(v))}
+            />
+            {mode === "in_person" ? (
+              <>
+                <Field label={t("booking.doorNumber")} value={doorNumber} onChangeText={setDoorNumber} />
+                <Field label={t("mobile.address")} value={address} onChangeText={setAddress} />
+                <Field label={t("web.booking.landmarkOptional")} value={landmark} onChangeText={setLandmark} />
+                <Field label={t("mobile.city")} value={city} onChangeText={setCity} />
+              </>
+            ) : (
+              <AppText variant="small" color={colors.mutedForeground}>
+                {t("web.booking.timezoneNotice", { timezone: customerTimezone })}
+              </AppText>
+            )}
             <AppText variant="small">{t("mobile.recurring")}</AppText>
             <ChoiceChips
               options={[
                 { id: "none", label: t("booking.recurring.none") },
                 { id: "weekly", label: t("booking.recurring.weekly") },
                 { id: "monthly", label: t("booking.recurring.monthly") },
+                { id: "selected_dates", label: t("booking.recurring.selected") },
               ]}
               value={recurring}
               onChange={(v) => setRecurring(String(v))}
             />
-            {recurring !== "none" ? (
+            {recurring !== "none" && recurring !== "selected_dates" ? (
               <Field label={t("mobile.repeatCount")} value={recurringCount} onChangeText={setRecurringCount} keyboardType="number-pad" />
             ) : null}
-            {muhurtaNeeded ? <Field label={t("mobile.muhurthamNotes")} value={muhurtaNotes} onChangeText={setMuhurtaNotes} /> : null}
+            {recurring === "selected_dates" ? (
+              <>
+                <AppText variant="small">{t("booking.recurring.addDates")}</AppText>
+                <DateCalendar
+                  value={date}
+                  onChange={(iso) => {
+                    setSelectedDates((prev) => (prev.includes(iso) ? prev : [...prev, iso].sort()));
+                  }}
+                  leadHours={leadHours}
+                />
+                {selectedDates.map((d) => (
+                  <Pressable key={d} onPress={() => setSelectedDates((prev) => prev.filter((x) => x !== d))}>
+                    <AppText>{d}  ×</AppText>
+                  </Pressable>
+                ))}
+              </>
+            ) : null}
+            {muhurtaNeeded ? (
+              <MuhurtaConsultation
+                serviceId={svc.id}
+                serviceName={svc.name}
+                requiresMuhurtham={Boolean(svc.requires_muhurta)}
+                feePaise={Number(svc.muhurta_fee_paise || 0)}
+                defaultDate={date}
+                defaultTime={time}
+                receipt={muhurtaReceipt}
+                onBooked={setMuhurtaReceipt}
+              />
+            ) : null}
             <Field label={t("mobile.specialInstructions")} value={instructions} onChangeText={setInstructions} />
             <View style={{ flexDirection: "row", gap: 8 }}>
               <View style={{ flex: 1 }}>
@@ -447,6 +511,8 @@ export default function BookService() {
                 {Number(quote.samagri) ? <AppText>{t("mobile.samagri")} {rupees(Number(quote.samagri))}</AppText> : null}
                 {Number(quote.alankaram) ? <AppText>{t("mobile.alankaram")} {rupees(Number(quote.alankaram))}</AppText> : null}
                 {Number(quote.foodPrasadam) ? <AppText>{t("mobile.food")} {rupees(Number(quote.foodPrasadam))}</AppText> : null}
+                {Number(quote.peakFee) ? <AppText>{t("booking.peakFee")} {rupees(Number(quote.peakFee))}</AppText> : null}
+                {Number(quote.discount) ? <AppText>{t("booking.coupon")} {rupees(Number(quote.discount))}</AppText> : null}
                 <AppText>{t("booking.gst")} {rupees(Number(quote.gstAmount))}</AppText>
                 <AppText variant="h3">{t("mobile.total")} {rupees(Number(quote.totalAmount))}</AppText>
               </Card>

@@ -7,6 +7,13 @@ import { AppText, Card, ChoiceChips, LoadingBlock, Screen } from "@/components/u
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 
+function display(key: string, value: unknown) {
+  if (value == null) return "—";
+  if (typeof value === "number" && /paise|amount|revenue|total/i.test(key)) return rupees(value);
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
 export default function AdminReports() {
   const { t } = useI18n();
   const [range, setRange] = useState("last_30_days");
@@ -31,12 +38,12 @@ export default function AdminReports() {
           onChange={(v) => setRange(String(v))}
         />
         {q.isLoading ? <LoadingBlock /> : null}
-        <Card>
-          <AppText>Bookings: {String(data.bookings_count ?? data.totalBookings ?? "—")}</AppText>
-          <AppText>Revenue: {data.revenue_paise != null ? rupees(Number(data.revenue_paise)) : String(data.revenue ?? "—")}</AppText>
-          <AppText>Customers: {String(data.customers_count ?? data.newCustomers ?? "—")}</AppText>
-          <AppText>Pujaris: {String(data.pujaris_count ?? "—")}</AppText>
-        </Card>
+        {Object.entries(data).map(([k, v]) => (
+          <Card key={k}>
+            <AppText variant="small">{k}</AppText>
+            <AppText variant="h3">{display(k, v)}</AppText>
+          </Card>
+        ))}
       </ScrollView>
     </Screen>
   );
