@@ -12,6 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { api, rupees } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
+import { formatPujaTitleText } from "@bseva/locales";
+import { PujaTitle } from "@/components/PujaTitle";
 
 type BookingResult = {
   id: string;
@@ -132,7 +134,7 @@ export default function MuhurtaConsultationBook({
           <div>
             <p className="font-semibold text-foreground">{t("web.muhurta.bookingTitle")}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {t("web.muhurta.servicePrompt", { service: serviceName })}
+              {t("web.muhurta.servicePrompt", { service: formatPujaTitleText(serviceName) })}
             </p>
           </div>
 
@@ -239,7 +241,9 @@ export default function MuhurtaConsultationBook({
             </div>
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">{t("booking.service")}</span>
-              <span className="font-medium">{receipt.service_name || serviceName}</span>
+              <span className="font-medium">
+                <PujaTitle name={receipt.service_name || serviceName} />
+              </span>
             </div>
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">{t("web.muhurta.appointment")}</span>

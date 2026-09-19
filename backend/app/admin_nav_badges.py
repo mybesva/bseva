@@ -298,7 +298,7 @@ def admin_action_badges(db: Session) -> dict:
         db,
         """
         SELECT COUNT(*) FROM support_tickets
-        WHERE LOWER(COALESCE(status, 'open')) IN ('open', 'pending', 'new', 'in_progress')
+        WHERE LOWER(COALESCE(status, 'open')) IN ('open', 'pending', 'new', 'in_progress', 'waiting_for_user', 'escalated')
         """,
     )
 

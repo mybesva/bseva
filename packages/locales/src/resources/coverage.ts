@@ -3,9 +3,11 @@ import type { Lang } from "../constants";
 type Dict = Record<string, string>;
 
 const en: Dict = {
-  "auth.customerLoginDescription": "Sign in with your customer account to book pujas and manage bookings.",
+  "auth.customerLoginDescription": "Continue your spiritual journey with BSeva. Access your puja bookings, services, and devotional experiences in one place.",
   "auth.customerLoginHint": "For devotees and customers only. Use the header to switch portals.",
-  "auth.pujariLoginDescription": "Sign in with your pujari account to manage bookings, profile, and dakshina.",
+  "auth.pujariLoginDescription": "Continue your journey of service with BSeva. Manage your puja bookings, serve devotees, and stay connected with your sacred responsibilities.",
+  "auth.customerRegisterDescription": "Begin your spiritual journey with BSeva. Discover trusted puja services and stay connected to traditions that matter to you.",
+  "auth.pujariRegisterDescription": "Join BSeva's trusted Pujari community. Share your Vedic knowledge, serve devotees, and carry sacred traditions forward with devotion.",
   "auth.pujariLoginHint": "For pujaris and head pujaris only. Use the header to switch portals.",
   "auth.adminLogin": "Admin Login",
   "auth.adminLoginDescription": "Sign in with your admin credentials to manage the platform.",
@@ -40,7 +42,8 @@ const en: Dict = {
   "services.searchPujas": "Search Pujas, Homams, Vrathams...",
   "services.noPujas": "No pujas match your search.",
   "services.startingFromPrice": "Starting from {{price}}",
-  "services.comingSoonLabel": "Coming Soon",
+          "services.comingSoonLabel": "Coming Soon",
+  "services.readMore": "Read More",
   "common.version": "Version {{version}}",
   "service.spiritualMeaning": "Spiritual meaning",
   "service.commonOccasions": "Common occasions",
@@ -58,9 +61,11 @@ const en: Dict = {
 };
 
 const te: Dict = {
-  "auth.customerLoginDescription": "పూజలు బుక్ చేయడానికి మరియు బుకింగ్‌లను నిర్వహించడానికి మీ కస్టమర్ ఖాతాతో లాగిన్ అవ్వండి.",
+  "auth.customerLoginDescription": "BSevaతో మీ ఆధ్యాత్మిక ప్రయాణాన్ని కొనసాగించండి. పూజ బుకింగ్‌లు, సేవలు మరియు భక్తి అనుభవాలు ఒకే చోట పొందండి.",
   "auth.customerLoginHint": "భక్తులు మరియు కస్టమర్లకు మాత్రమే. పోర్టల్ మార్చడానికి హెడర్‌ను ఉపయోగించండి.",
-  "auth.pujariLoginDescription": "బుకింగ్‌లు, ప్రొఫైల్ మరియు దక్షిణ నిర్వహించడానికి మీ పూజారి ఖాతాతో లాగిన్ అవ్వండి.",
+  "auth.pujariLoginDescription": "BSevaతో మీ సేవా ప్రయాణాన్ని కొనసాగించండి. పూజ బుకింగ్‌లను నిర్వహించి, భక్తులకు సేవ చేసి, మీ పవిత్ర బాధ్యతలతో అనుసంధానంగా ఉండండి.",
+  "auth.customerRegisterDescription": "BSevaతో మీ ఆధ్యాత్మిక ప్రయాణాన్ని ప్రారంభించండి. నమ్మదగిన పూజ సేవలను కనుగొని, మీకు ముఖ్యమైన సంప్రదాయాలతో అనుసంధానంగా ఉండండి.",
+  "auth.pujariRegisterDescription": "BSeva నమ్మకమైన పూజారి సముదాయంలో చేరండి. వైదిక జ్ఞానాన్ని పంచుకుని, భక్తులకు సేవ చేసి, పవిత్ర సంప్రదాయాలను భక్తితో ముందుకు తీసుకెళ్లండి.",
   "auth.pujariLoginHint": "పూజారులు మరియు ప్రధాన పూజారులకు మాత్రమే. పోర్టల్ మార్చడానికి హెడర్‌ను ఉపయోగించండి.",
   "auth.adminLogin": "అడ్మిన్ లాగిన్",
   "auth.adminLoginDescription": "ప్లాట్‌ఫారమ్ నిర్వహించడానికి అడ్మిన్ వివరాలతో లాగిన్ అవ్వండి.",
@@ -96,6 +101,7 @@ const te: Dict = {
   "services.noPujas": "మీ శోధనకు సరిపోయే పూజలు లేవు.",
   "services.startingFromPrice": "{{price}} నుండి",
   "services.comingSoonLabel": "త్వరలో",
+  "services.readMore": "మరింత చదవండి",
   "common.version": "వెర్షన్ {{version}}",
   "service.spiritualMeaning": "ఆధ్యాత్మిక ప్రాముఖ్యత",
   "service.commonOccasions": "సాధారణ సందర్భాలు",
@@ -113,9 +119,11 @@ const te: Dict = {
 };
 
 const hi: Dict = {
-  "auth.customerLoginDescription": "पूजा बुक करने और बुकिंग संभालने के लिए अपने ग्राहक खाते से लॉगिन करें।",
+  "auth.customerLoginDescription": "BSeva के साथ अपनी आध्यात्मिक यात्रा जारी रखें। अपनी पूजा बुकिंग, सेवाएँ और भक्ति अनुभव एक ही स्थान पर पाएँ।",
   "auth.customerLoginHint": "केवल भक्तों और ग्राहकों के लिए। पोर्टल बदलने के लिए हेडर का उपयोग करें।",
-  "auth.pujariLoginDescription": "बुकिंग, प्रोफ़ाइल और दक्षिणा संभालने के लिए अपने पुजारी खाते से लॉगिन करें।",
+  "auth.pujariLoginDescription": "BSeva के साथ अपनी सेवा यात्रा जारी रखें। पूजा बुकिंग संभालें, भक्तों की सेवा करें और अपनी पवित्र जिम्मेदारियों से जुड़े रहें।",
+  "auth.customerRegisterDescription": "BSeva के साथ अपनी आध्यात्मिक यात्रा शुरू करें। विश्वसनीय पूजा सेवाएँ खोजें और उन परंपराओं से जुड़े रहें जो आपके लिए मायने रखती हैं।",
+  "auth.pujariRegisterDescription": "BSeva के विश्वसनीय पुजारी समुदाय से जुड़ें। अपना वैदिक ज्ञान बाँटें, भक्तों की सेवा करें और पवित्र परंपराओं को भक्ति के साथ आगे बढ़ाएँ।",
   "auth.pujariLoginHint": "केवल पुजारी और मुख्य पुजारी के लिए। पोर्टल बदलने के लिए हेडर का उपयोग करें।",
   "auth.adminLogin": "एडमिन लॉगिन",
   "auth.adminLoginDescription": "प्लेटफ़ॉर्म संभालने के लिए एडमिन विवरण से लॉगिन करें।",
@@ -151,6 +159,7 @@ const hi: Dict = {
   "services.noPujas": "आपकी खोज से कोई पूजा नहीं मिली।",
   "services.startingFromPrice": "{{price}} से",
   "services.comingSoonLabel": "जल्द आ रहा है",
+  "services.readMore": "और पढ़ें",
   "common.version": "संस्करण {{version}}",
   "service.spiritualMeaning": "आध्यात्मिक महत्व",
   "service.commonOccasions": "सामान्य अवसर",
@@ -168,9 +177,11 @@ const hi: Dict = {
 };
 
 const mr: Dict = {
-  "auth.customerLoginDescription": "पूजा बुक करण्यासाठी आणि बुकिंग व्यवस्थापित करण्यासाठी ग्राहक खात्याने लॉगिन करा.",
+  "auth.customerLoginDescription": "BSeva सोबत आपला आध्यात्मिक प्रवास सुरू ठेवा. पूजा बुकिंग, सेवा आणि भक्ती अनुभव एकाच ठिकाणी मिळवा.",
   "auth.customerLoginHint": "फक्त भक्त आणि ग्राहकांसाठी. पोर्टल बदलण्यासाठी हेडर वापरा.",
-  "auth.pujariLoginDescription": "बुकिंग, प्रोफाइल आणि दक्षिणा व्यवस्थापित करण्यासाठी पुजारी खात्याने लॉगिन करा.",
+  "auth.pujariLoginDescription": "BSeva सोबत आपला सेवा प्रवास सुरू ठेवा. पूजा बुकिंग व्यवस्थापित करा, भक्तांची सेवा करा आणि आपल्या पवित्र जबाबदाऱ्यांशी जोडून राहा.",
+  "auth.customerRegisterDescription": "BSeva सोबत आपला आध्यात्मिक प्रवास सुरू करा. विश्वसनीय पूजा सेवा शोधा आणि आपल्यासाठी महत्त्वाच्या परंपरांशी जोडून राहा.",
+  "auth.pujariRegisterDescription": "BSeva च्या विश्वसनीय पुजारी समुदायात सामील व्हा. वैदिक ज्ञान शेअर करा, भक्तांची सेवा करा आणि पवित्र परंपरा भक्तीने पुढे न्या.",
   "auth.pujariLoginHint": "फक्त पुजारी आणि मुख्य पुजाऱ्यांसाठी. पोर्टल बदलण्यासाठी हेडर वापरा.",
   "auth.adminLogin": "अॅडमिन लॉगिन",
   "auth.adminLoginDescription": "प्लॅटफॉर्म व्यवस्थापित करण्यासाठी अॅडमिन तपशीलांनी लॉगिन करा.",
@@ -206,6 +217,7 @@ const mr: Dict = {
   "services.noPujas": "तुमच्या शोधाशी जुळणारी पूजा नाही.",
   "services.startingFromPrice": "{{price}} पासून",
   "services.comingSoonLabel": "लवकरच",
+  "services.readMore": "अधिक वाचा",
   "common.version": "आवृत्ती {{version}}",
   "service.spiritualMeaning": "आध्यात्मिक महत्त्व",
   "service.commonOccasions": "सामान्य प्रसंग",
@@ -223,9 +235,11 @@ const mr: Dict = {
 };
 
 const kn: Dict = {
-  "auth.customerLoginDescription": "ಪೂಜೆ ಬುಕ್ ಮಾಡಲು ಮತ್ತು ಬುಕಿಂಗ್ ನಿರ್ವಹಿಸಲು ನಿಮ್ಮ ಗ್ರಾಹಕ ಖಾತೆಯಿಂದ ಲಾಗಿನ್ ಮಾಡಿ.",
+  "auth.customerLoginDescription": "BSeva ಜೊತೆ ನಿಮ್ಮ ಆಧ್ಯಾತ್ಮಿಕ ಪಯಣವನ್ನು ಮುಂದುವರಿಸಿ. ಪೂಜೆ ಬುಕಿಂಗ್, ಸೇವೆಗಳು ಮತ್ತು ಭಕ್ತಿ ಅನುಭವಗಳನ್ನು ಒಂದೇ ಸ್ಥಳದಲ್ಲಿ ಪಡೆಯಿರಿ.",
   "auth.customerLoginHint": "ಭಕ್ತರು ಮತ್ತು ಗ್ರಾಹಕರಿಗೆ ಮಾತ್ರ. ಪೋರ್ಟಲ್ ಬದಲಿಸಲು ಹೆಡರ್ ಬಳಸಿ.",
-  "auth.pujariLoginDescription": "ಬುಕಿಂಗ್, ಪ್ರೊಫೈಲ್ ಮತ್ತು ದಕ್ಷಿಣೆ ನಿರ್ವಹಿಸಲು ಪೂಜಾರಿ ಖಾತೆಯಿಂದ ಲಾಗಿನ್ ಮಾಡಿ.",
+  "auth.pujariLoginDescription": "BSeva ಜೊತೆ ನಿಮ್ಮ ಸೇವಾ ಪಯಣವನ್ನು ಮುಂದುವರಿಸಿ. ಪೂಜೆ ಬುಕಿಂಗ್ ನಿರ್ವಹಿಸಿ, ಭಕ್ತರಿಗೆ ಸೇವೆ ಸಲ್ಲಿಸಿ, ನಿಮ್ಮ ಪವಿತ್ರ ಜವಾಬ್ದಾರಿಗಳೊಂದಿಗೆ ಸಂಪರ್ಕದಲ್ಲಿರಿ.",
+  "auth.customerRegisterDescription": "BSeva ಜೊತೆ ನಿಮ್ಮ ಆಧ್ಯಾತ್ಮಿಕ ಪಯಣವನ್ನು ಪ್ರಾರಂಭಿಸಿ. ನಂಬಲರ್ಹ ಪೂಜೆ ಸೇವೆಗಳನ್ನು ಕಂಡುಕೊಂಡು ನಿಮಗೆ ಮುಖ್ಯವಾದ ಸಂಪ್ರದಾಯಗಳೊಂದಿಗೆ ಸಂಪರ್ಕದಲ್ಲಿರಿ.",
+  "auth.pujariRegisterDescription": "BSeva ನಂಬಲರ್ಹ ಪೂಜಾರಿ ಸಮುದಾಯಕ್ಕೆ ಸೇರಿ. ವೈದಿಕ ಜ್ಞಾನ ಹಂಚಿಕೊಳ್ಳಿ, ಭಕ್ತರಿಗೆ ಸೇವೆ ಸಲ್ಲಿಸಿ, ಪವಿತ್ರ ಸಂಪ್ರದಾಯಗಳನ್ನು ಭಕ್ತಿಯಿಂದ ಮುಂದುವರಿಸಿ.",
   "auth.pujariLoginHint": "ಪೂಜಾರಿ ಮತ್ತು ಮುಖ್ಯ ಪೂಜಾರಿಗಳಿಗೆ ಮಾತ್ರ. ಪೋರ್ಟಲ್ ಬದಲಿಸಲು ಹೆಡರ್ ಬಳಸಿ.",
   "auth.adminLogin": "ಅಡ್ಮಿನ್ ಲಾಗಿನ್",
   "auth.adminLoginDescription": "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ನಿರ್ವಹಿಸಲು ಅಡ್ಮಿನ್ ವಿವರಗಳಿಂದ ಲಾಗಿನ್ ಮಾಡಿ.",
@@ -261,6 +275,7 @@ const kn: Dict = {
   "services.noPujas": "ನಿಮ್ಮ ಹುಡುಕಾಟಕ್ಕೆ ಹೊಂದುವ ಪೂಜೆಗಳಿಲ್ಲ.",
   "services.startingFromPrice": "{{price}} ರಿಂದ",
   "services.comingSoonLabel": "ಶೀಘ್ರದಲ್ಲೇ",
+  "services.readMore": "ಇನ್ನಷ್ಟು ಓದಿ",
   "common.version": "ಆವೃತ್ತಿ {{version}}",
   "service.spiritualMeaning": "ಆಧ್ಯಾತ್ಮಿಕ ಮಹತ್ವ",
   "service.commonOccasions": "ಸಾಮಾನ್ಯ ಸಂದರ್ಭಗಳು",
@@ -278,9 +293,11 @@ const kn: Dict = {
 };
 
 const ta: Dict = {
-  "auth.customerLoginDescription": "பூஜைகளை முன்பதிவு செய்து நிர்வகிக்க வாடிக்கையாளர் கணக்கில் உள்நுழையவும்.",
+  "auth.customerLoginDescription": "BSeva உடன் உங்கள் ஆன்மிகப் பயணத்தைத் தொடருங்கள். பூஜை முன்பதிவுகள், சேவைகள் மற்றும் பக்தி அனுபவங்களை ஒரே இடத்தில் பெறுங்கள்.",
   "auth.customerLoginHint": "பக்தர்கள் மற்றும் வாடிக்கையாளர்களுக்கு மட்டும். போர்டலை மாற்ற தலைப்பைப் பயன்படுத்தவும்.",
-  "auth.pujariLoginDescription": "முன்பதிவு, சுயவிவரம் மற்றும் தட்சிணையை நிர்வகிக்க பூசாரி கணக்கில் உள்நுழையவும்.",
+  "auth.pujariLoginDescription": "BSeva உடன் உங்கள் சேவைப் பயணத்தைத் தொடருங்கள். பூஜை முன்பதிவுகளை நிர்வகித்து, பக்தர்களுக்கு சேவை செய்து, உங்கள் புனிதப் பொறுப்புகளுடன் இணைந்திருங்கள்.",
+  "auth.customerRegisterDescription": "BSeva உடன் உங்கள் ஆன்மிகப் பயணத்தைத் தொடங்குங்கள். நம்பகமான பூஜை சேவைகளைக் கண்டறிந்து உங்களுக்கு முக்கியமான மரபுகளுடன் இணைந்திருங்கள்.",
+  "auth.pujariRegisterDescription": "BSevaவின் நம்பகமான பூசாரி சமூகத்தில் இணையுங்கள். வைதீக அறிவைப் பகிர்ந்து, பக்தர்களுக்கு சேவை செய்து, புனித மரபுகளை பக்தியுடன் முன்னெடுங்கள்.",
   "auth.pujariLoginHint": "பூசாரிகள் மற்றும் தலைமை பூசாரிகளுக்கு மட்டும். போர்டலை மாற்ற தலைப்பைப் பயன்படுத்தவும்.",
   "auth.adminLogin": "நிர்வாக உள்நுழைவு",
   "auth.adminLoginDescription": "தளத்தை நிர்வகிக்க நிர்வாக விவரங்களுடன் உள்நுழையவும்.",
@@ -316,6 +333,7 @@ const ta: Dict = {
   "services.noPujas": "உங்கள் தேடலுக்குப் பொருந்தும் பூஜைகள் இல்லை.",
   "services.startingFromPrice": "{{price}} முதல்",
   "services.comingSoonLabel": "விரைவில்",
+  "services.readMore": "மேலும் படிக்க",
   "common.version": "பதிப்பு {{version}}",
   "service.spiritualMeaning": "ஆன்மிக முக்கியத்துவம்",
   "service.commonOccasions": "பொதுவான நிகழ்வுகள்",

@@ -32,8 +32,9 @@ export default function AdminSupport() {
             <ChoiceChips
               options={[
                 { id: "open", label: "Open" },
-                { id: "in_progress", label: "In progress" },
-                { id: "waiting_for_user", label: "Waiting" },
+                { id: "in_progress", label: "In Progress" },
+                { id: "waiting_for_user", label: "Waiting for User" },
+                { id: "escalated", label: "Escalated" },
                 { id: "resolved", label: "Resolved" },
                 { id: "closed", label: "Closed" },
               ]}

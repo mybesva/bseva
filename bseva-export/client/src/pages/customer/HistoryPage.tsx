@@ -8,6 +8,7 @@ import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
+import { PujaTitle } from "@/components/PujaTitle";
 
 const HISTORY = new Set(["completed", "cancelled", "refunded"]);
 
@@ -58,7 +59,9 @@ export default function CustomerHistoryPage() {
           {history.map((booking) => (
             <div key={booking.id} className="border rounded-lg p-4 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-semibold">{booking.service_name}</h3>
+                <h3>
+                  <PujaTitle name={booking.service_name} />
+                </h3>
                 <Badge className={statusColor(booking.status)}>{t(`status.${booking.status}`)}</Badge>
               </div>
               <p className="text-sm text-muted-foreground">#{booking.booking_number}</p>

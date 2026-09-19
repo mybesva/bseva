@@ -118,6 +118,11 @@ export default function RegisterScreen() {
                 />
               </View>
             </View>
+            <AppText color={colors.mutedForeground} style={{ marginBottom: 16, lineHeight: 22 }}>
+              {accountType === "pujari"
+                ? t("auth.pujariRegisterDescription")
+                : t("auth.customerRegisterDescription")}
+            </AppText>
             <View style={{ gap: 12 }}>
               <ErrorBanner message={error} />
               <Field label={t("auth.name")} value={name} onChangeText={setName} />

@@ -152,7 +152,7 @@ export default function RolePortalGate({
                 <p className="text-xs font-medium text-primary mt-0.5">{copy.hint}</p>
               </div>
             </div>
-            <CardDescription>{copy.description}</CardDescription>
+            <CardDescription className="leading-relaxed text-pretty">{copy.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <form key={expected} className="space-y-3" onSubmit={onLogin} autoComplete="off">

@@ -11,6 +11,7 @@ import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
+import { PujaTitle } from "@/components/PujaTitle";
 
 const CANCELLED = new Set(["cancelled", "refunded"]);
 
@@ -59,7 +60,9 @@ function BookingCard({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-semibold">{booking.service_name}</h3>
+          <h3 className="min-w-0">
+            <PujaTitle name={booking.service_name} />
+          </h3>
           <Badge className={statusColor(displayStatus)}>{displayLabel}</Badge>
         </div>
         <Button

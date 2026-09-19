@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Switch, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { PujaTitle } from "@/components/PujaTitle";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
@@ -311,7 +312,7 @@ export default function BookService() {
 
   return (
     <Screen>
-      <ScreenHeader title={t("mobile.bookService", { service: svc.name })} back />
+      <ScreenHeader title={<PujaTitle name={svc.name} onDark numberOfLines={1} />} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
         <AppText variant="small">{t("mobile.stepOf", { step, total: 4 })}</AppText>
         <ErrorBanner message={error} />

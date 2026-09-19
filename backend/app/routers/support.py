@@ -29,17 +29,17 @@ class MessageIn(BaseModel):
 
 
 @router.post("/conversations")
-def create_conversation(body: ConversationCreateIn, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+def create_conversation(body: ConversationCreateIn, user=Depends(require_roles("customer", "pujari", "head_pujari")), db: Session = Depends(get_db)):
     cid = str(uuid4())
     mid = str(uuid4())
     db.execute(
         text(
             """
-            INSERT INTO support_conversations (id, customer_id, status, subject, last_response_at)
-            VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), 'open', :subj, NOW())
+            INSERT INTO support_conversations (id, customer_id, status, subject, last_response_at, user_role)
+            VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), 'open', :subj, NOW(), :role)
             """
         ),
-        {"id": cid, "cid": user["id"], "subj": body.subject or "Booking assistance"},
+        {"id": cid, "cid": user["id"], "subj": body.subject or "Booking assistance", "role": user["role"]},
     )
     db.execute(
         text(
@@ -56,13 +56,15 @@ def create_conversation(body: ConversationCreateIn, user=Depends(require_roles("
 
 @router.get("/conversations")
 def list_conversations(user=Depends(current_user), db: Session = Depends(get_db)):
-    if user["role"] == "customer":
+    if user["role"] in ("customer", "pujari", "head_pujari"):
         rows = db.execute(
             text(
                 """
-                SELECT * FROM support_conversations
-                WHERE customer_id = CAST(:id AS uuid)
-                ORDER BY updated_at DESC NULLS LAST, created_at DESC
+                SELECT c.*, t.ticket_number
+                FROM support_conversations c
+                LEFT JOIN support_tickets t ON t.id = c.ticket_id
+                WHERE c.customer_id = CAST(:id AS uuid)
+                ORDER BY c.updated_at DESC NULLS LAST, c.created_at DESC
                 LIMIT 50
                 """
             ),
@@ -72,9 +74,10 @@ def list_conversations(user=Depends(current_user), db: Session = Depends(get_db)
         rows = db.execute(
             text(
                 """
-                SELECT c.*, u.name AS customer_name
+                SELECT c.*, u.name AS customer_name, u.role AS user_role, t.ticket_number, t.id AS linked_ticket_id
                 FROM support_conversations c
                 JOIN users u ON u.id = c.customer_id
+                LEFT JOIN support_tickets t ON t.id = c.ticket_id
                 ORDER BY c.created_at DESC
                 LIMIT 100
                 """
@@ -85,6 +88,14 @@ def list_conversations(user=Depends(current_user), db: Session = Depends(get_db)
     return [row_dict(r) for r in rows]
 
 
+def _can_access_conversation(conv, user) -> None:
+    if user["role"] in ("admin", "super_admin"):
+        return
+    if user["role"] in ("customer", "pujari", "head_pujari") and str(conv["customer_id"]) == str(user["id"]):
+        return
+    raise HTTPException(403, "Not allowed")
+
+
 @router.get("/conversations/{conversation_id}/messages")
 def list_messages(conversation_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
     conv = db.execute(
@@ -93,10 +104,7 @@ def list_messages(conversation_id: str, user=Depends(current_user), db: Session 
     ).mappings().first()
     if not conv:
         raise HTTPException(404, "Conversation not found")
-    if user["role"] == "customer" and str(conv["customer_id"]) != str(user["id"]):
-        raise HTTPException(403, "Not allowed")
-    if user["role"] not in ("customer", "admin", "super_admin"):
-        raise HTTPException(403, "Not allowed")
+    _can_access_conversation(conv, user)
     rows = db.execute(
         text(
             """
@@ -118,13 +126,10 @@ def post_message(conversation_id: str, body: MessageIn, user=Depends(current_use
     ).mappings().first()
     if not conv:
         raise HTTPException(404, "Conversation not found")
-    if user["role"] == "customer" and str(conv["customer_id"]) != str(user["id"]):
-        raise HTTPException(403, "Not allowed")
-    if user["role"] not in ("customer", "admin", "super_admin"):
-        raise HTTPException(403, "Not allowed")
+    _can_access_conversation(conv, user)
     if conv["status"] in ("closed", "resolved"):
         raise HTTPException(400, "Conversation is closed")
-    role = "agent" if user["role"] in ("admin", "super_admin") else "customer"
+    role = "agent" if user["role"] in ("admin", "super_admin") else user["role"]
     mid = str(uuid4())
     db.execute(
         text(
@@ -156,6 +161,19 @@ def post_message(conversation_id: str, body: MessageIn, user=Depends(current_use
                 """
             ),
             {"id": conversation_id},
+        )
+    ticket_id = conv.get("ticket_id")
+    if ticket_id:
+        from app.routers.tickets import _add_event
+
+        _add_event(
+            db,
+            ticket_id=str(ticket_id),
+            actor=user,
+            event_type="admin_reply" if role == "agent" else "user_message",
+            body=body.body,
+            visibility="public",
+            meta={"from_conversation": conversation_id},
         )
     db.commit()
     return {"id": mid, "ok": True}

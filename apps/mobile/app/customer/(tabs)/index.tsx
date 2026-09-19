@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { Image, Linking, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ChoiceChips, EmptyState, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
+import { PujaTitle } from "@/components/PujaTitle";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
@@ -126,7 +127,7 @@ export default function CustomerHome() {
               <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
                 <Card>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <AppText variant="h3">{b.service_name}</AppText>
+                    <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
                     <StatusBadge status={b.customer_display_status || b.status} />
                   </View>
                   <AppText variant="small" color={colors.mutedForeground}>
@@ -144,7 +145,7 @@ export default function CustomerHome() {
               <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
                 <Card>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <AppText variant="h3">{b.service_name}</AppText>
+                    <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
                     <StatusBadge status={b.customer_display_status || b.status} />
                   </View>
                   <AppText variant="small">{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
@@ -172,7 +173,7 @@ export default function CustomerHome() {
         {(services.data || []).slice(0, 6).map((s: CatalogService) => (
           <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
             <Card>
-              <AppText variant="h3">{s.name}</AppText>
+              <PujaTitle name={s.name} />
               <AppText variant="small" color={colors.primary}>
                 {s.standard_price_paise != null ? `${t("customer.from")} ${rupees(s.standard_price_paise)}` : t("services.comingSoonLabel")}
               </AppText>

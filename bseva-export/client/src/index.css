@@ -327,24 +327,286 @@
   .text-gradient-gold {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-[#D4AF37] to-[#FF9933];
   }
+
+  /* Premium card hover — lift, orange border, soft glow. Fine-pointer only. */
+  @keyframes card-hover-sheen {
+    0% {
+      opacity: 0;
+      transform: translateX(-28%);
+    }
+    32% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(28%);
+    }
+  }
+
+  .card-hover-premium {
+    position: relative;
+    isolation: isolate;
+    transition:
+      transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.38s ease,
+      border-color 0.38s ease;
+  }
+
+  .card-hover-premium::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    background: linear-gradient(
+      108deg,
+      transparent 38%,
+      rgb(255 153 51 / 0.16) 50%,
+      transparent 62%
+    );
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .card-hover-premium:hover {
+      z-index: 3;
+      transform: translateY(-4px) scale(1.015);
+      border-color: #ff9933 !important;
+      box-shadow:
+        0 16px 32px -12px rgb(255 153 51 / 0.4),
+        0 0 0 1.5px #ff9933,
+        0 0 22px rgb(255 153 51 / 0.22) !important;
+    }
+
+    .card-hover-premium:hover::after {
+      animation: card-hover-sheen 0.7s ease;
+    }
+  }
+
+  /* Primary Book a Puja CTA — slow glow, slight scale, occasional sheen */
+  @keyframes book-puja-breathe {
+    0%,
+    14%,
+    100% {
+      transform: scale(1);
+      box-shadow:
+        0 1px 2px rgb(26 43 74 / 0.08),
+        0 0 0 0 rgb(255 153 51 / 0);
+    }
+    24% {
+      transform: scale(1.028);
+      box-shadow:
+        0 8px 18px -8px rgb(255 153 51 / 0.5),
+        0 0 18px rgb(255 153 51 / 0.32);
+    }
+    36% {
+      transform: scale(1);
+      box-shadow:
+        0 3px 10px -4px rgb(255 153 51 / 0.28),
+        0 0 8px rgb(255 153 51 / 0.14);
+    }
+  }
+
+  @keyframes book-puja-shimmer {
+    0%,
+    42%,
+    100% {
+      transform: translateX(-140%) skewX(-14deg);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.45;
+    }
+    64% {
+      transform: translateX(240%) skewX(-14deg);
+      opacity: 0;
+    }
+  }
+
+  .book-puja-cta-wrap {
+    display: inline-flex;
+    border-radius: 0.375rem;
+    transform-origin: center;
+    animation: book-puja-breathe 6.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .book-puja-cta {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: inherit;
+    box-shadow: 0 1px 2px rgb(26 43 74 / 0.08);
+  }
+
+  .book-puja-cta::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 42%;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 248 231 / 0.08) 28%,
+      rgb(255 255 255 / 0.32) 50%,
+      rgb(255 220 170 / 0.16) 72%,
+      transparent 100%
+    );
+    animation: book-puja-shimmer 6.8s ease-in-out infinite;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .book-puja-cta-wrap:hover {
+      animation: none;
+      transform: translateY(-2px) scale(1.03);
+      transition:
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.35s ease;
+      box-shadow:
+        0 10px 22px -8px rgb(255 153 51 / 0.55),
+        0 0 20px rgb(255 153 51 / 0.36);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-hover-premium,
+    .card-hover-premium:hover {
+      transition: none;
+      animation: none;
+      transform: none;
+    }
+
+    .card-hover-premium::after,
+    .card-hover-premium:hover::after {
+      animation: none !important;
+      opacity: 0;
+    }
+
+    .book-puja-cta-wrap,
+    .book-puja-cta-wrap:hover {
+      animation: none;
+      transform: none;
+      transition: none;
+      box-shadow: 0 1px 2px rgb(26 43 74 / 0.08);
+    }
+
+    .book-puja-cta::after {
+      animation: none !important;
+      opacity: 0;
+    }
+  }
+}
+
+.bseva-doc-watermark,
+.bseva-doc-header,
+.bseva-doc-footer {
+  display: none;
 }
 
 @media print {
   @page {
-    margin: 14mm;
     size: A4;
+    margin: 0;
+  }
+  @page {
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font: 9px "Plus Jakarta Sans", Helvetica, Arial, sans-serif;
+      color: #1a2b4a;
+    }
   }
   html,
   body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     background: #fff !important;
     color: #1a2b4a !important;
+    padding: 28mm 14mm 20mm 14mm !important;
+    margin: 0 !important;
   }
-  .bseva-print-header {
-    break-inside: avoid;
-  }
+  aside,
   nav,
-  footer,
+  header:not(.bseva-doc-header):not(.bseva-print-header),
+  footer:not(.bseva-doc-footer),
   [data-sonner-toaster] {
     display: none !important;
+  }
+  .min-h-screen,
+  .h-screen {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .bseva-doc-watermark {
+    display: flex !important;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .bseva-doc-watermark img {
+    width: min(52%, 380px);
+    opacity: 0.07;
+  }
+  .bseva-doc-header,
+  .bseva-print-header {
+    display: flex !important;
+    position: fixed;
+    top: 8mm;
+    left: 14mm;
+    right: 14mm;
+    z-index: 2;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 8px;
+    margin: 0;
+    border-bottom: 3px solid #ff9933;
+    background: #fff;
+    break-inside: avoid;
+  }
+  .bseva-doc-title {
+    text-align: right;
+  }
+  .bseva-doc-title h1 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #1a2b4a;
+  }
+  .bseva-doc-ref {
+    margin: 6px 0 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: #334155;
+  }
+  .bseva-doc-footer {
+    display: flex !important;
+    position: fixed;
+    left: 14mm;
+    right: 14mm;
+    bottom: 8mm;
+    z-index: 2;
+    padding-top: 8px;
+    border-top: 2px solid #ff9933;
+    background: #fff;
+    font-size: 10px;
+    color: #1a2b4a;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .bseva-doc-footer p {
+    margin: 2px 0 0;
+    color: #334155;
   }
 }

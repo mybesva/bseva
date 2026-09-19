@@ -1,15 +1,13 @@
 """A4 PDF for issued BSeva invoices — snapshot only, no live settings."""
 from __future__ import annotations
 
-import io
 import json
-from pathlib import Path
 from typing import Any
 
+from app.document_brand import NAVY_RGB as NAVY
+from app.document_brand import build_bseva_pdf
 from app.invoice_docs import format_duration_minutes
 
-NAVY = (0x1A / 255, 0x2B / 255, 0x4A / 255)
-ORANGE = (1.0, 0x99 / 255, 0x33 / 255)
 GRAY = (0.35, 0.35, 0.38)
 
 
@@ -27,39 +25,11 @@ def _inr(paise: int | None) -> str:
     return f"Rs {(int(paise or 0) / 100):,.2f}"
 
 
-def _logo_file(configured: str | None) -> Path | None:
-    """Resolve the snapshotted logo without requiring network access."""
-    value = str(configured or "").strip()
-    if value.startswith(("http://", "https://")):
-        return None
-    repo_root = Path(__file__).resolve().parents[2]
-    name = Path(value).name if value else "bseva-mark.png"
-    if name in {"bseva-logo-transparent.png", "bseva-logo.png"}:
-        name = "bseva-mark.png"
-    candidates = [
-        Path(value).expanduser() if value else Path(),
-        repo_root / "bseva-export" / "client" / "public" / name,
-        repo_root / "client" / "public" / name,
-    ]
-    for path in candidates:
-        if path.is_file():
-            return path
-    return None
-
-
 def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
-    from reportlab.platypus import (
-        Paragraph,
-        Image,
-        SimpleDocTemplate,
-        Spacer,
-        Table,
-        TableStyle,
-    )
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
     snap = _snap(inv)
     company = snap.get("company") or {}
@@ -72,77 +42,20 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
     muted = ParagraphStyle("muted", parent=styles["Normal"], textColor=colors.Color(*GRAY), fontSize=8, leading=11)
     small = ParagraphStyle("small", parent=styles["Normal"], fontSize=8, leading=11, textColor=colors.Color(*NAVY))
 
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf,
-        pagesize=A4,
-        leftMargin=14 * mm,
-        rightMargin=14 * mm,
-        topMargin=12 * mm,
-        bottomMargin=14 * mm,
-        title=str(inv.get("invoice_number") or "Invoice"),
-        author=str(company.get("legal_name") or "BSeva"),
-    )
-    word = ParagraphStyle(
-        "word",
-        parent=styles["Normal"],
-        textColor=colors.Color(*ORANGE),
-        fontSize=18,
-        leading=20,
-        fontName="Helvetica-Bold",
-        spaceAfter=1,
-    )
-    motto = ParagraphStyle(
-        "motto",
-        parent=styles["Normal"],
-        textColor=colors.Color(*NAVY),
-        fontSize=8,
-        leading=10,
-        fontName="Helvetica-Oblique",
-    )
     story: list[Any] = []
-    left = []
-    logo_path = _logo_file(company.get("logo_path"))
-    if logo_path:
-        name_row = Table(
-            [
-                [
-                    Image(str(logo_path), width=14 * mm, height=14 * mm, kind="proportional"),
-                    Paragraph("<font color='#1A2B4A'>-</font>Seva", word),
-                ]
-            ],
-            colWidths=[16 * mm, 40 * mm],
-        )
-        name_row.setStyle(
-            TableStyle(
-                [
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 2),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ]
-            )
-        )
-        left.append(name_row)
-        left.append(Paragraph("Book, Believe, Bless", motto))
-    else:
-        left.append(Paragraph("<font color='#1A2B4A'>-</font>Seva", word))
-        left.append(Paragraph("Book, Believe, Bless", motto))
-    left.extend([
+    left = [
         Paragraph(str(company.get("legal_name") or ""), legal),
         Paragraph(str(company.get("address") or "").replace("\n", "<br/>"), muted),
         Paragraph(
             f"Email: {company.get('email') or ''} &nbsp; Website: {company.get('website') or ''}",
             muted,
         ),
-    ])
+    ]
     if company.get("gstin"):
         left.append(Paragraph(f"GSTIN: {company.get('gstin')}", muted))
     if company.get("pan"):
         left.append(Paragraph(f"PAN: {company.get('pan')}", muted))
     meta = [
-        Paragraph(f"<b>{title}</b>", legal),
         Paragraph(f"Invoice No. {inv.get('invoice_number') or snap.get('invoice_number') or ''}", small),
         Paragraph(f"Invoice Date {snap.get('invoice_date') or ''}", small),
         Paragraph(f"Booking ID {snap.get('booking_number') or ''}", small),
@@ -156,7 +69,6 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
         TableStyle(
             [
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LINEBELOW", (0, 0), (-1, -1), 2, colors.Color(*ORANGE)),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ]
         )
@@ -259,5 +171,10 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
     story.append(Spacer(1, 4))
     story.append(Paragraph("<b>Terms &amp; Conditions</b>", small))
     story.append(Paragraph(str(snap.get("terms") or company.get("terms") or ""), muted))
-    doc.build(story)
-    return buf.getvalue()
+    return build_bseva_pdf(
+        story,
+        document_title=title,
+        company=company,
+        title=str(inv.get("invoice_number") or title),
+        author=str(company.get("legal_name") or "BSeva"),
+    )

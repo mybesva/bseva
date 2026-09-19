@@ -14,6 +14,10 @@ import {
 } from "@/lib/serviceAvailabilityMessages";
 import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 import { formatStartingFrom } from "@/lib/servicePricing";
+import { serviceImageUrl } from "@/lib/serviceImage";
+import ServiceCard from "@/components/ServiceCard";
+import { PujaTitle } from "@/components/PujaTitle";
+import { useStartBooking } from "@/hooks/useStartBooking";
 import { Calendar, MapPin, Clock, Sparkles, CreditCard, ArrowRight, PlayCircle, Video } from "lucide-react";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
@@ -37,6 +41,7 @@ function CustomerDashboardContent() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { canBook, checking, status } = useServiceAvailability();
+  const { startBooking, bookingBlocked } = useStartBooking();
   const [calPref, setCalPref] = useState<"north" | "south" | "lunar">("north");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -179,7 +184,9 @@ function CustomerDashboardContent() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3 mb-1 flex-wrap">
-                          <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
+                          <h3 className="text-lg">
+                            <PujaTitle name={booking.service_name} />
+                          </h3>
                           <Badge className={getStatusColor(customerStatus(booking))}>{customerStatusLabel(booking)}</Badge>
                           <Badge variant="outline" className="capitalize">{booking.package_type}</Badge>
                         </div>
@@ -349,7 +356,7 @@ function CustomerDashboardContent() {
                       <p className="text-xs text-muted-foreground">{rec.recurrence_hint}</p>
                     )}
                     <div className="text-sm font-medium text-foreground">
-                      {rec.service_name}
+                      <PujaTitle name={rec.service_name} />
                       {(() => {
                         const line = formatStartingFrom(rec);
                         return line ? ` · ${line}` : "";
@@ -388,34 +395,31 @@ function CustomerDashboardContent() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(pujas || []).slice(0, 6).map((puja) => (
-              <Card key={puja.id} className="hover:shadow-md transition-shadow border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-foreground flex items-center gap-2">
-                    <Sparkles className="text-primary" size={18} />
-                    {puja.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground line-clamp-2">{puja.description}</p>
-                  {formatStartingFrom(puja) ? (
-                    <div className="text-sm font-semibold text-primary">{formatStartingFrom(puja)}</div>
-                  ) : null}
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90 font-bold"
-                    disabled={!canBook || checking}
-                    title={!canBook ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
-                    onClick={() => {
-                      if (!canBook || checking) {
-                        notifyBookingBlocked(status, t);
-                        return;
-                      }
-                      setLocation(`/book/${puja.slug}`);
-                    }}
-                  >
-                    {checking ? "Checking…" : t("customer.bookNow")}
-                  </Button>
-                </CardContent>
-              </Card>
+              <div
+                key={puja.id}
+                onClick={() => setLocation(`/services/${puja.slug}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setLocation(`/services/${puja.slug}`);
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+                className="cursor-pointer min-w-0 h-full"
+              >
+                <ServiceCard
+                  title={puja.name}
+                  description={puja.short_description || puja.description || ""}
+                  startingFrom={formatStartingFrom(puja)}
+                  image={serviceImageUrl(puja)}
+                  comingSoon={!puja.bookable}
+                  bookingDisabled={Boolean(puja.bookable && bookingBlocked)}
+                  bookingDisabledLabel={checking ? t("services.checkingAvailability") : t("services.bookingUnavailableArea")}
+                  onReadMore={() => setLocation(`/services/${puja.slug}`)}
+                  onBookNow={() => startBooking(puja.slug)}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -446,7 +450,9 @@ function CustomerDashboardContent() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg text-foreground">{booking.service_name}</h3>
+                        <h3 className="text-lg">
+                          <PujaTitle name={booking.service_name} />
+                        </h3>
                         <Badge className={getStatusColor(customerStatus(booking))}>{customerStatusLabel(booking)}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">#{booking.booking_number}</p>

@@ -8,13 +8,10 @@ import { Flame, Flower, Home, Sparkles, Heart, Star, Sun, Moon, Loader2, Search 
 import { useI18n } from "@/i18n/I18nProvider";
 import { useLocation, useSearch } from "wouter";
 import { api } from "@/lib/api";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
-import { toast } from "sonner";
 import { serviceImageUrl } from "@/lib/serviceImage";
 import { formatStartingFrom } from "@/lib/servicePricing";
-import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
-import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
+import { useStartBooking } from "@/hooks/useStartBooking";
+import { toast } from "sonner";
 
 const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
 
@@ -38,8 +35,7 @@ export default function Services() {
   const { t, lang } = useI18n();
   const [, setLocation] = useLocation();
   const searchStr = useSearch();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { canBook, checking, status } = useServiceAvailability();
+  const { startBooking, bookingBlocked, checking } = useStartBooking();
   const [services, setServices] = useState<Svc[]>([]);
   const [categories, setCategories] = useState<Cat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,27 +63,8 @@ export default function Services() {
       .finally(() => setLoading(false));
   }, [q, category, lang]);
 
-  function openService(slug: string, bookable?: boolean) {
-    if (!bookable) {
-      setLocation(`/services/${slug}`);
-      return;
-    }
-    // Always allow browsing the detail page; only go to booking when area is confirmed.
-    if (authLoading || checking) {
-      setLocation(`/services/${slug}`);
-      return;
-    }
-    if (!isAuthenticated || user?.role !== "customer") {
-      const path = `/book/${slug}`;
-      setLocation(getLoginUrl({ role: "customer", returnPath: path }));
-      return;
-    }
-    if (!canBook) {
-      notifyBookingBlocked(status, t);
-      setLocation(`/services/${slug}`);
-      return;
-    }
-    setLocation(`/book/${slug}`);
+  function openDetails(slug: string) {
+    setLocation(`/services/${slug}`);
   }
 
   function selectCategory(slug: string) {
@@ -111,14 +88,16 @@ export default function Services() {
   const available = useMemo(() => services.filter((s) => s.bookable), [services]);
   const upcoming = useMemo(() => services.filter((s) => !s.bookable), [services]);
   const combined = useMemo(() => [...available, ...upcoming], [available, upcoming]);
+  const paginate = category === "all";
   const totalPages = Math.max(1, Math.ceil(combined.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const pageSlice = useMemo(() => {
+  const visible = useMemo(() => {
+    if (!paginate) return combined;
     const start = (pageSafe - 1) * pageSize;
     return combined.slice(start, start + pageSize);
-  }, [combined, pageSafe, pageSize]);
-  const pageAvailable = pageSlice.filter((s) => s.bookable);
-  const pageUpcoming = pageSlice.filter((s) => !s.bookable);
+  }, [combined, paginate, pageSafe, pageSize]);
+  const pageAvailable = visible.filter((s) => s.bookable);
+  const pageUpcoming = visible.filter((s) => !s.bookable);
 
   return (
     <Layout>
@@ -181,16 +160,30 @@ export default function Services() {
                         starting ||
                         (s.bookable ? t("services.pricingSoon") : t("services.comingSoonLabel"));
                       return (
-                        <div key={s.id} onClick={() => openService(s.slug, s.bookable)} className="cursor-pointer">
+                        <div
+                          key={s.id}
+                          onClick={() => openDetails(s.slug)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openDetails(s.slug);
+                            }
+                          }}
+                          role="link"
+                          tabIndex={0}
+                          className="cursor-pointer min-w-0 h-full"
+                        >
                           <ServiceCard
                             title={s.name}
                             description={desc}
                             startingFrom={starting}
                             image={img}
-                            icon={<Icon size={24} />}
+                            icon={<Icon size={20} />}
                             comingSoon={!s.bookable}
-                            bookingDisabled={Boolean(s.bookable && isAuthenticated && user?.role === "customer" && (!canBook || checking))}
+                            bookingDisabled={Boolean(s.bookable && bookingBlocked)}
                             bookingDisabledLabel={checking ? t("services.checkingAvailability") : t("services.bookingUnavailableArea")}
+                            onReadMore={() => openDetails(s.slug)}
+                            onBookNow={() => startBooking(s.slug)}
                           />
                         </div>
                       );
@@ -214,50 +207,52 @@ export default function Services() {
                         {renderGrid(pageUpcoming)}
                       </div>
                     )}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{t("services.show")}</span>
-                        <select
-                          value={pageSize}
-                          onChange={(e) => {
-                            setPageSize(Number(e.target.value));
-                            setPage(1);
-                          }}
-                          className="h-9 rounded-md border border-border bg-card px-2 text-foreground"
-                          aria-label={t("services.itemsPerPage")}
-                        >
-                          {[6, 9, 12, 24].map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                        </select>
-                        <span>{t("services.perPageTotal", { count: combined.length })}</span>
+                    {paginate ? (
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>{t("services.show")}</span>
+                          <select
+                            value={pageSize}
+                            onChange={(e) => {
+                              setPageSize(Number(e.target.value));
+                              setPage(1);
+                            }}
+                            className="h-9 rounded-md border border-border bg-card px-2 text-foreground"
+                            aria-label={t("services.itemsPerPage")}
+                          >
+                            {[6, 9, 12, 24].map((n) => (
+                              <option key={n} value={n}>
+                                {n}
+                              </option>
+                            ))}
+                          </select>
+                          <span>{t("services.perPageTotal", { count: combined.length })}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={pageSafe <= 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          >
+                            {t("services.previous")}
+                          </Button>
+                          <span className="text-sm text-muted-foreground tabular-nums px-2">
+                            {t("services.pageOf", { page: pageSafe, pages: totalPages })}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={pageSafe >= totalPages}
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                          >
+                            {t("common.next")}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={pageSafe <= 1}
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        >
-                          {t("services.previous")}
-                        </Button>
-                        <span className="text-sm text-muted-foreground tabular-nums px-2">
-                          {t("services.pageOf", { page: pageSafe, pages: totalPages })}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={pageSafe >= totalPages}
-                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        >
-                          {t("common.next")}
-                        </Button>
-                      </div>
-                    </div>
+                    ) : null}
                   </>
                 );
               })()}

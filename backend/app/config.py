@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     supabase_anon_key: str = ""
     storage_bucket: str = "bseva"
-    cors_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://localhost:8081"
+    cors_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://0.0.0.0:3000,http://localhost:8081"
     otp_dev_code: str = "123456"
     environment: str = "development"
     public_app_url: str = "http://localhost:5173"

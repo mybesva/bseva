@@ -15,7 +15,9 @@ import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { useI18n } from "@/i18n/I18nProvider";
 import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
 import { shareSafely } from "@/lib/browserActions";
-import { formatPujaDuration } from "@bseva/locales";
+import { downloadBSevaDocument, fieldsToDocumentBody } from "@/lib/bsevaDocument";
+import { formatPujaDuration, formatPujaTitleText } from "@bseva/locales";
+import { PujaTitle } from "@/components/PujaTitle";
 
 function statusColor(status: string) {
   switch (status) {
@@ -125,7 +127,7 @@ export default function BookingReceipt() {
   async function shareReceipt() {
     const data = {
       title: t("web.booking.receipt"),
-      text: `${booking.service_name} · ${booking.booking_number}`,
+      text: `${formatPujaTitleText(booking.service_name) || booking.service_name} · ${booking.booking_number}`,
       url: window.location.href,
     };
     try {
@@ -137,29 +139,22 @@ export default function BookingReceipt() {
   }
 
   function downloadReceipt() {
-    const text = [
-      "BSeva",
-      t("app.tagline"),
-      "",
-      `${t("web.booking.receipt")}: ${booking.booking_number}`,
-      `${t("booking.service")}: ${booking.service_name}`,
-      `${t("web.booking.slot")}: ${slot}`,
-      booking.duration_minutes ? `${t("web.booking.pujaDuration")}: ${formatPujaDuration(lang, booking.duration_minutes)}` : "",
-      `${t("common.total")}: ${rupees(booking.total_paise)}`,
-    ].filter(Boolean).join("\n");
-    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `BSeva-${booking.booking_number || "booking"}.txt`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadBSevaDocument(`BSeva-${booking.booking_number || "booking"}.html`, {
+      documentTitle: t("web.booking.receipt"),
+      reference: booking.booking_number,
+      bodyHtml: fieldsToDocumentBody([
+        [t("web.booking.receipt"), booking.booking_number || ""],
+        [t("booking.service"), formatPujaTitleText(booking.service_name) || booking.service_name || ""],
+        [t("web.booking.slot"), slot],
+        [t("web.booking.pujaDuration"), booking.duration_minutes ? formatPujaDuration(lang, booking.duration_minutes) : ""],
+        [t("common.total"), rupees(booking.total_paise)],
+      ]),
+    });
   }
 
   return (
     <Layout>
-      <div className="container max-w-3xl py-10 print:py-4">
+      <div className="container max-w-3xl py-10 print:py-0 print:max-w-none">
         <PrintableBSevaHeader documentTitle={t("web.booking.receipt")} reference={booking.booking_number} />
         <div className="flex flex-wrap gap-2 mb-6 print:hidden">
           <Button variant="outline" size="sm" onClick={() => setLocation("/customer/bookings")}>
@@ -186,7 +181,9 @@ export default function BookingReceipt() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("web.booking.receipt")}</p>
-                <CardTitle className="text-2xl mt-1">{booking.service_name || t("web.common.puja")}</CardTitle>
+                <CardTitle className="text-2xl mt-1">
+                  <PujaTitle name={booking.service_name || t("web.common.puja")} />
+                </CardTitle>
               </div>
               <Badge className={`${statusColor(displayStatus)} print:hidden`}>
                 {displayStatusLabel}
@@ -205,7 +202,9 @@ export default function BookingReceipt() {
               </div>
               <div>
                 <p className="text-muted-foreground">{t("booking.service")}</p>
-                <p className="font-medium">{booking.service_name}</p>
+                <p className="font-medium">
+                  <PujaTitle name={booking.service_name} />
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">{t("booking.package")}</p>

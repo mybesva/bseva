@@ -28,6 +28,7 @@ const IDENTICAL_OK = new Set([
   "pujari.public.gotra",
   "pujari.angikara.address",
   "footer.rights",
+  "home.brandClose",
   "booking.basic",
   "booking.standard",
   "booking.premium",

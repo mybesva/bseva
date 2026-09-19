@@ -7,6 +7,7 @@ import { apiBase } from "@/lib/api";
 import { formatDisplaySlot } from "@/lib/formatDate";
 import { Loader2, Video } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { PujaTitle } from "@/components/PujaTitle";
 
 type InvitePayload = {
   booking_number?: string;
@@ -66,7 +67,11 @@ export default function JoinMeetPage() {
             ) : (
               <>
                 <div className="text-sm space-y-1 text-muted-foreground">
-                  {data?.service_name ? <p className="text-base font-medium text-foreground">{data.service_name}</p> : null}
+                  {data?.service_name ? (
+                    <p className="text-base">
+                      <PujaTitle name={data.service_name} />
+                    </p>
+                  ) : null}
                   {data?.booking_number ? <p>{t("web.booking.numberValue", { number: data.booking_number })}</p> : null}
                   <p>
                     {formatDisplaySlot(data?.booking_date, data?.start_time)}

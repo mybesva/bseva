@@ -17,6 +17,7 @@ import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 import { formatStartingFrom } from "@/lib/servicePricing";
 import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { PujaTitle } from "@/components/PujaTitle";
 
 type Svc = {
   id: string;
@@ -163,7 +164,9 @@ export default function ServiceDetail() {
                     {t("services.bookingSoon")}
                   </p>
                 )}
-                <h1 className="text-h1 text-primary mb-2">{svc.name}</h1>
+                <h1 className="mb-2 text-2xl md:text-3xl tracking-tight">
+                  <PujaTitle name={svc.name} />
+                </h1>
                 {svc.local_name && <p className="text-muted-foreground mb-4">{svc.local_name}</p>}
                 <p className="text-lg text-muted-foreground leading-relaxed">
                   {svc.short_description || svc.description || t("app.tagline")}

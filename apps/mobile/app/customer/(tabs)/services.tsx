@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, EmptyState, LoadingBlock, Screen } from "@/components/ui";
+import { PujaTitle } from "@/components/PujaTitle";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
@@ -42,7 +43,7 @@ export default function CustomerServices() {
         {filtered.map((s: CatalogService) => (
           <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
             <Card>
-              <AppText variant="h3">{s.name}</AppText>
+              <PujaTitle name={s.name} />
               <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
                 {s.short_description || ""}
               </AppText>

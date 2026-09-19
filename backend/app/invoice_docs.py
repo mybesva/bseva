@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.document_brand import wrap_html_document
 from app.platform_config import get_setting
 
 logger = logging.getLogger("bseva.invoice")
@@ -41,7 +42,7 @@ def company_snapshot(db: Session) -> dict[str, str]:
         "gstin": _s(db, "invoice_gstin", ""),
         "pan": _s(db, "invoice_pan", ""),
         "website": _s(db, "invoice_website", "www.b-seva.com"),
-        "logo_path": _s(db, "invoice_logo_path", "/bseva-mark.png"),
+        "logo_path": _s(db, "invoice_logo_path", "/bseva-logo-transparent.png"),
         "prefix_customer": _s(db, "invoice_prefix_customer", "BSEVA"),
         "prefix_settlement": _s(db, "invoice_prefix_settlement", "INV-S"),
         "signatory_name": _s(db, "invoice_signatory_name", ""),
@@ -606,21 +607,7 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     signatory = " ".join(
         x for x in [company.get("signatory_name"), company.get("signatory_designation")] if x
     )
-    brand = html.escape(str(company.get("brand_name") or "BSeva"))
     legal = html.escape(str(company.get("legal_name") or company.get("name") or "BSeva"))
-    raw_logo = str(company.get("logo_path") or "/bseva-mark.png")
-    if raw_logo.rstrip("/").endswith(("bseva-logo-transparent.png", "bseva-logo.png")):
-        raw_logo = "/bseva-mark.png"
-    logo_path = html.escape(raw_logo, quote=True)
-    logo = (
-        "<div class='brand-lockup'>"
-        "<div class='brand-name'>"
-        f"<img class='brand-mark' src='{logo_path}' alt='{brand}'/>"
-        "<span class='brand-word'><span class='brand-hyphen'>-</span>Seva</span>"
-        "</div>"
-        "<div class='brand-motto'>Book, Believe, Bless</div>"
-        "</div>"
-    )
     duration = snap.get("duration_minutes")
     if duration is None:
         bid = inv.get("booking_id") or snap.get("booking_id")
@@ -643,25 +630,9 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
         if duration is not None
         else ""
     )
-    return f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"/>
-<title>{html.escape(str(inv.get('invoice_number') or ''))}</title>
-<style>
-@page {{ size: A4; margin: 16mm; }}
-body {{ font-family: 'Segoe UI', Helvetica, Arial, sans-serif; color: {NAVY}; margin: 0; font-size: 12px; }}
-.wrap {{ max-width: 210mm; margin: 0 auto; padding: 12px 8px 24px; }}
-.top {{ display: flex; justify-content: space-between; border-bottom: 3px solid {ORANGE}; padding-bottom: 12px; }}
-.brand-lockup {{ margin-bottom: 6px; }}
-.brand-name {{ display: flex; align-items: center; }}
-.brand-mark {{ display: block; width: 48px; height: 48px; object-fit: contain; }}
-.brand-word {{ font-size: 26px; font-weight: 800; color: {ORANGE}; line-height: 1; }}
-.brand-hyphen {{ color: {NAVY}; }}
-.brand-motto {{ font-size: 11px; font-style: italic; color: {NAVY}; margin-top: 4px; }}
-h1 {{ margin: 0; font-size: 22px; letter-spacing: .04em; }}
-.legal {{ color: #334; font-size: 12px; margin-top: 2px; }}
+    extra_css = f"""
 .muted {{ color: #555; line-height: 1.45; }}
-.badge {{ display: inline-block; background: {ORANGE}; color: #fff; font-weight: 700; letter-spacing: .08em;
-  padding: 4px 10px; font-size: 11px; }}
+.issuer {{ display: flex; justify-content: space-between; gap: 16px; }}
 table {{ width: 100%; border-collapse: collapse; margin-top: 12px; }}
 th, td {{ border: 1px solid #d7dde8; padding: 6px 8px; text-align: left; }}
 th {{ background: {NAVY}; color: #fff; font-weight: 600; font-size: 11px; }}
@@ -670,35 +641,29 @@ th {{ background: {NAVY}; color: #fff; font-weight: 600; font-size: 11px; }}
 .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }}
 .box {{ border: 1px solid #d7dde8; padding: 10px 12px; }}
 .box h3 {{ margin: 0 0 6px; font-size: 11px; letter-spacing: .08em; color: {ORANGE}; }}
-.foot {{ margin-top: 18px; font-size: 11px; color: #444; }}
-@media print {{ .noprint {{ display: none; }} }}
-</style></head><body>
-<div class="wrap">
+.invoice-notes {{ margin-top: 18px; font-size: 11px; color: #444; }}
+"""
+    invoice_no = str(inv.get("invoice_number") or snap.get("invoice_number") or "")
+    body = f"""
   <p class="noprint"><button onclick="window.print()">Print / Save PDF</button></p>
-  <div class="top">
-    <div>
-      {logo}
-      <div class="legal">{legal}</div>
-      <div class="muted">{html.escape(str(company.get('address') or ''))}<br/>
+  <div class="issuer">
+    <div class="muted">{legal}<br/>
+      {html.escape(str(company.get('address') or ''))}<br/>
       {html.escape(str(company.get('state') or ''))} {html.escape(str(company.get('pincode') or ''))}<br/>
       Email: {html.escape(str(company.get('email') or ''))}
       {" | Phone: " + html.escape(company['phone']) if company.get('phone') else ""}<br/>
       Website: {html.escape(str(company.get('website') or ''))}<br/>
       {("GSTIN: " + html.escape(gstin) + "<br/>") if gstin else ""}
       {("PAN: " + html.escape(company.get('pan') or '') + "<br/>") if company.get('pan') else ""}
-      </div>
     </div>
-    <div style="text-align:right">
-      <span class="badge">{html.escape(title)}</span>
-      <p class="muted" style="margin-top:10px">
-        <strong>Invoice No.</strong> {html.escape(str(inv.get('invoice_number') or snap.get('invoice_number') or ''))}<br/>
+    <div class="muted" style="text-align:right">
+        <strong>Invoice No.</strong> {html.escape(invoice_no)}<br/>
         <strong>Invoice Date</strong> {html.escape(str(snap.get('invoice_date') or str(inv.get('created_at') or '')[:10]))}<br/>
         <strong>Booking ID</strong> {html.escape(str(snap.get('booking_number') or snap.get('booking_id') or ''))}<br/>
         <strong>Payment ID</strong> {html.escape(str(snap.get('payment_id') or '—'))}<br/>
         <strong>Payment Date</strong> {html.escape(str(snap.get('payment_date') or '')[:19])}<br/>
         <strong>Payment Method</strong> {html.escape(str(snap.get('payment_method') or '—'))}<br/>
         <strong>Status</strong> {html.escape(str(snap.get('payment_status') or inv.get('payment_status') or 'PAID'))}
-      </p>
     </div>
   </div>
   <div class="grid">
@@ -742,14 +707,21 @@ th {{ background: {NAVY}; color: #fff; font-weight: 600; font-size: 11px; }}
   </table>
   <p><strong>Total Invoice Amount in Words:</strong> {html.escape(str(snap.get('amount_in_words') or amount_in_words(inv.get('total_paise'))))}</p>
   <p><strong>Payment Status: {html.escape(str(snap.get('payment_status') or 'PAID'))}</strong></p>
-  <div class="foot">
+  <div class="invoice-notes">
     <p>{html.escape(str(snap.get('notes') or company.get('notes') or 'Thank you for choosing BSeva.'))}</p>
     <p>This is a computer-generated invoice and does not require a physical signature.</p>
     {f"<p>For {legal}<br/>{html.escape(signatory)}</p>" if signatory else ""}
     <p><strong>Terms &amp; Conditions</strong><br/>{html.escape(str(snap.get('terms') or company.get('terms') or ''))}</p>
   </div>
-</div>
-</body></html>"""
+"""
+    return wrap_html_document(
+        document_title=title,
+        body_html=body,
+        page_title=invoice_no or title,
+        reference=invoice_no,
+        company=company,
+        extra_css=extra_css,
+    )
 
 
 def issue_paid_booking_invoice(db: Session, booking: dict) -> dict[str, Any]:

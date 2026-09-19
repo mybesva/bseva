@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Alert, Linking, ScrollView, Share, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { PujaTitle } from "@/components/PujaTitle";
 import { TrackingMap } from "@/components/TrackingMap";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -325,9 +326,7 @@ export default function BookingDetail() {
         <ErrorBanner message={error} />
         <Card style={{ gap: 6 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-            <AppText variant="h2" style={{ flex: 1 }}>
-              {b.service_name}
-            </AppText>
+            <PujaTitle name={b.service_name} variant="h2" style={{ flex: 1 }} />
             <StatusBadge status={displayStatus} />
           </View>
           <AppText>{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>

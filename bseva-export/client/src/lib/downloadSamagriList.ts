@@ -2,6 +2,11 @@ import { api } from "@/lib/api";
 import type { PreparationView } from "@/components/PreparationChecklist";
 import { normalizePreparationSections, PREPARATION_SECTION_KEYS } from "@bseva/types";
 import { shareSafely } from "@/lib/browserActions";
+import {
+  downloadBSevaDocument,
+  escapeDocumentHtml,
+  printBSevaDocument,
+} from "@/lib/bsevaDocument";
 
 export type SamagriExportLabels = {
   brandedTitle: string;
@@ -53,9 +58,12 @@ export function formatSamagriListText(
   preparation: PreparationView | null | undefined,
   meta: { serviceName?: string; bookingNumber?: string },
   labels: SamagriExportLabels,
+  options?: { branded?: boolean },
 ): string {
   const lines: string[] = [];
-  lines.push(labels.brandedTitle);
+  if (options?.branded !== false) {
+    lines.push(labels.brandedTitle);
+  }
   if (meta.serviceName) lines.push(`${labels.service}: ${meta.serviceName}`);
   if (meta.bookingNumber) lines.push(`${labels.booking}: ${meta.bookingNumber}`);
   lines.push("");
@@ -86,7 +94,7 @@ export function formatSamagriListText(
   return lines.join("\n").trim() + "\n";
 }
 
-async function loadSamagriText(bookingId: string, labels: SamagriExportLabels) {
+async function loadSamagriText(bookingId: string, labels: SamagriExportLabels, branded = true) {
   const [prep, detail] = await Promise.all([
     api<PreparationView>(`/bookings/${bookingId}/preparation`),
     api<{ service_name?: string; booking_number?: string }>(`/bookings/${bookingId}`),
@@ -94,53 +102,31 @@ async function loadSamagriText(bookingId: string, labels: SamagriExportLabels) {
   const text = formatSamagriListText(prep, {
     serviceName: detail.service_name,
     bookingNumber: detail.booking_number,
-  }, labels);
+  }, labels, { branded });
   return { detail, text };
 }
 
 export async function downloadSamagriListForBooking(bookingId: string, labels: SamagriExportLabels) {
-  const { detail, text } = await loadSamagriText(bookingId, labels);
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `BSeva-Samagri-${detail.booking_number || bookingId}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[char] || char);
+  const { detail, text } = await loadSamagriText(bookingId, labels, false);
+  downloadBSevaDocument(`BSeva-Samagri-${detail.booking_number || bookingId}.html`, {
+    documentTitle: labels.documentTitle,
+    pageTitle: labels.brandedTitle,
+    reference: detail.booking_number,
+    bodyHtml: `<pre class="bseva-doc-pre">${escapeDocumentHtml(text)}</pre>`,
+  });
 }
 
 export async function printSamagriListForBooking(bookingId: string, labels: SamagriExportLabels) {
-  const { detail, text } = await loadSamagriText(bookingId, labels);
-  const popup = window.open("", "_blank");
-  if (!popup) throw new Error(labels.popupBlocked);
-  const mark = new URL("/bseva-mark.png", window.location.origin).href;
-  popup.document.write(`<!doctype html><html><head><title>${escapeHtml(labels.documentTitle)}</title>
-    <style>body{font-family:Arial,sans-serif;color:#1A2B4A;max-width:760px;margin:32px auto;padding:0 24px}
-    header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #FF9933;padding-bottom:16px;margin-bottom:24px}
-    .lockup{{display:flex;flex-direction:column;align-items:flex-start}}
-    .name{{display:flex;align-items:center}}
-    .name img{{width:48px;height:48px;object-fit:contain}}
-    .word{{font-size:26px;font-weight:800;color:#FF9933;line-height:1}}
-    .hyphen{{color:#1A2B4A}}
-    .motto{{font-size:11px;font-style:italic;margin-top:4px;color:#1A2B4A}}
-    h1{font-size:22px;margin:0;color:#1A2B4A}pre{font:14px/1.65 Arial,sans-serif;white-space:pre-wrap}
-    @media print{body{margin:0;max-width:none}}</style></head><body>
-    <header><div class="lockup"><div class="name"><img src="${escapeHtml(mark)}" alt=""><span class="word"><span class="hyphen">-</span>Seva</span></div><div class="motto">Book, Believe, Bless</div></div>
-    <div><h1>${escapeHtml(labels.documentTitle)}</h1><div>${escapeHtml(detail.booking_number || "")}</div></div></header>
-    <pre>${escapeHtml(text)}</pre></body></html>`);
-  popup.document.close();
-  popup.addEventListener("load", () => {
-    popup.focus();
-    popup.print();
-  }, { once: true });
+  const { detail, text } = await loadSamagriText(bookingId, labels, false);
+  printBSevaDocument(
+    {
+      documentTitle: labels.documentTitle,
+      pageTitle: labels.brandedTitle,
+      reference: detail.booking_number,
+      bodyHtml: `<pre class="bseva-doc-pre">${escapeDocumentHtml(text)}</pre>`,
+    },
+    labels.popupBlocked,
+  );
 }
 
 export async function shareSamagriListForBooking(bookingId: string, labels: SamagriExportLabels) {

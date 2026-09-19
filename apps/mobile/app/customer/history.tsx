@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Pressable, ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, EmptyState, Screen, StatusBadge } from "@/components/ui";
+import { PujaTitle } from "@/components/PujaTitle";
 import { apiClient } from "@/services/api";
 import { formatDisplayDate } from "@/utils/formatDate";
 import { useI18n } from "@/providers/I18nProvider";
@@ -21,7 +22,7 @@ export default function HistoryScreen() {
         {past.map((b) => (
           <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
             <Card>
-              <AppText variant="h3">{b.service_name}</AppText>
+              <PujaTitle name={b.service_name} />
               <StatusBadge status={b.customer_display_status || b.status} />
               <AppText variant="small">{formatDisplayDate(b.booking_date)}</AppText>
             </Card>

@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
+import { PujaTitle } from "@/components/PujaTitle";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
@@ -33,7 +34,7 @@ export default function CustomerBookings() {
           <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <AppText variant="h3">{b.service_name}</AppText>
+                <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
                 <StatusBadge status={b.customer_display_status || b.status} />
               </View>
               <AppText variant="small" color={colors.mutedForeground}>
@@ -48,7 +49,7 @@ export default function CustomerBookings() {
           <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <AppText variant="h3">{b.service_name}</AppText>
+                <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
                 <StatusBadge status={b.customer_display_status || b.status} />
               </View>
               <AppText variant="small">{formatDisplayDate(b.booking_date)}</AppText>

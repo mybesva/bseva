@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { AppText } from "./ui";
 
-export function ScreenHeader({ title, back }: { title: string; back?: boolean }) {
+export function ScreenHeader({ title, back }: { title: ReactNode; back?: boolean }) {
   const { colors } = useAppTheme();
   return (
     <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.navy }}>
@@ -24,9 +25,15 @@ export function ScreenHeader({ title, back }: { title: string; back?: boolean })
           <Ionicons name="chevron-back" size={24} color={colors.cream} />
         </Pressable>
       ) : null}
-      <AppText variant="h3" color={colors.cream} style={{ flex: 1 }} numberOfLines={1}>
-        {title}
-      </AppText>
+      <View style={{ flex: 1 }}>
+        {typeof title === "string" ? (
+          <AppText variant="h3" color={colors.cream} numberOfLines={1}>
+            {title}
+          </AppText>
+        ) : (
+          title
+        )}
+      </View>
     </View>
     </SafeAreaView>
   );

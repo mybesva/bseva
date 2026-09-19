@@ -1,46 +1,39 @@
-import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const LOGO_SIZE = {
   xs: {
     mark: "h-8 w-8",
     word: "text-base",
-    motto: "text-[8px] leading-tight",
   },
   sm: {
     mark: "h-10 w-10",
     word: "text-xl",
-    motto: "text-[9px] leading-tight",
   },
   md: {
     mark: "h-12 w-12",
     word: "text-2xl",
-    motto: "text-[10px] leading-tight",
   },
   lg: {
     mark: "h-14 w-14",
     word: "text-3xl",
-    motto: "text-xs leading-tight",
   },
   xl: {
     mark: "h-16 w-16",
     word: "text-4xl",
-    motto: "text-sm leading-tight",
+  },
+  header: {
+    mark: "h-[4.5rem] w-[4.5rem]",
+    word: "text-4xl",
   },
 } as const;
 
 type BSevaLogoProps = {
-  size?: keyof typeof LOGO_SIZE;
+  size?: keyof typeof LOGO_SIZE | "portal";
   className?: string;
   alt?: string;
-  showMotto?: boolean;
-  /** Full artwork on the public home chrome; lockup is for portals. */
+  /** Full artwork on public chrome and portal headers; lockup is compact mark + Seva. */
   variant?: "lockup" | "full";
-  /** Renders on the B-Seva line (e.g. “Customer portal”), not on the quotation line. */
-  afterWordmark?: ReactNode;
 };
-
-const MOTTO = "Book, Believe, Bless";
 
 const FULL_HEIGHT = {
   xs: "h-8",
@@ -48,16 +41,16 @@ const FULL_HEIGHT = {
   md: "h-14",
   lg: "h-16",
   xl: "h-20",
+  header: "h-[4.5rem] sm:h-[4.75rem] lg:h-[5.5rem]",
+  portal: "h-12 sm:h-[3.35rem]",
 } as const;
 
-/** Logo stands in for the letter B in “B-Seva”; quotation sits under that name only. */
+/** Logo stands in for the letter B in “B-Seva”. Motto lives in the full artwork only. */
 export default function BSevaLogo({
   size = "md",
   className,
   alt = "B-Seva",
-  showMotto = true,
   variant = "lockup",
-  afterWordmark,
 }: BSevaLogoProps) {
   if (variant === "full") {
     return (
@@ -65,7 +58,12 @@ export default function BSevaLogo({
         src="/bseva-logo-transparent.png"
         alt={alt}
         className={cn(
-          "w-auto max-w-[min(100%,16rem)] object-contain object-left",
+          "w-auto object-contain object-left",
+          size === "header"
+            ? "max-w-[min(100%,22rem)]"
+            : size === "portal"
+              ? "max-w-[11.5rem]"
+              : "max-w-[min(100%,16rem)]",
           FULL_HEIGHT[size],
           className,
         )}
@@ -74,17 +72,14 @@ export default function BSevaLogo({
     );
   }
 
-  const s = LOGO_SIZE[size];
+  const s = LOGO_SIZE[size === "portal" ? "sm" : size];
   return (
     <span
-      className={cn(
-        "inline-grid grid-cols-[auto_auto] grid-rows-[auto_auto] items-center gap-x-2 gap-y-0.5 text-foreground",
-        className,
-      )}
+      className={cn("inline-flex items-center gap-x-2 text-foreground", className)}
       role="img"
-      aria-label={showMotto ? `${alt}. ${MOTTO}` : alt}
+      aria-label={alt}
     >
-      <span className="col-start-1 row-start-1 inline-flex items-center">
+      <span className="inline-flex items-center">
         <img
           src="/bseva-mark.png"
           alt=""
@@ -96,19 +91,6 @@ export default function BSevaLogo({
           <span className="text-primary">Seva</span>
         </span>
       </span>
-      {afterWordmark ? (
-        <span className="col-start-2 row-start-1 self-center">{afterWordmark}</span>
-      ) : null}
-      {showMotto ? (
-        <span
-          className={cn(
-            "col-start-1 row-start-2 font-medium italic tracking-wide text-current/70",
-            s.motto,
-          )}
-        >
-          {MOTTO}
-        </span>
-      ) : null}
     </span>
   );
 }

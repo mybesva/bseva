@@ -19,21 +19,6 @@ from app.rbac import ALL_PERMISSIONS, require_admin, require_permission, user_pe
 router = APIRouter(tags=["ops"])
 
 
-class TicketIn(BaseModel):
-    category: str
-    subject: str = Field(min_length=5, max_length=200)
-    description: str = Field(min_length=10, max_length=5000)
-    related_booking_id: str | None = None
-    related_settlement_id: str | None = None
-    related_payment_id: str | None = None
-
-
-class TicketUpdateIn(BaseModel):
-    status: str | None = None
-    resolution: str | None = None
-    assigned_admin_id: str | None = None
-
-
 class SamagriItemIn(BaseModel):
     name: str
     description: str | None = None
@@ -92,91 +77,6 @@ class SettingIn(BaseModel):
 class PermissionGrantIn(BaseModel):
     permissions: list[str]
     user_id: str | None = None  # optional; path param is authoritative
-
-
-@router.post("/support/tickets")
-def create_ticket(body: TicketIn, user=Depends(current_user), db: Session = Depends(get_db)):
-    from app.validation_rules import validate_support_text
-
-    cats_c = {
-        "Payments", "Wallet", "Bookings", "Others",
-        "payments", "wallet", "bookings", "booking", "others",
-    }
-    cats_p = {
-        "Settlement", "Route Map / Location", "Others", "Bookings",
-        "settlement", "route", "others", "bookings", "booking",
-    }
-    role = user["role"]
-    if role == "customer" and body.category not in cats_c:
-        raise HTTPException(400, "Invalid category for customer")
-    if role in ("pujari", "head_pujari") and body.category not in cats_p and body.category not in cats_c:
-        raise HTTPException(400, "Invalid category for pujari")
-    subject, description = validate_support_text(body.subject, body.description)
-    num = f"TKT-{datetime.utcnow().strftime('%y%m%d')}-{uuid4().hex[:6].upper()}"
-    tid = str(uuid4())
-    params = {
-        "id": tid,
-        "n": num,
-        "u": str(user["id"]),
-        "r": role,
-        "c": body.category,
-        "subj": subject,
-        "d": description,
-        "b": body.related_booking_id,
-        "setl": body.related_settlement_id,
-        "pay": body.related_payment_id,
-    }
-    db.execute(
-        text(
-            """
-            INSERT INTO support_tickets (
-              id, ticket_number, user_id, user_role, category,
-              related_booking_id, related_settlement_id, related_payment_id,
-              subject, description
-            ) VALUES (
-              CAST(:id AS uuid), :n, CAST(:u AS uuid), :r, :c,
-              CAST(:b AS uuid), CAST(:setl AS uuid), CAST(:pay AS uuid), :subj, :d
-            )
-            """
-        ),
-        params,
-    )
-    db.commit()
-    return {"id": tid, "ticket_number": num}
-
-
-@router.get("/support/tickets")
-def list_tickets(user=Depends(current_user), db: Session = Depends(get_db)):
-    if user["role"] in ("admin", "super_admin"):
-        rows = db.execute(text("SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT 200")).mappings().all()
-    else:
-        rows = db.execute(
-            text("SELECT * FROM support_tickets WHERE user_id = CAST(:id AS uuid) ORDER BY created_at DESC"),
-            {"id": user["id"]},
-        ).mappings().all()
-    return [row_dict(r) for r in rows]
-
-
-@router.patch("/support/tickets/{ticket_id}")
-def update_ticket(ticket_id: str, body: TicketUpdateIn, user=Depends(require_permission("manage_support")), db: Session = Depends(get_db)):
-    t = db.execute(text("SELECT * FROM support_tickets WHERE id = CAST(:id AS uuid)"), {"id": ticket_id}).mappings().first()
-    if not t:
-        raise HTTPException(404, "Ticket not found")
-    db.execute(
-        text(
-            """
-            UPDATE support_tickets SET
-              status = COALESCE(:st, status),
-              resolution = COALESCE(:res, resolution),
-              assigned_admin_id = COALESCE(CAST(:aid AS uuid), assigned_admin_id),
-              updated_at = NOW()
-            WHERE id = CAST(:id AS uuid)
-            """
-        ),
-        {"st": body.status, "res": body.resolution, "aid": body.assigned_admin_id, "id": ticket_id},
-    )
-    db.commit()
-    return {"ok": True}
 
 
 @router.get("/samagri/items")

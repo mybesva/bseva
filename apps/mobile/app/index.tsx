@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, LoadingBlock, PrimaryButton } from "@/components/ui";
+import { PujaTitle } from "@/components/PujaTitle";
 import { BrandLockup } from "@/components/BrandLockup";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -161,7 +162,7 @@ export default function LandingScreen() {
                   <Ionicons name="flame" size={24} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText variant="h3">{s.name}</AppText>
+                  <PujaTitle name={s.name} />
                   <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
                     {s.short_description || s.description || (s.standard_price_paise ? t("home.fromPrice", { price: rupees(s.standard_price_paise) }) : t("home.availableSoon"))}
                   </AppText>

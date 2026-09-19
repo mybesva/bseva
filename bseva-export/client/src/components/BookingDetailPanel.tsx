@@ -29,11 +29,13 @@ import {
   samagriExportLabels,
 } from "@/lib/downloadSamagriList";
 import { formatPujaDuration } from "@bseva/locales";
+import { PujaTitle } from "@/components/PujaTitle";
 import { Download, Printer, Share2 } from "lucide-react";
 import { mapsDirectionsUrl, mapsSearchUrl } from "@/lib/googleMaps";
 import { pujariTeamAcceptNotice, pujariTeamPaymentNotice, pujarisIncludedShort } from "@/lib/pujariTeam";
 import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
 import { shareSafely } from "@/lib/browserActions";
+import { downloadBSevaDocument, fieldsToDocumentBody } from "@/lib/bsevaDocument";
 
 export type BookingDetail = {
   id: string;
@@ -324,7 +326,9 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         {viewerRole === "pujari" && samagriSelected && (
           <Badge className="bg-orange-100 text-orange-900 border-orange-200">{t("web.pujariBookings.samagriSelected")}</Badge>
         )}
-        {booking.needs_reassignment && <Badge variant="destructive">{t("web.booking.needsReassignment")}</Badge>}
+        {viewerRole === "admin" && booking.needs_reassignment && (
+          <Badge variant="destructive">{t("web.booking.needsReassignment")}</Badge>
+        )}
         <Badge variant="outline" className="font-normal">
           {teamLabel}
         </Badge>
@@ -388,7 +392,9 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           {booking.service_name && (
             <div className="col-span-2">
               <div className="text-muted-foreground">{t("booking.service")}</div>
-              <div className="font-medium">{booking.service_name}</div>
+              <div className="font-medium">
+                <PujaTitle name={booking.service_name} />
+              </div>
             </div>
           )}
           <div>
@@ -946,20 +952,15 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             variant="outline"
             size="sm"
             onClick={() => {
-              const text = [
-                "BSeva", t("app.tagline"), "",
-                `${t("booking.id")}: ${booking.booking_number || booking.id}`,
-                `${t("booking.service")}: ${booking.service_name || "—"}`,
-                `${t("common.total")}: ${rupees(total)}`,
-              ].join("\n");
-              const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-              const anchor = document.createElement("a");
-              anchor.href = url;
-              anchor.download = `BSeva-${booking.booking_number || booking.id}.txt`;
-              document.body.appendChild(anchor);
-              anchor.click();
-              anchor.remove();
-              URL.revokeObjectURL(url);
+              downloadBSevaDocument(`BSeva-${booking.booking_number || booking.id}.html`, {
+                documentTitle: t("web.booking.detailsReceipt"),
+                reference: booking.booking_number || String(booking.id),
+                bodyHtml: fieldsToDocumentBody([
+                  [t("booking.id"), String(booking.booking_number || booking.id)],
+                  [t("booking.service"), booking.service_name || "—"],
+                  [t("common.total"), rupees(total)],
+                ]),
+              });
             }}
           >
             <Download className="h-4 w-4 mr-2" /> {t("common.download")}

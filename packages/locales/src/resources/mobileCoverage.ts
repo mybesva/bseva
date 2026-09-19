@@ -30,7 +30,7 @@ const en: Dict = {
   "mobile.jobs": "Jobs", "mobile.noJobs": "No jobs yet.", "mobile.earnings": "Earnings",
   "mobile.completedPayable": "Completed payable", "mobile.upcomingPayable": "In progress / upcoming",
   "mobile.settlements": "Settlements", "mobile.settlementHelp": "Settlement amounts are calculated after completion.",
-  "mobile.bank": "Bank", "mobile.bankHelp": "Used for settlements. Only the last 4 account digits are stored.",
+  "mobile.bank": "Bank / UPI Details", "mobile.bankHelp": "Add your UPI or bank account details to receive Dakshina payments. Only the last 4 account digits are stored.",
   "mobile.accountHolder": "Account holder", "mobile.ifsc": "IFSC code", "mobile.accountLast4": "Account last 4",
   "mobile.availability": "Availability", "mobile.availableBookings": "Available for new bookings",
   "mobile.serviceRadius": "Service radius (km)", "mobile.saveAvailability": "Save availability",

@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import { useI18n } from "@/i18n/I18nProvider";
+import { PujaTitle } from "@/components/PujaTitle";
 
 export default function MyBookings() {
   const { t } = useI18n();
@@ -61,7 +62,7 @@ export default function MyBookings() {
           >
             <CardHeader>
               <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-                <span>{b.service_name || b.booking_number}</span>
+                <PujaTitle name={b.service_name || b.booking_number} />
                 <Badge>
                   {(b.customer_display_status || b.status) === "confirmed"
                     ? t("web.booking.confirmed")

@@ -5,6 +5,7 @@ const en: Record<string, string> = {
 
   "nav.home": "Home",
   "nav.services": "Services",
+  "nav.ourServices": "Our Services",
   "nav.astrology": "Astrology",
   "nav.pujaris": "Pujaris",
   "nav.customer": "Customer",
@@ -33,7 +34,7 @@ const en: Record<string, string> = {
   "nav.availability": "Availability",
   "nav.documents": "Documents",
   "nav.earnings": "Dakshina",
-  "nav.bank": "Bank / Settlement",
+  "nav.bank": "Bank / UPI Details",
   "nav.referral": "Referral",
   "nav.onboarding": "Complete Profile",
 
@@ -354,6 +355,8 @@ const en: Record<string, string> = {
   "customer.reviewPuja": "Review this puja",
   "customer.cancelBooking": "Cancel booking",
   "customer.payNow": "Pay now",
+  "customer.bookPujaCardTitle": "Ready for a Puja?",
+  "customer.bookPujaCardBody": "Browse trusted rituals and book in a few steps.",
 
   "priest.dashboard": "Pujari Dashboard",
   "priest.earnings": "Earnings",
@@ -707,7 +710,7 @@ const en: Record<string, string> = {
   "pujari.applied": "Applied",
   "pujari.serviceOffers": "Service applications",
   "pujari.verification": "Verification status",
-  "pujari.bankTitle": "Bank / Settlement",
+  "pujari.bankTitle": "Bank / UPI Details",
   "pujari.availabilityTitle": "Availability",
   "pujari.blockDate": "Block date",
   "pujari.unavail": "Not available",

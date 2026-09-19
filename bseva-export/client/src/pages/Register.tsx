@@ -274,15 +274,15 @@ export default function Register() {
         <Card className="w-full max-w-lg mx-auto border-border shadow-lg">
           <CardHeader>
             <div className="flex justify-center mb-2">
-              <BSevaLogo size="md" />
+              <BSevaLogo variant="full" size="lg" />
             </div>
-            <CardTitle className="text-2xl">
+            <CardTitle className="text-2xl text-foreground text-center">
               {accountType === "pujari" ? "Create your Pujari account" : "Create your Customer account"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="leading-relaxed text-pretty text-center">
               {accountType === "pujari"
-                ? "Register as a Pujari. Your service level is assigned by BSeva Admin after review."
-                : "Register as a Customer. Address and location can be added after Login."}
+                ? t("auth.pujariRegisterDescription")
+                : t("auth.customerRegisterDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>

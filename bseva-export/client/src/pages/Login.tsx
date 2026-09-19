@@ -76,6 +76,12 @@ export default function Login() {
       : roleHint === "pujari"
         ? t("auth.pujariLogin")
         : t("auth.loginTitle");
+  const portalDescription =
+    roleHint === "customer"
+      ? t("auth.customerLoginDescription")
+      : roleHint === "pujari"
+        ? t("auth.pujariLoginDescription")
+        : t("auth.loginDesc");
 
   return (
     <Layout publicOnly>
@@ -83,10 +89,12 @@ export default function Login() {
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader>
             <div className="flex justify-center mb-2">
-              <BSevaLogo size="md" />
+              <BSevaLogo variant="full" size="lg" />
             </div>
-            <CardTitle className="text-2xl text-foreground">{portalLabel}</CardTitle>
-            <CardDescription>{t("auth.loginDesc")}</CardDescription>
+            <CardTitle className="text-2xl text-foreground text-center">{portalLabel}</CardTitle>
+            <CardDescription className="leading-relaxed text-pretty text-center">
+              {portalDescription}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form key={roleHint || "default"} className="space-y-4" onSubmit={onSubmit} autoComplete="off">

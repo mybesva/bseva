@@ -20,6 +20,7 @@ import {
   Star,
   Gift,
   Bell,
+  Flower2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,6 +47,7 @@ const customerNav: NavItem[] = [
   { labelKey: "customer.myProfile", href: "/customer/profile", icon: User },
   { labelKey: "customer.myAddress", href: "/customer/address", icon: MapPin },
   { labelKey: "customer.walletPayments", href: "/customer/wallet", icon: Wallet },
+  { labelKey: "nav.ourServices", href: "/services", icon: Flower2 },
   { labelKey: "nav.bookings", href: "/customer/bookings", icon: Calendar },
   { labelKey: "nav.notifications", href: "/customer/notifications", icon: Bell },
   { labelKey: "customer.bookingHistory", href: "/customer/history", icon: History },
@@ -223,8 +225,8 @@ function PortalShell({
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <aside className="hidden lg:block w-64 shrink-0 border-r border-border h-screen sticky top-0">{Sidebar}</aside>
+    <div className="min-h-screen bg-background flex print:block print:min-h-0">
+      <aside className="hidden lg:block w-64 shrink-0 border-r border-border h-screen sticky top-0 print:hidden">{Sidebar}</aside>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
@@ -232,41 +234,43 @@ function PortalShell({
         </div>
       )}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b bg-background px-4 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label={t("nav.openMenu")}>
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-2 sm:gap-3 border-b bg-background px-3 sm:px-4 lg:px-6 print:hidden">
+          <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setOpen(true)} aria-label={t("nav.openMenu")}>
             <Menu size={22} />
           </Button>
-          <Link href="/">
+          <Link href={role === "pujari" ? "/pujari" : "/customer"}>
             <a className="flex items-center shrink-0">
-              <BSevaLogo
-                size="sm"
-                afterWordmark={
-                  <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    {role === "pujari" ? t("portal.pujariPortal") : t("portal.customerPortal")}
-                  </span>
-                }
-              />
+              <BSevaLogo variant="full" size="portal" />
             </a>
           </Link>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2 min-w-0">
+            {role === "customer" ? (
+              <Link href="/services">
+                <a className="book-puja-cta-wrap">
+                  <span className="book-puja-cta inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground">
+                    {t("nav.bookPuja")}
+                  </span>
+                </a>
+              </Link>
+            ) : null}
             <LanguageSelector />
             <NotificationBell inboxHref={role === "pujari" ? "/pujari/notifications" : "/customer/notifications"} />
             <ThemeToggle className="shrink-0" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => void handleLogout()}
+            >
+              <LogOut size={16} className="mr-1.5 hidden sm:inline" />
+              {t("nav.logout")}
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => void handleLogout()}
-          >
-            <LogOut size={16} className="mr-1.5" />
-            {t("nav.logout")}
-          </Button>
         </header>
-        <main className="flex-1 p-4 lg:p-8" data-scroll-reset>
+        <main className="flex-1 p-4 lg:p-8 print:p-0" data-scroll-reset>
           {children}
         </main>
-        <footer className="border-t py-4 text-center text-xs text-muted-foreground">{t("footer.rights")}</footer>
+        <footer className="border-t py-4 text-center text-xs text-muted-foreground print:hidden">{t("footer.rights")}</footer>
       </div>
     </div>
   );

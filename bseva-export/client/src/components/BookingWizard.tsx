@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PujaTitle } from "@/components/PujaTitle";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1102,6 +1103,7 @@ export default function BookingWizard({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-8 px-4">
+      <PujaTitle name={pujaName} className="block text-xl md:text-2xl tracking-tight" />
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         {steps.map((step, index) => (
           <div key={step.number} className="flex items-center">
@@ -1643,7 +1645,9 @@ export default function BookingWizard({
             <CardContent className="p-6 space-y-3 text-sm">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-lg font-semibold">{pujaName}</p>
+                  <p className="text-lg">
+                    <PujaTitle name={pujaName} />
+                  </p>
                   <Badge className="bg-primary mt-1">
                     {tierDetails[tier].name} ·{" "}
                     {serviceMode === "virtual" ? t("booking.virtual") : t("booking.physical")}

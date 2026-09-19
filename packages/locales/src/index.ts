@@ -12,6 +12,7 @@ import { webCoverage } from "./resources/webCoverage";
 import { customerRequirements } from "./resources/customerRequirements";
 import webUiGaps from "./resources/webUiGaps";
 import { extras } from "./extras";
+import { landing } from "./resources/landing";
 
 export {
   DEFAULT_LANG,
@@ -43,6 +44,13 @@ export {
   formatSlot,
   formatTime,
 } from "./format";
+export {
+  PUJA_OM,
+  PUJA_SWASTIKA,
+  formatPujaTitleText,
+  stripPujaTitleMarks,
+} from "./pujaTitle";
+
 export { ERROR_CODE_KEYS, errorKeyForCode, parseApiErrorDetail } from "./errors";
 
 /** English is copied first so missing locale keys fall back without showing raw keys. */
@@ -54,6 +62,7 @@ const base: Record<string, string> = {
   ...customerRequirements.en,
   ...webUiGaps,
   ...extras.en,
+  ...landing.en,
 };
 
 function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): Record<string, string> {
@@ -65,6 +74,7 @@ function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): 
     ...customerRequirements[lang],
     ...webUiGaps,
     ...extras[lang],
+    ...landing[lang],
   };
 }
 

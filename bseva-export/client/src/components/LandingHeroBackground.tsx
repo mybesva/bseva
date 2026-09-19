@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 const SLIDE_MS = 8000;
 
+/** Swap these sources to change the hero scene without touching Home copy. */
 const SLIDES = [
   { kind: "image" as const, src: "/images/hero-bg.png" },
   { kind: "video" as const, src: "/videos/landing-1.mp4" },
@@ -63,7 +64,7 @@ export default function LandingHeroBackground() {
           )}
         </div>
       ))}
-      <div className="absolute inset-0 z-[2] bg-gradient-to-b from-sidebar/60 via-sidebar/40 to-background" />
+      <div className="absolute inset-0 z-[2] bg-gradient-to-b from-sidebar/80 via-sidebar/65 to-background" />
     </>
   );
 }

@@ -119,8 +119,26 @@ export const PUJARI_DOC_TYPES = [
   { id: "certificate", label: "Professional certificate" },
   { id: "supporting", label: "Additional documents" },
 ] as const;
-export const CUSTOMER_SUPPORT_CATS = ["Payments", "Wallet", "Bookings", "Others"] as const;
-export const PUJARI_SUPPORT_CATS = ["Settlement", "Route Map / Location", "Bookings", "Others"] as const;
+export const CUSTOMER_SUPPORT_CATS = [
+  "booking",
+  "payment",
+  "cancellation_refund",
+  "puja_seva",
+  "samagri",
+  "rescheduling",
+  "technical",
+  "other",
+] as const;
+export const PUJARI_SUPPORT_CATS = [
+  "booking",
+  "payment",
+  "puja_seva",
+  "pujari",
+  "samagri",
+  "rescheduling",
+  "technical",
+  "other",
+] as const;
 
 export function rupees(paise: number | null | undefined): string {
   return `₹${(Number(paise || 0) / 100).toLocaleString("en-IN")}`;

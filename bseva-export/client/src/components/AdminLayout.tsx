@@ -197,24 +197,18 @@ function AdminShell({ children }: AdminLayoutProps) {
 
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full w-64 overflow-hidden bg-sidebar border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0",
+          "fixed top-0 left-0 z-50 h-full w-64 overflow-hidden bg-sidebar border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0 print:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full min-h-0">
-          <div className="h-[4.5rem] flex items-center justify-between px-4 border-b border-sidebar-border shrink-0">
+          <div className="h-[4.5rem] flex items-center justify-between px-3 border-b border-sidebar-border shrink-0">
             <Link href={opsBase}>
-              <div className="flex items-center gap-2 min-w-0">
-                <BSevaLogo
-                  size="xs"
-                  className="text-sidebar-foreground"
-                  afterWordmark={
-                    <span className="font-bold text-lg text-sidebar-foreground shrink-0">Admin</span>
-                  }
-                />
-              </div>
+              <a className="flex items-center min-w-0 rounded-md bg-background px-1.5 py-1">
+                <BSevaLogo variant="full" size="portal" />
+              </a>
             </Link>
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+            <Button variant="ghost" size="icon" className="lg:hidden text-sidebar-foreground" onClick={() => setSidebarOpen(false)}>
               <X size={20} />
             </Button>
           </div>
@@ -304,11 +298,16 @@ function AdminShell({ children }: AdminLayoutProps) {
         </div>
       </aside>
 
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur border-b border-border flex items-center px-4 lg:px-6 gap-3">
+      <div className="lg:pl-64 print:pl-0">
+        <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur border-b border-border flex items-center px-3 sm:px-4 lg:px-6 gap-2 sm:gap-3 print:hidden">
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </Button>
+          <Link href={opsBase}>
+            <a className="flex items-center shrink-0">
+              <BSevaLogo variant="full" size="portal" />
+            </a>
+          </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-semibold text-foreground truncate">
               {(() => {
@@ -329,7 +328,7 @@ function AdminShell({ children }: AdminLayoutProps) {
             Logout
           </Button>
         </header>
-        <main className="p-4 lg:p-6" data-scroll-reset>
+        <main className="p-4 lg:p-6 print:p-0" data-scroll-reset>
           {children}
         </main>
       </div>

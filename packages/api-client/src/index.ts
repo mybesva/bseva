@@ -677,8 +677,25 @@ export function createApiClient(opts: ApiClientOptions) {
       return api<SupportTicket>("/support/tickets", { method: "POST", body: JSON.stringify(body) });
     },
 
-    listSupportTickets() {
-      return api<SupportTicket[]>("/support/tickets").then((d) => asArray<SupportTicket>(d));
+    listSupportTickets(params?: Record<string, string | number | boolean | undefined>) {
+      return api<SupportTicket[] | { items?: SupportTicket[] }>(`/support/tickets${toQuery(params || {})}`).then((d) =>
+        asArray<SupportTicket>(d)
+      );
+    },
+
+    getSupportTicket(id: string) {
+      return api<SupportTicket>(`/support/tickets/${encodeURIComponent(id)}`);
+    },
+
+    replySupportTicket(id: string, body: string, kind = "user") {
+      return api(`/support/tickets/${encodeURIComponent(id)}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ body, kind }),
+      });
+    },
+
+    reopenSupportTicket(id: string) {
+      return api(`/support/tickets/${encodeURIComponent(id)}/reopen`, { method: "POST", body: JSON.stringify({}) });
     },
 
     serviceSamagri(serviceId: string) {

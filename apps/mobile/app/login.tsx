@@ -67,8 +67,12 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
           <Card>
-            <AppText color={colors.mutedForeground} style={{ marginBottom: 16 }}>
-              {t("auth.loginDesc")} {t("auth.loginMobileHint")}
+            <AppText color={colors.mutedForeground} style={{ marginBottom: 16, lineHeight: 22 }}>
+              {roleHint === "pujari"
+                ? t("auth.pujariLoginDescription")
+                : roleHint === "customer"
+                  ? t("auth.customerLoginDescription")
+                  : `${t("auth.loginDesc")} ${t("auth.loginMobileHint")}`}
             </AppText>
             <LanguagePicker />
             <View style={{ gap: 14 }}>

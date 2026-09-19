@@ -95,6 +95,18 @@ _DEFAULTS: dict[str, Any] = {
     "festival_surge_percent": 0,
     "festival_surge_paise": 0,
     "festival_surge_dates": [],
+    "support_categories": [
+        "booking",
+        "payment",
+        "cancellation_refund",
+        "puja_seva",
+        "pujari",
+        "customer",
+        "samagri",
+        "rescheduling",
+        "technical",
+        "other",
+    ],
 }
 
 

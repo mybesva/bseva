@@ -6,6 +6,7 @@ import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
+import { PujaTitle } from "@/components/PujaTitle";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
@@ -81,9 +82,7 @@ export default function BrowseServices() {
             <Pressable key={s.id} onPress={() => router.push(`/service/${s.slug}`)}>
               <Card>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <AppText variant="h3" style={{ flex: 1 }}>
-                    {s.name}
-                  </AppText>
+                  <PujaTitle name={s.name} variant="h3" style={{ flex: 1 }} />
                   {s.bookable ? <StatusBadge status="available" /> : <StatusBadge status="pending" />}
                 </View>
                 <AppText variant="small" color={colors.mutedForeground} numberOfLines={3} style={{ marginTop: 6 }}>

@@ -24,6 +24,7 @@ from app.routers import (
     reports,
     support,
     temples,
+    tickets,
     wallet,
 )
 
@@ -46,7 +47,11 @@ app = FastAPI(title="BSeva API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?" if settings.environment != "production" else None,
+    allow_origin_regex=(
+        r"https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?"
+        if settings.environment != "production"
+        else None
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,6 +72,7 @@ app.include_router(ops.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(promos.router, prefix="/api/v1")
 app.include_router(support.router, prefix="/api/v1")
+app.include_router(tickets.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 
 

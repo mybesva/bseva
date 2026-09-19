@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image, ScrollView, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { PujaTitle } from "@/components/PujaTitle";
 import { AppText, Card, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
@@ -39,12 +40,13 @@ export default function ServiceDetail() {
   }
   return (
     <Screen>
-      <ScreenHeader title={s.name} back />
+      <ScreenHeader title={<PujaTitle name={s.name} onDark numberOfLines={1} />} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <Image
           source={{ uri: apiClient.serviceImageUrl(s.slug) }}
           style={{ width: "100%", height: 180, borderRadius: 12, backgroundColor: colors.secondary }}
         />
+        <PujaTitle name={s.name} variant="h1" />
         <AppText color={colors.mutedForeground}>
           {String(s.full_description || s.description || s.short_description || "")}
         </AppText>
