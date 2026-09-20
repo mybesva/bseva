@@ -1,7 +1,8 @@
 import { CALENDARS, rupees } from "@bseva/config";
 import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback } from "react";
 import { Image, Linking, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { SeasonalPopup } from "@/components/SeasonalPopup";
@@ -30,16 +31,32 @@ export default function CustomerHome() {
     queryKey: ["promos", "post_login"],
     queryFn: () => apiClient.promoBanners("post_login"),
   });
-  const profile = useQuery({ queryKey: ["customer-profile"], queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>> });
+  const profile = useQuery({
+    queryKey: ["customer-profile"],
+    queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>>,
+    staleTime: 0,
+  });
   const config = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
-  const profileLat = Number(profile.data?.latitude);
-  const profileLng = Number(profile.data?.longitude);
-  const hasCoords = Number.isFinite(profileLat) && Number.isFinite(profileLng);
+  const rawLat = profile.data?.latitude;
+  const rawLng = profile.data?.longitude;
+  const profileLat = rawLat == null || rawLat === "" ? NaN : Number(rawLat);
+  const profileLng = rawLng == null || rawLng === "" ? NaN : Number(rawLng);
+  const hasCoords =
+    Number.isFinite(profileLat) &&
+    Number.isFinite(profileLng) &&
+    !(profileLat === 0 && profileLng === 0);
   const availability = useQuery({
     queryKey: ["service-availability", profileLat, profileLng],
     queryFn: () => apiClient.serviceAvailability(profileLat, profileLng),
     enabled: hasCoords,
+    staleTime: 0,
   });
+  useFocusEffect(
+    useCallback(() => {
+      void profile.refetch();
+      void availability.refetch();
+    }, [profile.refetch, availability.refetch])
+  );
   const ongoing = (bookings.data || []).filter((b) => b.status === "in_progress");
   const upcoming = (bookings.data || []).filter((b) => ["pending", "pending_acceptance", "confirmed"].includes(String(b.customer_display_status || b.status))).slice(0, 3);
   const balance = wallet.data?.wallet?.balance_paise ?? wallet.data?.balance_paise ?? 0;
@@ -53,12 +70,15 @@ export default function CustomerHome() {
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
         refreshControl={
           <RefreshControl
-            refreshing={bookings.isRefetching}
+            refreshing={bookings.isRefetching || profile.isRefetching || availability.isRefetching}
             onRefresh={() => {
               void bookings.refetch();
               void wallet.refetch();
               void services.refetch();
               void panchang.refetch();
+              void profile.refetch();
+              void availability.refetch();
+              void config.refetch();
             }}
           />
         }
@@ -78,6 +98,20 @@ export default function CustomerHome() {
             <AppText color={colors.mutedForeground}>
               {String(config.data?.service_area_unavailable_description || t("web.availability.comingSoonBody"))}
             </AppText>
+            {String(profile.data?.location_label || profile.data?.city || "").trim() ? (
+              <AppText variant="small" color={colors.mutedForeground}>
+                {String(profile.data?.location_label || profile.data?.city)}
+              </AppText>
+            ) : null}
+            <PrimaryButton title={t("web.availability.myAddress")} variant="outline" onPress={() => router.push("/customer/address")} />
+            <PrimaryButton
+              title={t("web.availability.checkLocation")}
+              variant="ghost"
+              onPress={() => {
+                void profile.refetch();
+                void availability.refetch();
+              }}
+            />
             {config.data?.virtual_puja_enabled ? (
               <PrimaryButton title={t("web.availability.bookVirtual")} onPress={() => router.push("/customer/services")} />
             ) : null}

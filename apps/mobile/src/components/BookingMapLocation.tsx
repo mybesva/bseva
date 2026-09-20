@@ -10,43 +10,12 @@ import {
   LocationDisabledError,
   LocationPermissionError,
   reverseGeocodeParts,
+  searchPlaces,
+  type PlaceSuggestion,
 } from "@/utils/deviceLocation";
-
-type PlaceSuggestion = {
-  id: string;
-  description: string;
-  lat?: number;
-  lng?: number;
-};
 
 function mapsKey() {
   return (process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "").trim();
-}
-
-async function fetchSuggestions(query: string, key: string): Promise<PlaceSuggestion[]> {
-  if (key) {
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&components=country:in&key=${encodeURIComponent(key)}`;
-    const res = await fetch(url);
-    const data = (await res.json()) as {
-      status?: string;
-      predictions?: { place_id: string; description: string }[];
-    };
-    if (data.status === "OK" && data.predictions?.length) {
-      return data.predictions.slice(0, 6).map((p) => ({ id: p.place_id, description: p.description }));
-    }
-  }
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=in&q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "BSevaMobile/1.0" } });
-  const rows = (await res.json()) as { place_id?: number; display_name?: string; lat?: string; lon?: string }[];
-  if (!Array.isArray(rows)) return [];
-  return rows
-    .filter((row) => row.display_name && row.lat && row.lon)
-    .map((row) => ({
-      id: String(row.place_id || `${row.lat},${row.lon}`),
-      description: String(row.display_name),
-      lat: Number(row.lat),
-      lng: Number(row.lon),
-    }));
 }
 
 export function BookingMapLocation({
@@ -148,7 +117,10 @@ export function BookingMapLocation({
 
   async function searchAddress() {
     const q = search.trim();
-    if (!q) return;
+    if (!q) {
+      setMapError(t("web.address.searchPlaceholder"));
+      return;
+    }
     if (suggestions[0]) {
       await selectSuggestion(suggestions[0]);
       return;
@@ -162,17 +134,16 @@ export function BookingMapLocation({
         const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&components=country:IN&key=${encodeURIComponent(key)}`;
         const res = await fetch(url);
         const data = (await res.json()) as {
+          status?: string;
           results?: { geometry?: { location?: { lat: number; lng: number } }; formatted_address?: string }[];
         };
         const loc = data.results?.[0]?.geometry?.location;
-        if (!loc) {
-          setMapError(t("web.address.locationNotFound"));
+        if (loc) {
+          await applyCoords(loc.lat, loc.lng, data.results?.[0]?.formatted_address);
           return;
         }
-        await applyCoords(loc.lat, loc.lng, data.results?.[0]?.formatted_address);
-        return;
       }
-      const rows = await fetchSuggestions(q, "");
+      const rows = await searchPlaces(q, mapsKey());
       if (!rows[0]?.lat || !rows[0]?.lng) {
         setMapError(t("web.address.locationNotFound"));
         return;
@@ -200,7 +171,7 @@ export function BookingMapLocation({
     }
     let cancelled = false;
     const timer = setTimeout(() => {
-      void fetchSuggestions(q, mapsKey())
+      void searchPlaces(q, mapsKey())
         .then((rows) => {
           if (cancelled) return;
           setSuggestions(rows);
@@ -225,7 +196,7 @@ export function BookingMapLocation({
   return (
     <View style={{ gap: 10 }}>
       <AppText variant="small">{t("web.address.mapLocation")}</AppText>
-      <View style={{ zIndex: 20 }}>
+      <View style={{ zIndex: 20, elevation: 8 }}>
         <Field
           label={t("web.address.searchPlaceholder")}
           value={search}
@@ -257,14 +228,26 @@ export function BookingMapLocation({
           </View>
         ) : null}
       </View>
-      <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-        <PrimaryButton title={t("common.search")} variant="outline" disabled={pending} onPress={() => void searchAddress()} />
-        <PrimaryButton
-          title={t("web.address.currentLocation")}
-          variant="outline"
-          disabled={pending}
-          onPress={() => void useCurrentLocation()}
-        />
+      <View
+        onStartShouldSetResponder={() => true}
+        style={{ flexDirection: "row", gap: 8, zIndex: 30, elevation: 8 }}
+      >
+        <View style={{ flex: 1 }}>
+          <PrimaryButton
+            title={t("common.search")}
+            variant="outline"
+            loading={pending}
+            onPress={() => void searchAddress()}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <PrimaryButton
+            title={t("web.address.currentLocation")}
+            variant="outline"
+            loading={pending}
+            onPress={() => void useCurrentLocation()}
+          />
+        </View>
       </View>
       {mapError ? <AppText variant="small" color={colors.destructive}>{mapError}</AppText> : null}
       <MapPinPicker

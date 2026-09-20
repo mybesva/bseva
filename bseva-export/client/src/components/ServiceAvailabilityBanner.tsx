@@ -46,14 +46,30 @@ export default function ServiceAvailabilityBanner({ showChecking = true, virtual
             <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
               {config.service_area_unavailable_description?.trim() || t("web.availability.comingSoonBody")}
             </p>
-            {config.virtual_puja_enabled && virtualHref ? (
-              <Link href={virtualHref}>
-                <Button size="sm" className="font-semibold">
-                  <Video className="h-4 w-4 mr-2" />
-                  {t("web.availability.bookVirtual")}
+            <div className="flex flex-wrap gap-2">
+              <Link href="/customer/address">
+                <Button type="button" size="sm" variant="outline" className="font-semibold">
+                  {t("web.availability.myAddress")}
                 </Button>
               </Link>
-            ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="font-semibold"
+                onClick={() => void refresh()}
+              >
+                {t("web.availability.checkLocation")}
+              </Button>
+              {config.virtual_puja_enabled && virtualHref ? (
+                <Link href={virtualHref}>
+                  <Button size="sm" className="font-semibold">
+                    <Video className="h-4 w-4 mr-2" />
+                    {t("web.availability.bookVirtual")}
+                  </Button>
+                </Link>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

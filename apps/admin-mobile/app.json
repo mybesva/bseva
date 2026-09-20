@@ -67,12 +67,19 @@
           "backgroundColor": "#FFF8E7",
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
+          "enableFullScreenImage_legacy": true,
           "imageWidth": 200,
           "android": {
             "image": "./assets/splash-android.png",
             "backgroundColor": "#FFF8E7",
             "resizeMode": "contain",
-            "imageWidth": 180
+            "enableFullScreenImage_legacy": true
+          },
+          "ios": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#FFF8E7",
+            "resizeMode": "contain",
+            "enableFullScreenImage_legacy": true
           }
         }
       ],

@@ -5,8 +5,8 @@ type Dict = Record<string, string>;
 const en: Dict = {
   "nav.howItWorks": "How It Works",
   "home.badge": "Authentic rituals. Clearer coordination.",
-  "home.heroTitle1": "Bring the right ritual",
-  "home.heroTitle2": "home.",
+  "home.heroTitle1": "Bring The Right Ritual",
+  "home.heroTitle2": "Home.",
   "home.heroDesc":
     "Arrange meaningful pujas, havans, and ceremonies with clearer service details, coordinated Pujari support, and a booking journey built around your date and location.",
   "home.heroTrust": "Choose your ceremony. Share your details. Receive coordinated support.",

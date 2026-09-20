@@ -3,6 +3,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { MapPinPicker } from "./MapPinPicker";
 import { AppText, ErrorBanner, Field, PrimaryButton } from "./ui";
+import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 import {
   getDeviceCoordinates,

@@ -11,12 +11,11 @@ import {
   VIRTUAL_COUNTRIES,
   type CustomerBookablePackage,
 } from "@bseva/config";
-import type { Quote } from "@bseva/types";
+import type { LegalPolicy, Quote } from "@bseva/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Switch, View } from "react-native";
+import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { BookingMapLocation } from "@/components/BookingMapLocation";
 import { DatePickerField } from "@/components/DatePickerField";
@@ -99,6 +98,10 @@ export default function BookService() {
   const profileQ = useQuery({ queryKey: ["customer-profile"], queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>> });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const configQ = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
+  const legalQ = useQuery({
+    queryKey: ["legal-policies"],
+    queryFn: () => apiClient.legal() as Promise<LegalPolicy[]>,
+  });
   const svc = serviceQ.data;
   const [step, setStep] = useState(1);
   const [pkg, setPkg] = useState<CustomerBookablePackage>("standard");
@@ -147,14 +150,17 @@ export default function BookService() {
     enabled: step >= 2,
   });
   useEffect(() => {
-    void (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
-      const pos = await Location.getCurrentPositionAsync({});
-      setLat(pos.coords.latitude);
-      setLng(pos.coords.longitude);
-    })();
-  }, []);
+    if (!hydrated) return;
+    if (lat != null && lng != null) return;
+    const rawLat = profileQ.data?.latitude;
+    const rawLng = profileQ.data?.longitude;
+    if (rawLat == null || rawLng == null || rawLat === "") return;
+    const plat = Number(rawLat);
+    const plng = Number(rawLng);
+    if (!Number.isFinite(plat) || !Number.isFinite(plng) || (plat === 0 && plng === 0)) return;
+    setLat(plat);
+    setLng(plng);
+  }, [hydrated, profileQ.data, lat, lng]);
 
   useEffect(() => {
     if (!slug) return;
@@ -249,7 +255,47 @@ export default function BookService() {
   const showSamagri = svc?.samagri_available !== false;
   const alankaramPrice = Number(svc?.alankaram_price_paise || quote?.alankaramListPrice || 0);
   const alankaramOffered = !deathRelated && Boolean(svc?.alankaram_available) && alankaramPrice > 0;
+  const showAlankaramComingSoon = !deathRelated && !alankaramOffered;
   const showFood = Boolean(svc?.food_available);
+  const samagriListPaise = Number(svc?.samagri_price_paise || quote?.samagriListPrice || 0);
+  const foodPrice = Number(svc?.food_price_paise || (quote as Quote | null)?.foodListPrice || 0);
+  const pujariCount =
+    pkg === "premium"
+      ? Number(svc?.premium_pujaris_required || svc?.pujaris_required || 2)
+      : Number(svc?.standard_pujaris_required || svc?.pujaris_required || 1);
+  const durationMinutes = Number(svc?.duration_minutes || 0);
+  const cancellationPolicy = (Array.isArray(legalQ.data) ? legalQ.data : []).find((p) => p.slug === "cancellation_policy");
+
+  function formatPlusPrice(paise: number) {
+    if (paise <= 0) return "—";
+    return `+ ${rupees(paise)}`;
+  }
+
+  function requestAddon(kind: "samagri" | "alankaram" | "food", checked: boolean) {
+    if (!checked) {
+      if (kind === "samagri") setIncludeSamagri(false);
+      else if (kind === "alankaram") setIncludeAlankaram(false);
+      else setIncludeFood(false);
+      return;
+    }
+    const amount = kind === "food" ? foodPrice : kind === "alankaram" ? alankaramPrice : samagriListPaise;
+    const title = kind === "food" ? t("booking.addFoodQ") : t("booking.addSamagriQ");
+    const arranged = kind === "food" ? t("booking.foodArranged") : t("booking.samagriArranged");
+    const priceLine =
+      amount > 0 ? t("web.booking.addonIncluded", { amount: formatPlusPrice(amount) }) : t("booking.includedInTotal");
+    Alert.alert(title, `${priceLine}\n\n${arranged}`, [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.ok"),
+        onPress: () => {
+          if (kind === "samagri") setIncludeSamagri(true);
+          else if (kind === "alankaram") setIncludeAlankaram(true);
+          else setIncludeFood(true);
+        },
+      },
+    ]);
+  }
+
   const availablePackages = customerBookablePackages({
     standard: svc?.standard_price_paise,
     premium: svc?.premium_price_paise,
@@ -529,7 +575,7 @@ export default function BookService() {
   return (
     <Screen>
       <ScreenHeader title={<PujaTitle name={svc.name} onDark numberOfLines={1} />} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} keyboardShouldPersistTaps="always">
         <AppText variant="small">{t("mobile.stepOf", { step, total: 4 })}</AppText>
         <ErrorBanner message={error} />
         {step === 1 ? (
@@ -701,8 +747,8 @@ export default function BookService() {
               </View>
               <View style={{ flex: 1 }}>
                 <PrimaryButton
-                  title={t("booking.review")}
-                  disabled={!time || leadBlocked || startValidQ.isFetching}
+                  title={t("mobile.next")}
+                  loading={startValidQ.isFetching}
                   onPress={async () => {
                     if (!validateStep2()) return;
                     await checkPhysicalAvailability();
@@ -737,35 +783,191 @@ export default function BookService() {
                 />
               </Card>
             ) : null}
-            <AppText variant="small" color={colors.mutedForeground}>{t("booking.pujariSharedLater")}</AppText>
-            {showSamagri ? (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <AppText>{t("mobile.includeSamagri")}</AppText>
-                <Switch value={includeSamagri} onValueChange={setIncludeSamagri} />
+            <AppText variant="h3">{t("booking.review")}</AppText>
+            <Card style={{ gap: 6 }}>
+              <AppText>
+                {pkg === "premium" ? t("booking.premium") : t("booking.standard")}
+                {" · "}
+                {mode === "virtual" ? t("booking.virtual") : t("booking.physical")}
+              </AppText>
+              <AppText variant="small" color={colors.mutedForeground}>
+                {t("web.booking.pujarisIncluded", { count: pujariCount })}
+              </AppText>
+              <AppText variant="small">
+                {t("booking.reviewDate")} {date} {time}
+                {mode === "virtual" ? ` (${customerTimezone})` : ""}
+              </AppText>
+              {durationMinutes > 0 ? (
+                <AppText variant="small">
+                  {t("services.duration")} {t("service.minutes", { count: durationMinutes })}
+                </AppText>
+              ) : null}
+              {mode === "virtual" ? (
+                <AppText variant="small">
+                  {t("booking.reviewCountryTimezone")} {t(`web.country.${customerCountry}`)} · {customerTimezone}
+                </AppText>
+              ) : (
+                <AppText variant="small">
+                  {t("booking.reviewLocation")} {composedAddress()}
+                  {city ? `, ${city}` : ""}
+                </AppText>
+              )}
+              <AppText variant="small" color={colors.mutedForeground}>{t("booking.pujariSharedLater")}</AppText>
+              <View
+                style={{
+                  marginTop: 4,
+                  padding: 10,
+                  borderRadius: 8,
+                  backgroundColor: colors.primary + "12",
+                  borderWidth: 1,
+                  borderColor: colors.primary + "40",
+                  gap: 4,
+                }}
+              >
+                <AppText variant="small">{cancellationPolicy?.title || t("booking.cancellationPolicy")}</AppText>
+                {(cancellationPolicy?.points || []).map((p, i) => (
+                  <AppText key={`${p.title || i}`} variant="small" color={colors.mutedForeground}>
+                    {p.title ? `${p.title}: ` : ""}
+                    {p.body}
+                  </AppText>
+                ))}
               </View>
-            ) : null}
-            {alankaramOffered ? (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <AppText>{t("mobile.includeAlankaram")}</AppText>
-                <Switch value={includeAlankaram} onValueChange={setIncludeAlankaram} />
-              </View>
-            ) : null}
-            {showFood ? (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <AppText>{t("mobile.includeFood")}</AppText>
-                <Switch value={includeFood} onValueChange={setIncludeFood} />
-              </View>
-            ) : null}
+            </Card>
+            <Card style={{ gap: 10 }}>
+              <AppText>
+                {alankaramOffered || showAlankaramComingSoon
+                  ? t("booking.samagriAlankaramOptional")
+                  : t("booking.samagriOptional")}
+              </AppText>
+              <AppText variant="small" color={colors.mutedForeground}>{t("web.booking.addonsDescription")}</AppText>
+              {showSamagri ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: 12,
+                    borderRadius: 10,
+                    borderWidth: includeSamagri ? 2 : 1,
+                    borderColor: includeSamagri ? colors.primary : colors.border,
+                    backgroundColor: includeSamagri ? colors.primary + "18" : colors.background,
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <AppText>{t("booking.samagri")}</AppText>
+                    <AppText variant="small" color={colors.mutedForeground}>
+                      {t("web.booking.samagriArrangedShort")}
+                    </AppText>
+                    {includeSamagri ? (
+                      <AppText variant="small" color={colors.mutedForeground}>{t("booking.includedInTotal")}</AppText>
+                    ) : null}
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 8 }}>
+                    <AppText color={includeSamagri ? colors.primary : colors.foreground}>
+                      {formatPlusPrice(samagriListPaise)}
+                    </AppText>
+                    <Switch value={includeSamagri} onValueChange={(v) => requestAddon("samagri", v)} />
+                  </View>
+                </View>
+              ) : null}
+              {alankaramOffered ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: 12,
+                    borderRadius: 10,
+                    borderWidth: includeAlankaram ? 2 : 1,
+                    borderColor: includeAlankaram ? colors.primary : colors.border,
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <AppText>{t("booking.alankaram")}</AppText>
+                    <AppText variant="small" color={colors.mutedForeground}>
+                      {t("web.booking.alankaramDescription")}
+                    </AppText>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 8 }}>
+                    <AppText>{formatPlusPrice(alankaramPrice)}</AppText>
+                    <Switch value={includeAlankaram} onValueChange={(v) => requestAddon("alankaram", v)} />
+                  </View>
+                </View>
+              ) : null}
+              {showAlankaramComingSoon ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: 12,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderStyle: "dashed",
+                    borderColor: colors.border,
+                    opacity: 0.7,
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <AppText color={colors.mutedForeground}>{t("booking.alankaram")}</AppText>
+                    <AppText variant="small" color={colors.mutedForeground}>
+                      {t("web.booking.alankaramComingSoon")}
+                    </AppText>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 8 }}>
+                    <AppText variant="small" color={colors.mutedForeground} style={{ fontWeight: "700" }}>
+                      {t("common.comingSoon")}
+                    </AppText>
+                    <Switch value={false} disabled />
+                  </View>
+                </View>
+              ) : null}
+              {showFood ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: 12,
+                    borderRadius: 10,
+                    borderWidth: includeFood ? 2 : 1,
+                    borderColor: includeFood ? colors.primary : colors.border,
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <AppText>{t("booking.food")}</AppText>
+                    <AppText variant="small" color={colors.mutedForeground}>
+                      {t("web.booking.foodDescription")}
+                    </AppText>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 8 }}>
+                    <AppText color={colors.primary}>{formatPlusPrice(foodPrice)}</AppText>
+                    <Switch value={includeFood} onValueChange={(v) => requestAddon("food", v)} />
+                  </View>
+                </View>
+              ) : null}
+            </Card>
             {quote ? (
-              <Card>
-                <AppText>{t("mobile.puja")} {rupees(Number(quote.basePrice))}</AppText>
-                {Number(quote.samagri) ? <AppText>{t("mobile.samagri")} {rupees(Number(quote.samagri))}</AppText> : null}
-                {Number(quote.alankaram) ? <AppText>{t("mobile.alankaram")} {rupees(Number(quote.alankaram))}</AppText> : null}
-                {Number(quote.foodPrasadam) ? <AppText>{t("mobile.food")} {rupees(Number(quote.foodPrasadam))}</AppText> : null}
+              <Card style={{ gap: 6 }}>
+                <AppText variant="small" color={colors.mutedForeground}>
+                  {t("web.booking.pujarisIncluded", { count: pujariCount })}
+                </AppText>
+                <AppText>{t("booking.service")} ({pkg === "premium" ? t("booking.premium") : t("booking.standard")}) {rupees(Number(quote.basePrice))}</AppText>
+                {includeSamagri && Number(quote.samagri) ? <AppText>{t("booking.samagri")} {rupees(Number(quote.samagri))}</AppText> : null}
+                {includeAlankaram && Number(quote.alankaram) ? <AppText>{t("booking.alankaram")} {rupees(Number(quote.alankaram))}</AppText> : null}
+                {includeFood && Number(quote.foodPrasadam) ? <AppText>{t("booking.food")} {rupees(Number(quote.foodPrasadam))}</AppText> : null}
                 {Number(quote.peakFee) ? <AppText>{t("booking.peakFee")} {rupees(Number(quote.peakFee))}</AppText> : null}
                 {Number(quote.discount) ? <AppText>{t("booking.coupon")} {rupees(Number(quote.discount))}</AppText> : null}
-                <AppText>{t("booking.gst")} {rupees(Number(quote.gstAmount))}</AppText>
-                <AppText variant="h3">{t("mobile.total")} {rupees(Number(quote.totalAmount))}</AppText>
+                {Number(quote.subtotal) ? <AppText>{t("booking.subtotal")} {rupees(Number(quote.subtotal))}</AppText> : null}
+                <AppText>
+                  {t("booking.gst")}
+                  {quote.gstPercent ? ` (${quote.gstPercent}%)` : ""} {rupees(Number(quote.gstAmount))}
+                </AppText>
+                <AppText variant="h3" color={colors.primary}>{t("booking.total")} {rupees(Number(quote.totalAmount))}</AppText>
               </Card>
             ) : null}
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(2)} />
@@ -781,7 +983,21 @@ export default function BookService() {
                 {t("mobile.walletBookingHelp")}
               </AppText>
             </Card>
-            {quote ? <AppText variant="h3">{t("mobile.payAmount", { amount: rupees(Number(quote.totalAmount)) })}</AppText> : null}
+            {quote ? (
+              <Card style={{ gap: 6 }}>
+                <AppText>{t("booking.service")} ({pkg === "premium" ? t("booking.premium") : t("booking.standard")}) {rupees(Number(quote.basePrice))}</AppText>
+                {includeSamagri && Number(quote.samagri) ? <AppText>{t("booking.samagri")} {rupees(Number(quote.samagri))}</AppText> : null}
+                {includeAlankaram && Number(quote.alankaram) ? <AppText>{t("booking.alankaram")} {rupees(Number(quote.alankaram))}</AppText> : null}
+                {includeFood && Number(quote.foodPrasadam) ? <AppText>{t("booking.food")} {rupees(Number(quote.foodPrasadam))}</AppText> : null}
+                {Number(quote.peakFee) ? <AppText>{t("booking.peakFee")} {rupees(Number(quote.peakFee))}</AppText> : null}
+                {Number(quote.subtotal) ? <AppText>{t("booking.subtotal")} {rupees(Number(quote.subtotal))}</AppText> : null}
+                <AppText>
+                  {t("booking.gst")}
+                  {quote.gstPercent ? ` (${quote.gstPercent}%)` : ""} {rupees(Number(quote.gstAmount))}
+                </AppText>
+                <AppText variant="h3" color={colors.primary}>{t("booking.total")} {rupees(Number(quote.totalAmount))}</AppText>
+              </Card>
+            ) : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Switch value={terms} onValueChange={setTerms} />
               <AppText variant="small" style={{ flex: 1 }}>

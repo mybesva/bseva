@@ -6,6 +6,7 @@ import { MapPin, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
+import { insecureOriginHint, requestBrowserPosition } from "@/lib/browserGeolocation";
 
 function toastError(msg: string) {
   toast.error(msg);
@@ -258,31 +259,30 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
   }
 
   function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      setMapError(t("web.address.geolocationUnsupported"));
-      toastError(t("web.address.geolocationUnsupported"));
-      return;
-    }
     setMapError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    void requestBrowserPosition()
+      .then((pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         applyCoords(lat, lng);
         void reverseGeocode(lat, lng);
-      },
-      (err) => {
+      })
+      .catch((err: { geoBlock?: "unsupported" | "insecure"; code?: number }) => {
+        const denied = typeof GeolocationPositionError !== "undefined" ? GeolocationPositionError.PERMISSION_DENIED : 1;
+        const unavailable = typeof GeolocationPositionError !== "undefined" ? GeolocationPositionError.POSITION_UNAVAILABLE : 2;
         const msg =
-          err.code === err.PERMISSION_DENIED
-            ? t("web.address.permissionDenied")
-            : err.code === err.POSITION_UNAVAILABLE
-              ? t("web.address.currentUnavailable")
-              : t("web.address.currentFailed");
+          err.geoBlock === "insecure"
+            ? t("web.address.insecureOrigin", { url: insecureOriginHint() })
+            : err.geoBlock === "unsupported"
+              ? t("web.address.geolocationUnsupported")
+              : err.code === denied
+                ? t("web.address.permissionDenied")
+                : err.code === unavailable
+                  ? t("web.address.currentUnavailable")
+                  : t("web.address.currentFailed");
         setMapError(msg);
         toastError(msg);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+      });
   }
 
   return (

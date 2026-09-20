@@ -1,5 +1,6 @@
 /** English copy for web keys used in the UI but missing from other locale packs. */
 const webUiGaps: Record<string, string> = {
+  "web.address.insecureOrigin": "Current location needs a secure page. Open {{url}} (not 0.0.0.0), or use Search / drag the map pin.",
   "web.availability.checking": "Checking availability…",
   "web.bank.account": "Account number",
   "web.bank.confirmAccount": "Confirm account number",

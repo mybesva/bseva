@@ -318,11 +318,8 @@ function AdminShell({ children }: AdminLayoutProps) {
           </Button>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <Link href={adminPath("")}>
-              <a className="flex min-w-0 items-center gap-2 sm:gap-3" onClick={() => setSidebarOpen(false)}>
+              <a className="flex min-w-0 items-center" onClick={() => setSidebarOpen(false)}>
                 <BSevaLogo variant="full" size="portal" className="h-10 sm:h-11 max-w-[9.5rem]" />
-                <span className="truncate text-base sm:text-lg font-bold text-foreground">
-                  {isSuper ? "Super Admin" : "Admin"}
-                </span>
               </a>
             </Link>
           </div>

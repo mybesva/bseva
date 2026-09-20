@@ -64,7 +64,6 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
 
   const checkSeqRef = useRef(0);
   const resolvedSessionRef = useRef<string | null>(null);
-  const inFlightRef = useRef(false);
 
   const persist = useCallback((userId: string, next: ServiceAvailabilityStatus, key: string) => {
     const at = Date.now();
@@ -75,10 +74,7 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
 
   const runCheckAt = useCallback(
     async (userId: string, coords: Coords, opts?: { silent?: boolean }) => {
-      if (inFlightRef.current) return;
-
       const seq = ++checkSeqRef.current;
-      inFlightRef.current = true;
       if (!opts?.silent) setStatus("checking");
 
       try {
@@ -95,8 +91,6 @@ export function ServiceAvailabilityProvider({ children }: { children: ReactNode 
         if (seq !== checkSeqRef.current) return;
         setStatus("error");
         persist(userId, "error", coords.key);
-      } finally {
-        if (seq === checkSeqRef.current) inFlightRef.current = false;
       }
     },
     [persist]

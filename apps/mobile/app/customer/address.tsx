@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import { AddressForm, type AddressFormValue } from "@/components/AddressForm";
@@ -9,6 +9,7 @@ import { useI18n } from "@/providers/I18nProvider";
 
 export default function CustomerAddress() {
   const { t } = useI18n();
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["customer-profile"],
     queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>>,
@@ -71,6 +72,7 @@ export default function CustomerAddress() {
                 address: [parsed.address_line1, parsed.city].filter(Boolean).join(", "),
               });
               await q.refetch();
+              await qc.invalidateQueries({ queryKey: ["service-availability"] });
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
             } finally {

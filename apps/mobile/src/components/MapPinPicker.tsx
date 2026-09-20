@@ -111,7 +111,7 @@ export function MapPinPicker({
   }, [lat, lng]);
 
   return (
-    <View style={{ height, borderRadius: 10, overflow: "hidden" }}>
+    <View collapsable={false} style={{ height, borderRadius: 10, overflow: "hidden", zIndex: 0, elevation: 0 }}>
       <WebView
         ref={ref}
         originWhitelist={["*"]}
@@ -119,6 +119,7 @@ export function MapPinPicker({
         javaScriptEnabled
         nestedScrollEnabled
         setSupportMultipleWindows={false}
+        androidLayerType="hardware"
         onLoadEnd={() => injectPin(lat, lng)}
         onMessage={(e) => {
           try {
@@ -128,7 +129,7 @@ export function MapPinPicker({
             /* ignore */
           }
         }}
-        style={{ flex: 1 }}
+        style={{ flex: 1, height, backgroundColor: "transparent" }}
       />
     </View>
   );

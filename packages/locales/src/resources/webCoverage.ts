@@ -88,6 +88,7 @@ const en: Dict = {
   "web.address.locationNotFound": "Location not found — enter a fuller address or choose a suggestion",
   "web.address.geolocationUnsupported": "Geolocation is not supported by this browser",
   "web.address.permissionDenied": "Location permission denied. Enable it in your browser settings.",
+  "web.address.insecureOrigin": "Current location needs a secure page. Open {{url}} (not 0.0.0.0), or use Search / drag the map pin.",
   "web.address.currentUnavailable": "Current location is unavailable. Enter the address manually.",
   "web.address.currentFailed": "Could not access current location. Enter the address manually.",
   "web.address.mapLocation": "Location on map",
