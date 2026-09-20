@@ -1908,7 +1908,7 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
         raise HTTPException(400, "Booking cancelled")
     total = int(b["total_paise"])
     try:
-        apply_wallet(db, str(user["id"]), total, "debit", f"Pay booking {b['booking_number']}", booking_id)
+        apply_wallet(db, str(user["id"]), -total, "debit", f"Pay booking {b['booking_number']}", booking_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     db.execute(
