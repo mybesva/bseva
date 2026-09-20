@@ -24,7 +24,10 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
         "NSLocationAlwaysUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
         "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it.",
-        "UIBackgroundModes": ["remote-notification", "location"]
+        "UIBackgroundModes": [
+          "remote-notification",
+          "location"
+        ]
       }
     },
     "android": {
@@ -59,10 +62,19 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "bseva" },
-            { "scheme": "https", "host": "bseva.vercel.app", "pathPrefix": "/" }
+            {
+              "scheme": "bseva"
+            },
+            {
+              "scheme": "https",
+              "host": "bseva.vercel.app",
+              "pathPrefix": "/"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -112,7 +124,8 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false,

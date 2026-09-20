@@ -1,4 +1,5 @@
 import { isPujariRole, rupees } from "@bseva/config";
+import { formatPujaTitleText } from "@bseva/locales";
 import type { Booking, BookingPreparation, PreparationItem } from "@bseva/types";
 import { normalizePreparationSections, PREPARATION_SECTION_KEYS } from "@bseva/types";
 import { formatPujaDuration } from "@bseva/locales";
@@ -7,7 +8,7 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, ScrollView, Share, View } from "react-native";
+import { Alert, Linking, ScrollView, Share, Switch, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
@@ -196,6 +197,7 @@ export default function BookingDetail() {
   const [stars, setStars] = useState("5");
   const [comment, setComment] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -253,7 +255,7 @@ export default function BookingDetail() {
     try {
       await Share.share({
         title: b!.booking_number || t("mobile.bookingTitle"),
-        message: `${t("web.booking.confirmed")}\n${b!.service_name || ""}\n${formatDisplaySlot(b!.booking_date, b!.start_time)}\n#${b!.booking_number || b!.id}`,
+        message: `${t("web.booking.confirmed")}\n${formatPujaTitleText(b!.service_name) || ""}\n${formatDisplaySlot(b!.booking_date, b!.start_time)}\n#${b!.booking_number || b!.id}`,
       });
     } catch {
       Alert.alert(t("mobile.bookingTitle"), t("web.booking.shareFailed"));
@@ -333,7 +335,14 @@ export default function BookingDetail() {
           {b.duration_minutes ? <AppText>{t("web.booking.pujaDuration")}: {formatPujaDuration(lang, b.duration_minutes)}</AppText> : null}
           <AppText color={colors.mutedForeground}>{b.location_label || b.address}</AppText>
           {pujari && b.customer_name ? <AppText>{t("mobile.customer", { name: b.customer_name })}</AppText> : null}
-          {!pujari && b.pujari_name ? <AppText>{t("mobile.pujari", { name: b.pujari_name })}</AppText> : null}
+          {!pujari && b.pujari_details_visible && b.pujari_name ? (
+            <AppText>{t("mobile.pujari", { name: b.pujari_name })}</AppText>
+          ) : null}
+          {!pujari && !b.pujari_details_visible && (b.pujari_reveal_note || b.awaiting_pujari_assignment) ? (
+            <AppText variant="small" color={colors.mutedForeground}>
+              {String(b.pujari_reveal_note || (b.awaiting_pujari_assignment ? t("booking.confirmedAssign") : t("booking.pujariSharedLater")))}
+            </AppText>
+          ) : null}
           <AppText variant="price" color={colors.primary} style={{ marginTop: 4 }}>
             {rupees(b.total_paise)}
           </AppText>
@@ -361,8 +370,11 @@ export default function BookingDetail() {
               {t("mobile.trackingPermission")}
             </AppText>
           ) : null}
-          {b.meeting_url ? (
+          {b.meeting_url && b.meeting_link_visible !== false ? (
             <PrimaryButton title={t("mobile.joinMeet")} variant="outline" onPress={() => void Linking.openURL(String(b.meeting_url))} />
+          ) : null}
+          {!pujari && b.mode === "virtual" && !b.meeting_url && b.meeting_reveal_note ? (
+            <AppText variant="small" color={colors.mutedForeground}>{String(b.meeting_reveal_note)}</AppText>
           ) : null}
           {b.public_invite_url ? (
             <PrimaryButton title={t("mobile.inviteLink")} variant="ghost" onPress={() => void Linking.openURL(String(b.public_invite_url))} />
@@ -370,10 +382,25 @@ export default function BookingDetail() {
           {!pujari ? <PrimaryButton title={t("mobile.share")} variant="ghost" onPress={() => void shareBooking()} /> : null}
         </Card>
 
-        {!pujari && Boolean(b.pujari_id) && b.status === "confirmed" ? <CustomerStartOtp bookingId={b.id} /> : null}
+        {!pujari && b.awaiting_pujari_assignment && !b.pujari_details_visible ? (
+          <Card style={{ gap: 8 }}>
+            <AppText variant="h3">{t("web.booking.confirmedAssignmentPending")}</AppText>
+            <AppText variant="small" color={colors.mutedForeground}>
+              {t("web.booking.assignmentPendingBody")}
+            </AppText>
+            {b.assignment_status === "offers_sent" || Number(b.offers_sent || 0) > 0 ? (
+              <AppText variant="small" color={colors.mutedForeground}>{t("booking.confirmedNearby")}</AppText>
+            ) : b.admin_assignment_required ? (
+              <AppText variant="small" color={colors.mutedForeground}>{t("booking.confirmedAssign")}</AppText>
+            ) : null}
+            <PrimaryButton title={t("web.booking.connectAdmin")} variant="outline" onPress={() => router.push("/customer/support")} />
+          </Card>
+        ) : null}
+
+        {!pujari && b.pujari_details_visible && b.status === "confirmed" ? <CustomerStartOtp bookingId={b.id} /> : null}
         {pujari && b.status === "in_progress" ? <PujariCompleteOtp bookingId={b.id} /> : null}
 
-        {b.mode !== "virtual" && Boolean(b.pujari_id) && (b.status === "confirmed" || b.status === "in_progress") ? (
+        {b.mode !== "virtual" && (pujari ? Boolean(b.pujari_id) : b.pujari_details_visible === true) && (b.status === "confirmed" || b.status === "in_progress") ? (
           <LiveTrackCard bookingId={b.id} role={pujari ? "pujari" : "customer"} />
         ) : null}
 
@@ -453,7 +480,7 @@ export default function BookingDetail() {
           <PrimaryButton title={t("mobile.cancelSeries")} variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.cancelRecurring(String(b.recurring_series_id)))} />
         ) : null}
 
-        {!pujari && b.pujari_id ? (
+        {!pujari && b.pujari_details_visible && b.pujari_id ? (
           <PrimaryButton title={t("mobile.viewPujari")} variant="outline" onPress={() => router.push(`/pujari-public/${b.pujari_id}`)} />
         ) : null}
 
@@ -482,9 +509,13 @@ export default function BookingDetail() {
           </>
         ) : null}
 
-        {pujari && b.status === "pending_acceptance" ? (
+        {pujari && (b.status === "pending_acceptance" || b.pujari_offer_invited || b.pujari_accept_required) && !["confirmed", "in_progress", "completed", "cancelled", "rejected"].includes(b.status) ? (
           <>
-            <PrimaryButton title={t("mobile.acceptBooking")} disabled={busy} onPress={() => void run(() => apiClient.acceptBooking(b.id))} />
+            <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+              <Switch value={acceptTerms} onValueChange={setAcceptTerms} />
+              <AppText variant="small" style={{ flex: 1 }}>{t("mobile.acceptTerms")}</AppText>
+            </View>
+            <PrimaryButton title={t("mobile.acceptBooking")} disabled={busy || !acceptTerms} onPress={() => void run(() => apiClient.acceptBooking(b.id))} />
             <Field label={t("mobile.rejectReason")} value={rejectReason} onChangeText={setRejectReason} />
             <PrimaryButton title={t("mobile.reject")} variant="outline" disabled={busy} onPress={() => void run(() => apiClient.rejectBooking(b.id, rejectReason))} />
           </>

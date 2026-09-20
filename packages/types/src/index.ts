@@ -42,7 +42,23 @@ export type CatalogService = {
   samagri_available?: boolean;
   alankaram_available?: boolean;
   food_available?: boolean;
+  death_related?: boolean;
+  categories?: { slug?: string }[];
+  booking_lead_hours?: number | null;
+  muhurta_consultation_enabled?: boolean;
+  requires_muhurta?: boolean;
+  muhurta_fee_paise?: number | null;
   [key: string]: unknown;
+};
+
+export type ValidateBookingStart = {
+  valid: boolean;
+  start?: string;
+  reason?: string | null;
+  lead_hours: number;
+  duration_minutes: number;
+  buffer_hours?: number;
+  timezone: string;
 };
 
 export type ServiceCategory = {
@@ -204,7 +220,14 @@ export type Booking = {
   eligible_pujari_found?: boolean;
   admin_assignment_required?: boolean;
   assignment_status?: "assigned" | "offers_sent" | "admin_assignment_required" | string;
+  offers_sent?: number;
+  meeting_link_visible?: boolean;
+  meeting_reveal_note?: string | null;
   duration_minutes?: number | null;
+  pujari_details_visible?: boolean;
+  pujari_reveal_note?: string | null;
+  pujari_offer_invited?: boolean;
+  pujari_accept_required?: boolean;
   preparation?: BookingPreparation | null;
   invoice_id?: string | null;
   invoice_number?: string | null;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
+import { PujaTitle } from "@/components/PujaTitle";
 import AdminPageHeader from "@/components/AdminPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -182,7 +183,7 @@ export default function Muhurtham() {
               <TableRow key={row.id}>
                 <TableCell className="font-mono text-xs">{row.consultation_number || row.id.slice(0, 8)}</TableCell>
                 <TableCell>{row.customer_name || "—"}</TableCell>
-                <TableCell>{row.service_name || "—"}</TableCell>
+                <TableCell>{row.service_name ? <PujaTitle name={row.service_name} as="span" /> : "—"}</TableCell>
                 <TableCell className="whitespace-nowrap">
                   {row.appointment_date ? formatDisplayDate(row.appointment_date) : "—"}{" "}
                   {row.appointment_time?.slice(0, 5) || ""}

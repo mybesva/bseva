@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ScrollView, Switch } from "react-native";
+import { Alert, ScrollView, Switch } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
@@ -11,6 +11,89 @@ function stringify(v: unknown) {
   if (typeof v === "boolean" || typeof v === "number") return String(v);
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
+}
+
+type RoleRow = { id: string; level?: number; title?: string; summary?: string; examples?: string[]; can_delete?: boolean };
+
+function PujariRolesCard({ setError }: { setError: (v: string | null) => void }) {
+  const roles = useQuery({
+    queryKey: ["admin-pujari-roles"],
+    queryFn: () => apiClient.api<RoleRow[] | { items?: RoleRow[] }>("/admin/pujari-roles"),
+  });
+  const rows = Array.isArray(roles.data) ? roles.data : roles.data?.items || [];
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [examplesText, setExamplesText] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const examples = examplesText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const payload = { title, summary: summary || null, examples };
+    try {
+      if (editingId) {
+        await apiClient.api(`/admin/pujari-roles/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
+      } else {
+        await apiClient.api("/admin/pujari-roles", { method: "POST", body: JSON.stringify(payload) });
+      }
+      setTitle("");
+      setSummary("");
+      setExamplesText("");
+      setEditingId(null);
+      await roles.refetch();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card style={{ gap: 8 }}>
+      <AppText variant="h3">Pujari roles / levels</AppText>
+      {roles.isLoading ? <LoadingBlock /> : null}
+      {rows.map((role) => (
+        <Card key={role.id}>
+          <AppText variant="h3">Level {role.level} · {role.title}</AppText>
+          <AppText variant="small">{role.summary}</AppText>
+          <PrimaryButton
+            title="Edit"
+            variant="outline"
+            onPress={() => {
+              setEditingId(role.id);
+              setTitle(role.title || "");
+              setSummary(role.summary || "");
+              setExamplesText((role.examples || []).join("\n"));
+            }}
+          />
+          {role.can_delete !== false ? (
+            <PrimaryButton
+              title="Delete"
+              variant="ghost"
+              onPress={() =>
+                Alert.alert("Delete role?", `Level ${role.level} — ${role.title}`, [
+                  { text: "Cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () =>
+                      void apiClient.api(`/admin/pujari-roles/${role.id}`, { method: "DELETE" }).then(() => roles.refetch()),
+                  },
+                ])
+              }
+            />
+          ) : null}
+        </Card>
+      ))}
+      <Field label="Title" value={title} onChangeText={setTitle} />
+      <Field label="Summary" value={summary} onChangeText={setSummary} />
+      <Field label="Examples (one per line)" value={examplesText} onChangeText={setExamplesText} multiline />
+      <PrimaryButton title={editingId ? "Update role" : "Add role"} loading={saving} onPress={() => void save()} />
+      {editingId ? <PrimaryButton title="Cancel edit" variant="ghost" onPress={() => { setEditingId(null); setTitle(""); setSummary(""); setExamplesText(""); }} /> : null}
+    </Card>
+  );
 }
 
 function parseValue(raw: string, original: unknown) {
@@ -82,6 +165,7 @@ export default function AdminSettings() {
           />
         </Card>
         <Field label={t("admin.search")} value={filter} onChangeText={setFilter} />
+        <PujariRolesCard setError={setError} />
         {keys.map((k) => {
           const original = config.data?.[k];
           const isBool = typeof original === "boolean";

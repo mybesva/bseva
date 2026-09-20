@@ -1,6 +1,7 @@
 import { rupees } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { Pressable, ScrollView, View } from "react-native";
+import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -13,6 +14,7 @@ type OfferService = {
   name: string;
   slug?: string;
   applied?: boolean;
+  dakshina_paise?: number;
   catalog_price_paise?: number;
   short_description?: string | null;
 };
@@ -55,13 +57,13 @@ export default function PujariServicesScreen() {
         {offers.data?.note ? <AppText variant="small">{offers.data.note}</AppText> : null}
         {services.map((s) => (
           <Card key={s.id}>
-            <AppText variant="h3">{s.name}</AppText>
+            <PujaTitle name={s.name} variant="h3" style={{ flex: 1 }} />
             {s.short_description ? (
               <AppText variant="small" color={colors.mutedForeground}>
                 {s.short_description}
               </AppText>
             ) : null}
-            {s.catalog_price_paise ? <AppText variant="small">{rupees(s.catalog_price_paise)}</AppText> : null}
+            {s.dakshina_paise != null ? <AppText variant="small">{rupees(s.dakshina_paise)}</AppText> : s.catalog_price_paise ? <AppText variant="small">{rupees(s.catalog_price_paise)}</AppText> : null}
             {s.applied ? (
               <AppText variant="small" color={colors.success}>
                 {t("mobile.applied")}

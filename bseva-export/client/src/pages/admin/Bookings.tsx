@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import { PujaTitle } from "@/components/PujaTitle";
 import AdminPageHeader from "@/components/AdminPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -392,7 +393,7 @@ export default function Bookings() {
             return (
               <TableRow key={b.id} className={cn(needsAttention &&"bg-red-50 hover:bg-red-100/70")}>
                 <TableCell>{b.booking_number}</TableCell>
-                <TableCell>{b.service_name}</TableCell>
+                <TableCell>{b.service_name ? <PujaTitle name={b.service_name} as="span" /> : "—"}</TableCell>
                 <TableCell>{b.customer_name}</TableCell>
                 <TableCell>{b.pujari_name || "—"}</TableCell>
                 <TableCell>

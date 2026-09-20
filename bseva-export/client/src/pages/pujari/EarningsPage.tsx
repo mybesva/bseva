@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PujaTitle } from "@/components/PujaTitle";
 import { PujariPortal } from "@/components/RolePortals";
 import WalletPanel from "@/components/WalletPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,13 +8,8 @@ import { api, apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { Wallet, TrendingUp, CheckCircle2, Clock } from "lucide-react";
-import { isSameMonth, parseISO, startOfMonth } from "date-fns";
+import { pujariEarningsStats } from "@bseva/config";
 import { useI18n } from "@/i18n/I18nProvider";
-
-function priestShare(b: any) {
-  if (b.pujari_payable_paise != null) return Number(b.pujari_payable_paise);
-  return Math.max(0, Number(b.base_price_paise || 0) - Number(b.platform_fee_paise || 0));
-}
 
 export default function PujariEarningsPage() {
   const { t } = useI18n();
@@ -31,34 +27,7 @@ export default function PujariEarningsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const stats = useMemo(() => {
-    const monthStart = startOfMonth(new Date());
-    let thisMonth = 0;
-    let completed = 0;
-    let pending = 0;
-    const rows: any[] = [];
-    for (const b of bookings) {
-      const status = b.status;
-      const share = priestShare(b);
-      const d = b.booking_date ? parseISO(String(b.booking_date).slice(0, 10)) : null;
-      if (["completed", "confirmed", "in_progress"].includes(status)) {
-        if (d && isSameMonth(d, monthStart)) thisMonth += share;
-      }
-      if (status === "completed") {
-        completed += share;
-        rows.push(b);
-      } else if (["confirmed", "in_progress"].includes(status)) {
-        pending += share;
-      }
-    }
-    const settled = settlements
-      .filter((s) => s.status === "paid" || s.status === "settled")
-      .reduce((sum, s) => sum + Number(s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0), 0);
-    const settlementPending = settlements
-      .filter((s) => s.status === "pending" || s.status === "held" || s.status === "eligible")
-      .reduce((sum, s) => sum + Number(s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0), 0);
-    return { thisMonth, completed, pending, settled, settlementPending, rows: rows.slice(0, 40) };
-  }, [bookings, settlements]);
+  const stats = useMemo(() => pujariEarningsStats(bookings, settlements), [bookings, settlements]);
 
   return (
     <PujariPortal>
@@ -168,7 +137,7 @@ export default function PujariEarningsPage() {
               className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 py-2 last:border-0"
             >
               <div>
-                <p className="font-medium text-sm">{b.service_name || t("web.common.puja")}</p>
+                <PujaTitle name={b.service_name || t("web.common.puja")} as="p" className="text-sm" />
                 <p className="text-xs text-muted-foreground">
                   {b.booking_number}
                   {b.booking_date

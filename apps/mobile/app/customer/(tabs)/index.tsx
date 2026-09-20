@@ -145,6 +145,9 @@ export default function CustomerHome() {
                     <StatusBadge status={b.customer_display_status || b.status} />
                   </View>
                   <AppText variant="small">{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
+              {!b.pujari_details_visible && !["cancelled", "refunded", "completed"].includes(String(b.status)) ? (
+                <AppText variant="small" color={colors.mutedForeground}>{t("booking.pujariSharedLater")}</AppText>
+              ) : null}
                 </Card>
               </Pressable>
             ))}

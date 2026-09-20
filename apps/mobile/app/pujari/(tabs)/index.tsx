@@ -3,6 +3,7 @@ import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { PujaTitle } from "@/components/PujaTitle";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { AppText, Card, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -64,7 +65,7 @@ export default function PujariHome() {
           <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <AppText variant="h3">{b.service_name}</AppText>
+                <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
                 <StatusBadge status={b.status} />
               </View>
               <AppText variant="small">
@@ -77,7 +78,7 @@ export default function PujariHome() {
         {ready.map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
             <Card>
-              <AppText variant="h3">{b.service_name}</AppText>
+              <PujaTitle name={b.service_name} variant="h3" />
               <StatusBadge status={b.status} />
             </Card>
           </Pressable>
@@ -86,7 +87,7 @@ export default function PujariHome() {
         {ongoing.map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
             <Card>
-              <AppText variant="h3">{b.service_name}</AppText>
+              <PujaTitle name={b.service_name} variant="h3" />
               <StatusBadge status={b.status} />
             </Card>
           </Pressable>

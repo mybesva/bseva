@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PujaTitle } from "@/components/PujaTitle";
 import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
@@ -70,7 +71,11 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
           <Pressable key={b.id} onPress={() => router.push(`/booking/${b.id}`)}>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <AppText variant="h3">{b.service_name || b.booking_number}</AppText>
+                {b.service_name ? (
+                  <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
+                ) : (
+                  <AppText variant="h3">{b.booking_number}</AppText>
+                )}
                 <StatusBadge status={b.status} />
               </View>
               <AppText variant="small">{b.customer_name} · {b.pujari_name || "Unassigned"}</AppText>

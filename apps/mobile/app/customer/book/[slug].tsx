@@ -1,13 +1,28 @@
-import { BOOKING_TIME_SLOTS, bookingLeadHint, CALENDARS, isCalendarDayDisabled, rupees } from "@bseva/config";
-import type { NearbyPujari, Quote } from "@bseva/types";
+import {
+  bookingLeadHint,
+  CALENDARS,
+  buildCreateBookingPayload,
+  composePhysicalServiceAddress,
+  customerBookablePackages,
+  isBookingDateTimeBeforeLead,
+  isCalendarDayDisabled,
+  isDeathRelatedService,
+  rupees,
+  VIRTUAL_COUNTRIES,
+  type CustomerBookablePackage,
+} from "@bseva/config";
+import type { Quote } from "@bseva/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Switch, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { DateCalendar } from "@/components/DateCalendar";
+import { BookingMapLocation } from "@/components/BookingMapLocation";
+import { DatePickerField } from "@/components/DatePickerField";
+import { SelectField } from "@/components/SelectField";
 import { MuhurtaConsultation, type MuhurtaReceipt } from "@/components/MuhurtaConsultation";
+import { TimePicker } from "@/components/TimePicker";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
@@ -19,7 +34,7 @@ import { useI18n } from "@/providers/I18nProvider";
 type BookingDraft = {
   idempotencyKey: string;
   step: number;
-  pkg: "basic" | "standard" | "premium";
+  pkg: CustomerBookablePackage;
   mode: "in_person" | "virtual";
   calendar: string;
   date: string;
@@ -39,7 +54,36 @@ type BookingDraft = {
   selectedDates: string[];
   doorNumber: string;
   landmark: string;
+  locationSelection: string;
 };
+
+type SavedLocation = {
+  id: string;
+  label: string;
+  city: string;
+  lat: number | null;
+  lng: number | null;
+};
+
+function buildSavedLocation(p: Record<string, string | number | null> | undefined, index = 0): SavedLocation | null {
+  if (!p) return null;
+  const parts = [p.address_line1, p.address_line2, p.city, p.district, p.state, p.pincode]
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+  const label =
+    String(p.location_label || "").trim() ||
+    String(p.address || "").trim() ||
+    parts.join(", ");
+  const profileCity = String(p.city || "").trim();
+  if (!label && !profileCity) return null;
+  return {
+    id: `saved-${index}`,
+    label: label || profileCity,
+    city: profileCity,
+    lat: p.latitude != null ? Number(p.latitude) : null,
+    lng: p.longitude != null ? Number(p.longitude) : null,
+  };
+}
 
 function newIdempotencyKey(slug: string) {
   return `mobile-${slug}-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
@@ -57,7 +101,7 @@ export default function BookService() {
   const configQ = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
   const svc = serviceQ.data;
   const [step, setStep] = useState(1);
-  const [pkg, setPkg] = useState<"basic" | "standard" | "premium">("standard");
+  const [pkg, setPkg] = useState<CustomerBookablePackage>("standard");
   const [mode, setMode] = useState<"in_person" | "virtual">(initialMode === "virtual" ? "virtual" : "in_person");
   const [calendar, setCalendar] = useState(String(user?.calendar_preference || "north"));
   const [date, setDate] = useState(() => {
@@ -70,15 +114,18 @@ export default function BookService() {
   const [city, setCity] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
-  const [pujariId, setPujariId] = useState<string | null>(null);
-  const [nearby, setNearby] = useState<NearbyPujari[]>([]);
-  const [previous, setPrevious] = useState<NearbyPujari[]>([]);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [includeSamagri, setIncludeSamagri] = useState(false);
   const [includeAlankaram, setIncludeAlankaram] = useState(false);
   const [includeFood, setIncludeFood] = useState(false);
   const [customerCountry, setCustomerCountry] = useState("IN");
-  const [customerTimezone, setCustomerTimezone] = useState("Asia/Kolkata");
+  const [customerTimezone, setCustomerTimezone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+    } catch {
+      return "Asia/Kolkata";
+    }
+  });
   const [terms, setTerms] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [recurring, setRecurring] = useState("none");
@@ -86,6 +133,8 @@ export default function BookService() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [doorNumber, setDoorNumber] = useState("");
   const [landmark, setLandmark] = useState("");
+  const [locationSelection, setLocationSelection] = useState("new");
+  const restoredAddressFromDraft = useRef(false);
   const [muhurtaReceipt, setMuhurtaReceipt] = useState<MuhurtaReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -97,7 +146,6 @@ export default function BookService() {
     queryFn: () => apiClient.panchang(date, calendar) as Promise<Record<string, unknown>>,
     enabled: step >= 2,
   });
-
   useEffect(() => {
     void (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -113,10 +161,10 @@ export default function BookService() {
     void AsyncStorage.getItem(`bseva.booking-draft.${slug}`)
       .then((raw) => {
         if (!raw) return;
-        const d = JSON.parse(raw) as Partial<BookingDraft>;
+        const d = JSON.parse(raw) as Partial<BookingDraft> & { addressMode?: "saved" | "new" };
         if (d.idempotencyKey) setIdempotencyKey(d.idempotencyKey);
         if (d.step) setStep(Math.min(4, Math.max(1, d.step)));
-        if (d.pkg) setPkg(d.pkg);
+        if (d.pkg === "standard" || d.pkg === "premium") setPkg(d.pkg);
         if (initialMode === "virtual") setMode("virtual");
         else if (d.mode) setMode(d.mode);
         if (d.calendar) setCalendar(d.calendar);
@@ -137,6 +185,10 @@ export default function BookService() {
         if (d.selectedDates) setSelectedDates(d.selectedDates);
         if (d.doorNumber != null) setDoorNumber(d.doorNumber);
         if (d.landmark != null) setLandmark(d.landmark);
+        if (d.locationSelection) setLocationSelection(d.locationSelection);
+        else if (d.addressMode === "saved") setLocationSelection("saved-0");
+        else if (d.addressMode === "new") setLocationSelection("new");
+        restoredAddressFromDraft.current = Boolean(d.address || d.city || d.doorNumber || d.landmark);
       })
       .catch(() => undefined)
       .finally(() => setHydrated(true));
@@ -147,52 +199,168 @@ export default function BookService() {
     const draft: BookingDraft = {
       idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng,
       includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone,
-      instructions, recurring, recurringCount, selectedDates, doorNumber, landmark,
+      instructions, recurring, recurringCount, selectedDates, doorNumber, landmark, locationSelection,
     };
     void AsyncStorage.setItem(`bseva.booking-draft.${slug}`, JSON.stringify(draft));
-  }, [slug, hydrated, idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng, includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone, instructions, recurring, recurringCount, selectedDates, doorNumber, landmark]);
+  }, [slug, hydrated, idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng, includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone, instructions, recurring, recurringCount, selectedDates, doorNumber, landmark, locationSelection]);
 
-  useEffect(() => {
-    const p = profileQ.data;
-    if (!p) return;
-    if (!address) setAddress(String(p.address_line1 || p.address || ""));
-    if (!doorNumber) setDoorNumber(String(p.address_line1 || ""));
-    if (!landmark) setLandmark(String(p.address_line2 || p.landmark || ""));
-    if (!city) setCity(String(p.city || ""));
-    if (p.latitude != null && lat == null) setLat(Number(p.latitude));
-    if (p.longitude != null && lng == null) setLng(Number(p.longitude));
+  const savedLocations = useMemo((): SavedLocation[] => {
+    const one = buildSavedLocation(profileQ.data, 0);
+    return one ? [one] : [];
   }, [profileQ.data]);
+
+  const selectedSavedLocation = useMemo(
+    () => savedLocations.find((s) => s.id === locationSelection) || null,
+    [savedLocations, locationSelection],
+  );
+
+  const isNewLocation = locationSelection === "new";
+
+  function applySavedLocation(id: string) {
+    const loc = savedLocations.find((s) => s.id === id);
+    if (!loc) return;
+    setLocationSelection(id);
+    setAddress(loc.label);
+    setDoorNumber("");
+    setLandmark("");
+    setCity(loc.city);
+    setLat(loc.lat);
+    setLng(loc.lng);
+  }
+
+  function startNewLocation() {
+    setLocationSelection("new");
+    setAddress("");
+    setDoorNumber("");
+    setLandmark("");
+    setCity("");
+    setLat(null);
+    setLng(null);
+  }
+
+  function onLocationSelectionChange(id: string) {
+    if (id === "new") startNewLocation();
+    else applySavedLocation(id);
+  }
 
   const muhurtaNeeded = Boolean(svc?.muhurta_consultation_enabled || svc?.requires_muhurta);
   const leadHours = Number(svc?.booking_lead_hours ?? 48) || 48;
+  const deathRelated = Boolean(svc?.death_related) || isDeathRelatedService(svc?.categories || svc?.category);
+  const showSamagri = svc?.samagri_available !== false;
+  const alankaramPrice = Number(svc?.alankaram_price_paise || quote?.alankaramListPrice || 0);
+  const alankaramOffered = !deathRelated && Boolean(svc?.alankaram_available) && alankaramPrice > 0;
+  const showFood = Boolean(svc?.food_available);
+  const availablePackages = customerBookablePackages({
+    standard: svc?.standard_price_paise,
+    premium: svc?.premium_price_paise,
+  });
+  const virtualEnabled =
+    Boolean((configQ.data as { virtual_puja_enabled?: boolean } | undefined)?.virtual_puja_enabled) &&
+    svc?.virtual_available !== false;
+  const tzRows = (configQ.data?.customer_timezones as { id: string; label?: string }[] | undefined) || [];
+  const timezoneOptions = (tzRows.length ? tzRows : [{ id: "Asia/Kolkata", label: t("booking.timezoneIndia") }]).map((z) => ({
+    id: z.id,
+    label: z.label || z.id,
+  }));
+  const startValidQ = useQuery({
+    queryKey: ["validate-booking-start", svc?.id, date, time, mode, customerTimezone],
+    queryFn: () =>
+      apiClient.validateBookingStart({
+        service_id: svc!.id,
+        booking_date: date,
+        start_time: time.slice(0, 5),
+        mode,
+        timezone: mode === "virtual" ? customerTimezone : undefined,
+      }),
+    enabled: !!svc && step >= 2 && /^\d{2}:\d{2}/.test(time),
+  });
+  const leadBlocked =
+    startValidQ.isSuccess && startValidQ.data
+      ? !startValidQ.data.valid
+      : isBookingDateTimeBeforeLead(date, time, leadHours);
+
+  useEffect(() => {
+    if (availablePackages.length && !availablePackages.includes(pkg)) {
+      setPkg(availablePackages.includes("standard") ? "standard" : availablePackages[0]);
+    }
+  }, [availablePackages.join(","), pkg]);
+
+  useEffect(() => {
+    if (!virtualEnabled && mode === "virtual") setMode("in_person");
+  }, [virtualEnabled, mode]);
+
   function composedAddress() {
-    if (mode === "virtual") return [customerCountry, customerTimezone].filter(Boolean).join(" · ");
-    return [doorNumber.trim(), address.trim(), landmark.trim()].filter(Boolean).join(", ");
+    if (selectedSavedLocation) return selectedSavedLocation.label.trim();
+    return composePhysicalServiceAddress({ doorNumber, street: address, landmark });
   }
 
-  async function loadQuoteAndPujaris() {
+  function validateStep2(): boolean {
+    if (!date) {
+      setError(t("booking.needDate"));
+      return false;
+    }
+    const dateObj = new Date(`${date}T12:00:00`);
+    if (isCalendarDayDisabled(dateObj, leadHours)) {
+      setError(bookingLeadHint(leadHours));
+      return false;
+    }
+    if (!time || !/^\d{2}:\d{2}/.test(time)) {
+      setError(t("web.muhurta.needTime"));
+      return false;
+    }
+    if (leadBlocked) {
+      setError(bookingLeadHint(leadHours));
+      return false;
+    }
+    if (mode === "in_person") {
+      if (!city.trim()) {
+        setError(t("booking.needCity"));
+        return false;
+      }
+      if (isNewLocation) {
+        if (!doorNumber.trim()) {
+          setError(t("booking.needDoor"));
+          return false;
+        }
+        if (!address.trim()) {
+          setError(t("booking.needStreet"));
+          return false;
+        }
+        if (lat == null || lng == null) {
+          setError(t("booking.needPin"));
+          return false;
+        }
+      } else {
+        if (!selectedSavedLocation || !composedAddress().trim()) {
+          setError(t("booking.needAddress"));
+          return false;
+        }
+        if (lat == null || lng == null) {
+          setError(t("booking.needMap"));
+          return false;
+        }
+      }
+    }
+    setError(null);
+    return true;
+  }
+
+  async function loadQuote() {
     if (!svc) return;
     setError(null);
     try {
       const q = await apiClient.quote({
         service_id: svc.id,
         package_type: pkg,
-        city: city || undefined,
+        city: mode === "virtual" ? undefined : city || undefined,
         booking_date: date,
         include_samagri: includeSamagri,
         include_alankaram: includeAlankaram,
         include_food: includeFood,
         country: mode === "virtual" ? customerCountry : undefined,
+        mode,
       });
       setQuote(q);
-      const [near, prev] = await Promise.all([
-        lat != null && lng != null ? apiClient.nearbyPujaris(lat, lng, svc.id) : Promise.resolve([]),
-        apiClient.previousPujaris().catch(() => []),
-      ]);
-      let rows = near;
-      if (!rows.length) rows = await apiClient.listPujaris().catch(() => []);
-      setNearby(rows);
-      setPrevious(prev);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t("mobile.quoteFailed"));
     }
@@ -200,7 +368,7 @@ export default function BookService() {
 
   useEffect(() => {
     if (step < 3 || !svc) return;
-    const timer = setTimeout(() => void loadQuoteAndPujaris(), 250);
+    const timer = setTimeout(() => void loadQuote(), 250);
     return () => clearTimeout(timer);
   }, [step, svc?.id, pkg, mode, city, date, includeSamagri, includeAlankaram, includeFood, customerCountry]);
 
@@ -210,7 +378,7 @@ export default function BookService() {
       return true;
     }
     try {
-      const result = await apiClient.serviceAvailability(lat, lng, svc.id);
+      const result = await apiClient.serviceAvailability(lat, lng);
       setServiceAvailable(result.service_available);
       return result.service_available;
     } catch (e: unknown) {
@@ -230,13 +398,30 @@ export default function BookService() {
       setError(t("web.muhurta.needDate"));
       return;
     }
-    if (mode === "in_person" && !doorNumber.trim()) {
-      setError(t("booking.needDoor"));
+    if (!validateStep2()) return;
+    if (!time || !/^\d{2}:\d{2}/.test(time)) {
+      setError(t("web.muhurta.needTime"));
       return;
     }
     const dateObj = new Date(`${date}T${time.length === 5 ? `${time}:00` : time}`);
     if (isCalendarDayDisabled(dateObj, leadHours)) {
       setError(bookingLeadHint(leadHours));
+      return;
+    }
+    try {
+      const leadCheck = await apiClient.validateBookingStart({
+        service_id: svc.id,
+        booking_date: date,
+        start_time: time.slice(0, 5),
+        mode,
+        timezone: mode === "virtual" ? customerTimezone : undefined,
+      });
+      if (!leadCheck.valid) {
+        setError(bookingLeadHint(leadHours));
+        return;
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : bookingLeadHint(leadHours));
       return;
     }
     if (!terms) {
@@ -245,11 +430,7 @@ export default function BookService() {
     }
     if (mode === "virtual") {
       try {
-        const pre = await apiClient.virtualPrecheck({
-          service_id: svc.id,
-          country: customerCountry,
-          timezone: customerTimezone,
-        });
+        const pre = await apiClient.virtualPrecheck({});
         if (pre.blocked) {
           setError(pre.message || t("mobile.virtualUnavailable"));
           return;
@@ -262,29 +443,46 @@ export default function BookService() {
     setPending(true);
     setError(null);
     try {
-      const created = await apiClient.createBooking({
-        service_id: svc.id,
-        pujari_id: pujariId || undefined,
-        package_type: pkg,
-        mode,
-        booking_date: date,
-        start_time: time.length === 5 ? `${time}:00` : time,
-        location_label: mode === "virtual" ? composedAddress() : `${composedAddress()}${city ? `, ${city}` : ""}`,
-        address: composedAddress(),
-        city,
-        latitude: lat,
-        longitude: lng,
-        special_instructions: instructions || undefined,
-        terms_accepted: true,
-        include_samagri: includeSamagri,
-        include_alankaram: includeAlankaram,
-        include_food: includeFood,
-        customer_country: mode === "virtual" ? customerCountry : undefined,
-        customer_timezone: mode === "virtual" ? customerTimezone : undefined,
-        recurring,
-        recurring_count: recurring === "none" || recurring === "selected_dates" ? undefined : Number(recurringCount) || undefined,
-        selected_dates: recurring === "selected_dates" ? selectedDates : undefined,
-      }, idempotencyKey);
+      if (mode === "in_person" && isNewLocation) {
+        const profile = (await apiClient.getCustomerProfile().catch(() => ({}))) as Record<string, unknown>;
+        const label = `${composedAddress()}${city ? `, ${city}` : ""}`;
+        await apiClient.patchCustomerProfile({
+          address_line1: doorNumber.trim() || profile.address_line1,
+          address_line2: address.trim() || profile.address_line2,
+          city: city.trim() || profile.city,
+          district: profile.district,
+          state: profile.state,
+          pincode: profile.pincode,
+          country: profile.country || "India",
+          location_label: label,
+          latitude: lat,
+          longitude: lng,
+        });
+      }
+      const created = await apiClient.createBooking(
+        buildCreateBookingPayload({
+          service_id: svc.id,
+          package_type: pkg,
+          mode,
+          booking_date: date,
+          start_time: time,
+          physicalAddress: composedAddress(),
+          city,
+          latitude: lat,
+          longitude: lng,
+          special_instructions: instructions || undefined,
+          include_samagri: includeSamagri,
+          include_alankaram: includeAlankaram,
+          include_food: includeFood,
+          recurring,
+          recurring_count: Number(recurringCount) || undefined,
+          selected_dates: selectedDates,
+          customer_country: customerCountry,
+          customer_timezone: customerTimezone,
+          idempotency_key: idempotencyKey,
+        }),
+        idempotencyKey
+      );
       await AsyncStorage.removeItem(`bseva.booking-draft.${slug}`);
       router.replace(`/customer/booking/${(created as { id: string }).id}`);
     } catch (e: unknown) {
@@ -292,19 +490,6 @@ export default function BookService() {
     } finally {
       setPending(false);
     }
-  }
-
-  function PujariCard({ p }: { p: NearbyPujari }) {
-    return (
-      <Pressable onPress={() => setPujariId(p.id)}>
-        <Card style={{ borderWidth: pujariId === p.id ? 2 : 0.5, borderColor: pujariId === p.id ? colors.primary : colors.border }}>
-          <AppText variant="h3">{p.name}</AppText>
-          <AppText variant="small" color={colors.mutedForeground}>
-            {t("mobile.pujariLevel", { level: String(p.approved_level ?? "—") })} · {p.distance_km != null ? `${p.distance_km} km` : p.city || ""}
-          </AppText>
-        </Card>
-      </Pressable>
-    );
   }
 
   if (serviceQ.isLoading) {
@@ -326,6 +511,19 @@ export default function BookService() {
     );
   }
 
+  if (svc.bookable === false) {
+    return (
+      <Screen>
+        <ScreenHeader title={<PujaTitle name={svc.name} onDark numberOfLines={1} />} back />
+        <View style={{ padding: 16, gap: 12 }}>
+          <AppText variant="h3">{t("web.book.notOpen")}</AppText>
+          <AppText>{t("web.book.notOpenBody")}</AppText>
+          <PrimaryButton title={t("web.book.browseServices")} onPress={() => router.replace("/customer/services")} />
+        </View>
+      </Screen>
+    );
+  }
+
   const balance = walletQ.data?.wallet?.balance_paise ?? walletQ.data?.balance_paise ?? 0;
 
   return (
@@ -337,22 +535,15 @@ export default function BookService() {
         {step === 1 ? (
           <>
             <AppText variant="h3">{t("mobile.packageMode")}</AppText>
-            {svc.basic_price_paise ? (
-              <PrimaryButton title={`${t("booking.basic")} ${rupees(svc.basic_price_paise)}`} variant={pkg === "basic" ? "primary" : "outline"} onPress={() => setPkg("basic")} />
+            {availablePackages.includes("standard") ? (
+              <PrimaryButton title={`${t("booking.standard")} ${svc.standard_price_paise ? rupees(svc.standard_price_paise) : ""}`} variant={pkg === "standard" ? "primary" : "outline"} onPress={() => setPkg("standard")} />
             ) : null}
-            <PrimaryButton title={`${t("booking.standard")} ${svc.standard_price_paise ? rupees(svc.standard_price_paise) : ""}`} variant={pkg === "standard" ? "primary" : "outline"} onPress={() => setPkg("standard")} />
-            {svc.premium_price_paise ? (
+            {availablePackages.includes("premium") ? (
               <PrimaryButton title={`${t("booking.premium")} ${rupees(svc.premium_price_paise)}`} variant={pkg === "premium" ? "primary" : "outline"} onPress={() => setPkg("premium")} />
             ) : null}
             <PrimaryButton title={t("mobile.inPerson")} variant={mode === "in_person" ? "navy" : "outline"} onPress={() => setMode("in_person")} />
-            {svc.virtual_available ? (
+            {virtualEnabled ? (
               <PrimaryButton title={t("mobile.virtual")} variant={mode === "virtual" ? "navy" : "outline"} onPress={() => setMode("virtual")} />
-            ) : null}
-            {mode === "virtual" ? (
-              <>
-                <Field label={t("mobile.country")} value={customerCountry} onChangeText={setCustomerCountry} autoCapitalize="characters" />
-                <Field label={t("mobile.timezone")} value={customerTimezone} onChangeText={setCustomerTimezone} />
-              </>
             ) : null}
             <PrimaryButton title={t("mobile.next")} onPress={() => { setServiceAvailable(null); setStep(2); }} />
           </>
@@ -366,26 +557,95 @@ export default function BookService() {
                 {String(panchang.data.tithi || panchang.data.summary || JSON.stringify(panchang.data).slice(0, 180))}
               </AppText>
             ) : null}
-            <AppText variant="small">{t("mobile.date")}</AppText>
-            <DateCalendar value={date} onChange={setDate} leadHours={leadHours} />
-            <AppText variant="small" color={colors.mutedForeground}>{bookingLeadHint(leadHours)}</AppText>
-            <AppText variant="small">{t("mobile.startTime")}</AppText>
-            <ChoiceChips
-              options={BOOKING_TIME_SLOTS.map((id) => ({ id, label: id }))}
-              value={time.slice(0, 5)}
-              onChange={(v) => setTime(String(v))}
+            <DatePickerField
+              value={date}
+              onChange={setDate}
+              leadHours={leadHours}
+              label={t("booking.selectDate")}
+              hint={bookingLeadHint(leadHours)}
             />
-            {mode === "in_person" ? (
+            <TimePicker value={time.slice(0, 5) || "10:00"} onChange={setTime} />
+            {leadBlocked ? (
+              <AppText variant="small" color={colors.mutedForeground}>{bookingLeadHint(leadHours)}</AppText>
+            ) : null}
+            {mode === "virtual" ? (
               <>
-                <Field label={t("booking.doorNumber")} value={doorNumber} onChangeText={setDoorNumber} />
-                <Field label={t("mobile.address")} value={address} onChangeText={setAddress} />
-                <Field label={t("web.booking.landmarkOptional")} value={landmark} onChangeText={setLandmark} />
-                <Field label={t("mobile.city")} value={city} onChangeText={setCity} />
+                <AppText variant="small">{t("booking.yourCountry")}</AppText>
+                <ChoiceChips
+                  options={VIRTUAL_COUNTRIES.map((c) => ({ id: c.id, label: t(`web.country.${c.id}`) === `web.country.${c.id}` ? c.label : t(`web.country.${c.id}`) }))}
+                  value={customerCountry}
+                  onChange={(v) => setCustomerCountry(String(v))}
+                />
+                <AppText variant="small">{t("booking.yourTimezone")}</AppText>
+                <ChoiceChips options={timezoneOptions} value={customerTimezone} onChange={(v) => setCustomerTimezone(String(v))} />
+                <AppText variant="small" color={colors.mutedForeground}>
+                  {t("booking.timezoneVirtualHint")}
+                </AppText>
               </>
             ) : (
-              <AppText variant="small" color={colors.mutedForeground}>
-                {t("web.booking.timezoneNotice", { timezone: customerTimezone })}
-              </AppText>
+              <>
+                {profileQ.isLoading ? (
+                  <AppText variant="small" color={colors.mutedForeground}>{t("booking.loadingSavedAddress")}</AppText>
+                ) : (
+                  <SelectField
+                    label={t("booking.selectLocation")}
+                    placeholder={t("booking.selectLocation")}
+                    value={locationSelection}
+                    options={[
+                      { id: "new", label: t("booking.addNewLocation") },
+                      ...savedLocations.map((loc) => ({
+                        id: loc.id,
+                        label: loc.label.length > 80 ? `${loc.label.slice(0, 80)}…` : loc.label,
+                        subtitle: loc.city || undefined,
+                      })),
+                    ]}
+                    onChange={onLocationSelectionChange}
+                  />
+                )}
+                {!isNewLocation && selectedSavedLocation ? (
+                  <Card style={{ gap: 4 }}>
+                    <AppText>{selectedSavedLocation.label}</AppText>
+                    {selectedSavedLocation.city ? (
+                      <AppText variant="small" color={colors.mutedForeground}>
+                        {t("web.booking.cityValue", { city: selectedSavedLocation.city })}
+                      </AppText>
+                    ) : null}
+                    {lat != null && lng != null ? (
+                      <AppText variant="small" color={colors.mutedForeground}>
+                        {t("web.booking.assignedPujariLocation")} · GPS {lat.toFixed(4)}, {lng.toFixed(4)}
+                      </AppText>
+                    ) : null}
+                  </Card>
+                ) : (
+                  <>
+                    <AppText variant="small" color={colors.mutedForeground}>{t("web.booking.newAddress")}</AppText>
+                    <Field label={t("booking.doorNumber")} value={doorNumber} onChangeText={setDoorNumber} />
+                    <Field
+                      label={t("booking.streetPh")}
+                      value={address}
+                      onChangeText={setAddress}
+                      multiline
+                      numberOfLines={3}
+                      style={{ minHeight: 88, textAlignVertical: "top" }}
+                    />
+                    <Field label={t("web.booking.landmarkOptional")} value={landmark} onChangeText={setLandmark} placeholder={t("booking.landmarkPh")} />
+                    <BookingMapLocation
+                      latitude={lat}
+                      longitude={lng}
+                      onCoordinatesChange={(la, ln) => {
+                        setLat(la);
+                        setLng(ln);
+                      }}
+                      onReverseGeocoded={(parts) => {
+                        if (parts.door && !doorNumber.trim()) setDoorNumber(parts.door);
+                        if (parts.street && !address.trim()) setAddress(parts.street);
+                        if (parts.city && !city.trim()) setCity(parts.city);
+                      }}
+                    />
+                  </>
+                )}
+                <Field label={t("address.city")} value={city} onChangeText={setCity} placeholder={t("address.city")} />
+              </>
             )}
             <AppText variant="small">{t("mobile.recurring")}</AppText>
             <ChoiceChips
@@ -403,13 +663,13 @@ export default function BookService() {
             ) : null}
             {recurring === "selected_dates" ? (
               <>
-                <AppText variant="small">{t("booking.recurring.addDates")}</AppText>
-                <DateCalendar
+                <DatePickerField
                   value={date}
+                  leadHours={leadHours}
+                  label={t("booking.recurring.addDates")}
                   onChange={(iso) => {
                     setSelectedDates((prev) => (prev.includes(iso) ? prev : [...prev, iso].sort()));
                   }}
-                  leadHours={leadHours}
                 />
                 {selectedDates.map((d) => (
                   <Pressable key={d} onPress={() => setSelectedDates((prev) => prev.filter((x) => x !== d))}>
@@ -425,7 +685,7 @@ export default function BookService() {
                 requiresMuhurtham={Boolean(svc.requires_muhurta)}
                 feePaise={Number(svc.muhurta_fee_paise || 0)}
                 defaultDate={date}
-                defaultTime={time}
+                defaultTime={time || "10:00"}
                 receipt={muhurtaReceipt}
                 onBooked={setMuhurtaReceipt}
               />
@@ -438,9 +698,11 @@ export default function BookService() {
               <View style={{ flex: 1 }}>
                 <PrimaryButton
                   title={t("booking.review")}
+                  disabled={!time || leadBlocked || startValidQ.isFetching}
                   onPress={async () => {
+                    if (!validateStep2()) return;
                     await checkPhysicalAvailability();
-                    await loadQuoteAndPujaris();
+                    await loadQuote();
                     setStep(3);
                   }}
                 />
@@ -461,45 +723,30 @@ export default function BookService() {
                 {svc.virtual_available && configQ.data?.virtual_puja_enabled ? (
                   <PrimaryButton
                     title={t("web.availability.bookVirtual")}
-                    onPress={() => { setMode("virtual"); setServiceAvailable(null); }}
+                    onPress={() => { setMode("virtual"); setServiceAvailable(null); setStep(2); }}
                   />
                 ) : null}
-              </Card>
-            ) : null}
-            {previous.length > 0 ? <AppText variant="h3">{t("mobile.previousPujaris")}</AppText> : null}
-            {previous.map((p) => (
-              <PujariCard key={`p-${p.id}`} p={p} />
-            ))}
-            <AppText variant="h3">{t("mobile.availablePujaris")}</AppText>
-            {nearby.length === 0 ? (
-              <Card style={{ gap: 8 }}>
-                <AppText variant="h3">{t("web.booking.confirmedAssignmentPending")}</AppText>
-                <AppText color={colors.mutedForeground}>{t("web.booking.assignmentPendingBody")}</AppText>
                 <PrimaryButton
                   title={t("web.booking.connectAdmin")}
                   variant="outline"
                   onPress={() => router.push("/customer/support")}
                 />
-                {svc.virtual_available && configQ.data?.virtual_puja_enabled ? (
-                  <PrimaryButton
-                    title={t("web.availability.bookVirtual")}
-                    onPress={() => { setMode("virtual"); setServiceAvailable(null); }}
-                  />
-                ) : null}
               </Card>
             ) : null}
-            {nearby.map((p) => (
-              <PujariCard key={p.id} p={p} />
-            ))}
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <AppText>{t("mobile.includeSamagri")}</AppText>
-              <Switch value={includeSamagri} onValueChange={(v) => { setIncludeSamagri(v); }} />
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <AppText>{t("mobile.includeAlankaram")}</AppText>
-              <Switch value={includeAlankaram} onValueChange={setIncludeAlankaram} />
-            </View>
-            {svc.food_available ? (
+            <AppText variant="small" color={colors.mutedForeground}>{t("booking.pujariSharedLater")}</AppText>
+            {showSamagri ? (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <AppText>{t("mobile.includeSamagri")}</AppText>
+                <Switch value={includeSamagri} onValueChange={setIncludeSamagri} />
+              </View>
+            ) : null}
+            {alankaramOffered ? (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <AppText>{t("mobile.includeAlankaram")}</AppText>
+                <Switch value={includeAlankaram} onValueChange={setIncludeAlankaram} />
+              </View>
+            ) : null}
+            {showFood ? (
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <AppText>{t("mobile.includeFood")}</AppText>
                 <Switch value={includeFood} onValueChange={setIncludeFood} />

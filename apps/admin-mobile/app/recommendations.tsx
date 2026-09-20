@@ -12,6 +12,8 @@ export default function AdminRecommendations() {
   const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [serviceId, setServiceId] = useState("");
+  const [description, setDescription] = useState("");
+  const [audience, setAudience] = useState("");
   const [error, setError] = useState<string | null>(null);
   const list = useQuery({
     queryKey: ["admin-recs"],
@@ -44,13 +46,15 @@ export default function AdminRecommendations() {
           <AppText variant="h3">Add</AppText>
           <Field label="Title" value={title} onChangeText={setTitle} />
           <Field label="Service id" value={serviceId} onChangeText={setServiceId} />
+          <Field label="Description" value={description} onChangeText={setDescription} />
+          <Field label="Audience" value={audience} onChangeText={setAudience} />
           <PrimaryButton
             title="Create"
             onPress={async () => {
               setError(null);
               try {
-                await apiClient.api("/admin/recommendations", { method: "POST", body: JSON.stringify({ title, service_id: serviceId, active: true }) });
-                setTitle(""); setServiceId("");
+                await apiClient.api("/admin/recommendations", { method: "POST", body: JSON.stringify({ title, service_id: serviceId, description, audience, active: true }) });
+                setTitle(""); setServiceId(""); setDescription(""); setAudience("");
                 await list.refetch();
               } catch (e: unknown) {
                 setError(e instanceof Error ? e.message : "Failed");

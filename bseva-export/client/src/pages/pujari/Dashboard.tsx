@@ -1,3 +1,4 @@
+import { PujaTitle } from "@/components/PujaTitle";
 import { PujariPortal } from "@/components/RolePortals";
 import BookingDetailPanel from "@/components/BookingDetailPanel";
 import PromoBannerCarousel from "@/components/PromoBannerCarousel";
@@ -268,8 +269,7 @@ function PujariDashboardContent() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                <Sparkles size={16} className="text-primary shrink-0" />
-                <span className="truncate">{row.pujaType.name}</span>
+                <PujaTitle name={row.pujaType.name} className="truncate min-w-0" />
                 {row.booking.samagriRequested ? (
                   <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[10px] uppercase tracking-wide">
                     Samagri Selected
@@ -715,7 +715,11 @@ function PujariDashboardContent() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {detailIntent === "reject" ? "Reject booking" : selectedBooking?.pujaType.name}
+              {detailIntent === "reject" ? (
+                "Reject booking"
+              ) : selectedBooking ? (
+                <PujaTitle name={selectedBooking.pujaType.name} as="span" />
+              ) : null}
             </DialogTitle>
             <DialogDescription>#{selectedBooking?.booking.bookingNumber}</DialogDescription>
           </DialogHeader>

@@ -76,7 +76,7 @@ export default function LandingScreen() {
                   {t("home.badge")}
                 </AppText>
               </View>
-              <AppText variant="display" color="#fff">
+              <AppText variant="display" color={colors.primary}>
                 {t("home.heroTitle1")}
               </AppText>
               <AppText variant="display" color={colors.primary}>

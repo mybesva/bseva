@@ -3,6 +3,7 @@ import { useSearch } from "wouter";
 import { PujariPortal } from "@/components/RolePortals";
 import { useI18n } from "@/i18n/I18nProvider";
 import BookingDetailPanel from "@/components/BookingDetailPanel";
+import { PujaTitle } from "@/components/PujaTitle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -262,8 +263,7 @@ export default function PujariBookingsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                          <Sparkles size={16} className="text-primary shrink-0" />
-                          <span className="truncate">{row.pujaType.name}</span>
+                          <PujaTitle name={row.pujaType.name} className="truncate min-w-0" />
                           {row.booking.offerInvited ? (
                             <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-[10px] uppercase tracking-wide">
                               {row.booking.offerDistanceKm != null
@@ -341,7 +341,11 @@ export default function PujariBookingsPage() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {detailIntent === "reject" ? t("web.pujariBookings.rejectBooking") : selected?.pujaType.name}
+              {detailIntent === "reject" ? (
+                t("web.pujariBookings.rejectBooking")
+              ) : selected ? (
+                <PujaTitle name={selected.pujaType.name} as="span" />
+              ) : null}
             </DialogTitle>
             <DialogDescription>#{selected?.booking.bookingNumber}</DialogDescription>
           </DialogHeader>

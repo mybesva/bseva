@@ -13,7 +13,10 @@ export default function HeadRatings() {
   const [comments, setComments] = useState("");
   const [error, setError] = useState<string | null>(null);
   const history = useQuery({ queryKey: ["head-ratings"], queryFn: () => apiClient.headRatings() });
-  const pujaris = useQuery({ queryKey: ["head-pujaris"], queryFn: () => apiClient.api<Record<string, unknown>[] | { items?: Record<string, unknown>[] }>("/head/pujaris") });
+  const pujaris = useQuery({
+    queryKey: ["head-pujaris"],
+    queryFn: () => apiClient.api<Record<string, unknown>[] | { items?: Record<string, unknown>[] }>("/head/pujaris"),
+  });
   const rows = Array.isArray(history.data) ? history.data : (history.data as { items?: Record<string, unknown>[] } | undefined)?.items || [];
   const people = Array.isArray(pujaris.data) ? pujaris.data : (pujaris.data as { items?: Record<string, unknown>[] } | undefined)?.items || [];
   return (
@@ -31,6 +34,10 @@ export default function HeadRatings() {
           title="Submit rating"
           onPress={async () => {
             setError(null);
+            if (comments.trim().length < 5) {
+              setError("Comments must be at least 5 characters");
+              return;
+            }
             try {
               await apiClient.submitHeadRating({ pujari_id: pujariId, stars: Number(stars), comments });
               await history.refetch();

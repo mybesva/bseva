@@ -68,6 +68,12 @@ import {
   type PackageTier,
   type ServicePujariConfig,
 } from "@/lib/pujariTeam";
+import {
+  VIRTUAL_COUNTRIES,
+  customerBookablePackages,
+  virtualPujaCity,
+  virtualPujaLocationLabel,
+} from "@bseva/config";
 
 interface BookingWizardProps {
   serviceId: string;
@@ -97,30 +103,6 @@ interface BookingWizardProps {
   serviceVirtualAvailable?: boolean;
   durationMinutes?: number | null;
 }
-
-const VIRTUAL_COUNTRIES: { id: string; label: string }[] = [
-  { id: "IN", label: "India" },
-  { id: "AE", label: "United Arab Emirates" },
-  { id: "US", label: "United States" },
-  { id: "GB", label: "United Kingdom" },
-  { id: "SG", label: "Singapore" },
-  { id: "MY", label: "Malaysia" },
-  { id: "AU", label: "Australia" },
-  { id: "CA", label: "Canada" },
-  { id: "NZ", label: "New Zealand" },
-  { id: "DE", label: "Germany" },
-  { id: "FR", label: "France" },
-  { id: "NL", label: "Netherlands" },
-  { id: "IE", label: "Ireland" },
-  { id: "JP", label: "Japan" },
-  { id: "TH", label: "Thailand" },
-  { id: "SA", label: "Saudi Arabia" },
-  { id: "QA", label: "Qatar" },
-  { id: "KW", label: "Kuwait" },
-  { id: "OM", label: "Oman" },
-  { id: "BH", label: "Bahrain" },
-  { id: "ZA", label: "South Africa" },
-];
 
 function browserTimezone() {
   try {
@@ -789,9 +771,7 @@ export default function BookingWizard({
   };
 
   /** Book Standard and Premium only (no Basic tier in customer flow). */
-  const availableTiers = (["standard", "premium"] as Tier[]).filter(
-    (key) => Number(basePrices[key] || 0) > 0
-  );
+  const availableTiers = customerBookablePackages(basePrices) as Tier[];
 
   const tierPujariCount = (key: Tier) => pujarisForPackage(pujariTeam, key as PackageTier);
   const selectedPujariCount = tierPujariCount(tier);
@@ -1034,8 +1014,8 @@ export default function BookingWizard({
       lastSubmitSignature.current = submitSignature;
       if (requestKey !== idempotencyKey) setIdempotencyKey(requestKey);
 
-      const countryLabel = VIRTUAL_COUNTRIES.find((c) => c.id === customerCountry)?.label || customerCountry;
-      const virtualLocation = `Virtual Puja · ${countryLabel} · ${customerTimezone}`;
+      const countryLabel = virtualPujaCity(customerCountry);
+      const virtualLocation = virtualPujaLocationLabel(customerCountry, customerTimezone);
 
       // Pujari is assigned by admin after payment (service area already verified above).
       const result = await api<{

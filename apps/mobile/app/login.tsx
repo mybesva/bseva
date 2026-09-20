@@ -12,7 +12,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { LanguagePicker } from "@/components/LanguagePicker";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
-import { apiClient } from "@/services/api";
+import { apiClient, resolveApiBase } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 
 function routeForRole(role: string) {
@@ -53,7 +53,11 @@ export default function LoginScreen() {
     } catch (e: unknown) {
       const code = e instanceof ApiError ? e.code : undefined;
       const key = errorKeyForCode(code);
-      setError(key ? t(key) : e instanceof Error ? e.message : t("errors.loginFailed"));
+      let msg = key ? t(key) : e instanceof Error ? e.message : t("errors.loginFailed");
+      if (__DEV__ && code === "NETWORK") {
+        msg = `${msg}\n\nAPI: ${resolveApiBase()}\nStart FastAPI on the host (uvicorn app.main:app --host 0.0.0.0 --port 8000) or set EXPO_PUBLIC_API_URL in apps/mobile/.env.`;
+      }
+      setError(msg);
     } finally {
       setPending(false);
     }

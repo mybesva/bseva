@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Image, ScrollView, Switch, View, type ImageSourcePropType } from "react-native";
 import { MediaPicker } from "@/components/MediaPicker";
+import { SignaturePad } from "@/components/SignaturePad";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -118,6 +119,12 @@ export default function PujariProfile() {
           {sign ? (
             <Image source={sign} style={{ width: "100%", height: 80, resizeMode: "contain", backgroundColor: colors.secondary }} />
           ) : null}
+          <SignaturePad
+            onSave={async (file) => {
+              await apiClient.uploadPujariAsset("signature", file);
+              setSign(await apiClient.pujariMediaUri("signature"));
+            }}
+          />
           <AppText variant="small">{t("mobile.signatureHelp")}</AppText>
           <MediaPicker
             cameraLabel={t("mobile.photographSignature")}

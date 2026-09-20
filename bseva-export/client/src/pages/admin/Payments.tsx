@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import { PujaTitle } from "@/components/PujaTitle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -295,7 +296,7 @@ export default function Payments() {
               <TableRow key={b.id}>
                 <TableCell className="font-medium">{b.booking_number}</TableCell>
                 <TableCell>{b.customer_name || "—"}</TableCell>
-                <TableCell>{b.service_name || "—"}</TableCell>
+                <TableCell>{b.service_name ? <PujaTitle name={b.service_name} as="span" /> : "—"}</TableCell>
                 <TableCell className="font-medium">{rupees(b.total_paise)}</TableCell>
                 <TableCell className="text-green-600">{rupees(b.platform_fee_paise)}</TableCell>
                 <TableCell className="text-blue-600">{rupees(b.pujari_payable_paise)}</TableCell>

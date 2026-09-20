@@ -2,7 +2,7 @@ import { PUJARI_DOC_TYPES } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+import { ScrollView, Switch, View } from "react-native";
 import { MediaPicker } from "@/components/MediaPicker";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, ErrorBanner, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
@@ -13,9 +13,12 @@ export default function PujariDocuments() {
   const { t } = useI18n();
   const router = useRouter();
   const q = useQuery({ queryKey: ["pujari-docs"], queryFn: () => apiClient.pujariDocuments() });
+  const profile = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const official = useQuery({ queryKey: ["official-docs"], queryFn: () => apiClient.officialDocuments() as Promise<{ items?: { title?: string; status?: string }[] } | unknown[]> });
   const [docType, setDocType] = useState("identity");
   const [error, setError] = useState<string | null>(null);
+  const licenceOn = String(profile.data?.licence_type || "").toLowerCase() === "driving_licence" || String(profile.data?.licence_type || "").toLowerCase() === "cab_commercial";
+  const docOptions = PUJARI_DOC_TYPES.filter((d) => d.id !== "driving_licence" || licenceOn);
   const officialRows = Array.isArray(official.data) ? official.data : official.data?.items || [];
   return (
     <Screen>
@@ -23,7 +26,16 @@ export default function PujariDocuments() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
         <AppText>{t("mobile.documentsHelp")}</AppText>
-        <ChoiceChips options={PUJARI_DOC_TYPES.map((t) => ({ id: t.id, label: t.label }))} value={docType} onChange={(v) => setDocType(String(v))} />
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <AppText>Driving licence</AppText>
+          <Switch
+            value={licenceOn}
+            onValueChange={(on) => {
+              void apiClient.patchPujariProfile({ licence_type: on ? "driving_licence" : "none" }).then(() => profile.refetch());
+            }}
+          />
+        </View>
+        <ChoiceChips options={docOptions.map((t) => ({ id: t.id, label: t.label }))} value={docType} onChange={(v) => setDocType(String(v))} />
         <MediaPicker
           allowFile
           onPicked={async (file) => {

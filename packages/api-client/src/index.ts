@@ -15,6 +15,7 @@ import type {
   PujariProfile,
   PublicConfig,
   Quote,
+  ValidateBookingStart,
   ServiceCategory,
   SupportTicket,
   TokenOut,
@@ -286,6 +287,7 @@ export function createApiClient(opts: ApiClientOptions) {
       include_alankaram?: boolean;
       include_food?: boolean;
       country?: string;
+      mode?: "in_person" | "virtual";
     }) {
       const qs = new URLSearchParams({
         service_id: params.service_id,
@@ -297,12 +299,31 @@ export function createApiClient(opts: ApiClientOptions) {
       if (params.city) qs.set("city", params.city);
       if (params.booking_date) qs.set("booking_date", params.booking_date);
       if (params.country) qs.set("country", params.country);
+      if (params.mode) qs.set("mode", params.mode);
       return api<Quote>(`/quote?${qs}`);
     },
 
     serviceAvailability(lat: number, lng: number, service_id?: string) {
       return api<{ service_available: boolean }>(
         `/service-availability${toQuery({ lat, lng, service_id })}`
+      );
+    },
+
+    validateBookingStart(params: {
+      service_id: string;
+      booking_date: string;
+      start_time: string;
+      mode?: "in_person" | "virtual";
+      timezone?: string;
+    }) {
+      return api<ValidateBookingStart>(
+        `/validate-booking-start${toQuery({
+          service_id: params.service_id,
+          booking_date: params.booking_date,
+          start_time: params.start_time,
+          mode: params.mode || "in_person",
+          timezone: params.timezone,
+        })}`
       );
     },
 
@@ -482,7 +503,7 @@ export function createApiClient(opts: ApiClientOptions) {
       return apiBlob(`/invoices/${id}/pdf`);
     },
 
-    virtualPrecheck(body: Record<string, unknown>) {
+    virtualPrecheck(body: Record<string, unknown> = {}) {
       return api<{ ok: boolean; blocked?: boolean; message?: string; country_code?: string }>(
         "/bookings/virtual-precheck",
         { method: "POST", body: JSON.stringify(body) }
@@ -727,6 +748,24 @@ export function createApiClient(opts: ApiClientOptions) {
       );
     },
 
+    uploadPromoImage(file: UploadFile) {
+      const form = new FormData();
+      form.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+      return upload<{ ok: boolean; image_url: string; preview_url?: string }>("/admin/promos/images", form);
+    },
+
+    supportDirectory(q: string, kind: string) {
+      return api<Record<string, unknown>[]>(
+        `/support/tickets/directory${toQuery({ q, kind })}`
+      ).then((d) => asArray<Record<string, unknown>>(d));
+    },
+
+    supportDirectoryBookings(userId: string) {
+      return api<Record<string, unknown>[]>(`/support/tickets/directory/${encodeURIComponent(userId)}/bookings`).then(
+        (d) => asArray<Record<string, unknown>>(d)
+      );
+    },
+
     createSupportTicket(body: Record<string, unknown>) {
       return api<SupportTicket>("/support/tickets", { method: "POST", body: JSON.stringify(body) });
     },
@@ -758,6 +797,10 @@ export function createApiClient(opts: ApiClientOptions) {
 
     servicePreparation(serviceId: string) {
       return api(`/services/${serviceId}/preparation`);
+    },
+
+    headPujaris() {
+      return api("/head/pujaris");
     },
 
     headRatings() {

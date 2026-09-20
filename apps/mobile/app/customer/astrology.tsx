@@ -3,6 +3,7 @@ import type { CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView } from "react-native";
+import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, EmptyState, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -41,7 +42,7 @@ export default function AstrologyScreen() {
         {(q.data || []).map((s) => (
           <Pressable key={s.id || s.slug} onPress={() => router.push(s.slug ? `/service/${s.slug}` : "/customer/services")}>
             <Card>
-              <AppText variant="h3">{s.name}</AppText>
+              <PujaTitle name={s.name} variant="h3" />
               {s.standard_price_paise != null || s.fee_paise != null ? (
                 <AppText color={colors.primary}>{rupees(Number(s.standard_price_paise ?? s.fee_paise))}</AppText>
               ) : null}

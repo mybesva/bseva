@@ -20,6 +20,7 @@ export default function AdminCustomers() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const list = useQuery({
     queryKey: ["admin-customers", q, blocked, page],
@@ -45,20 +46,30 @@ export default function AdminCustomers() {
               <StatusBadge status={u.blocked ? "blocked" : "active"} />
             </View>
             <AppText variant="small">{u.email} · {u.phone}</AppText>
+            {u.preferred_language ? <AppText variant="small">{u.preferred_language}</AppText> : null}
             {can("edit_customers") ? (
+              <>
+                <Field
+                  label="Preferred language"
+                  value={u.preferred_language || "en"}
+                  onChangeText={(lang) => {
+                    void apiClient.api(`/admin/users/${u.id}/customer`, { method: "PUT", body: JSON.stringify({ preferred_language: lang }) }).then(() => list.refetch()).catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed"));
+                  }}
+                />
               <PrimaryButton
                 title={u.blocked ? t("admin.unblock") : t("admin.block")}
                 variant="outline"
                 onPress={async () => {
                   setError(null);
                   try {
-                    await apiClient.api(`/admin/users/${u.id}/block`, { method: "POST", body: JSON.stringify({ blocked: !u.blocked }) });
+                    await apiClient.api(`/admin/users/${u.id}/block`, { method: "POST", body: JSON.stringify({ blocked: !u.blocked, reason: "admin" }) });
                     await list.refetch();
                   } catch (e: unknown) {
                     setError(e instanceof Error ? e.message : "Failed");
                   }
                 }}
               />
+              </>
             ) : null}
           </Card>
         ))}
@@ -73,13 +84,14 @@ export default function AdminCustomers() {
             <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
             <Field label="Phone" value={phone} onChangeText={setPhone} />
             <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
+            <Field label="Location" value={location} onChangeText={setLocation} />
             <PrimaryButton
               title="Create"
               onPress={async () => {
                 setError(null);
                 try {
-                  await apiClient.api("/admin/users", { method: "POST", body: JSON.stringify({ name, email, phone, password, role: "customer" }) });
-                  setName(""); setEmail(""); setPhone(""); setPassword("");
+                  await apiClient.api("/admin/users", { method: "POST", body: JSON.stringify({ name, email, phone, password, role: "customer", location }) });
+                  setName(""); setEmail(""); setPhone(""); setPassword(""); setLocation("");
                   await qc.invalidateQueries({ queryKey: ["admin-customers"] });
                 } catch (e: unknown) {
                   setError(e instanceof Error ? e.message : "Create failed");

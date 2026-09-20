@@ -1,6 +1,7 @@
 import { MUHURTA_TIME_SLOTS, rupees } from "@bseva/config";
 import { useState } from "react";
 import { View } from "react-native";
+import { formatPujaTitleText } from "@bseva/locales";
 import { DateCalendar } from "@/components/DateCalendar";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -99,7 +100,7 @@ export function MuhurtaConsultation({
       ) : (
         <>
           <ErrorBanner message={error} />
-          <AppText variant="small">{t("web.muhurta.servicePrompt", { service: serviceName })}</AppText>
+          <AppText variant="small">{t("web.muhurta.servicePrompt", { service: formatPujaTitleText(serviceName) })}</AppText>
           <DateCalendar value={date} onChange={setDate} leadHours={1} />
           <ChoiceChips
             options={MUHURTA_TIME_SLOTS.map((id) => ({ id, label: id }))}

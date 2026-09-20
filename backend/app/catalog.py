@@ -110,6 +110,12 @@ def enrich_service(
         data["categories"] = service_categories(db, sid, lang)
     except Exception:
         data["categories"] = []
+    try:
+        from app.service_categories import service_is_death_related
+
+        data["death_related"] = service_is_death_related(db, sid)
+    except Exception:
+        data["death_related"] = False
     aliases = data.get("search_aliases") or []
     if isinstance(aliases, str):
         try:

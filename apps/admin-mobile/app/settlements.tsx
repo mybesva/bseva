@@ -13,6 +13,7 @@ export default function AdminSettlements() {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   const [reason, setReason] = useState("");
+  const [paymentRef, setPaymentRef] = useState("");
   const [error, setError] = useState<string | null>(null);
   const list = useQuery({
     queryKey: ["settlements", q],
@@ -32,13 +33,14 @@ export default function AdminSettlements() {
             <AppText variant="h3">{s.pujari_name || s.id}</AppText>
             <AppText>{rupees(s.pujari_payable_paise ?? s.amount_paise)}</AppText>
             <Field label="Override reason" value={reason} onChangeText={setReason} />
+            <Field label="Payment reference" value={paymentRef} onChangeText={setPaymentRef} />
             <PrimaryButton
               title="Mark settled"
               variant="outline"
               onPress={async () => {
                 setError(null);
                 try {
-                  await apiClient.api(`/settlements/${s.id}/override`, { method: "POST", body: JSON.stringify({ reason, mark_settled: true }) });
+                  await apiClient.api(`/settlements/${s.id}/override`, { method: "POST", body: JSON.stringify({ reason, mark_settled: true, payment_reference: paymentRef || undefined }) });
                   await list.refetch();
                 } catch (e: unknown) {
                   setError(e instanceof Error ? e.message : "Failed");

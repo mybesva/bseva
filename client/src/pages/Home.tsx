@@ -28,7 +28,7 @@ export default function Home() {
             </span>
             <h1 className="font-heading font-bold text-4xl md:text-6xl lg:text-7xl text-primary mb-6 leading-tight drop-shadow-lg">
               {t("home.heroTitle1")} <br />
-              <span className="text-gradient-gold">{t("home.heroTitle2")}</span>
+              {t("home.heroTitle2")}
             </h1>
             <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
               {t("home.heroDesc")}

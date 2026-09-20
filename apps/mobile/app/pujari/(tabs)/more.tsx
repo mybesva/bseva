@@ -9,9 +9,11 @@ import { useI18n } from "@/providers/I18nProvider";
 import { spacing } from "@bseva/tokens";
 
 export default function PujariMore() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
+  const showHeadRatings =
+    user?.role === "head_pujari" || Boolean((user as { is_head_pujari?: boolean } | null)?.is_head_pujari);
   const items = [
     { href: "/pujari/notifications", label: t("mobile.notifications"), icon: "notifications-outline" as const },
     { href: "/pujari/onboarding", label: t("nav.onboarding"), icon: "flag-outline" as const },
@@ -24,7 +26,9 @@ export default function PujariMore() {
     { href: "/pujari/address", label: t("mobile.address"), icon: "location-outline" as const },
     { href: "/pujari/bank", label: t("nav.bank"), icon: "card-outline" as const },
     { href: "/pujari/referral", label: t("mobile.rewards"), icon: "gift-outline" as const },
-    { href: "/pujari/ratings", label: t("admin.headRatings"), icon: "star-outline" as const },
+    ...(showHeadRatings
+      ? [{ href: "/pujari/ratings", label: t("admin.headRatings"), icon: "star-outline" as const }]
+      : []),
     { href: "/pujari/support", label: t("mobile.support"), icon: "help-circle-outline" as const },
     { href: "/pujari/password", label: t("mobile.password"), icon: "lock-closed-outline" as const },
     { href: "/legal/platform_terms", label: t("mobile.terms"), icon: "book-outline" as const },

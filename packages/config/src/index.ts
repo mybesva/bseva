@@ -112,10 +112,24 @@ export const PUJARI_QUALS = [
 ] as const;
 
 export const PUJARI_LANGS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"] as const;
-export const PUJARI_SPECS = ["Satyanarayan Puja", "Griha Pravesh", "Wedding", "Havan", "Vastu Shanti", "Namkaran"] as const;
-export const SAMPRADAYA_OPTS = ["smarta", "madhwa", "vaishnava"] as const;
+export const PUJARI_SPECS = [
+  "Satyanarayan Puja",
+  "Gruha Pravesam",
+  "Wedding",
+  "Brahmana Wedding",
+  "Homalu",
+  "Vastu Shanti",
+  "Namkaran",
+  "Upanayanam",
+  "Santhulu",
+  "Pitru Karma",
+  "Alankaram",
+] as const;
+/** Backend Literal: smartha | madhwa | vaishnava */
+export const SAMPRADAYA_OPTS = ["smartha", "madhwa", "vaishnava"] as const;
 export const PUJARI_DOC_TYPES = [
   { id: "identity", label: "Aadhaar (required)" },
+  { id: "driving_licence", label: "Driving Licence" },
   { id: "certificate", label: "Professional certificate" },
   { id: "supporting", label: "Additional documents" },
 ] as const;
@@ -226,6 +240,68 @@ export {
   MUHURTA_TIME_SLOTS,
   bookingLeadHint,
   earliestBookingInstant,
+  isBookingDateTimeBeforeLead,
   isCalendarDayBeforeLead,
   isCalendarDayDisabled,
 } from "./bookingLeadTime";
+export { isDeathRelatedService } from "./serviceCategories";
+export { VIRTUAL_COUNTRIES } from "./virtualCountries";
+export {
+  CUSTOMER_BOOKABLE_PACKAGES,
+  PHONE_COUNTRY_CODES,
+  RECURRING_OPTIONS,
+  buildCreateBookingPayload,
+  composePhysicalServiceAddress,
+  customerBookablePackages,
+  toE164,
+  virtualPujaCity,
+  virtualPujaLocationLabel,
+  type CustomerBookablePackage,
+} from "./bookingParity";
+export {
+  PUJARI_SPECIALIZATIONS,
+  mergeSpecializations,
+  specializationKey,
+  type PujariSpecialization,
+} from "./pujariSpecializations";
+export { dateInputToIsoEnd, dateInputToIsoStart } from "./isoDateBounds";
+export {
+  PUJARI_JOB_SEGMENTS,
+  bookingStartAt,
+  isExpiredBooking,
+  isTerminalBookingStatus,
+  isUpcomingBooking,
+  matchesPujariJobSegment,
+  type PujariJobSegment,
+} from "./bookingSchedule";
+export { priestShare, pujariEarningsStats, settlementAmountPaise } from "./pujariEarnings";
+export {
+  EMPTY_PROMO_BANNER,
+  EMPTY_PROMO_POPUP,
+  PROMO_AUDIENCES,
+  PROMO_PLACEMENTS,
+  promoBannerBody,
+  promoPopupBody,
+  validatePromoBanner,
+  validatePromoPopup,
+  type PromoBannerForm,
+  type PromoPopupForm,
+} from "./promoParity";
+export {
+  EMPTY_SUPPORT_TICKET,
+  SUPPORT_CATEGORIES,
+  SUPPORT_CONTACT_SOURCES,
+  SUPPORT_PRIORITIES,
+  SUPPORT_REPORTER_TYPES,
+  TICKET_STATUSES,
+} from "./supportTicketForm";
+export {
+  adminServiceActivationError,
+  buildAdminServicePayload,
+  emptyAdminServiceForm,
+  paiseFromRupees,
+  parseAliasList,
+  rupeesField,
+  slugFromName,
+  type AdminServiceForm,
+} from "./serviceForm";

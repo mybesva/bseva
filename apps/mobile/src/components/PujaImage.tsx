@@ -6,6 +6,7 @@ import { rupees } from "@bseva/config";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { AppText, Card } from "@/components/ui";
+import { formatPujaTitleText } from "@bseva/locales";
 import { PujaTitle } from "@/components/PujaTitle";
 import { useI18n } from "@/providers/I18nProvider";
 
@@ -100,7 +101,7 @@ export function PujaServiceCard({
   const { colors } = useAppTheme();
   const { t } = useI18n();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={service.name}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={formatPujaTitleText(service.name)}>
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <PujaImage service={service} height={168} imageStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }} />
         <View style={{ padding: 12, gap: 4 }}>

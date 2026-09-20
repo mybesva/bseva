@@ -30,9 +30,24 @@ export function bookingLeadHint(leadHours: number): string {
   return `This puja must be booked at least ${days} days in advance.`;
 }
 
+/** True if date+HH:MM is earlier than now + lead hours (same rule as POST /bookings). */
+export function isBookingDateTimeBeforeLead(
+  dateIso: string,
+  timeHm: string,
+  leadHours: number,
+  now: Date = new Date()
+): boolean {
+  const hm = (timeHm || "").trim();
+  const stamp = `${dateIso}T${hm.length === 5 ? `${hm}:00` : hm}`;
+  const start = new Date(stamp);
+  if (Number.isNaN(start.getTime())) return true;
+  return start < earliestBookingInstant(leadHours, now);
+}
+
 /** Same consultation slots as the working web Muhurtham widget. */
 export const MUHURTA_TIME_SLOTS = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00"] as const;
 
+/** Deprecated: Muhurtham consultation only uses MUHURTA_TIME_SLOTS. Puja booking time is free-form (web + mobile). */
 export const BOOKING_TIME_SLOTS = [
   "06:00",
   "07:00",

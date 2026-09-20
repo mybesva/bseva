@@ -12,6 +12,9 @@ export default function AdminSamagri() {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("pcs");
+  const [itemKey, setItemKey] = useState("");
+  const [nameHi, setNameHi] = useState("");
+  const [nameTe, setNameTe] = useState("");
   const [error, setError] = useState<string | null>(null);
   const list = useQuery({
     queryKey: ["samagri"],
@@ -34,13 +37,16 @@ export default function AdminSamagri() {
           <AppText variant="h3">Add item</AppText>
           <Field label="Name" value={name} onChangeText={setName} />
           <Field label="Unit" value={unit} onChangeText={setUnit} />
+          <Field label="Item key" value={itemKey} onChangeText={setItemKey} />
+          <Field label="Name (hi)" value={nameHi} onChangeText={setNameHi} />
+          <Field label="Name (te)" value={nameTe} onChangeText={setNameTe} />
           <PrimaryButton
             title="Create"
             onPress={async () => {
               setError(null);
               try {
-                await apiClient.api("/admin/samagri/items", { method: "POST", body: JSON.stringify({ name, unit, active: true }) });
-                setName("");
+                await apiClient.api("/admin/samagri/items", { method: "POST", body: JSON.stringify({ name, unit, item_key: itemKey || undefined, name_hi: nameHi || undefined, name_te: nameTe || undefined, active: true }) });
+                setName(""); setItemKey(""); setNameHi(""); setNameTe("");
                 await list.refetch();
               } catch (e: unknown) {
                 setError(e instanceof Error ? e.message : "Failed");

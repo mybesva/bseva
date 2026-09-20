@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
+import { PujaTitle } from "@/components/PujaTitle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -273,7 +274,9 @@ export default function RecommendationsAdmin() {
           {rows.map((r) => (
             <TableRow key={r.id}>
               <TableCell className="font-medium">{r.title}</TableCell>
-              <TableCell className="text-muted-foreground text-sm">{r.service_name}</TableCell>
+              <TableCell className="text-muted-foreground text-sm">
+                {r.service_name ? <PujaTitle name={r.service_name} as="span" className="text-sm" /> : "—"}
+              </TableCell>
               <TableCell>{r.month_number ? MONTHS[r.month_number - 1] : "Any"}</TableCell>
               <TableCell>{r.sort_order}</TableCell>
               <TableCell>

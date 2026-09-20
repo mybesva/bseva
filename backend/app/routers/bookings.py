@@ -398,6 +398,44 @@ def get_legal_public(slug: str, request: Request, lang: str | None = None, db: S
     return data
 
 
+@router.get("/validate-booking-start")
+def validate_booking_start_endpoint(
+    service_id: UUID,
+    booking_date: date,
+    start_time: str = Query(..., min_length=4, max_length=12),
+    mode: str = "in_person",
+    timezone: str | None = None,
+    db: Session = Depends(get_db),
+    _user=Depends(require_roles("customer", "admin", "super_admin")),
+):
+    """True when start_time passes the same lead-time rule as POST /bookings (any minute, like web)."""
+    from app.booking_slots import validate_booking_start
+
+    svc = db.execute(
+        text("SELECT * FROM services WHERE id = CAST(:id AS uuid) AND active = TRUE"),
+        {"id": str(service_id)},
+    ).mappings().first()
+    if not svc:
+        raise HTTPException(404, "Service not found")
+    mode_norm = "virtual" if mode == "virtual" else "in_person"
+    tz = timezone
+    if mode_norm == "virtual":
+        from app.timezones import validate_timezone
+
+        try:
+            tz = validate_timezone(timezone or "Asia/Kolkata")
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+    return validate_booking_start(
+        db,
+        service=dict(svc),
+        booking_date=booking_date,
+        start_time_raw=start_time,
+        mode=mode_norm,
+        timezone_name=tz,
+    )
+
+
 @router.get("/quote")
 def quote(
     service_id: UUID,

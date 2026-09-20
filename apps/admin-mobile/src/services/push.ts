@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { apiClient } from "./api";
 
+/** Per-device token; backend sends via Firebase project b-seva-61ab7 (same Admin SDK as Customer/Pujari). */
 const FCM_STORE_KEY = "bseva_admin_fcm_token";
 
 export async function registerPushToken(): Promise<string | null> {

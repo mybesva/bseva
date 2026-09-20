@@ -5,7 +5,7 @@ Apps: `apps/mobile` (Customer + Pujari) and `apps/admin-mobile` (Admin + Super A
 
 Statuses: **DONE** · **PARTIAL** · **NOT APPLICABLE** · **BLOCKED**
 
-Android and iOS share the same React Native screens. Native Firebase client files exist for Customer/Pujari (`com.bseva.app`). Admin (`com.bseva.admin`) FCM is coded but needs a second Firebase Android/iOS app (manual).
+Android and iOS share the same React Native screens. Firebase project **`b-seva-61ab7`** for all apps; backend uses one Admin SDK. Customer/Pujari client files exist for `com.bseva.app`. Admin (`com.bseva.admin`) needs additional **client** configs from the same project (see `apps/admin-mobile/README.md`, `scripts/sync-firebase-clients.sh`).
 
 ---
 
@@ -20,7 +20,7 @@ Android and iOS share the same React Native screens. Native Firebase client file
 | `/` | Marketing home | public | `app/index.tsx` | PARTIAL | PARTIAL | `/services?featured=1` | locales | Native landing, not a WebView of marketing site |
 | `/services` | Catalog search/filter | public | `browse-services.tsx`, `customer/(tabs)/services.tsx` | DONE | DONE | `/services`, `/service-categories` | api-client | |
 | `/services/:slug` | Puja details | public | `app/service/[slug].tsx` | DONE | DONE | `/services/{slug}` | types.CatalogService | |
-| `/book/:slug` | Booking wizard | customer | `app/customer/book/[slug].tsx` | PARTIAL | PARTIAL | `/quote`, `/bookings`, `/panchang`, `/bookings/virtual-precheck` | quote + booking models | basic/standard/premium, samagri/alankaram/food, virtual country; map pin / recurring selected_dates thinner than web |
+| `/book/:slug` | Booking wizard | customer | `app/customer/book/[slug].tsx` | DONE | DONE | `/quote`, `/validate-booking-start`, `/bookings`, `/panchang`, `/service-availability`, `/bookings/virtual-precheck` | `@bseva/config` lead + virtual countries; backend validates start | Free time (any minute) via native `TimePicker` + `GET /validate-booking-start`; no customer pujari picker; service-area → virtual or Connect Admin; map pin when `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` set |
 | `/astrology` | Muhurtham / astrology | customer | `app/customer/astrology.tsx` | PARTIAL | PARTIAL | `/astrology/services`, `/muhurta-consultations` | api-client | List + book; not identical to web MuhurtaConsultationBook widget |
 | `/customer` | Dashboard, wallet, recs, panchang | customer | `customer/(tabs)/index.tsx` | DONE | DONE | bookings, wallet, recommendations, panchang, promos | locales, rupees | Promo banners + start-OTP on booking detail |
 | `/customer/profile` | Profile + photo | customer | `customer/profile.tsx` | DONE | DONE | `/customer/profile`, photo upload | validation | |
@@ -53,8 +53,8 @@ Android and iOS share the same React Native screens. Native Firebase client file
 | `/pujari` | Dashboard | pujari | `pujari/(tabs)/index.tsx` | DONE | DONE | bookings | | |
 | `/pujari/bookings` | Jobs | pujari | `pujari/(tabs)/jobs.tsx` | DONE | DONE | `/bookings` | | |
 | `/pujari/notifications` | Inbox | pujari | `pujari/notifications.tsx` | DONE | DONE | `/notifications*` | mapNotificationLinkToMobile | |
-| `/pujari/onboarding` | Onboarding wizard | pujari | `pujari/onboarding.tsx` | PARTIAL | PARTIAL | profile, documents, joining fee | | No drawn signature pad (photo signature instead) |
-| `/pujari/profile` | Profile / photo / signature | pujari | `pujari/profile.tsx` | PARTIAL | PARTIAL | `/pujari/profile*` | | Image signature, not canvas pad |
+| `/pujari/onboarding` | Onboarding wizard | pujari | `pujari/onboarding.tsx` | PARTIAL | PARTIAL | profile, documents, joining fee | | Walkthrough layout differs from web; signature on profile |
+| `/pujari/profile` | Profile / photo / signature | pujari | `pujari/profile.tsx` | DONE | DONE | `/pujari/profile*` | `SignaturePad` | Drawn signature + optional photo fallback (same business intent as web canvas) |
 | `/pujari/documents` | KYC upload | pujari | `pujari/documents.tsx` | DONE | DONE | `/pujari/documents/upload` | | Camera + library |
 | `/pujari/address` | Address | pujari | `pujari/address.tsx` | DONE | DONE | profile | addressSchema | |
 | `/pujari/experience` | Experience | pujari | `pujari/experience.tsx` | DONE | DONE | profile PATCH | | |
@@ -79,11 +79,11 @@ Permission-driven UI. Backend RBAC remains authoritative (`GET /admin/me/permiss
 | `{ops}/` | Dashboard KPIs | admin | `(app)/index.tsx` | DONE | DONE | `/admin/stats`, nav-badges | hasAdminPermission | Card layout, not a desktop grid |
 | `{ops}/customers` | List/search/block/create | view_customers | `customers.tsx` | DONE | DONE | `/admin/users` | | |
 | `{ops}/pujaris` | List/filter | view_pujaris | `(app)/pujaris.tsx` | DONE | DONE | `/admin/pujaris` | | |
-| `{ops}/pujaris/:id` | Verify / block / level | verify/edit | `pujari/[id].tsx` | PARTIAL | PARTIAL | `/admin/pujaris/{id}` | | Core verify/block; document file viewer is thinner than desktop |
+| `{ops}/pujaris/:id` | Verify / block / level / head | verify/edit | `pujari/[id].tsx` | PARTIAL | PARTIAL | `/admin/pujaris/{id}`, `/head` | | Verify/block/head assign; full document viewer + inline profile editor stays web-rich |
 | `{ops}/temples` | CRUD | manage_services | `temples.tsx` | PARTIAL | PARTIAL | `/admin/temples` | | Search/create/delete; CSV bulk import is NOT APPLICABLE on phone (use web) |
 | `{ops}/services` | Catalog + availability | manage_services | `services.tsx` | PARTIAL | PARTIAL | `/admin/services` | | Toggle availability + search; full package/image editor stays richer on web |
 | `{ops}/recommendations` | Seasonal recs | manage_services | `recommendations.tsx` | DONE | DONE | `/admin/recommendations` | | |
-| `{ops}/bulk-import` | CSV temples | manage_services | — | NOT APPLICABLE | NOT APPLICABLE | `/admin/temples/bulk` | | File-heavy desktop tool; temples can be added one-by-one on mobile |
+| `{ops}/bulk-import` | CSV temples | manage_services | `bulk-import.tsx` | PARTIAL | PARTIAL | `/admin/temples/bulk` | | Mobile uses document picker + upload; no spreadsheet preview grid like web |
 | `{ops}/samagri` | Items | manage_samagri | `samagri.tsx` | DONE | DONE | `/samagri/items`, POST admin | | |
 | `{ops}/bookings` | Assign / filter | view/manage_bookings | `(app)/bookings.tsx`, `booking/[id].tsx` | DONE | DONE | `/bookings`, `/admin/bookings/{id}/assign` | listBookingsPage | Card → detail → assign |
 | `{ops}/virtual-puja` | Virtual queue | view/manage_bookings | `virtual-puja.tsx` | DONE | DONE | `/bookings?mode=virtual` | | |
@@ -102,7 +102,7 @@ Permission-driven UI. Backend RBAC remains authoritative (`GET /admin/me/permiss
 | `{ops}/head-ratings` | Head assessments | admin | `head-ratings.tsx` | DONE | DONE | `/head/ratings` | | |
 | `{ops}/email-templates` | Mock templates | — | — | NOT APPLICABLE | NOT APPLICABLE | none | | Web-only local mock |
 | `{ops}/sms-templates` | Mock templates | — | — | NOT APPLICABLE | NOT APPLICABLE | none | | Web-only local mock |
-| FCM | Ops pushes | admin | `src/services/push.ts` | BLOCKED | BLOCKED | `/notifications/fcm/token` | | Needs Firebase apps for `com.bseva.admin` |
+| FCM | Ops pushes | admin | `src/services/push.ts` + `SessionEffects` | PARTIAL | PARTIAL | `/notifications/fcm/token`, `/fcm/test` | same backend Firebase Admin | Same project `b-seva-61ab7`; wire `google-services.json` / plist for `com.bseva.admin` then native rebuild |
 
 ---
 
@@ -114,7 +114,7 @@ There are **no Super-Admin-only routes** in the current web nav (`superOnly` unu
 |---|---|---|---|
 | Bypass permission filters | `hasAdminPermission(role, perms)` | DONE | `super_admin` always true in UI; APIs still enforce |
 | `PUT /admin/users/{id}/permissions` | `permissions.tsx` | DONE | Super Admin target is not editable |
-| `POST /admin/users/{id}/promote-super` | — | PARTIAL | Dangerous; keep on web until a dedicated confirm flow is needed |
+| `POST /admin/users/{id}/promote-super` | `permissions.tsx` | DONE | Destructive confirm dialog; Super Admin target row read-only |
 | Legal / support extra nav | shown when `manage_legal` / `manage_support` or super | DONE | |
 
 ---

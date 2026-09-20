@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bseva.admin",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "BSeva Admin uses the camera to capture documents for pujari verification.",
@@ -24,6 +25,7 @@
     },
     "android": {
       "package": "com.bseva.admin",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {

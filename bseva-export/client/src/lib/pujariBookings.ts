@@ -1,5 +1,12 @@
 /** Shared pujari booking list helpers */
 
+import {
+  bookingStartAt as startAtFromParts,
+  isExpiredBooking as expiredFromParts,
+  isTerminalBookingStatus,
+  isUpcomingBooking as upcomingFromParts,
+} from "@bseva/config";
+
 export type PujariBookingRow = {
   booking: {
     id: string;
@@ -31,8 +38,6 @@ export type PujariBookingRow = {
   pujaType: { name: string; estimatedDuration: number };
   customer: { name: string | null; email: string | null; phone: string | null };
 };
-
-const TERMINAL = new Set(["completed", "cancelled", "refunded"]);
 
 export function mapApiBooking(b: any): PujariBookingRow {
   const base = Number(b.base_price_paise || 0);
@@ -86,36 +91,20 @@ export function compareByPujaSchedule(
 }
 
 export function bookingStartAt(row: PujariBookingRow): Date | null {
-  if (!row.booking.bookingDate) return null;
-  const d = new Date(row.booking.bookingDate);
-  if (Number.isNaN(d.getTime())) return null;
-  const t = (row.booking.bookingTime || "").trim();
-  const m = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if (m) {
-    d.setHours(Number(m[1]), Number(m[2]), Number(m[3] || 0), 0);
-  } else {
-    // Date-only: treat as end of that local day so the day stays "active"
-    d.setHours(23, 59, 59, 999);
-  }
-  return d;
+  return startAtFromParts(row.booking.bookingDate, row.booking.bookingTime);
 }
 
 export function isTerminalStatus(status: string) {
-  return TERMINAL.has(status);
+  return isTerminalBookingStatus(status);
 }
 
 /** Past scheduled time but not completed/cancelled — show under Completed. */
 export function isExpiredBooking(row: PujariBookingRow, now = new Date()) {
-  if (isTerminalStatus(row.booking.status)) return false;
-  const start = bookingStartAt(row);
-  if (!start) return false;
-  return start.getTime() < now.getTime();
+  return expiredFromParts(row.booking.status, row.booking.bookingDate, row.booking.bookingTime, now);
 }
 
 export function isUpcomingBooking(row: PujariBookingRow, now = new Date()) {
-  if (isTerminalStatus(row.booking.status)) return false;
-  if (isExpiredBooking(row, now)) return false;
-  return true;
+  return upcomingFromParts(row.booking.status, row.booking.bookingDate, row.booking.bookingTime, now);
 }
 
 export function isPastBooking(row: PujariBookingRow, now = new Date()) {

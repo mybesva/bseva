@@ -1,5 +1,17 @@
 /** Display dates as DD-MM-YYYY. Keep API payloads as yyyy-MM-dd. */
 
+export function parseDisplayDateToIso(input: string): string | null {
+  const m = input.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return null;
+  const dd = Number(m[1]);
+  const mm = Number(m[2]);
+  const yyyy = Number(m[3]);
+  if (!Number.isFinite(dd) || !Number.isFinite(mm) || !Number.isFinite(yyyy)) return null;
+  const d = new Date(yyyy, mm - 1, dd);
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+}
+
 export function formatDisplayDate(value: string | Date | null | undefined, fallback = "—"): string {
   if (value == null || value === "") return fallback;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {

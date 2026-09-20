@@ -23,6 +23,10 @@ export default function CustomerProfile() {
     retry: false,
   });
   const [name, setName] = useState(user?.name || "");
+  const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState(user?.phone || "");
   const [lang, setLangState] = useState<Lang>((user?.preferred_language as Lang) || "en");
   const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
   const [photoOk, setPhotoOk] = useState(true);
@@ -41,8 +45,15 @@ export default function CustomerProfile() {
 
   useEffect(() => {
     if (user?.name) setName(user.name);
+    if (user?.phone) setPhone(user.phone);
+    const u = user as { first_name?: string; middle_name?: string; last_name?: string } | null;
+    if (u?.first_name || u?.last_name) {
+      setFirstName(String(u.first_name || ""));
+      setMiddleName(String(u.middle_name || ""));
+      setLastName(String(u.last_name || ""));
+    }
     if (user?.preferred_language) setLangState(user.preferred_language as Lang);
-  }, [user?.name, user?.preferred_language]);
+  }, [user?.name, user?.phone, user?.preferred_language]);
 
   useEffect(() => {
     void loadPhoto();
@@ -95,12 +106,13 @@ export default function CustomerProfile() {
           />
         </Card>
         <Card>
+          <Field label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
+          <Field label={t("auth.middleName")} value={middleName} onChangeText={setMiddleName} />
+          <Field label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
           <Field label={t("mobile.name")} value={name} onChangeText={setName} />
+          <Field label={t("auth.phone")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
             {user?.email || "—"}
-          </AppText>
-          <AppText variant="small" color={colors.mutedForeground}>
-            {user?.phone || "—"}
           </AppText>
           <AppText variant="small" style={{ marginTop: 12, marginBottom: 8 }}>
             {t("mobile.language")}
@@ -118,7 +130,14 @@ export default function CustomerProfile() {
               setBusy(true);
               setError(null);
               try {
-                await apiClient.patchMe({ name, preferred_language: lang });
+                await apiClient.patchMe({
+                  name: [firstName, middleName, lastName].map((s) => s.trim()).filter(Boolean).join(" ") || name,
+                  first_name: firstName.trim() || undefined,
+                  middle_name: middleName.trim() || undefined,
+                  last_name: lastName.trim() || undefined,
+                  phone: phone.trim() || undefined,
+                  preferred_language: lang,
+                });
                 try {
                   await apiClient.patchCustomerProfile({ preferred_language: lang });
                 } catch {

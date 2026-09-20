@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { adminServiceActivationError, buildAdminServicePayload, type AdminServiceForm } from "@bseva/config";
 import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
@@ -379,81 +380,14 @@ export default function ServicesAdmin() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (
-      form.active &&
-      (form.standard_price_paise == null ||
-        form.premium_price_paise == null ||
-        form.pricing_status === "awaiting_pricing")
-    ) {
-      toast.error("Set Standard and Premium prices (priced status) before activating");
+    const activationError = adminServiceActivationError(form);
+    if (activationError) {
+      toast.error(activationError);
       return;
     }
     setSaving(true);
     try {
-      const slug =
-        form.slug ||
-        form.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, "");
-      const muhurtaFee = Math.max(0, Math.round(Number(form.muhurta_fee_paise) || 0));
-      const pricingStatus =
-        form.standard_price_paise != null && form.premium_price_paise != null
-          ? form.pricing_status
-          : "awaiting_pricing";
-      const payload = {
-        ...form,
-        slug,
-        search_aliases: parseAliases(form.search_aliases_text),
-        category_slugs: form.category_slugs,
-        languages: parseAliases(form.languages_text),
-        process_steps: (form.process_steps_text || "")
-          .split("\n")
-          .map((t) => t.trim())
-          .filter(Boolean)
-          .map((text, i) => ({ order: i + 1, text })),
-        priests_min: Math.min(20, Math.max(1, Math.round(Number(form.priests_min) || 1))),
-        priests_max: Math.min(20, Math.max(1, Math.round(Number(form.priests_max) || 1))),
-        online_nri_price_paise: form.virtual_international_price_paise,
-        virtual_domestic_price_paise: form.virtual_domestic_price_paise,
-        virtual_international_price_paise: form.virtual_international_price_paise,
-        standard_price_paise: form.standard_price_paise,
-        premium_price_paise: form.premium_price_paise,
-        basic_price_paise: null,
-        main_puja_price_paise: form.main_puja_price_paise ?? form.standard_price_paise,
-        samagri_price_paise: Math.max(0, Math.round(Number(form.samagri_price_paise) || 0)),
-        alankaram_price_paise: Math.max(0, Math.round(Number(form.alankaram_price_paise) || 0)),
-        food_price_paise: Math.max(0, Math.round(Number(form.food_price_paise) || 0)),
-        dakshina_share_percent: Math.min(
-          100,
-          Math.max(0, Number.isFinite(Number(form.dakshina_share_percent)) ? Number(form.dakshina_share_percent) : 85)
-        ),
-        muhurta_fee_paise: muhurtaFee,
-        duration_minutes: Math.max(15, Math.round(Number(form.duration_minutes) || 90)),
-        required_level: Math.min(4, Math.max(1, Number(form.required_level) || 2)),
-        pujaris_required: Math.min(20, Math.max(1, Math.round(Number(form.pujaris_required) || 1))),
-        basic_pujaris_required: null,
-        standard_pujaris_required:
-          form.standard_pujaris_required != null && form.standard_pujaris_required !== ("" as unknown as number)
-            ? Math.min(20, Math.max(1, Math.round(Number(form.standard_pujaris_required))))
-            : null,
-        premium_pujaris_required:
-          form.premium_pujaris_required != null && form.premium_pujaris_required !== ("" as unknown as number)
-            ? Math.min(20, Math.max(1, Math.round(Number(form.premium_pujaris_required))))
-            : null,
-        display_order: Math.round(Number(form.display_order) || 1000),
-        homepage_rank:
-          form.homepage_rank != null && form.homepage_rank !== ("" as unknown as number)
-            ? Math.round(Number(form.homepage_rank))
-            : null,
-        pricing_status: pricingStatus,
-        samagri_available: Boolean(form.samagri_available),
-        alankaram_available: Boolean(form.alankaram_available),
-        image_path: form.image_path.trim() || null,
-        image_url: form.image_url.trim() || null,
-        virtual_available: form.virtual_available,
-      };
-      delete (payload as any).search_aliases_text;
+      const payload = buildAdminServicePayload(form as AdminServiceForm);
       if (editId) {
         await api(`/admin/services/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
         toast.success("Service & pricing updated");

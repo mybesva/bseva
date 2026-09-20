@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView } from "react-native";
+import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, Field, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
@@ -33,7 +34,7 @@ export default function AdminPayments() {
           <Pressable key={b.id} onPress={() => router.push(`/booking/${b.id}`)}>
             <Card>
               <StatusBadge status={String(b.payment_status || "pending")} />
-              <AppText variant="h3">{b.service_name}</AppText>
+              <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
               <AppText>{rupees(b.total_paise)} · {b.customer_name}</AppText>
             </Card>
           </Pressable>

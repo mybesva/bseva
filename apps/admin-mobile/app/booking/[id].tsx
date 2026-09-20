@@ -4,6 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
+import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
@@ -74,7 +75,7 @@ export default function AdminBookingDetail() {
         <ErrorBanner message={error} />
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <AppText variant="h2">{b.service_name}</AppText>
+            <PujaTitle name={b.service_name} variant="h2" />
             <StatusBadge status={b.status} />
           </View>
           <AppText>Customer: {b.customer_name}</AppText>

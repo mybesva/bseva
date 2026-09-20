@@ -22,11 +22,13 @@ export function DateCalendar({
   onChange,
   leadHours = 48,
   minDate,
+  showSelectedFooter = true,
 }: {
   value: string;
   onChange: (iso: string) => void;
   leadHours?: number;
   minDate?: Date;
+  showSelectedFooter?: boolean;
 }) {
   const { colors } = useAppTheme();
   const selected = value ? parseIso(value) : new Date();
@@ -56,20 +58,38 @@ export function DateCalendar({
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Previous year"
+          onPress={() => setCursor(new Date(cursor.getFullYear() - 1, cursor.getMonth(), 1))}
+          style={{ minWidth: 36, minHeight: 44, justifyContent: "center" }}
+        >
+          <AppText variant="h3">«</AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Previous month"
           onPress={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-          style={{ minWidth: 44, minHeight: 44, justifyContent: "center" }}
+          style={{ minWidth: 36, minHeight: 44, justifyContent: "center" }}
         >
           <AppText variant="h3">‹</AppText>
         </Pressable>
-        <AppText variant="h3">{label}</AppText>
+        <AppText variant="h3" style={{ textAlign: "center", flex: 1 }}>
+          {label}
+        </AppText>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Next month"
           onPress={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-          style={{ minWidth: 44, minHeight: 44, alignItems: "flex-end", justifyContent: "center" }}
+          style={{ minWidth: 36, minHeight: 44, alignItems: "flex-end", justifyContent: "center" }}
         >
           <AppText variant="h3">›</AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Next year"
+          onPress={() => setCursor(new Date(cursor.getFullYear() + 1, cursor.getMonth(), 1))}
+          style={{ minWidth: 36, minHeight: 44, alignItems: "flex-end", justifyContent: "center" }}
+        >
+          <AppText variant="h3">»</AppText>
         </Pressable>
       </View>
       <View style={{ flexDirection: "row" }}>
@@ -103,9 +123,11 @@ export function DateCalendar({
           </View>
         ))}
       </View>
-      <AppText variant="small" color={colors.mutedForeground}>
-        {formatDisplayDate(value)}
-      </AppText>
+      {showSelectedFooter ? (
+        <AppText variant="small" color={colors.mutedForeground}>
+          {formatDisplayDate(value)}
+        </AppText>
+      ) : null}
     </View>
   );
 }

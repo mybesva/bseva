@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
@@ -101,10 +102,15 @@ export default function MuhurthamScreen() {
           <Pressable key={row.id} onPress={() => open(row)}>
             <Card style={{ gap: 5 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-                <AppText variant="h3" style={{ flex: 1 }}>{row.consultation_number || row.service_name}</AppText>
+                {row.service_name ? (
+                  <PujaTitle name={row.service_name} variant="h3" style={{ flex: 1 }} />
+                ) : (
+                  <AppText variant="h3" style={{ flex: 1 }}>{row.consultation_number}</AppText>
+                )}
                 <StatusBadge status={row.status} />
               </View>
-              <AppText>{row.customer_name || "—"} · {row.service_name || "—"}</AppText>
+              <AppText>{row.customer_name || "—"}</AppText>
+              {row.service_name ? <PujaTitle name={row.service_name} variant="small" /> : null}
               <AppText variant="small" color={colors.mutedForeground}>
                 {row.appointment_date || "—"} {row.appointment_time?.slice(0, 5) || ""}
               </AppText>

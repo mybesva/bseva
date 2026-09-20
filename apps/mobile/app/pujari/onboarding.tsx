@@ -5,9 +5,11 @@ import {
   PUJARI_LANGS,
   PUJARI_QUALS,
   PUJARI_SPECS,
+  rupees,
   SAMPRADAYA_OPTS,
   TERMS_VERSION,
 } from "@bseva/config";
+import { settlementPayload, validateSettlement } from "@bseva/validation";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -33,6 +35,10 @@ export default function PujariOnboarding() {
   const [consent, setConsent] = useState(false);
   const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
   const docs = useQuery({ queryKey: ["pujari-docs"], queryFn: () => apiClient.pujariDocuments() });
+  const offers = useQuery({
+    queryKey: ["pujari-offers"],
+    queryFn: () => apiClient.pujariServiceOffers() as Promise<{ services?: { id: string; name: string; applied?: boolean; dakshina_paise?: number }[] }>,
+  });
 
   async function load() {
     const p = await apiClient.getPujariProfile();
@@ -186,46 +192,121 @@ export default function PujariOnboarding() {
                 {d.status ? <StatusBadge status={String(d.status)} /> : null}
               </Card>
             ))}
-            {PUJARI_DOC_TYPES.map((t) => (
-              <Card key={t.id}>
-                <AppText variant="h3">{t.label}</AppText>
+            {PUJARI_DOC_TYPES.filter((d) => d.id !== "driving_licence" || String(profile.licence_type || "").toLowerCase() === "driving_licence").map((dt) => (
+              <Card key={dt.id}>
+                <AppText variant="h3">{dt.label}</AppText>
                 <MediaPicker
                   allowFile
                   onPicked={async (file) => {
-                    await apiClient.uploadPujariDocument(file, t.id);
+                    await apiClient.uploadPujariDocument(file, dt.id);
                     await docs.refetch();
                   }}
                 />
               </Card>
             ))}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <AppText>Driving licence</AppText>
+              <Switch
+                value={String(profile.licence_type || "").toLowerCase() === "driving_licence"}
+                onValueChange={(on) => set("licence_type", on ? "driving_licence" : "none")}
+              />
+            </View>
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(3)} />
-            <PrimaryButton title={t("mobile.continue")} onPress={() => void saveStep(5, {})} />
+            <PrimaryButton
+              title={t("mobile.continue")}
+              onPress={() => {
+                const rows = docs.data || [];
+                if (!rows.some((d) => d.document_type === "identity")) {
+                  setError("Identity (Aadhaar) is required");
+                  return;
+                }
+                if (String(profile.licence_type || "").toLowerCase() === "driving_licence" && !rows.some((d) => d.document_type === "driving_licence")) {
+                  setError("Driving licence document is required");
+                  return;
+                }
+                void saveStep(5, { licence_type: profile.licence_type || "none" });
+              }}
+            />
           </>
         ) : null}
 
         {step === 5 ? (
           <>
+            <AppText variant="h3">{t("mobile.capableServices")}</AppText>
+            {(offers.data?.services || []).slice(0, 40).map((s) => (
+              <Card key={s.id}>
+                <AppText>{s.name}</AppText>
+                {s.dakshina_paise ? <AppText variant="small">{rupees(s.dakshina_paise)}</AppText> : null}
+                {s.applied ? (
+                  <AppText variant="small">{t("mobile.applied")}</AppText>
+                ) : (
+                  <PrimaryButton
+                    title={t("mobile.applyService")}
+                    variant="outline"
+                    onPress={async () => {
+                      setError(null);
+                      try {
+                        await apiClient.applyPujariServiceOffer(s.id);
+                        await offers.refetch();
+                      } catch (e: unknown) {
+                        setError(e instanceof Error ? e.message : t("mobile.couldNotApplyService"));
+                      }
+                    }}
+                  />
+                )}
+              </Card>
+            ))}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <AppText>{t("mobile.availableBookings")}</AppText>
               <Switch value={!!profile.available} onValueChange={(v) => set("available", v)} />
             </View>
             <Field label={t("mobile.serviceRadius")} value={String(profile.service_radius_km || "")} onChangeText={(v) => set("service_radius_km", Number(v) || 0)} keyboardType="number-pad" />
+            <Field label="UPI ID" value={String(profile.upi_id || "")} onChangeText={(v) => set("upi_id", v)} autoCapitalize="none" />
             <Field label={t("mobile.accountHolder")} value={String(profile.bank_holder_name || "")} onChangeText={(v) => set("bank_holder_name", v)} />
+            <Field label="Bank name" value={String(profile.bank_name || "")} onChangeText={(v) => set("bank_name", v)} />
             <Field label={t("mobile.ifsc")} value={String(profile.bank_ifsc || "")} onChangeText={(v) => set("bank_ifsc", v)} autoCapitalize="characters" />
-            <Field label={t("mobile.accountLast4")} value={String(profile.bank_account_last4 || "")} onChangeText={(v) => set("bank_account_last4", v)} keyboardType="number-pad" maxLength={4} />
+            <Field label="Account number" value={String(profile.bank_account_number || "")} onChangeText={(v) => set("bank_account_number", v)} keyboardType="number-pad" />
+            <Field label="Confirm account" value={String(profile.bank_account_confirm || profile.bank_account_number || "")} onChangeText={(v) => set("bank_account_confirm", v)} keyboardType="number-pad" />
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(4)} />
             <PrimaryButton
               title={busy ? t("mobile.saving") : t("mobile.saveContinue")}
               loading={busy}
-              onPress={() =>
+              onPress={() => {
+                const applied = (offers.data?.services || []).some((s) => s.applied);
+                if (!applied) {
+                  setError(t("web.services.applyOne"));
+                  return;
+                }
+                if (!profile.service_radius_km) {
+                  setError(t("mobile.serviceRadius"));
+                  return;
+                }
+                const payload = settlementPayload({
+                  upiId: String(profile.upi_id || ""),
+                  holder: String(profile.bank_holder_name || ""),
+                  bankName: String(profile.bank_name || ""),
+                  ifsc: String(profile.bank_ifsc || ""),
+                  accountNumber: String(profile.bank_account_number || ""),
+                  accountConfirm: String(profile.bank_account_confirm || profile.bank_account_number || ""),
+                });
+                const errs = validateSettlement({
+                  upiId: String(profile.upi_id || ""),
+                  holder: String(profile.bank_holder_name || ""),
+                  bankName: String(profile.bank_name || ""),
+                  ifsc: String(profile.bank_ifsc || ""),
+                  accountNumber: String(profile.bank_account_number || ""),
+                  accountConfirm: String(profile.bank_account_confirm || profile.bank_account_number || ""),
+                });
+                if (Object.keys(errs).length) {
+                  setError(t(String(Object.values(errs)[0])));
+                  return;
+                }
                 void saveStep(6, {
                   available: !!profile.available,
                   service_radius_km: profile.service_radius_km ? Number(profile.service_radius_km) : null,
-                  bank_account_last4: profile.bank_account_last4 || null,
-                  bank_ifsc: profile.bank_ifsc || null,
-                  bank_holder_name: profile.bank_holder_name || null,
-                })
-              }
+                  ...payload,
+                });
+              }}
             />
           </>
         ) : null}

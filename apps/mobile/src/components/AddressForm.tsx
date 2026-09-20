@@ -2,6 +2,7 @@ import { addressSchema } from "@bseva/validation";
 import * as Location from "expo-location";
 import { useState } from "react";
 import { View } from "react-native";
+import { MapPinPicker } from "./MapPinPicker";
 import { AppText, ErrorBanner, Field, PrimaryButton } from "./ui";
 import { useI18n } from "@/providers/I18nProvider";
 
@@ -16,6 +17,7 @@ export type AddressFormValue = {
   location_label?: string;
   latitude?: number;
   longitude?: number;
+  gstin?: string;
 };
 
 export function AddressForm({
@@ -23,11 +25,13 @@ export function AddressForm({
   onChange,
   onSave,
   busy,
+  includeGstin,
 }: {
   value: AddressFormValue;
   onChange: (next: AddressFormValue) => void;
   onSave: (parsed: AddressFormValue) => Promise<void>;
   busy?: boolean;
+  includeGstin?: boolean;
 }) {
   const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
@@ -45,11 +49,19 @@ export function AddressForm({
       <Field label={t("mobile.pincode")} value={value.pincode} onChangeText={(v) => set("pincode", v)} keyboardType="number-pad" />
       <Field label={t("mobile.country")} value={value.country || "India"} onChangeText={(v) => set("country", v)} />
       <Field label={t("mobile.locationLabel")} value={value.location_label || ""} onChangeText={(v) => set("location_label", v)} />
+      {includeGstin ? (
+        <Field label="GSTIN (optional)" value={value.gstin || ""} onChangeText={(v) => set("gstin", v)} autoCapitalize="characters" />
+      ) : null}
       {value.latitude != null ? (
         <AppText variant="small">
           GPS: {value.latitude.toFixed(5)}, {value.longitude?.toFixed(5)}
         </AppText>
       ) : null}
+      <MapPinPicker
+        latitude={value.latitude}
+        longitude={value.longitude}
+        onChange={(lat, lng) => onChange({ ...value, latitude: lat, longitude: lng })}
+      />
       <PrimaryButton
         title={t("mobile.useCurrentLocation")}
         variant="outline"
@@ -76,12 +88,17 @@ export function AddressForm({
             setError(t("mobile.checkAddress"));
             return;
           }
+          if (value.latitude == null || value.longitude == null) {
+            setError(t("booking.needMap"));
+            return;
+          }
           setError(null);
           await onSave({
             ...parsed.data,
             latitude: value.latitude,
             longitude: value.longitude,
             location_label: parsed.data.location_label || parsed.data.city,
+            gstin: value.gstin?.trim() || undefined,
           });
         }}
       />

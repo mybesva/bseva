@@ -1,9 +1,8 @@
 import * as Clipboard from "expo-clipboard";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { Alert, ScrollView, Share } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { rupees } from "@bseva/config";
 import { useI18n } from "@/providers/I18nProvider";
@@ -12,7 +11,12 @@ export default function RewardsScreen() {
   const { t } = useI18n();
   const codeQ = useQuery({
     queryKey: ["referral"],
-    queryFn: () => apiClient.customerReferral() as Promise<{ code?: string; referral_code?: string; applied?: boolean }>,
+    queryFn: () =>
+      apiClient.customerReferral() as Promise<{
+        code?: string;
+        referral_code?: string;
+        my_referrals?: { name?: string }[];
+      }>,
   });
   const rewardsQ = useQuery({
     queryKey: ["rewards"],
@@ -22,10 +26,9 @@ export default function RewardsScreen() {
         transactions?: { id?: string; note?: string; amount_paise?: number }[];
       }>,
   });
-  const [code, setCode] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
   const mine = codeQ.data?.code || codeQ.data?.referral_code || "";
   const rows = rewardsQ.data?.items || rewardsQ.data?.transactions || [];
+  const referrals = codeQ.data?.my_referrals || [];
   return (
     <Screen>
       <ScreenHeader title={t("mobile.rewards")} back />
@@ -50,20 +53,11 @@ export default function RewardsScreen() {
             }}
           />
         </Card>
-        <ErrorBanner message={msg} />
-        <Field label={t("mobile.applyReferral")} value={code} onChangeText={setCode} autoCapitalize="characters" />
-        <PrimaryButton
-          title={t("mobile.apply")}
-          onPress={async () => {
-            setMsg(null);
-            try {
-              await apiClient.applyReferral(code.trim());
-              await Promise.all([codeQ.refetch(), rewardsQ.refetch()]);
-            } catch (e: unknown) {
-              setMsg(e instanceof Error ? e.message : t("mobile.couldNotApply"));
-            }
-          }}
-        />
+        {referrals.map((r, i) => (
+          <Card key={i}>
+            <AppText>{r.name || t("mobile.reward")}</AppText>
+          </Card>
+        ))}
         {rows.map((r) => (
           <Card key={r.id}>
             <AppText>{r.note || t("mobile.reward")}</AppText>

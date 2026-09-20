@@ -32,8 +32,8 @@ import { dictionaries } from "@bseva/locales";
 import { api } from "@/lib/api";
 import { adminBasePath, adminPath } from "@/const";
 import ThemeToggle from "@/components/ThemeToggle";
-import BSevaLogo from "@/components/BSevaLogo";
 import NotificationBell, { CountBadge } from "@/components/NotificationBell";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -176,6 +176,16 @@ function AdminShell({ children }: AdminLayoutProps) {
     setLocation(opsBase);
   };
 
+  const adminInitials = (user?.name || "A")
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const adminRoleLabel =
+    user?.role === "super_admin" ? "Super admin" : user?.role === "admin" ? "Admin" : user?.role || "Admin";
+
   const navActive = (suffix: string) => {
     const href = adminPath(suffix);
     return location === href || (suffix !== "" && location.startsWith(href));
@@ -202,15 +212,33 @@ function AdminShell({ children }: AdminLayoutProps) {
         )}
       >
         <div className="flex flex-col h-full min-h-0">
-          <div className="h-[4.5rem] flex items-center justify-between px-3 border-b border-sidebar-border shrink-0">
-            <Link href={opsBase}>
-              <a className="flex items-center min-w-0 rounded-md bg-background px-1.5 py-1">
-                <BSevaLogo variant="full" size="portal" />
-              </a>
-            </Link>
-            <Button variant="ghost" size="icon" className="lg:hidden text-sidebar-foreground" onClick={() => setSidebarOpen(false)}>
+          <div className="relative shrink-0 border-b border-sidebar-border p-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1 lg:hidden text-sidebar-foreground"
+              onClick={() => setSidebarOpen(false)}
+            >
               <X size={20} />
             </Button>
+            <Link href={adminPath("/settings")}>
+              <a
+                className="flex flex-col items-center gap-2 py-2 text-center"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <Avatar className="h-16 w-16 border-2 border-primary/30">
+                  <AvatarFallback className="bg-primary text-lg font-bold text-primary-foreground">
+                    {adminInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="w-full min-w-0 px-1">
+                  <p className="truncate text-sm font-bold leading-snug text-sidebar-foreground" title={user?.name || undefined}>
+                    {user?.name || "Admin User"}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-sidebar-foreground/70">{adminRoleLabel}</p>
+                </div>
+              </a>
+            </Link>
           </div>
 
           <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-1">
@@ -279,22 +307,6 @@ function AdminShell({ children }: AdminLayoutProps) {
                 </Link>
               )}
           </nav>
-
-          <div className="p-4 border-t border-sidebar-border space-y-3 shrink-0">
-            <Link href={adminPath("/settings")}>
-              <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent/50 transition-colors cursor-pointer">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                  {(user?.name || "A").charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || "Admin User"}</p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">
-                    {user?.role === "super_admin" ? "Super admin" : user?.email || "admin@bseva.com"}
-                  </p>
-                </div>
-              </a>
-            </Link>
-          </div>
         </div>
       </aside>
 
@@ -303,19 +315,7 @@ function AdminShell({ children }: AdminLayoutProps) {
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </Button>
-          <Link href={opsBase}>
-            <a className="flex items-center shrink-0">
-              <BSevaLogo variant="full" size="portal" />
-            </a>
-          </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold text-foreground truncate">
-              {(() => {
-                const match = navigation.find((item) => navActive(item.suffix));
-                return match ? t(match.nameKey) : "Dashboard";
-              })()}
-            </h1>
-          </div>
+          <div className="flex-1 min-w-0" />
           <NotificationBell inboxHref={adminPath("/notifications")} />
           <ThemeToggle className="shrink-0" />
           <Button

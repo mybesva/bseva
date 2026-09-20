@@ -16,6 +16,11 @@ export default function HeadRatings() {
     queryFn: () => apiClient.headRatings() as Promise<{ id?: string; pujari_id?: string; stars?: number; comments?: string; created_at?: string }[]>,
     enabled: allowed,
   });
+  const peopleQ = useQuery({
+    queryKey: ["head-pujaris"],
+    queryFn: () => apiClient.headPujaris() as Promise<Record<string, unknown>[] | { items?: Record<string, unknown>[] }>,
+    enabled: allowed,
+  });
   const [pujariId, setPujariId] = useState("");
   const [stars, setStars] = useState("5");
   const [comments, setComments] = useState("");
@@ -29,11 +34,20 @@ export default function HeadRatings() {
     );
   }
   const rows = Array.isArray(q.data) ? q.data : [];
+  const people = Array.isArray(peopleQ.data) ? peopleQ.data : (peopleQ.data as { items?: Record<string, unknown>[] } | undefined)?.items || [];
   return (
     <Screen>
       <ScreenHeader title={t("mobile.assessPujaris")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
+        {people.slice(0, 40).map((p) => (
+          <PrimaryButton
+            key={String(p.id)}
+            title={String(p.name || p.email || p.id)}
+            variant={pujariId === String(p.id) ? "primary" : "outline"}
+            onPress={() => setPujariId(String(p.id))}
+          />
+        ))}
         <Field label={t("mobile.pujariUserId")} value={pujariId} onChangeText={setPujariId} autoCapitalize="none" />
         <AppText variant="small">{t("mobile.stars")}</AppText>
         <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
@@ -42,6 +56,10 @@ export default function HeadRatings() {
           title={t("mobile.submitRating")}
           onPress={async () => {
             setError(null);
+            if (comments.trim().length < 5) {
+              setError(t("validation.subject"));
+              return;
+            }
             try {
               await apiClient.submitHeadRating({ pujari_id: pujariId.trim(), stars: Number(stars), comments });
               setComments("");

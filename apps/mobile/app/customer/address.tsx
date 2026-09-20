@@ -37,6 +37,7 @@ export default function CustomerAddress() {
       pincode: String(p.pincode || ""),
       country: String(p.country || "India"),
       location_label: String(p.location_label || ""),
+      gstin: String(p.gstin || ""),
       latitude: p.latitude != null ? Number(p.latitude) : undefined,
       longitude: p.longitude != null ? Number(p.longitude) : undefined,
     });
@@ -60,6 +61,7 @@ export default function CustomerAddress() {
           value={form}
           onChange={setForm}
           busy={busy}
+          includeGstin
           onSave={async (parsed) => {
             setBusy(true);
             setError(null);

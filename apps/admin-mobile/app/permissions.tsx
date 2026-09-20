@@ -1,7 +1,7 @@
 import { ADMIN_PERMISSIONS } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, ScrollView, Switch, View } from "react-native";
+import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -70,6 +70,34 @@ export default function AdminPermissions() {
                   } catch (e: unknown) {
                     setError(e instanceof Error ? e.message : "Failed");
                   }
+                }}
+              />
+            ) : null}
+            {user?.role === "super_admin" && !isSuper ? (
+              <PrimaryButton
+                title="Promote to Super Admin"
+                variant="outline"
+                onPress={() => {
+                  Alert.alert(
+                    "Promote to Super Admin",
+                    `This cannot be undone from the app. Promote ${current.email || current.name}?`,
+                    [
+                      { text: t("common.cancel"), style: "cancel" },
+                      {
+                        text: "Promote",
+                        style: "destructive",
+                        onPress: async () => {
+                          setError(null);
+                          try {
+                            await apiClient.api(`/admin/users/${current.id}/promote-super`, { method: "POST" });
+                            await list.refetch();
+                          } catch (e: unknown) {
+                            setError(e instanceof Error ? e.message : "Failed");
+                          }
+                        },
+                      },
+                    ]
+                  );
                 }}
               />
             ) : null}

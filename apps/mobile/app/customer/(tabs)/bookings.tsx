@@ -40,6 +40,9 @@ export default function CustomerBookings() {
               <AppText variant="small" color={colors.mutedForeground}>
                 #{b.booking_number} · {formatDisplaySlot(b.booking_date, b.start_time)}
               </AppText>
+              {!b.pujari_details_visible && !["cancelled", "refunded", "completed"].includes(String(b.status)) ? (
+                <AppText variant="small" color={colors.mutedForeground}>{t("booking.pujariSharedLater")}</AppText>
+              ) : null}
               <AppText style={{ marginTop: 6 }}>{rupees(b.total_paise)}</AppText>
             </Card>
           </Pressable>
