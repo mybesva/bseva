@@ -342,40 +342,44 @@ function CustomerDashboardContent() {
                 Recommended for you
               </h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
               {recommendations.map((rec) => (
-                <Card key={rec.id} className="border-primary/30 bg-orange-50/40">
+                <Card key={rec.id} className="border-primary/30 bg-orange-50/40 h-full flex flex-col">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-foreground">{rec.title}</CardTitle>
+                    <CardTitle className="text-lg text-foreground line-clamp-2 min-h-[3.5rem]">{rec.title}</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {rec.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-3">{rec.description}</p>
+                  <CardContent className="flex flex-1 flex-col space-y-4">
+                    {rec.description ? (
+                      <p className="text-sm text-muted-foreground line-clamp-3 min-h-[3.75rem]">{rec.description}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground min-h-[3.75rem]" />
                     )}
-                    {rec.recurrence_hint && (
+                    {rec.recurrence_hint ? (
                       <p className="text-xs text-muted-foreground">{rec.recurrence_hint}</p>
-                    )}
-                    <div className="text-sm font-medium text-foreground">
-                      <PujaTitle name={rec.service_name} />
-                      {(() => {
-                        const line = formatStartingFrom(rec);
-                        return line ? ` · ${line}` : "";
-                      })()}
+                    ) : null}
+                    <div className="mt-auto space-y-3">
+                      <div className="text-sm font-medium text-foreground space-y-1">
+                        <PujaTitle name={rec.service_name} className="block" />
+                        {(() => {
+                          const line = formatStartingFrom(rec);
+                          return line ? <p className="text-primary">{line}</p> : null;
+                        })()}
+                      </div>
+                      <Button
+                        className="w-full bg-primary hover:bg-primary/90 font-bold"
+                        disabled={!canBook || checking}
+                        title={!canBook ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
+                        onClick={() => {
+                          if (!canBook || checking) {
+                            notifyBookingBlocked(status, t);
+                            return;
+                          }
+                          setLocation(`/book/${rec.service_slug}`);
+                        }}
+                      >
+                        {checking ? "Checking…" : t("customer.bookNow")}
+                      </Button>
                     </div>
-                    <Button
-                      className="w-full bg-primary hover:bg-primary/90 font-bold"
-                      disabled={!canBook || checking}
-                      title={!canBook ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
-                      onClick={() => {
-                        if (!canBook || checking) {
-                          notifyBookingBlocked(status, t);
-                          return;
-                        }
-                        setLocation(`/book/${rec.service_slug}`);
-                      }}
-                    >
-                      {checking ? "Checking…" : t("customer.bookNow")}
-                    </Button>
                   </CardContent>
                 </Card>
               ))}

@@ -44,6 +44,34 @@ export const SUPPORT_PRIORITIES = [
   { id: "low", label: "Low" },
 ] as const;
 
+export const SUPPORT_RESOLUTIONS = [
+  { id: "information_provided", label: "Information Provided" },
+  { id: "booking_updated", label: "Booking Updated" },
+  { id: "puja_rescheduled", label: "Puja Rescheduled" },
+  { id: "pujari_reassigned", label: "Pujari Reassigned" },
+  { id: "refund_initiated", label: "Refund Initiated" },
+  { id: "payment_issue_resolved", label: "Payment Issue Resolved" },
+  { id: "escalated", label: "Escalated" },
+  { id: "other", label: "Other" },
+] as const;
+
+export const SUPPORT_ESCALATIONS = [
+  { id: "senior_support", label: "Senior Support" },
+  { id: "operations", label: "Operations" },
+  { id: "finance", label: "Finance" },
+  { id: "pujari_manager", label: "Pujari Manager" },
+  { id: "technical", label: "Technical" },
+  { id: "other", label: "Other" },
+] as const;
+
+export const SUPPORT_NOTE_KINDS = [
+  { id: "reply", label: "Reply" },
+  { id: "internal_note", label: "Internal note" },
+  { id: "call_note", label: "Call note" },
+  { id: "whatsapp_note", label: "WhatsApp note" },
+  { id: "email_note", label: "Email note" },
+] as const;
+
 export const SUPPORT_CATEGORIES = [
   { id: "booking", label: "Booking" },
   { id: "payment", label: "Payment" },

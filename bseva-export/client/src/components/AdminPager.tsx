@@ -34,7 +34,7 @@ export function AdminPager({
   onPage,
   onPageSize,
   sizes = PAGE_SIZES,
-  sizeLabel = "names / page",
+  sizeLabel = "IDs / page",
 }: {
   page: number;
   pages: number;
@@ -51,7 +51,7 @@ export function AdminPager({
         Page {page}/{pages} · {total}
       </span>
       <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-        <SelectTrigger className="h-8 w-[148px] text-xs" aria-label="Rows per page">
+        <SelectTrigger className="h-8 w-[160px] text-xs" aria-label="Rows per page">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

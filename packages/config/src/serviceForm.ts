@@ -1,3 +1,11 @@
+export const emptyServiceCategoryForm = {
+  slug: "",
+  name: "",
+  description: "",
+  sort_order: 0,
+  active: true,
+};
+
 export function parseAliasList(text: string): string[] {
   return text
     .split(",")

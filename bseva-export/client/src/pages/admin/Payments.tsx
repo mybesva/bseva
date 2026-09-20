@@ -140,8 +140,7 @@ export default function Payments() {
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <div>
-          <h1 className="text-h1">Payments</h1>
-          <p className="text-sm text-muted-foreground mt-1">Live booking payments from the database</p>
+          <p className="text-sm text-muted-foreground">Live booking payments from the database</p>
         </div>
         <AdminPager
           page={page}

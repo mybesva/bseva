@@ -150,8 +150,8 @@ export default function Home() {
             <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-eyebrow mb-5">
               {t("home.badge")}
             </span>
-            <h1 className="text-display text-primary mb-5 drop-shadow-lg text-balance">
-              {t("home.heroTitle1")} {t("home.heroTitle2")}
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-5 drop-shadow-lg text-balance text-white [color:#ffffff]">
+              <span>{t("home.heroTitle1")}</span> <span>{t("home.heroTitle2")}</span>
             </h1>
             <p className="text-body-lg text-white/95 max-w-2xl mx-auto mb-6 drop-shadow">
               {t("home.heroDesc")}

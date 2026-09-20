@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -99,7 +98,6 @@ export default function AdminSamagri() {
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-h1">Samagri catalog</h1>
           <p className="text-sm text-muted-foreground">
             Master items with en / hi / te names. Link them per service in Services admin.
           </p>
@@ -123,26 +121,16 @@ export default function AdminSamagri() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Key</TableHead>
                   <TableHead>Name (EN)</TableHead>
                   <TableHead>HI / TE</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((it) => (
                   <TableRow key={it.id}>
-                    <TableCell className="font-mono text-xs">{it.item_key ||"—"}</TableCell>
                     <TableCell className="font-medium">{it.name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {(it.translations?.hi || "—") + " / " + (it.translations?.te || "—")}
-                    </TableCell>
-                    <TableCell>{it.unit || "pcs"}</TableCell>
-                    <TableCell>
-                      <Badge variant={it.active === false ? "secondary" : "default"}>
-                        {it.active === false ? "Inactive" : "Active"}
-                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}

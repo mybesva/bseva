@@ -20,7 +20,6 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import type { PujariLevelRow } from "@/hooks/usePujariLevels";
 import { useAuth } from "@/_core/hooks/useAuth";
-import AdminPageHeader from "@/components/AdminPageHeader";
 
 const emptyRoleForm = { title: "", summary: "", examplesText: "" };
 
@@ -569,6 +568,16 @@ export default function Settings() {
     void loadRoles();
   }, []);
 
+  useEffect(() => {
+    const raw = window.location.hash.replace("#", "").trim();
+    if (!raw) return;
+    const id = raw.startsWith("settings-") ? raw : `settings-${raw}`;
+    const timer = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [platform]);
+
   function openAddRole() {
     setEditingRole(null);
     setRoleForm(emptyRoleForm);
@@ -731,7 +740,23 @@ export default function Settings() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader title="Settings" />
+      <nav className="sticky top-16 z-30 -mx-4 -mt-4 mb-4 flex flex-wrap gap-2 border-b border-border bg-background/95 px-4 py-3 backdrop-blur lg:-mx-6 lg:-mt-6 lg:px-6">
+        {[
+          ...SETTING_GROUPS.map((group) => ({ id: `settings-${group.id}`, title: group.title })),
+          { id: "settings-cancellation", title: "Cancellation" },
+          { id: "settings-pujari-roles", title: "Pujari roles" },
+        ].map((item) => (
+          <Button
+            key={item.id}
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          >
+            {item.title}
+          </Button>
+        ))}
+      </nav>
 
       <div className="space-y-8 max-w-4xl">
         {SETTING_GROUPS.map((group) => {
@@ -739,7 +764,7 @@ export default function Settings() {
           const isPricing = group.id === "pricing";
           if (!items.length && !isPricing) return null;
           return (
-            <Card key={group.id}>
+            <Card key={group.id} id={`settings-${group.id}`} className="scroll-mt-24">
               <CardHeader>
                 <CardTitle className="">{group.title}</CardTitle>
                 {group.description && (
@@ -782,7 +807,7 @@ export default function Settings() {
           );
         })}
 
-        <Card>
+        <Card id="settings-cancellation" className="scroll-mt-24">
           <CardHeader>
             <CardTitle className="">Cancellation policy</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -836,7 +861,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="settings-pujari-roles" className="scroll-mt-24">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
             <CardTitle className="">Pujari roles</CardTitle>
             <Button size="sm" className="gap-2" onClick={openAddRole}>

@@ -149,7 +149,7 @@ export default function Services() {
             <div className="space-y-10">
               {(() => {
                 const renderGrid = (list: Svc[]) => (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
                     {list.map((s, i) => {
                       const Icon = ICONS[i % ICONS.length];
                       const img = serviceImageUrl(s);
@@ -171,7 +171,7 @@ export default function Services() {
                           }}
                           role="link"
                           tabIndex={0}
-                          className="cursor-pointer min-w-0 h-full"
+                          className="cursor-pointer min-w-0 h-full flex"
                         >
                           <ServiceCard
                             title={s.name}

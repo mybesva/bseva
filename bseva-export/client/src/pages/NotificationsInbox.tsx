@@ -23,12 +23,21 @@ type Note = {
 
 function InboxList() {
   const [items, setItems] = useState<Note[]>([]);
+  const [counts, setCounts] = useState({ total: 0, read: 0, unread: 0 });
   const [, setLocation] = useLocation();
   const { t } = useI18n();
 
   async function load() {
-    const list = await api<{ items: Note[] }>("/notifications?page=1&page_size=50");
-    setItems(list.items || []);
+    const [list, count] = await Promise.all([
+      api<{ items: Note[]; total?: number }>("/notifications?page=1&page_size=50"),
+      api<{ unread: number; read?: number; total?: number }>("/notifications/unread-count"),
+    ]);
+    const next = list.items || [];
+    setItems(next);
+    const unread = count.unread || 0;
+    const total = count.total ?? list.total ?? next.length;
+    const read = count.read ?? Math.max(0, total - unread);
+    setCounts({ total, read, unread });
   }
 
   useEffect(() => {
@@ -50,8 +59,13 @@ function InboxList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-h1">{t("notifications.title")}</h1>
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div>
+          <h1 className="text-h1">{t("notifications.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {counts.total} total · {counts.read} read · {counts.unread} unread
+          </p>
+        </div>
         <Button size="sm" variant="outline" onClick={() => void markAll()}>
           {t("notifications.markAllRead")}
         </Button>

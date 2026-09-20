@@ -61,7 +61,7 @@ function RatingsForm() {
         method: "POST",
         body: JSON.stringify({ pujari_id: target, stars, comments: comments.trim() }),
       });
-      toast.success("Assessment saved");
+      toast.success("Rating saved");
       setComments("");
       await load();
     } catch (err: any) {
@@ -114,7 +114,7 @@ function RatingsForm() {
                 placeholder="Do not use numeric IDs like 2"
               />
               <p className="text-xs text-muted-foreground">
-                Assessments require the pujari account UUID, email, or phone — not a display number.
+                Ratings require the pujari account UUID, email, or phone — not a display number.
               </p>
             </div>
             <div className="space-y-1">
@@ -123,8 +123,17 @@ function RatingsForm() {
                 type="number"
                 min={1}
                 max={5}
-                value={stars}
-                onChange={(e) => setStars(Number(e.target.value))}
+                step={1}
+                inputMode="numeric"
+                value={String(stars)}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").replace(/^0+/, "");
+                  if (!digits) {
+                    setStars(1);
+                    return;
+                  }
+                  setStars(Math.min(5, Math.max(1, Number(digits))));
+                }}
                 required
               />
             </div>
@@ -133,17 +142,17 @@ function RatingsForm() {
               <Textarea value={comments} onChange={(e) => setComments(e.target.value)} required minLength={5} rows={4} />
             </div>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Submit assessment"}
+              {saving ? "Saving…" : "Submit rating"}
             </Button>
           </form>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Assessment history</CardTitle>
+          <CardTitle className="text-base">Rating history</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
-          {rows.length === 0 && <p className="text-sm text-muted-foreground">No assessments yet.</p>}
+          {rows.length === 0 && <p className="text-sm text-muted-foreground">No ratings yet.</p>}
           {rows.map((r) => (
             <div key={r.id} className="border rounded-md p-3 text-sm">
               <div className="font-medium">
@@ -164,14 +173,14 @@ export default function HeadRatingsPage() {
   if (user?.role === "admin" || user?.role === "super_admin") {
     return (
       <AdminLayout>
-        <h1 className="text-h1 mb-6">Head Pujari assessments</h1>
-        <RatingsForm />
+      <h1 className="text-h1 mb-6">Pujari Ratings</h1>
+      <RatingsForm />
       </AdminLayout>
     );
   }
   return (
     <PujariPortal>
-      <h1 className="text-h1 mb-6">Assess Pujaris</h1>
+      <h1 className="text-h1 mb-6">Rate Pujari</h1>
       <RatingsForm />
     </PujariPortal>
   );

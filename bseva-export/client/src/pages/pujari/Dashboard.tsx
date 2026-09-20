@@ -269,7 +269,7 @@ function PujariDashboardContent() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                <PujaTitle name={row.pujaType.name} className="truncate min-w-0" />
+                <PujaTitle name={row.pujaType.name} className="min-w-0" nameClassName="truncate" />
                 {row.booking.samagriRequested ? (
                   <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[10px] uppercase tracking-wide">
                     Samagri Selected

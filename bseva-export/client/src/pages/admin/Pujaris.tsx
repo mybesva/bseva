@@ -376,8 +376,7 @@ export default function PujarisPage() {
   return (
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h1 className="text-h1">Pujaris</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           <AdminPager
             page={page}
             pages={pages}
@@ -385,6 +384,7 @@ export default function PujarisPage() {
             pageSize={pageSize}
             onPage={(p) => updateFilters({ page: p })}
             onPageSize={(size) => updateFilters({ size })}
+            sizeLabel="IDs / page"
           />
           <Button onClick={() => setOpen(true)} className="gap-2">
             <Plus size={16} />

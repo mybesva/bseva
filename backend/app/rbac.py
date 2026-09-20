@@ -47,6 +47,7 @@ DEFAULT_ADMIN_PERMISSIONS = [
     "block_pujaris",
     "view_bookings",
     "manage_bookings",
+    "view_payments",
     "manage_support",
     "view_reports",
 ]

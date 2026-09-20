@@ -59,16 +59,20 @@
       "expo-secure-store",
       "expo-image-picker",
       "expo-document-picker",
+      "expo-file-system",
+      "expo-sharing",
       [
         "expo-splash-screen",
         {
           "backgroundColor": "#FFF8E7",
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "imageWidth": 400,
+          "imageWidth": 200,
           "android": {
             "image": "./assets/splash-android.png",
-            "backgroundColor": "#FFF8E7"
+            "backgroundColor": "#FFF8E7",
+            "resizeMode": "contain",
+            "imageWidth": 180
           }
         }
       ],

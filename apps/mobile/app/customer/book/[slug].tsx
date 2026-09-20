@@ -624,9 +624,7 @@ export default function BookService() {
                       label={t("booking.streetPh")}
                       value={address}
                       onChangeText={setAddress}
-                      multiline
-                      numberOfLines={3}
-                      style={{ minHeight: 88, textAlignVertical: "top" }}
+                      placeholder={t("booking.streetPh")}
                     />
                     <Field label={t("web.booking.landmarkOptional")} value={landmark} onChangeText={setLandmark} placeholder={t("booking.landmarkPh")} />
                     <BookingMapLocation
@@ -690,7 +688,13 @@ export default function BookService() {
                 onBooked={setMuhurtaReceipt}
               />
             ) : null}
-            <Field label={t("mobile.specialInstructions")} value={instructions} onChangeText={setInstructions} />
+            <Field
+              label={t("mobile.specialInstructions")}
+              value={instructions}
+              onChangeText={setInstructions}
+              multiline
+              numberOfLines={6}
+            />
             <View style={{ flexDirection: "row", gap: 8 }}>
               <View style={{ flex: 1 }}>
                 <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(1)} />

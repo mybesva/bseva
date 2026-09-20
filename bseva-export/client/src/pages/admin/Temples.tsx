@@ -107,9 +107,6 @@ const CSV_HEADERS = [
   "description",
 ];
 
-const SAMPLE_CSV = `${CSV_HEADERS.join(",")}
-Shri Ganesh Temple,Pandit Sharma,Lord Ganesha,MG Road,Hyderabad,Telangana,500001,6:00 AM - 9:00 PM,9876543210,temple@email.com,Ancient temple dedicated to Lord Ganesha`;
-
 export default function TemplesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
@@ -212,16 +209,6 @@ export default function TemplesPage() {
     }
   }
 
-  function downloadTemplate() {
-    const blob = new Blob([SAMPLE_CSV], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "temples_template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   function exportCsv() {
     const lines = [CSV_HEADERS.join(",")];
     for (const t of temples) {
@@ -298,10 +285,6 @@ export default function TemplesPage() {
             <Button variant="outline" onClick={exportCsv} disabled={!temples.length}>
               <Download size={16} className="mr-2" />
               Export
-            </Button>
-            <Button variant="outline" onClick={downloadTemplate}>
-              <Download size={16} className="mr-2" />
-              CSV template
             </Button>
             <Button variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}>
               <Upload size={16} className="mr-2" />

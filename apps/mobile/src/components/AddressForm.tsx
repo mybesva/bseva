@@ -1,10 +1,15 @@
 import { addressSchema } from "@bseva/validation";
-import * as Location from "expo-location";
 import { useState } from "react";
 import { View } from "react-native";
 import { MapPinPicker } from "./MapPinPicker";
 import { AppText, ErrorBanner, Field, PrimaryButton } from "./ui";
-import { useI18n } from "@/providers/I18nProvider";
+import { useAppTheme } from "@/theme/ThemeContext";
+import {
+  getDeviceCoordinates,
+  LocationDisabledError,
+  LocationPermissionError,
+  reverseGeocodeParts,
+} from "@/utils/deviceLocation";
 
 export type AddressFormValue = {
   address_line1: string;
@@ -34,10 +39,40 @@ export function AddressForm({
   includeGstin?: boolean;
 }) {
   const { t } = useI18n();
+  const { colors } = useAppTheme();
   const [error, setError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
   function set<K extends keyof AddressFormValue>(key: K, v: AddressFormValue[K]) {
     onChange({ ...value, [key]: v });
   }
+
+  async function useCurrentLocation() {
+    setError(null);
+    setLocating(true);
+    try {
+      const pos = await getDeviceCoordinates();
+      const geo = await reverseGeocodeParts(pos.latitude, pos.longitude);
+      onChange({
+        ...value,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        city: geo?.city || value.city,
+        district: geo?.district || value.district,
+        state: geo?.state || value.state,
+        pincode: geo?.pincode || value.pincode,
+        country: geo?.country || value.country || "India",
+        location_label: geo?.label || value.location_label,
+        address_line1: value.address_line1 || geo?.street || value.address_line1,
+      });
+    } catch (e) {
+      if (e instanceof LocationPermissionError) setError(t("mobile.locationPermissionDenied"));
+      else if (e instanceof LocationDisabledError) setError(t("web.address.currentUnavailable"));
+      else setError(t("web.address.currentFailed"));
+    } finally {
+      setLocating(false);
+    }
+  }
+
   return (
     <View style={{ gap: 10 }}>
       <ErrorBanner message={error} />
@@ -65,20 +100,10 @@ export function AddressForm({
       <PrimaryButton
         title={t("mobile.useCurrentLocation")}
         variant="outline"
-        onPress={async () => {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            setError(t("mobile.locationPermissionDenied"));
-            return;
-          }
-          const pos = await Location.getCurrentPositionAsync({});
-          onChange({
-            ...value,
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          });
-        }}
+        loading={locating}
+        onPress={() => void useCurrentLocation()}
       />
+      {error ? <AppText variant="small" color={colors.destructive}>{error}</AppText> : null}
       <PrimaryButton
         title={busy ? t("mobile.saving") : t("mobile.saveAddress")}
         loading={busy}

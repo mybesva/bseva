@@ -37,6 +37,7 @@ const IDENTICAL_OK = new Set([
   "mobile.premium",
   "mobile.themeDark",
   "mobile.themeLight",
+  "web.bank.upi",
 ]);
 
 describe("locale catalog", () => {

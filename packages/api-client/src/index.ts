@@ -748,6 +748,13 @@ export function createApiClient(opts: ApiClientOptions) {
       );
     },
 
+    uploadAdminPujariDocument(pujariId: string, file: UploadFile, document_type: string) {
+      const form = new FormData();
+      form.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+      form.append("document_type", document_type);
+      return upload(`/admin/pujaris/${encodeURIComponent(pujariId)}/documents/upload`, form);
+    },
+
     uploadPromoImage(file: UploadFile) {
       const form = new FormData();
       form.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);

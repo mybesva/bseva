@@ -20,16 +20,16 @@ export function PujaTitle({
   const clean = stripPujaTitleMarks(name);
   if (!clean) return null;
   return (
-    <Comp className={cn("leading-snug", className)} aria-label={formatPujaTitleText(clean)}>
+    <Comp className={cn("inline-flex max-w-full items-center leading-snug", className)} aria-label={formatPujaTitleText(clean)}>
       <span
-        className="text-primary font-semibold align-middle text-[0.82em] mr-1.5"
+        className="text-primary font-semibold shrink-0 align-middle text-[0.82em] mr-1.5"
         aria-hidden
       >
         ॐ
       </span>
       <span
         className={cn(
-          "font-bold align-middle",
+          "font-bold align-middle min-w-0",
           onDark ? "text-[#FFF8E7]" : "text-[#1A2B4A] dark:text-[#E8EEF6]",
           nameClassName,
         )}
@@ -37,7 +37,7 @@ export function PujaTitle({
         {clean}
       </span>
       <span
-        className="text-primary font-semibold align-middle text-[0.82em] ml-1.5"
+        className="text-primary font-semibold shrink-0 align-middle text-[0.82em] ml-1.5"
         aria-hidden
       >
         卐

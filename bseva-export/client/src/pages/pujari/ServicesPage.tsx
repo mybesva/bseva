@@ -8,6 +8,7 @@ import { api, rupees } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
+import { PujaTitle } from "@/components/PujaTitle";
 
 type CatalogService = {
   id: string;
@@ -190,7 +191,7 @@ export default function PujariServicesPage() {
       <div className="w-full max-w-none space-y-6">
         <div className="sticky top-14 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">{t("web.services.title")}</h1>
+            <h1 className="text-h1 truncate">{t("web.services.title")}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               {appliedCount > 0
                 ? t("web.services.appliedCount", { count: appliedCount })
@@ -243,7 +244,7 @@ export default function PujariServicesPage() {
                     >
                       <div className="flex-1 min-w-0 space-y-0.5">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
-                          <p className="font-medium text-foreground">{s.name}</p>
+                          <PujaTitle name={s.name} className="min-w-0" />
                           <p className="text-sm font-semibold text-primary">{t("web.services.dakshina", { amount: rupees(s.dakshina_paise) })}</p>
                         </div>
                         {s.short_description ? (

@@ -32,7 +32,6 @@ export default function AdminPricingRules() {
 
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-4">Location & Surge Pricing</h1>
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

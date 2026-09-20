@@ -34,6 +34,7 @@ import { adminBasePath, adminPath } from "@/const";
 import ThemeToggle from "@/components/ThemeToggle";
 import NotificationBell, { CountBadge } from "@/components/NotificationBell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import BSevaLogo from "@/components/BSevaLogo";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -289,7 +290,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                   onClick={() => setSidebarOpen(false)}
                 >
                   <Star size={18} />
-                  Head assessments
+                  {t("nav.headRatings")}
                 </a>
               </Link>
               {showLegal && (
@@ -315,7 +316,16 @@ function AdminShell({ children }: AdminLayoutProps) {
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </Button>
-          <div className="flex-1 min-w-0" />
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <Link href={adminPath("")}>
+              <a className="flex min-w-0 items-center gap-2 sm:gap-3" onClick={() => setSidebarOpen(false)}>
+                <BSevaLogo variant="full" size="portal" className="h-10 sm:h-11 max-w-[9.5rem]" />
+                <span className="truncate text-base sm:text-lg font-bold text-foreground">
+                  {isSuper ? "Super Admin" : "Admin"}
+                </span>
+              </a>
+            </Link>
+          </div>
           <NotificationBell inboxHref={adminPath("/notifications")} />
           <ThemeToggle className="shrink-0" />
           <Button

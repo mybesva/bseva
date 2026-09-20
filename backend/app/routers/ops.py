@@ -14,7 +14,7 @@ from app.db import get_db
 from app.deps import current_user, require_roles
 from app.domain import row_dict
 from app.platform_config import get_all_settings, get_setting, set_setting
-from app.rbac import ALL_PERMISSIONS, require_admin, require_permission, user_permissions
+from app.rbac import ALL_PERMISSIONS, require_admin, require_any_permission, require_permission, user_permissions
 
 router = APIRouter(tags=["ops"])
 
@@ -506,7 +506,7 @@ def resend_invoice_email(invoice_id: str, user=Depends(require_permission("manag
 def admin_list_invoices(
     q: str = "",
     invoice_type: str = "customer",
-    user=Depends(require_permission("view_payments")),
+    user=Depends(require_any_permission("view_payments", "manage_bookings", "manage_settlements")),
     db: Session = Depends(get_db),
 ):
     from app.invoice_docs import _ensure_invoice_schema
@@ -994,3 +994,61 @@ def _require_cron_auth(request: Request) -> None:
             503,
             "Set CRON_SECRET in Vercel env — Vercel Cron sends it as Bearer automatically (no manual calls)",
         )
+
+
+@router.get("/admin/reviews")
+def admin_list_reviews(user=Depends(require_permission("view_bookings")), db: Session = Depends(get_db)):
+    rows = db.execute(
+        text(
+            """
+            SELECT r.id, r.stars, r.comment, r.created_at, r.booking_id,
+                   COALESCE(r.moderation_status, 'approved') AS status,
+                   cu.name AS customer_name,
+                   pu.name AS priest_name,
+                   s.name AS puja_type,
+                   b.booking_date
+            FROM ratings r
+            JOIN users cu ON cu.id = r.from_user_id
+            LEFT JOIN users pu ON pu.id = r.to_user_id
+            LEFT JOIN bookings b ON b.id = r.booking_id
+            LEFT JOIN services s ON s.id = b.service_id
+            WHERE COALESCE(r.skipped, FALSE) = FALSE AND r.role_from = 'customer'
+            ORDER BY r.created_at DESC
+            LIMIT 500
+            """
+        )
+    ).mappings().all()
+    return [row_dict(r) for r in rows]
+
+
+@router.post("/admin/reviews/{review_id}/approve")
+def admin_approve_review(
+    review_id: str, user=Depends(require_permission("view_bookings")), db: Session = Depends(get_db)
+):
+    return _set_review_status(db, review_id, "approved")
+
+
+@router.post("/admin/reviews/{review_id}/reject")
+def admin_reject_review(
+    review_id: str, user=Depends(require_permission("view_bookings")), db: Session = Depends(get_db)
+):
+    return _set_review_status(db, review_id, "rejected")
+
+
+def _set_review_status(db: Session, review_id: str, status: str):
+    row = db.execute(
+        text(
+            """
+            UPDATE ratings
+            SET moderation_status = :st
+            WHERE CAST(id AS text) = :id AND COALESCE(skipped, FALSE) = FALSE
+            RETURNING id, moderation_status
+            """
+        ),
+        {"id": review_id, "st": status},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Review not found")
+    db.commit()
+    return {"ok": True, "id": str(row["id"]), "status": row["moderation_status"]}
+

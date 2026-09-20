@@ -171,7 +171,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="container flex h-[4.75rem] lg:h-24 items-center justify-between gap-3 lg:gap-4">
+        <div className="container flex h-16 lg:h-[4.5rem] items-center justify-between gap-3 lg:gap-4">
           <Link href="/">
             <a className="flex items-center shrink-0 -ml-1">
               <BSevaLogo variant="full" size="header" />

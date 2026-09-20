@@ -144,8 +144,7 @@ export default function RecommendationsAdmin() {
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <div>
-          <h1 className="text-h1">Recommended pujas</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Suggestions shown to customers on their dashboard. Pick a month to make one seasonal, or leave it on
             “Any month” to show it all year.
           </p>

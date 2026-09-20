@@ -13,6 +13,7 @@ import { customerRequirements } from "./resources/customerRequirements";
 import webUiGaps from "./resources/webUiGaps";
 import { extras } from "./extras";
 import { landing } from "./resources/landing";
+import { gapTranslations } from "./resources/gapTranslations";
 
 export {
   DEFAULT_LANG,
@@ -75,6 +76,7 @@ function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): 
     ...webUiGaps,
     ...extras[lang],
     ...landing[lang],
+    ...gapTranslations[lang],
   };
 }
 

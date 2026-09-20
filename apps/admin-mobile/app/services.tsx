@@ -2,6 +2,7 @@ import {
   adminServiceActivationError,
   buildAdminServicePayload,
   emptyAdminServiceForm,
+  emptyServiceCategoryForm,
   paiseFromRupees,
   rupees,
   rupeesField,
@@ -32,6 +33,64 @@ function formFromRow(s: Svc): AdminServiceForm {
     pricing_status: s.pricing_status === "priced" ? "priced" : "awaiting_pricing",
     samagri_review_status: (s.samagri_review_status as AdminServiceForm["samagri_review_status"]) || "UNVERIFIED",
   };
+}
+
+type Cat = { id: string; slug: string; name: string; description?: string; sort_order: number; active: boolean };
+
+function ServiceCategories({ onError }: { onError: (v: string | null) => void }) {
+  const list = useQuery({
+    queryKey: ["admin-service-categories"],
+    queryFn: () => apiClient.api<Cat[] | { items?: Cat[] }>("/admin/service-categories"),
+  });
+  const rows = Array.isArray(list.data) ? list.data : list.data?.items || [];
+  const [form, setForm] = useState({ ...emptyServiceCategoryForm });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    setBusy(true);
+    onError(null);
+    try {
+      if (editId) {
+        await apiClient.api(`/admin/service-categories/${editId}`, { method: "PUT", body: JSON.stringify(form) });
+      } else {
+        await apiClient.api("/admin/service-categories", { method: "POST", body: JSON.stringify(form) });
+      }
+      setForm({ ...emptyServiceCategoryForm });
+      setEditId(null);
+      await list.refetch();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Card style={{ gap: 8 }}>
+      <AppText variant="h3">Service categories</AppText>
+      {rows.map((c) => (
+        <Card key={c.id}>
+          <AppText>{c.name} · {c.slug} · {c.active ? "active" : "off"}</AppText>
+          <PrimaryButton
+            title="Edit"
+            variant="outline"
+            onPress={() => {
+              setEditId(c.id);
+              setForm({ slug: c.slug, name: c.name, description: c.description || "", sort_order: c.sort_order, active: c.active });
+            }}
+          />
+        </Card>
+      ))}
+      <Field label="Name" value={form.name} onChangeText={(name) => setForm({ ...form, name })} />
+      <Field label="Slug" value={form.slug} onChangeText={(slug) => setForm({ ...form, slug })} />
+      <Field label="Description" value={form.description} onChangeText={(description) => setForm({ ...form, description })} />
+      <Field label="Sort order" value={String(form.sort_order)} onChangeText={(v) => setForm({ ...form, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <AppText>Active</AppText>
+        <Switch value={form.active} onValueChange={(active) => setForm({ ...form, active })} />
+      </View>
+      <PrimaryButton title={editId ? "Update category" : "Add category"} loading={busy} onPress={() => void save()} />
+    </Card>
+  );
 }
 
 export default function AdminServices() {
@@ -143,6 +202,7 @@ export default function AdminServices() {
           <>
             <Field label={t("admin.search")} value={q} onChangeText={setQ} />
             <PrimaryButton title="Add service" onPress={() => { setEditId(null); setForm(emptyAdminServiceForm()); }} />
+            <ServiceCategories onError={setError} />
             {list.isLoading ? <LoadingBlock /> : null}
             {rows.map((s) => (
               <Card key={String(s.id)}>

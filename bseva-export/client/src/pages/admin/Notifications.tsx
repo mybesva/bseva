@@ -22,7 +22,7 @@ export default function AdminNotifications() {
   const [items, setItems] = useState<Notification[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [unread, setUnread] = useState(0);
+  const [counts, setCounts] = useState({ total: 0, read: 0, unread: 0 });
   const [category, setCategory] = useState("all");
 
   async function load(p = 1) {
@@ -30,12 +30,15 @@ export default function AdminNotifications() {
     if (category !== "all") qs.set("category", category);
     const [list, count] = await Promise.all([
       api<{ items: Notification[]; pages: number; page: number }>(`/notifications?${qs}`),
-      api<{ unread: number }>("/notifications/unread-count"),
+      api<{ unread: number; read?: number; total?: number }>("/notifications/unread-count"),
     ]);
     setItems(list.items || []);
     setPages(list.pages || 1);
     setPage(list.page || p);
-    setUnread(count.unread || 0);
+    const unread = count.unread || 0;
+    const total = count.total ?? list.items?.length ?? 0;
+    const read = count.read ?? Math.max(0, total - unread);
+    setCounts({ total, read, unread });
   }
 
   useEffect(() => {
@@ -58,8 +61,7 @@ export default function AdminNotifications() {
   return (
     <AdminLayout>
       <AdminPageHeader
-        title="Notifications"
-        description={`${unread} unread`}
+        description={`${counts.total} total · ${counts.read} read · ${counts.unread} unread`}
         actions={
           <div className="flex gap-2 items-center">
             <select

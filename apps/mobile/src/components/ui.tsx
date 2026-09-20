@@ -122,6 +122,8 @@ export function PrimaryButton({
 
 export function Field({
   label,
+  style,
+  multiline,
   ...props
 }: TextInputProps & { label: string }) {
   const { colors } = useAppTheme();
@@ -131,17 +133,22 @@ export function Field({
       <TextInput
         placeholderTextColor={colors.mutedForeground}
         accessibilityLabel={label}
-        style={{
-          backgroundColor: colors.input,
-          borderRadius: radius.md,
-          borderWidth: 1,
-          borderColor: colors.border,
-          paddingHorizontal: 12,
-          paddingVertical: 12,
-          minHeight: 48,
-          color: colors.foreground,
-          fontSize: 16,
-        }}
+        multiline={multiline}
+        textAlignVertical={multiline ? "top" : "center"}
+        style={[
+          {
+            backgroundColor: colors.input,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+            minHeight: multiline ? 128 : 48,
+            color: colors.foreground,
+            fontSize: 16,
+          },
+          style,
+        ]}
         {...props}
       />
     </View>

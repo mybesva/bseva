@@ -211,16 +211,23 @@ def list_notifications(
 
 @router.get("/notifications/unread-count")
 def unread_count(user=Depends(current_user), db: Session = Depends(get_db)):
-    n = db.execute(
+    row = db.execute(
         text(
             """
-            SELECT COUNT(*) FROM notifications
-            WHERE user_id = CAST(:uid AS uuid) AND COALESCE(is_read, FALSE) = FALSE
+            SELECT
+              COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE COALESCE(is_read, FALSE) = FALSE) AS unread,
+              COUNT(*) FILTER (WHERE COALESCE(is_read, FALSE) = TRUE) AS read
+            FROM notifications
+            WHERE user_id = CAST(:uid AS uuid)
             """
         ),
         {"uid": user["id"]},
-    ).scalar()
-    return {"unread": int(n or 0)}
+    ).mappings().first()
+    total = int((row or {}).get("total") or 0)
+    unread = int((row or {}).get("unread") or 0)
+    read = int((row or {}).get("read") or 0)
+    return {"unread": unread, "read": read, "total": total}
 
 
 @router.post("/notifications/{notification_id}/read")

@@ -263,7 +263,7 @@ export default function PujariBookingsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                          <PujaTitle name={row.pujaType.name} className="truncate min-w-0" />
+                          <PujaTitle name={row.pujaType.name} className="min-w-0" nameClassName="truncate" />
                           {row.booking.offerInvited ? (
                             <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-[10px] uppercase tracking-wide">
                               {row.booking.offerDistanceKm != null

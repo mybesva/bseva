@@ -977,9 +977,10 @@ def submit_rating(booking_id: str, body: RatingIn, user=Depends(current_user), d
         db.execute(
             text(
                 """
-                INSERT INTO ratings (booking_id, from_user_id, to_user_id, role_from, stars, comment, skipped)
-                VALUES (CAST(:b AS uuid), CAST(:f AS uuid), CAST(:t AS uuid), :r, :s, :c, FALSE)
-                ON CONFLICT (booking_id, from_user_id) DO UPDATE SET stars = EXCLUDED.stars, comment = EXCLUDED.comment, skipped = FALSE
+                INSERT INTO ratings (booking_id, from_user_id, to_user_id, role_from, stars, comment, skipped, moderation_status)
+                VALUES (CAST(:b AS uuid), CAST(:f AS uuid), CAST(:t AS uuid), :r, :s, :c, FALSE, 'pending')
+                ON CONFLICT (booking_id, from_user_id) DO UPDATE SET
+                  stars = EXCLUDED.stars, comment = EXCLUDED.comment, skipped = FALSE, moderation_status = 'pending'
                 """
             ),
             {"b": booking_id, "f": user["id"], "t": to_id, "r": role_from, "s": body.stars, "c": body.comment},

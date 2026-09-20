@@ -102,7 +102,6 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-4">Dashboard</h1>
       {loadError && (
         <p className="text-sm text-destructive mb-3 flex items-center gap-2">
           <AlertTriangle size={16} /> {loadError}

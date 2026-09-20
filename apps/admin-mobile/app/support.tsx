@@ -7,6 +7,7 @@ import {
   TICKET_STATUSES,
 } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -19,6 +20,7 @@ type Person = { id: string; name?: string; phone?: string; email?: string };
 
 export default function AdminSupport() {
   const { t } = useI18n();
+  const router = useRouter();
   const [status, setStatus] = useState("");
   const [reply, setReply] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +131,7 @@ export default function AdminSupport() {
             <StatusBadge status={String(ticket.status || "open")} />
             <AppText variant="h3">{ticket.subject}</AppText>
             <AppText variant="small">{ticket.category}</AppText>
-            <AppText variant="small">{ticket.description || ticket.body}</AppText>
+            <PrimaryButton title="Open workspace" onPress={() => router.push(`/support/${ticket.id}`)} />
             <ChoiceChips
               options={TICKET_STATUSES.map((id) => ({ id, label: id.replace(/_/g, " ") }))}
               value={status || String(ticket.status || "open")}

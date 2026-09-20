@@ -410,8 +410,7 @@ export default function ServicesAdmin() {
     <AdminLayout>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
-          <h1 className="text-h1">Puja Services</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Edit each puja’s name, catalog details, categories, and Standard / Premium pricing.
             {isSuper ? " As Super Admin you can change all services and costs." : ""}
           </p>
@@ -1680,7 +1679,7 @@ export default function ServicesAdmin() {
             <TableHead className="sticky top-0 z-20 bg-card border-b">Categories</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Standard</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Samagri</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Samagri ₹</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Samagri Cost (₹)</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Alankaram</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Status</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Featured</TableHead>

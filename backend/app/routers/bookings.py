@@ -2005,6 +2005,7 @@ def public_pujari_profile(pujari_id: str, db: Session = Depends(get_db)):
             """
             SELECT COALESCE(AVG(stars),0) AS avg_stars, COUNT(*) AS rating_count
             FROM ratings WHERE to_user_id = CAST(:id AS uuid) AND skipped = FALSE AND role_from = 'customer'
+              AND COALESCE(moderation_status, 'approved') = 'approved'
             """
         ),
         {"id": pujari_id},

@@ -137,8 +137,7 @@ export default function Reports() {
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-4">
           <div>
-            <h1 className="text-h1 text-foreground">Analytics & Reports</h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground">
               {report
                 ? `${report.period.label} (${formatDisplayDate(report.period.from)} – ${formatDisplayDate(report.period.to)})`
                 : "Live figures from bookings, payments, and settlements."}
@@ -366,18 +365,18 @@ export default function Reports() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Service</TableHead>
-                        <TableHead className="text-right">Bookings</TableHead>
+                        <TableHead className="text-center">Bookings</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">Avg duration</TableHead>
+                        <TableHead className="text-center">Avg duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {ov.top_services.map((service) => (
                         <TableRow key={service.id}>
                           <TableCell className="font-medium">{service.name}</TableCell>
-                          <TableCell className="text-right">{service.bookings}</TableCell>
+                          <TableCell className="text-center tabular-nums">{service.bookings}</TableCell>
                           <TableCell className="text-right">{rupees(service.revenue)}</TableCell>
-                          <TableCell className="text-right">{service.avg_duration} min</TableCell>
+                          <TableCell className="text-center tabular-nums">{service.avg_duration} min</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -575,19 +574,19 @@ export default function Reports() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Service</TableHead>
-                        <TableHead className="text-right">Bookings</TableHead>
+                        <TableHead className="text-center">Bookings</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">Avg duration</TableHead>
+                        <TableHead className="text-center">Avg duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {report.services.map((service) => (
                         <TableRow key={service.id}>
                           <TableCell className="font-medium">{service.name}</TableCell>
-                          <TableCell className="text-right">{service.bookings}</TableCell>
+                          <TableCell className="text-center tabular-nums">{service.bookings}</TableCell>
                           <TableCell className="text-right">{rupees(service.revenue)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
+                          <TableCell className="text-center tabular-nums">
+                            <div className="flex items-center justify-center gap-1">
                               <Clock className="w-4 h-4 text-muted-foreground" />
                               {service.avg_duration} min
                             </div>

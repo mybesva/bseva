@@ -202,8 +202,7 @@ export default function AdminLegalPage() {
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-h1">Terms & Conditions</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground">
           Choose a section below. Only that section opens for edit — add, update, or remove points, then save.
         </p>
       </div>

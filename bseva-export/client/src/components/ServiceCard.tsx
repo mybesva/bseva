@@ -184,16 +184,16 @@ export default function ServiceCard({
         )}
       </div>
 
-      <CardHeader className="pt-5 pb-1 px-4 min-w-0 overflow-hidden">
+      <CardHeader className="pt-5 pb-1 px-4 min-w-0 overflow-hidden min-h-[3.5rem]">
         <h3
-          className="text-base leading-snug break-words [overflow-wrap:anywhere] line-clamp-2"
+          className="text-base leading-snug break-words [overflow-wrap:anywhere] line-clamp-2 min-h-[2.5rem]"
           title={formatPujaTitleText(title)}
         >
           <PujaTitle name={title} />
         </h3>
       </CardHeader>
 
-      <CardContent className="px-4 pt-0 pb-2 min-w-0 overflow-hidden space-y-1">
+      <CardContent className="px-4 pt-0 pb-2 min-w-0 overflow-hidden space-y-1 flex-1">
         {occasion ? (
           <p className="text-xs font-semibold text-primary/90 leading-snug line-clamp-1">
             {t("home.forLabel")}: {occasion}

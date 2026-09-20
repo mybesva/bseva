@@ -291,17 +291,28 @@ export {
   EMPTY_SUPPORT_TICKET,
   SUPPORT_CATEGORIES,
   SUPPORT_CONTACT_SOURCES,
+  SUPPORT_ESCALATIONS,
+  SUPPORT_NOTE_KINDS,
   SUPPORT_PRIORITIES,
   SUPPORT_REPORTER_TYPES,
+  SUPPORT_RESOLUTIONS,
   TICKET_STATUSES,
 } from "./supportTicketForm";
 export {
   adminServiceActivationError,
   buildAdminServicePayload,
   emptyAdminServiceForm,
+  emptyServiceCategoryForm,
   paiseFromRupees,
   parseAliasList,
   rupeesField,
   slugFromName,
   type AdminServiceForm,
 } from "./serviceForm";
+export {
+  buildReportSheetTables,
+  reportWorkbookFilename,
+  type ReportCell,
+  type ReportSheetTable,
+  type ReportWorkbookData,
+} from "./reportSheets";

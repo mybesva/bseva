@@ -448,7 +448,6 @@ export default function PromosAdmin() {
 
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-4">Promotions & ads</h1>
       <Tabs defaultValue="banners">
         <TabsList>
           <TabsTrigger value="banners">Banners</TabsTrigger>

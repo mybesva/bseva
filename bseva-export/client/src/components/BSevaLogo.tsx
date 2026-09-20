@@ -41,8 +41,8 @@ const FULL_HEIGHT = {
   md: "h-14",
   lg: "h-16",
   xl: "h-20",
-  header: "h-[4.5rem] sm:h-[4.75rem] lg:h-[5.5rem]",
-  portal: "h-12 sm:h-[3.35rem]",
+  header: "h-12 sm:h-14 lg:h-[3.75rem]",
+  portal: "h-10 sm:h-11",
 } as const;
 
 /** Logo stands in for the letter B in “B-Seva”. Motto lives in the full artwork only. */
@@ -60,9 +60,9 @@ export default function BSevaLogo({
         className={cn(
           "w-auto object-contain object-left",
           size === "header"
-            ? "max-w-[min(100%,22rem)]"
+            ? "max-w-[min(100%,11.5rem)]"
             : size === "portal"
-              ? "max-w-[11.5rem]"
+              ? "max-w-[9.5rem]"
               : "max-w-[min(100%,16rem)]",
           FULL_HEIGHT[size],
           className,

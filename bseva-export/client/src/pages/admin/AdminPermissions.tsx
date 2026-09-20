@@ -54,7 +54,6 @@ export default function AdminPermissionsPage() {
 
   return (
     <AdminLayout>
-      <h1 className="text-h1 mb-4">{t("admin.permissions.title")}</h1>
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

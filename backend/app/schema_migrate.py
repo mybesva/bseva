@@ -713,6 +713,7 @@ _FOUNDATION_STMTS = [
       UNIQUE (booking_id, from_user_id)
     )
     """,
+    "ALTER TABLE ratings ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'approved'",
     """
     CREATE TABLE IF NOT EXISTS invoices (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
