@@ -23,7 +23,6 @@ import {
 } from "@/lib/fieldValidation";
 import { cn } from "@/lib/utils";
 import { splitDisplayName, type PersonNameParts } from "@/lib/personName";
-import PushNotificationCard from "@/components/PushNotificationCard";
 
 function RequiredMark() {
   return <span className="text-red-600 font-semibold"> *</span>;
@@ -715,9 +714,6 @@ export default function PujariProfilePage() {
           <ProfileForm setupBanner={fromRegister} />
         </CardContent>
       </Card>
-      <div className="max-w-3xl">
-        <PushNotificationCard />
-      </div>
     </PujariPortal>
   );
 }

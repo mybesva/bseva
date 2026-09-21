@@ -93,8 +93,12 @@ export function hasAdminPermission(
   return list.some((p) => have.includes(p));
 }
 
-export const CALENDARS = ["north", "south", "lunar"] as const;
+export const CALENDARS = ["lunar", "solar"] as const;
 export type CalendarPref = (typeof CALENDARS)[number];
+
+export function normalizeCalendarPref(value?: string | null): CalendarPref {
+  return value === "lunar" ? "lunar" : "solar";
+}
 
 export const TERMS_VERSION = "2026-01";
 export const PRIVACY_VERSION = "2026-01";

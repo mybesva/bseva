@@ -70,7 +70,7 @@ export default function RegisterScreen() {
       confirmPassword,
       otp,
       language,
-      calendar_preference: "north",
+      calendar_preference: "solar",
       registration_consent: consent,
       referral_code: referralCode.trim() || undefined,
     });
@@ -91,7 +91,7 @@ export default function RegisterScreen() {
         password,
         otp,
         language,
-        calendar_preference: "north",
+        calendar_preference: "solar",
         registration_consent: true,
         terms_version: TERMS_VERSION,
         privacy_version: PRIVACY_VERSION,

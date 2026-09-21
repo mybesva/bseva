@@ -44,7 +44,10 @@ export const registerSchema = z
     confirmPassword: z.string().min(1, "validation.confirmPassword"),
     otp: z.string().min(4, "validation.otp").max(8),
     language: z.enum(["en", "hi", "te", "mr", "ta", "kn"]).default("en"),
-    calendar_preference: z.enum(["north", "south", "lunar"]).default("north"),
+    calendar_preference: z
+      .enum(["lunar", "solar", "north", "south"])
+      .default("solar")
+      .transform((v) => (v === "lunar" ? "lunar" : "solar")),
     registration_consent: z.boolean(),
     referral_code: z.string().max(40).optional(),
   })

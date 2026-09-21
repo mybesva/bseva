@@ -23,7 +23,7 @@ from app.domain import (
     service_available_near,
     slot_conflict,
 )
-from app.panchang import panchang_for
+from app.panchang import panchang_for, normalize_calendar_pref
 from app.schemas import BookingCreateIn
 
 router = APIRouter(tags=["bookings"])
@@ -133,9 +133,8 @@ def _existing_idempotent_response(
 
 
 @router.get("/panchang")
-def panchang(on: date = Query(..., alias="date"), calendar: str = "north"):
-    cal = calendar if calendar in ("north", "south", "lunar") else "north"
-    return panchang_for(on, cal)
+def panchang(on: date = Query(..., alias="date"), calendar: str = "solar"):
+    return panchang_for(on, normalize_calendar_pref(calendar))
 
 
 @router.get("/service-categories")
@@ -322,14 +321,15 @@ _UNDER_24H_CANCEL_BODY = (
 
 
 def _normalize_legal_points(slug: str, points):
-    if slug != "cancellation_policy":
-        return points or []
     out = []
     for raw in points or []:
         item = dict(raw)
         title = str(item.get("title") or "").lower()
         body = str(item.get("body") or "").lower()
-        if "less than 24" in title and "not permitted" in body:
+        if "demo notice" in title or "demonstration application" in body:
+            continue
+        body = body.replace("demo total charged", "charged")
+        if slug == "cancellation_policy" and "less than 24" in title and "not permitted" in body:
             item["body"] = _UNDER_24H_CANCEL_BODY
         out.append(item)
     return out

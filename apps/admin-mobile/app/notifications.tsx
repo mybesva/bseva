@@ -22,11 +22,6 @@ export default function AdminNotifications() {
       <ScreenHeader title={t("admin.notifications")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }} refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <PrimaryButton title={t("mobile.markAllRead")} variant="outline" onPress={() => void apiClient.markAllNotificationsRead().then(() => q.refetch())} />
-        <PrimaryButton
-          title="Send test push"
-          variant="outline"
-          onPress={() => void apiClient.sendTestPush().catch(() => undefined)}
-        />
         {q.isLoading ? <LoadingBlock /> : null}
         {(q.data?.items || []).length === 0 && !q.isLoading ? <EmptyState title={t("mobile.emptyNotifications")} /> : null}
         {(q.data?.items || []).map((n: AppNotification) => (

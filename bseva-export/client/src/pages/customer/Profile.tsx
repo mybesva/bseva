@@ -19,7 +19,6 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { PREFERRED_LANGUAGES, uiLangFromPreferred, type PreferredLang } from "@/lib/languages";
 import { toast } from "sonner";
 import PersonNameFields from "@/components/PersonNameFields";
-import PushNotificationCard from "@/components/PushNotificationCard";
 import {
   splitDisplayName,
   validatePersonNameParts,
@@ -48,23 +47,17 @@ export default function CustomerProfilePage() {
   const syncedUserId = useRef<string | null>(null);
 
   function namePartsFromUser(u: typeof user): PersonNameParts {
-    const row = u as {
-      first_name?: string;
-      middle_name?: string;
-      last_name?: string;
-      name?: string;
-    } | null;
-    if (!row) return { first_name: "", middle_name: "", last_name: "" };
+    if (!u) return { first_name: "", middle_name: "", last_name: "" };
     const hasStructured =
-      row.first_name != null || row.middle_name != null || row.last_name != null;
+      u.first_name != null || u.middle_name != null || u.last_name != null;
     if (hasStructured) {
       return {
-        first_name: String(row.first_name ?? ""),
-        middle_name: String(row.middle_name ?? ""),
-        last_name: String(row.last_name ?? ""),
+        first_name: String(u.first_name ?? ""),
+        middle_name: String(u.middle_name ?? ""),
+        last_name: String(u.last_name ?? ""),
       };
     }
-    return splitDisplayName(row.name);
+    return splitDisplayName(u.name);
   }
 
   async function loadPhoto() {
@@ -96,9 +89,9 @@ export default function CustomerProfilePage() {
   }, [
     user?.id,
     user?.name,
-    (user as { first_name?: string })?.first_name,
-    (user as { middle_name?: string })?.middle_name,
-    (user as { last_name?: string })?.last_name,
+    user?.first_name,
+    user?.middle_name,
+    user?.last_name,
   ]);
 
   useEffect(() => {
@@ -145,7 +138,7 @@ export default function CustomerProfilePage() {
         method: "PATCH",
         body: JSON.stringify({
           first_name: nameParts.first_name.trim(),
-          middle_name: nameParts.middle_name.trim() || null,
+          middle_name: nameParts.middle_name.trim(),
           last_name: nameParts.last_name.trim(),
           preferred_language: language,
           phone,
@@ -188,8 +181,26 @@ export default function CustomerProfilePage() {
       if (!res.ok) throw new Error((data as { detail?: string }).detail || t("web.customerProfile.uploadFailed"));
       toast.success(t("web.customerProfile.photoUpdated"));
       await loadPhoto();
+      window.dispatchEvent(new Event("bseva:customer-photo"));
     } catch (err: any) {
       toast.error(err.message || t("web.customerProfile.uploadFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removePhoto() {
+    setUploading(true);
+    try {
+      await api("/customer/profile/photo", { method: "DELETE" });
+      setPhotoUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      toast.success(t("web.customerProfile.photoRemoved"));
+      window.dispatchEvent(new Event("bseva:customer-photo"));
+    } catch (err: any) {
+      toast.error(err.message || t("web.customerProfile.saveFailed"));
     } finally {
       setUploading(false);
     }
@@ -210,27 +221,37 @@ export default function CustomerProfilePage() {
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label>{t("web.customerProfile.photo")}</Label>
+              <Label>
+                {t("web.customerProfile.photo")}{" "}
+                <span className="text-muted-foreground font-normal">({t("common.optional")})</span>
+              </Label>
               {photoUrl ? (
                 <img src={photoUrl} alt="" className="h-28 w-28 rounded-md object-cover border" />
               ) : (
                 <p className="text-sm text-muted-foreground">{t("web.customerProfile.noPhoto")}</p>
               )}
-              <label className="inline-block">
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = "";
-                    if (f) void onPhoto(f);
-                  }}
-                />
-                <Button type="button" size="sm" variant="outline" disabled={uploading} asChild>
-                  <span>{uploading ? t("web.customerProfile.uploading") : photoUrl ? t("web.customerProfile.replacePhoto") : t("web.customerProfile.uploadPhoto")}</span>
-                </Button>
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-block">
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void onPhoto(f);
+                    }}
+                  />
+                  <Button type="button" size="sm" variant="outline" disabled={uploading} asChild>
+                    <span>{uploading ? t("web.customerProfile.uploading") : photoUrl ? t("web.customerProfile.replacePhoto") : t("web.customerProfile.uploadPhoto")}</span>
+                  </Button>
+                </label>
+                {photoUrl ? (
+                  <Button type="button" size="sm" variant="ghost" disabled={uploading} onClick={() => void removePhoto()}>
+                    {t("web.customerProfile.removePhoto")}
+                  </Button>
+                ) : null}
+              </div>
             </div>
             <PersonNameFields
               value={nameParts}
@@ -285,7 +306,6 @@ export default function CustomerProfilePage() {
           </form>
         </CardContent>
       </Card>
-      <PushNotificationCard />
     </CustomerPortal>
   );
 }

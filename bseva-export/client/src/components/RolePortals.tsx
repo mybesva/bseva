@@ -282,14 +282,28 @@ function CustomerShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = getToken();
-    if (!token || user?.role !== "customer") return;
-    fetch(`${apiBase()}/api/v1/customer/profile/photo`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.blob() : null))
-      .then((blob) => {
-        if (blob) setPhotoUrl(URL.createObjectURL(blob));
-      })
-      .catch(() => undefined);
-  }, [user?.id]);
+    if (!token || user?.role !== "customer") {
+      setPhotoUrl(null);
+      return;
+    }
+    let objectUrl: string | null = null;
+    const load = () => {
+      fetch(`${apiBase()}/api/v1/customer/profile/photo`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((blob) => {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          objectUrl = blob ? URL.createObjectURL(blob) : null;
+          setPhotoUrl(objectUrl);
+        })
+        .catch(() => setPhotoUrl(null));
+    };
+    load();
+    window.addEventListener("bseva:customer-photo", load);
+    return () => {
+      window.removeEventListener("bseva:customer-photo", load);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [user?.id, user?.role]);
 
   return (
     <PortalShell role="customer" nav={customerNav} photoUrl={photoUrl}>

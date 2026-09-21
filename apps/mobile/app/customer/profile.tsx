@@ -22,7 +22,6 @@ export default function CustomerProfile() {
     queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, unknown>>,
     retry: false,
   });
-  const [name, setName] = useState(user?.name || "");
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -44,16 +43,19 @@ export default function CustomerProfile() {
   }
 
   useEffect(() => {
-    if (user?.name) setName(user.name);
     if (user?.phone) setPhone(user.phone);
-    const u = user as { first_name?: string; middle_name?: string; last_name?: string } | null;
-    if (u?.first_name || u?.last_name) {
-      setFirstName(String(u.first_name || ""));
-      setMiddleName(String(u.middle_name || ""));
-      setLastName(String(u.last_name || ""));
+    if (user?.first_name || user?.last_name || user?.middle_name) {
+      setFirstName(String(user.first_name || ""));
+      setMiddleName(String(user.middle_name || ""));
+      setLastName(String(user.last_name || ""));
+    } else if (user?.name) {
+      const parts = user.name.trim().split(/\s+/).filter(Boolean);
+      setFirstName(parts[0] || "");
+      setMiddleName(parts.length > 2 ? parts.slice(1, -1).join(" ") : "");
+      setLastName(parts.length > 1 ? parts[parts.length - 1] : "");
     }
     if (user?.preferred_language) setLangState(user.preferred_language as Lang);
-  }, [user?.name, user?.phone, user?.preferred_language]);
+  }, [user?.name, user?.phone, user?.preferred_language, user?.first_name, user?.middle_name, user?.last_name]);
 
   useEffect(() => {
     void loadPhoto();
@@ -64,12 +66,17 @@ export default function CustomerProfile() {
       ? profileQ.error.message
       : null;
 
+  const initial = (firstName || user?.name || "?").slice(0, 1).toUpperCase();
+
   return (
     <Screen>
       <ScreenHeader title={t("mobile.profile")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error || profileErr} />
         <Card>
+          <AppText variant="small" color={colors.mutedForeground} style={{ marginBottom: 8 }}>
+            {t("web.customerProfile.photo")} ({t("common.optional")})
+          </AppText>
           {photo && photoOk ? (
             <Image
               source={photo}
@@ -89,7 +96,7 @@ export default function CustomerProfile() {
               }}
             >
               <AppText variant="h2" color={colors.primary}>
-                {(name || "?").slice(0, 1).toUpperCase()}
+                {initial}
               </AppText>
             </View>
           )}
@@ -99,17 +106,35 @@ export default function CustomerProfile() {
               try {
                 await apiClient.uploadCustomerPhoto(file);
                 await loadPhoto();
+                void qc.invalidateQueries({ queryKey: ["customer-photo"] });
               } catch (e: unknown) {
                 setError(e instanceof Error ? e.message : t("mobile.uploadFailed"));
               }
             }}
           />
+          {photo && photoOk ? (
+            <View style={{ marginTop: 8 }}>
+              <PrimaryButton
+                title={t("mobile.removePhoto")}
+                variant="outline"
+                onPress={async () => {
+                  setError(null);
+                  try {
+                    await apiClient.deleteCustomerPhoto();
+                    setPhoto(null);
+                    void qc.invalidateQueries({ queryKey: ["customer-photo"] });
+                  } catch (e: unknown) {
+                    setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
+                  }
+                }}
+              />
+            </View>
+          ) : null}
         </Card>
         <Card>
           <Field label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
           <Field label={t("auth.middleName")} value={middleName} onChangeText={setMiddleName} />
           <Field label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
-          <Field label={t("mobile.name")} value={name} onChangeText={setName} />
           <Field label={t("auth.phone")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
             {user?.email || "—"}
@@ -131,10 +156,9 @@ export default function CustomerProfile() {
               setError(null);
               try {
                 await apiClient.patchMe({
-                  name: [firstName, middleName, lastName].map((s) => s.trim()).filter(Boolean).join(" ") || name,
-                  first_name: firstName.trim() || undefined,
-                  middle_name: middleName.trim() || undefined,
-                  last_name: lastName.trim() || undefined,
+                  first_name: firstName.trim(),
+                  middle_name: middleName.trim(),
+                  last_name: lastName.trim(),
                   phone: phone.trim() || undefined,
                   preferred_language: lang,
                 });

@@ -49,8 +49,6 @@ export default function PersonNameFields({
           disabled={disabled}
           autoComplete="off"
           autoCorrect="off"
-          readOnly
-          onFocus={(e) => e.currentTarget.removeAttribute("readonly")}
           data-1p-ignore
           data-lpignore="true"
           aria-label="Middle name (optional)"

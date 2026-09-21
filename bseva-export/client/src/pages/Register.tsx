@@ -240,7 +240,7 @@ export default function Register() {
         password,
         otp: otp.trim(),
         language,
-        calendar_preference: "north",
+        calendar_preference: "solar",
         // Service level is assigned by Admin only — not chosen at registration
         registration_consent: true,
         terms_version: TERMS_VERSION,

@@ -498,6 +498,79 @@
       animation: none !important;
       opacity: 0;
     }
+
+    .book-puja-nav-cta-wrap,
+    .book-puja-nav-cta-wrap:hover {
+      animation: none;
+      transform: none;
+      transition: none;
+      box-shadow: 0 6px 16px -8px rgb(255 153 51 / 0.45);
+    }
+  }
+
+  /* Marketing header Book a Puja — larger, soft pulse, elegant hover lift */
+  @keyframes book-puja-nav-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow:
+        0 6px 16px -8px rgb(255 153 51 / 0.48),
+        0 0 0 0 rgb(255 153 51 / 0.18);
+    }
+    50% {
+      transform: scale(1.035);
+      box-shadow:
+        0 10px 22px -8px rgb(255 153 51 / 0.55),
+        0 0 16px rgb(255 153 51 / 0.28);
+    }
+  }
+
+  .book-puja-nav-cta-wrap {
+    display: inline-flex;
+    border-radius: 0.5rem;
+    transform-origin: center;
+    animation: book-puja-nav-pulse 3.4s ease-in-out infinite;
+  }
+
+  .book-puja-nav-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.75rem;
+    padding: 0 1.4rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: inherit;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .book-puja-nav-cta-compact {
+    height: 2.5rem;
+    padding: 0 0.95rem;
+    font-size: 0.8125rem;
+  }
+
+  .book-puja-nav-cta-block {
+    width: 100%;
+    height: 3rem;
+    font-size: 1rem;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .book-puja-nav-cta-wrap:hover {
+      animation: none;
+      transform: translateY(-2px) scale(1.03);
+      transition:
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.35s ease;
+      box-shadow:
+        0 14px 28px -10px rgb(255 153 51 / 0.62),
+        0 0 22px rgb(255 153 51 / 0.34);
+    }
   }
 }
 

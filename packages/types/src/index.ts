@@ -2,7 +2,11 @@ import type { CalendarPref, LangCode, Role } from "@bseva/config";
 
 export type AuthUser = {
   id: string;
+  public_id?: string | null;
   name: string;
+  first_name?: string | null;
+  middle_name?: string | null;
+  last_name?: string | null;
   email: string;
   phone: string;
   role: Role | string;

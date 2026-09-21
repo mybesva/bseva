@@ -1,9 +1,10 @@
-import { CALENDARS, rupees } from "@bseva/config";
+import { CALENDARS, normalizeCalendarPref, rupees } from "@bseva/config";
 import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { Image, Linking, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { CustomerWelcomeHero, customerGreetingName } from "@/components/CustomerWelcomeHero";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { SeasonalPopup } from "@/components/SeasonalPopup";
 import { AppText, Card, ChoiceChips, EmptyState, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
@@ -21,7 +22,7 @@ export default function CustomerHome() {
   const { colors } = useAppTheme();
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
-  const calendar = String(user?.calendar_preference || "north");
+  const calendar = normalizeCalendarPref(user?.calendar_preference);
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   const services = useQuery({ queryKey: ["services", lang], queryFn: () => apiClient.listServices() });
   const wallet = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
@@ -64,7 +65,7 @@ export default function CustomerHome() {
 
   return (
     <Screen>
-      <HomeBrandBar notificationsHref="/customer/notifications" subtitle={user?.name ? `${t("customer.welcome")}, ${user.name}` : undefined} />
+      <HomeBrandBar notificationsHref="/customer/notifications" />
       <SeasonalPopup />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
@@ -83,6 +84,10 @@ export default function CustomerHome() {
           />
         }
       >
+        <CustomerWelcomeHero
+          customerName={customerGreetingName(user?.name, t("auth.customer"))}
+          publicId={(user as { public_id?: string } | null)?.public_id}
+        />
         <Card>
           <AppText variant="small">{t("customer.wallet")}</AppText>
           <AppText variant="h1" color={colors.primary}>
@@ -139,7 +144,7 @@ export default function CustomerHome() {
         <Card>
           <AppText variant="small">{t("mobile.calendar")} · {today}</AppText>
           <ChoiceChips
-            options={CALENDARS.map((c) => ({ id: c, label: c }))}
+            options={CALENDARS.map((c) => ({ id: c, label: t(`calendar.${c}`) }))}
             value={calendar}
             onChange={(v) => {
               void apiClient.patchMe({ calendar_preference: v }).then(() => refresh());

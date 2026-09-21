@@ -154,7 +154,7 @@ const bookingsRouter = router({
       city: z.string().optional(),
       specialInstructions: z.string().optional(),
       serviceMode: z.enum(["physical", "virtual"]).default("physical"),
-      calendarType: z.enum(["north", "south", "lunar"]).default("north"),
+      calendarType: z.enum(["lunar", "solar", "north", "south"]).default("solar"),
       payWithWallet: z.boolean().default(true),
       termsAccepted: z.boolean().default(false),
       totalAmount: z.number().optional(),
@@ -195,7 +195,7 @@ const bookingsRouter = router({
       tier: z.enum(["standard", "premium"]),
       bookingDate: z.coerce.date(),
       serviceMode: z.enum(["physical", "virtual"]).default("physical"),
-      calendarType: z.enum(["north", "south", "lunar"]).default("north"),
+      calendarType: z.enum(["lunar", "solar", "north", "south"]).default("solar"),
     }))
     .query(async ({ input }) => demo.quoteBookingPrice(input)),
 
@@ -1085,7 +1085,7 @@ export const appRouter = router({
         return demo.creditWallet(
           ctx.user.id,
           paise,
-          `Wallet load ₹${input.amountRupees} (demo payment)`
+          `Wallet load ₹${input.amountRupees}`
         );
       }),
   }),
@@ -1104,11 +1104,11 @@ export const appRouter = router({
     panchangam: publicProcedure
       .input(z.object({
         date: z.coerce.date(),
-        calendarType: z.enum(["north", "south", "lunar"]).default("north"),
+        calendarType: z.enum(["lunar", "solar", "north", "south"]).default("solar"),
       }))
       .query(({ input }) => demo.getDemoPanchangam(input.date, input.calendarType)),
     setPreference: protectedProcedure
-      .input(z.object({ pref: z.enum(["north", "south", "lunar"]) }))
+      .input(z.object({ pref: z.enum(["lunar", "solar", "north", "south"]) }))
       .mutation(async ({ ctx, input }) => {
         await demo.setUserCalendarPref(ctx.user.id, input.pref);
         return { success: true, pref: input.pref };

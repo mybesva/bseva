@@ -2,9 +2,16 @@ from datetime import date, time
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 PreferredLang = Literal["en", "hi", "te", "mr", "ta", "kn"]
+CalendarPref = Literal["lunar", "solar"]
+
+
+def _coerce_calendar_pref(value):
+    if value is None or value == "":
+        return value
+    return "lunar" if str(value).strip().lower() == "lunar" else "solar"
 
 
 class RegisterIn(BaseModel):
@@ -22,7 +29,7 @@ class RegisterIn(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     language: PreferredLang = "en"
-    calendar_preference: Literal["north", "south", "lunar"] = "north"
+    calendar_preference: CalendarPref = "solar"
     requested_level: Optional[int] = Field(default=None, ge=1, le=4)
     backup_phone: Optional[str] = None
     address: Optional[str] = None
@@ -38,6 +45,11 @@ class RegisterIn(BaseModel):
     privacy_version: Optional[str] = None
     referral_code: Optional[str] = Field(default=None, max_length=40)
 
+    @field_validator("calendar_preference", mode="before")
+    @classmethod
+    def _calendar_pref(cls, value):
+        return _coerce_calendar_pref(value) or "solar"
+
 
 class MePatchIn(BaseModel):
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
@@ -45,8 +57,13 @@ class MePatchIn(BaseModel):
     middle_name: Optional[str] = Field(default=None, max_length=120)
     last_name: Optional[str] = Field(default=None, max_length=120)
     preferred_language: Optional[PreferredLang] = None
-    calendar_preference: Optional[Literal["north", "south", "lunar"]] = None
+    calendar_preference: Optional[CalendarPref] = None
     phone: Optional[str] = Field(default=None, min_length=8, max_length=20)
+
+    @field_validator("calendar_preference", mode="before")
+    @classmethod
+    def _calendar_pref(cls, value):
+        return _coerce_calendar_pref(value)
 
 
 class ChangePasswordIn(BaseModel):
@@ -69,8 +86,13 @@ class AddressIn(BaseModel):
 
 class CustomerProfileIn(AddressIn):
     preferred_language: Optional[PreferredLang] = None
-    calendar_preference: Optional[Literal["north", "south", "lunar"]] = None
+    calendar_preference: Optional[CalendarPref] = None
     gstin: Optional[str] = Field(default=None, max_length=15)
+
+    @field_validator("calendar_preference", mode="before")
+    @classmethod
+    def _calendar_pref(cls, value):
+        return _coerce_calendar_pref(value)
 
 
 class LoginIn(BaseModel):

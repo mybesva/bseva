@@ -1,6 +1,7 @@
 import {
   bookingLeadHint,
   CALENDARS,
+  normalizeCalendarPref,
   buildCreateBookingPayload,
   composePhysicalServiceAddress,
   customerBookablePackages,
@@ -106,7 +107,7 @@ export default function BookService() {
   const [step, setStep] = useState(1);
   const [pkg, setPkg] = useState<CustomerBookablePackage>("standard");
   const [mode, setMode] = useState<"in_person" | "virtual">(initialMode === "virtual" ? "virtual" : "in_person");
-  const [calendar, setCalendar] = useState(String(user?.calendar_preference || "north"));
+  const [calendar, setCalendar] = useState(normalizeCalendarPref(user?.calendar_preference));
   const [date, setDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -597,7 +598,7 @@ export default function BookService() {
         {step === 2 ? (
           <>
             <AppText variant="small">{t("mobile.calendar")}</AppText>
-            <ChoiceChips options={CALENDARS.map((c) => ({ id: c, label: c }))} value={calendar} onChange={(v) => setCalendar(String(v))} />
+            <ChoiceChips options={CALENDARS.map((c) => ({ id: c, label: t(`calendar.${c}`) }))} value={calendar} onChange={(v) => setCalendar(String(v))} />
             {panchang.data ? (
               <AppText variant="small" color={colors.mutedForeground}>
                 {String(panchang.data.tithi || panchang.data.summary || JSON.stringify(panchang.data).slice(0, 180))}

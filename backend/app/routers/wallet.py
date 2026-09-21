@@ -6,6 +6,7 @@ from app.db import get_db
 from app.deps import current_user
 from app.domain import apply_wallet, row_dict
 from app.schemas import WalletLoadIn
+from app.wallet_copy import public_wallet_description
 
 router = APIRouter(prefix="/wallet", tags=["wallet"])
 
@@ -19,13 +20,20 @@ def get_wallet(user=Depends(current_user), db: Session = Depends(get_db)):
         text("SELECT * FROM wallet_transactions WHERE wallet_id = :wid ORDER BY created_at DESC LIMIT 50"),
         {"wid": w["id"]},
     ).mappings().all()
-    return {"wallet": row_dict(w), "transactions": [row_dict(t) for t in txs]}
+    out = []
+    for t in txs:
+        d = row_dict(t)
+        d["description"] = public_wallet_description(d.get("description"))
+        if d.get("note"):
+            d["note"] = public_wallet_description(d.get("note"))
+        out.append(d)
+    return {"wallet": row_dict(w), "transactions": out}
 
 
 @router.post("/load")
 def load_wallet(body: WalletLoadIn, user=Depends(current_user), db: Session = Depends(get_db)):
     try:
-        bal = apply_wallet(db, str(user["id"]), body.amount_paise, "credit", "Wallet load (demo gateway)")
+        bal = apply_wallet(db, str(user["id"]), body.amount_paise, "credit", "Wallet load")
     except ValueError as e:
         raise HTTPException(400, str(e))
     db.commit()

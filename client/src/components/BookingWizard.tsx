@@ -53,7 +53,7 @@ interface BookingWizardProps {
 type BookingStep = 1 | 2 | 3 | 4;
 type Tier = "standard" | "premium";
 type ServiceMode = "physical" | "virtual";
-type CalendarType = "north" | "south" | "lunar";
+type CalendarType = "lunar" | "solar";
 
 const DEMO_LAT = 12.9352;
 const DEMO_LNG = 77.6245;
@@ -65,7 +65,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
   const [currentStep, setCurrentStep] = useState<BookingStep>(1);
   const [tier, setTier] = useState<Tier>("standard");
   const [serviceMode, setServiceMode] = useState<ServiceMode>("physical");
-  const [calendarType, setCalendarType] = useState<CalendarType>("north");
+  const [calendarType, setCalendarType] = useState<CalendarType>("solar");
   const [bookingDate, setBookingDate] = useState<Date | undefined>();
   const [bookingTime, setBookingTime] = useState("10:00");
   const [locationText, setLocationText] = useState("Jayanagar 4th Block, Bangalore");
@@ -281,9 +281,8 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="north">{t("calendar.north")}</SelectItem>
-                  <SelectItem value="south">{t("calendar.south")}</SelectItem>
                   <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
+                  <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

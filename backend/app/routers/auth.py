@@ -432,7 +432,8 @@ def me(user=Depends(current_user), db: Session = Depends(get_db)):
 def patch_me(body: MePatchIn, user=Depends(current_user), db: Session = Depends(get_db)):
     from app.name_parts import compose_display_name, split_display_name, validate_name_parts
 
-    if body.first_name is not None or body.middle_name is not None or body.last_name is not None:
+    name_keys = {"first_name", "middle_name", "last_name"}
+    if name_keys & body.model_fields_set:
         cur = db.execute(
             text(
                 "SELECT first_name, middle_name, last_name, name FROM users WHERE id = CAST(:id AS uuid)"
@@ -440,9 +441,9 @@ def patch_me(body: MePatchIn, user=Depends(current_user), db: Session = Depends(
             {"id": user["id"]},
         ).mappings().first()
         cf, cm, cl = split_display_name((cur or {}).get("name"))
-        f = body.first_name if body.first_name is not None else ((cur or {}).get("first_name") or cf)
-        m = body.middle_name if body.middle_name is not None else ((cur or {}).get("middle_name") or cm)
-        l = body.last_name if body.last_name is not None else ((cur or {}).get("last_name") or cl)
+        f = body.first_name if "first_name" in body.model_fields_set else ((cur or {}).get("first_name") or cf)
+        m = body.middle_name if "middle_name" in body.model_fields_set else ((cur or {}).get("middle_name") or cm)
+        l = body.last_name if "last_name" in body.model_fields_set else ((cur or {}).get("last_name") or cl)
         f, m, l = validate_name_parts(first=f, middle=m, last=l, require_last=True)
         display = compose_display_name(f, m, l)
         db.execute(

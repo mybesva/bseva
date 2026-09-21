@@ -5,7 +5,7 @@ const en: Record<string, string> = {
 
   "nav.home": "Home",
   "nav.services": "Services",
-  "nav.ourServices": "Our Services",
+  "nav.ourServices": "Services",
   "nav.astrology": "Astrology",
   "nav.pujaris": "Pujaris",
   "nav.customer": "Customer",
@@ -216,7 +216,7 @@ const en: Record<string, string> = {
   "home.contactSupport": "Contact Support",
   "home.verifiedCount": "Verified Pujaris",
 
-  "services.title": "Our Spiritual Services",
+  "services.title": "Spiritual Services",
   "services.subtitle": "Comprehensive Vedic rituals performed by verified priests to bring peace, prosperity, and divine blessings to your life.",
   "services.all": "All Services",
   "services.pujas": "Pujas",
@@ -368,7 +368,7 @@ const en: Record<string, string> = {
   "priest.documentsAdded": "Documents Added",
   "priest.subtitle": "Track earnings, calendar, and booking history.",
   "priest.ongoingPuja": "Ongoing Puja",
-  "priest.withdrawable": "Withdrawable (demo)",
+  "priest.withdrawable": "Withdrawable",
   "priest.jobs": "Jobs",
   "priest.accept": "Accept",
   "priest.reject": "Decline",
@@ -537,7 +537,8 @@ const en: Record<string, string> = {
 
   "calendar.north": "North Indian Calendar",
   "calendar.south": "South Indian Calendar",
-  "calendar.lunar": "Lunar Calendar",
+  "calendar.lunar": "Lunar",
+  "calendar.solar": "Solar",
   "calendar.panchangam": "Panchangam",
   "calendar.preference": "Calendar Preference",
 

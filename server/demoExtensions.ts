@@ -103,7 +103,7 @@ async function seedPlatformSettings(raw: Client) {
     peakDays: "Saturday,Sunday,Ekadashi,Purnima",
     platformFeePercent: "15",
     virtualPujaEnabled: "true",
-    defaultCalendar: "north",
+    defaultCalendar: "solar",
   };
   for (const [key, value] of Object.entries(defaults)) {
     const existing = await raw.execute({
@@ -520,7 +520,8 @@ export async function getPreviouslyBookedPujaris(customerId: number) {
 }
 
 // Demo panchangam generator
-export function getDemoPanchangam(date: Date, calendarType: "north" | "south" | "lunar") {
+export function getDemoPanchangam(date: Date, calendarType: "lunar" | "solar" | "north" | "south") {
+  const kind = calendarType === "lunar" ? "lunar" : "solar";
   const tithis = [
     "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
     "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
@@ -549,27 +550,23 @@ export function getDemoPanchangam(date: Date, calendarType: "north" | "south" | 
 
   return {
     date: date.toISOString(),
-    calendarType,
+    calendarType: kind,
     gregorian: date.toDateString(),
     tithi: tithis[tithiIndex],
     paksha,
     nakshatra: nakshatras[Math.floor(date.getTime() / 86400000) % 27],
     yoga: yogas[date.getDate() % yogas.length],
     karana: karanas[date.getDate() % karanas.length],
-    lunarMonth: calendarType === "south" ? southMonths[monthIdx] : northMonths[monthIdx],
+    lunarMonth: kind === "solar" ? southMonths[monthIdx] : northMonths[monthIdx],
     lunarDay: (lunarDay % 15) + 1,
     sunrise: "06:12 AM",
     sunset: "06:38 PM",
-    rahukaalam: calendarType === "south" ? "01:30 PM – 03:00 PM" : "07:30 AM – 09:00 AM",
+    rahukaalam: kind === "solar" ? "01:30 PM – 03:00 PM" : "07:30 AM – 09:00 AM",
     abhijitMuhurta: "11:48 AM – 12:36 PM",
     isAuspicious: !isPeak || tithiIndex === 10,
     isPeakDay: isPeak,
     notes:
-      calendarType === "lunar"
-        ? "Demo lunar calendar — tithi-based observance"
-        : calendarType === "south"
-          ? "South Indian (Tamil) calendar style — demo"
-          : "North Indian (Vikram Samvat style) — demo",
+      kind === "lunar" ? "Demo lunar calendar — tithi-based observance" : "Demo solar calendar — sankranti-based observance",
   };
 }
 
@@ -613,7 +610,7 @@ export async function createDemoBooking(opts: {
     else basePrice = Math.floor(basePrice * 0.85);
   }
 
-  const panchang = getDemoPanchangam(opts.bookingDate, (opts.calendarType as any) || "north");
+  const panchang = getDemoPanchangam(opts.bookingDate, (opts.calendarType as any) || "solar");
   const peakFee = panchang.isPeakDay ? peakDayFee : 0;
   const subtotal = basePrice + peakFee;
   const gstAmount = Math.floor((subtotal * gstPercent) / 100);
@@ -653,7 +650,7 @@ export async function createDemoBooking(opts: {
       gstAmount,
       peakFee,
       virtualLink,
-      opts.calendarType || "north",
+      opts.calendarType || "solar",
       t,
       t,
     ],
@@ -719,7 +716,7 @@ export async function quoteBookingPrice(opts: {
     if (vp > 0) basePrice = vp;
     else basePrice = Math.floor(basePrice * 0.85);
   }
-  const panchang = getDemoPanchangam(opts.bookingDate, (opts.calendarType as any) || "north");
+  const panchang = getDemoPanchangam(opts.bookingDate, (opts.calendarType as any) || "solar");
   const peakFee = panchang.isPeakDay ? peakDayFee : 0;
   const subtotal = basePrice + peakFee;
   const gstAmount = Math.floor((subtotal * gstPercent) / 100);

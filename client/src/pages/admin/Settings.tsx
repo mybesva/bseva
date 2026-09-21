@@ -34,7 +34,7 @@ export default function Settings() {
   const [peakDayFee, setPeakDayFee] = useState("500");
   const [platformFeePercent, setPlatformFeePercent] = useState("15");
   const [virtualPujaEnabled, setVirtualPujaEnabled] = useState(true);
-  const [defaultCalendar, setDefaultCalendar] = useState("north");
+  const [defaultCalendar, setDefaultCalendar] = useState("solar");
   const [peakDays, setPeakDays] = useState("Saturday,Sunday,Ekadashi,Purnima");
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function Settings() {
     setPeakDayFee(String(Number(settings.peakDayFee || 50000) / 100));
     setPlatformFeePercent(settings.platformFeePercent || "15");
     setVirtualPujaEnabled(settings.virtualPujaEnabled !== "false");
-    setDefaultCalendar(settings.defaultCalendar || "north");
+    setDefaultCalendar(settings.defaultCalendar || "solar");
     setPeakDays(settings.peakDays || "Saturday,Sunday,Ekadashi,Purnima");
   }, [settings]);
 
@@ -126,9 +126,8 @@ export default function Settings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="north">{t("calendar.north")}</SelectItem>
-                        <SelectItem value="south">{t("calendar.south")}</SelectItem>
                         <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
+                        <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

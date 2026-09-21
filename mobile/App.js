@@ -135,7 +135,7 @@ export default function App() {
             latitude: 12.9716,
             longitude: 77.5946,
             language: "en",
-            calendar_preference: "north",
+            calendar_preference: "solar",
             requested_level: accountType === "pujari" ? 2 : undefined,
           }),
         })

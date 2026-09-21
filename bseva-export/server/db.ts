@@ -674,7 +674,7 @@ export async function registerDemoUser(input: {
   // Init wallet
   try {
     const { creditWallet } = await import("./demoExtensions");
-    await creditWallet(user.id, input.role === "customer" ? 100000 : 0, "Welcome bonus (demo)");
+    await creditWallet(user.id, input.role === "customer" ? 100000 : 0, "Welcome bonus");
   } catch { /* ignore */ }
   return user;
 }

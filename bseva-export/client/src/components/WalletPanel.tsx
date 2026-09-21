@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, rupees } from "@/lib/api";
+import { publicWalletDescription } from "@/lib/walletCopy";
 import { toast } from "sonner";
 import { Wallet } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -89,7 +90,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
         <div className="space-y-2 max-h-48 overflow-auto text-sm">
           {data.transactions.slice(0, 8).map((tx) => (
             <div key={tx.id} className="flex justify-between border-b py-1">
-              <span>{tx.description}</span>
+              <span>{publicWalletDescription(tx.description)}</span>
               <span className={tx.type ==="credit" ?"text-green-700" :"text-red-700"}>
                 {tx.type === "credit" ? "+" : "-"}
                 {rupees(tx.amount_paise)}

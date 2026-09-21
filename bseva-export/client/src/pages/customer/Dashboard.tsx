@@ -1,4 +1,5 @@
 import { CustomerPortal } from "@/components/RolePortals";
+import CustomerWelcomeHero, { customerGreetingName } from "@/components/CustomerWelcomeHero";
 import PromoBannerCarousel from "@/components/PromoBannerCarousel";
 import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import WalletPanel from "@/components/WalletPanel";
 import { useI18n } from "@/i18n/I18nProvider";
+import { normalizeCalendarPref, type CalendarPref } from "@bseva/config";
 import {
   Select,
   SelectContent,
@@ -42,7 +44,7 @@ function CustomerDashboardContent() {
   const [, setLocation] = useLocation();
   const { canBook, checking, status } = useServiceAvailability();
   const { startBooking, bookingBlocked } = useStartBooking();
-  const [calPref, setCalPref] = useState<"north" | "south" | "lunar">("north");
+  const [calPref, setCalPref] = useState<CalendarPref>("solar");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujas, setPujas] = useState<any[]>([]);
@@ -50,8 +52,7 @@ function CustomerDashboardContent() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
-    const pref = (user?.calendar_preference as "north" | "south" | "lunar") || "north";
-    setCalPref(pref);
+    setCalPref(normalizeCalendarPref(user?.calendar_preference));
   }, [user?.calendar_preference]);
 
   useEffect(() => {
@@ -148,13 +149,10 @@ function CustomerDashboardContent() {
 
   return (
     <>
-      <section className="bg-sidebar text-sidebar-foreground py-10 px-6 rounded-xl mb-8">
-        <h1 className="text-h1 mb-2">{t("customer.welcome")}, {user?.name || t("auth.customer")}</h1>
-        <p className="text-sidebar-foreground/80">{t("customer.subtitle")}</p>
-        {user?.public_id ? (
-          <p className="mt-2 text-sm text-sidebar-foreground/70 font-mono">ID: {user.public_id}</p>
-        ) : null}
-      </section>
+      <CustomerWelcomeHero
+        customerName={customerGreetingName(user?.name, t("auth.customer"))}
+        publicId={(user as { public_id?: string } | null)?.public_id}
+      />
       <ServiceAvailabilityBanner virtualHref="/services" />
       <PromoBannerCarousel />
       <div className="space-y-12">
@@ -307,7 +305,7 @@ function CustomerDashboardContent() {
                 <Select
                   value={calPref}
                   onValueChange={(v) => {
-                    const pref = v as "north" | "south" | "lunar";
+                    const pref = normalizeCalendarPref(v);
                     setCalPref(pref);
                     void api("/auth/me", { method: "PATCH", body: JSON.stringify({ calendar_preference: pref }) });
                   }}
@@ -316,9 +314,8 @@ function CustomerDashboardContent() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="north">{t("calendar.north")}</SelectItem>
-                    <SelectItem value="south">{t("calendar.south")}</SelectItem>
                     <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
+                    <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

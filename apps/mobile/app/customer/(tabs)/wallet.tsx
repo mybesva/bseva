@@ -9,10 +9,31 @@ import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
 
+function publicWalletDescription(raw?: string | null, fallback = "Wallet transaction"): string {
+  const s = String(raw || "").trim();
+  if (!s) return fallback;
+  return (
+    s
+      .replace(/\s*\((?:demo|mock)[^)]*\)/gi, "")
+      .replace(/\b(?:demo|mock)\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/^[\s\-–]+|[\s\-–]+$/g, "")
+      .trim() || fallback
+  );
+}
+
 type WalletPayload = {
   wallet?: { balance_paise?: number };
   balance_paise?: number;
-  transactions?: { id?: string; amount_paise: number; type?: string; kind?: string; note?: string; created_at?: string }[];
+  transactions?: {
+    id?: string;
+    amount_paise: number;
+    type?: string;
+    kind?: string;
+    note?: string;
+    description?: string;
+    created_at?: string;
+  }[];
 };
 
 export default function WalletScreen() {
@@ -65,7 +86,7 @@ export default function WalletScreen() {
         <AppText variant="h3">{tr("mobile.transactions")}</AppText>
         {txns.map((t) => (
           <Card key={t.id || `${t.created_at}-${t.amount_paise}`}>
-            <AppText>{t.note || t.type || t.kind || tr("mobile.transaction")}</AppText>
+            <AppText>{publicWalletDescription(t.note || t.description || t.type || t.kind, tr("mobile.transaction"))}</AppText>
             <AppText color={Number(t.amount_paise) < 0 ? colors.destructive : colors.success}>
               {rupees(t.amount_paise)}
             </AppText>

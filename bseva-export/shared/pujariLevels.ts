@@ -79,13 +79,13 @@ export function cancellationPolicy(hoursUntil: number) {
   };
 }
 
-export const TERMS_TEXT = `BSeva Terms & Conditions and Cancellation Policy (Demo)
+export const TERMS_TEXT = `BSeva Terms & Conditions and Cancellation Policy
 
 1. Booking confirmation
 By confirming a booking you agree to the selected service, pujari (if any), date, time, package (Standard/Premium), and mode (In-person or Virtual).
 
 2. Pricing
-The final booking price may include applicable GST, service charges, and peak-day/surge fees where applicable. The amount shown at checkout is the demo total charged to your wallet.
+The final booking price may include applicable GST, service charges, and peak-day/surge fees where applicable. The amount shown at checkout is charged to your wallet.
 
 3. Cancellation policy
 Cancellation is calculated from the scheduled booking date and time versus the current date and time:
@@ -97,7 +97,4 @@ Cancellation is calculated from the scheduled booking date and time versus the c
 Pujaris may only be assigned to services permitted by their Admin-approved service level. Requested levels remain pending until Admin verification.
 
 5. Documents
-Pujari certificates and identity documents are demo uploads only. No real KYC or verification service is used.
-
-6. Demo notice
-This is a demonstration application. Payments, OTP, maps, wallets, and document reviews are mocked.`;
+Pujaris must upload valid identity and qualification documents for verification by BSeva.`;

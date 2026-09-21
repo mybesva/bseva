@@ -222,6 +222,9 @@ export type AuthUser = {
   id: string;
   public_id?: string | null;
   name: string;
+  first_name?: string | null;
+  middle_name?: string | null;
+  last_name?: string | null;
   email: string;
   phone: string;
   role: "customer" | "pujari" | "admin" | "super_admin";

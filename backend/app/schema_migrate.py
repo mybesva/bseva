@@ -240,7 +240,6 @@ _DEFAULT_LEGAL_POLICIES = [
             {"title": "Availability", "body": "Bookings are subject to availability, pujari verification, and service-level eligibility."},
             {"title": "Pricing", "body": "The checkout total may include GST, service charges and peak-day fees. The amount shown at checkout is charged to your wallet."},
             {"title": "Pujari levels", "body": "Pujaris may only be booked for services allowed by their Admin-approved service level."},
-            {"title": "Demo notice", "body": "This is a demonstration application. Payments, OTP, maps, wallets, and document reviews may be mocked."},
         ],
     },
     {
@@ -291,19 +290,20 @@ def _seed_legal_policies(conn) -> None:
                 },
             )
         return
-    cancel = next((p for p in _DEFAULT_LEGAL_POLICIES if p["slug"] == "cancellation_policy"), None)
-    if not cancel:
-        return
-    conn.execute(
-        text(
-            """
-            UPDATE legal_policies
-            SET points = CAST(:points AS jsonb), version = '2026-09', updated_at = NOW()
-            WHERE slug = 'cancellation_policy'
-            """
-        ),
-        {"points": json.dumps(cancel["points"])},
-    )
+    for slug in ("cancellation_policy", "booking_terms"):
+        policy = next((p for p in _DEFAULT_LEGAL_POLICIES if p["slug"] == slug), None)
+        if not policy:
+            continue
+        conn.execute(
+            text(
+                """
+                UPDATE legal_policies
+                SET points = CAST(:points AS jsonb), version = '2026-09', updated_at = NOW()
+                WHERE slug = :slug
+                """
+            ),
+            {"points": json.dumps(policy["points"]), "slug": slug},
+        )
 
 
 _FOUNDATION_STMTS = [
@@ -1259,6 +1259,19 @@ def ensure_schema(*, quiet: bool = False) -> None:
             failed.append(("platform seeds", str(e).split("\n")[0][:180]))
         # Mark historical payouts as legacy settlements
         for label, stmt in (
+            (
+                "wallet demo labels",
+                """
+            UPDATE wallet_transactions
+            SET description = CASE
+              WHEN description ILIKE '%welcome bonus%' THEN 'Welcome bonus'
+              WHEN description ILIKE '%wallet load%' THEN 'Wallet load'
+              WHEN description ILIKE '%demo payment%' THEN 'Wallet load'
+              ELSE regexp_replace(description, '\\s*\\((demo|mock)[^)]*\\)', '', 'gi')
+            END
+            WHERE description ILIKE '%demo%' OR description ILIKE '%mock%'
+            """,
+            ),
             (
                 "legacy settlements",
                 """

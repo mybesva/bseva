@@ -37,7 +37,7 @@ function CustomerDashboardContent() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [calPref, setCalPref] = useState<"north" | "south" | "lunar">("north");
+  const [calPref, setCalPref] = useState<"lunar" | "solar">("solar");
   const { data: bookings, isLoading } = trpc.bookings.getMyBookings.useQuery(undefined, {
     enabled: !!user && user.role === "customer",
   });
@@ -126,7 +126,7 @@ function CustomerDashboardContent() {
                 <Select
                   value={calPref}
                   onValueChange={(v) => {
-                    const pref = v as "north" | "south" | "lunar";
+                    const pref = v as "lunar" | "solar";
                     setCalPref(pref);
                     setPref.mutate({ pref });
                   }}
@@ -135,9 +135,8 @@ function CustomerDashboardContent() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="north">{t("calendar.north")}</SelectItem>
-                    <SelectItem value="south">{t("calendar.south")}</SelectItem>
                     <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
+                    <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -121,33 +121,38 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   }, [location, search]);
 
   const navItems = useMemo(() => {
-    const base = [
-      { label: t("nav.home"), path: "/" },
-      { label: t("nav.services"), path: "/services" },
-      { label: t("nav.astrology"), path: "/astrology" },
-      { label: t("nav.about"), path: "/about" },
-      { label: t("nav.contact"), path: "/contact" },
-    ];
-
     const portals = [
       { label: t("nav.customer"), path: "/customer", role: "customer" as const },
-      { label: t("nav.pujaris"), path: "/pujari", role: "pujari" as const },
+      {
+        label: t("nav.pujaris").replace(/\bPujaris\b/, "Pujari"),
+        path: "/pujari",
+        role: "pujari" as const,
+      },
     ];
 
-    if (!user) {
-      return [...base, ...portals.map(({ label, path }) => ({ label, path }))];
+    const visiblePortals = !user
+      ? portals.map(({ label, path }) => ({ label, path }))
+      : portals
+          .filter(
+            (p) =>
+              p.role === user.role ||
+              (p.role === "pujari" && user.role === "head_pujari"),
+          )
+          .map(({ label, path }) => ({ label, path }));
+
+    const items = [
+      { label: t("nav.home"), path: "/" },
+      { label: t("nav.services"), path: "/services" },
+      ...visiblePortals,
+      { label: t("nav.astrology"), path: "/astrology" },
+      { label: t("nav.contact"), path: "/contact" },
+      { label: t("nav.about"), path: "/about" },
+    ];
+
+    if (user) {
+      items.push({ label: t("nav.bookings"), path: "/my-bookings" });
     }
-
-    const mine = portals.find(
-      (p) =>
-        p.role === user.role ||
-        (p.role === "pujari" && user.role === "head_pujari")
-    );
-    return [
-      ...base,
-      ...(mine ? [{ label: mine.label, path: mine.path }] : []),
-      { label: t("nav.bookings"), path: "/my-bookings" },
-    ];
+    return items;
   }, [user, t]);
 
   const socialLinks = useMemo(
@@ -190,15 +195,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 </a>
               </Link>
             ))}
+            <Link href="/services">
+              <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
+                <span className="book-puja-nav-cta">{t("nav.bookPuja")}</span>
+              </a>
+            </Link>
             <LanguageSelect triggerClassName="w-[118px] xl:w-[148px]" />
             <ThemeToggle className="h-8 w-8 shrink-0" />
-            {!user && (
-              <Link href="/services">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-md shrink-0">
-                  {t("nav.bookPuja")}
-                </Button>
-              </Link>
-            )}
             {user && (
               <Button
                 variant="outline"
@@ -216,6 +219,11 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="flex items-center gap-2 lg:hidden">
+            <Link href="/services">
+              <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
+                <span className="book-puja-nav-cta book-puja-nav-cta-compact">{t("nav.bookPuja")}</span>
+              </a>
+            </Link>
             <ThemeToggle />
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -244,16 +252,15 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                         </a>
                       </Link>
                     ))}
-                    {!user && (
-                      <Link href="/services">
-                        <Button
-                          className="w-full mt-2 bg-primary text-primary-foreground font-bold"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          {t("nav.bookPuja")}
-                        </Button>
-                      </Link>
-                    )}
+                    <Link href="/services">
+                      <a
+                        className="book-puja-nav-cta-wrap w-full mt-2"
+                        aria-label={t("nav.bookPuja")}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <span className="book-puja-nav-cta book-puja-nav-cta-block">{t("nav.bookPuja")}</span>
+                      </a>
+                    </Link>
                     {user && (
                       <Button
                         variant="outline"

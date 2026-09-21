@@ -97,12 +97,17 @@ def is_festival_day(d: date) -> bool:
     return _lunar_tithi_index(d) in (10, 14)
 
 
-def panchang_for(d: date, calendar_type: str = "north") -> dict:
+def normalize_calendar_pref(value: str | None) -> str:
+    return "lunar" if str(value or "").strip().lower() == "lunar" else "solar"
+
+
+def panchang_for(d: date, calendar_type: str = "solar") -> dict:
+    calendar_type = normalize_calendar_pref(calendar_type)
     epoch = date(2000, 1, 1)
     lunar_day = (d - epoch).days % 30
     tithi_index = _lunar_tithi_index(d)
     paksha = "Shukla Paksha" if lunar_day < 15 else "Krishna Paksha"
-    months = SOUTH_MONTHS if calendar_type == "south" else NORTH_MONTHS
+    months = SOUTH_MONTHS if calendar_type == "solar" else NORTH_MONTHS
     rahu_key = (d.weekday() + 1) % 7  # convert to Sun=0
     is_peak = d.weekday() >= 5 or is_festival_day(d)
     return {

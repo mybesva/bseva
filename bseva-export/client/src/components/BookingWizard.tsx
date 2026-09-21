@@ -71,8 +71,10 @@ import {
 import {
   VIRTUAL_COUNTRIES,
   customerBookablePackages,
+  normalizeCalendarPref,
   virtualPujaCity,
   virtualPujaLocationLabel,
+  type CalendarPref,
 } from "@bseva/config";
 
 interface BookingWizardProps {
@@ -120,7 +122,7 @@ function newIdempotencyKey() {
 type BookingStep = 1 | 2 | 3 | 4;
 type Tier = "basic" | "standard" | "premium";
 type ServiceMode = "physical" | "virtual";
-type CalendarType = "north" | "south" | "lunar";
+type CalendarType = CalendarPref;
 
 type Step2FieldErrors = Partial<
   Record<
@@ -259,7 +261,7 @@ export default function BookingWizard({
   const [currentStep, setCurrentStep] = useState<BookingStep>(1);
   const [tier, setTier] = useState<Tier>("standard");
   const [serviceMode, setServiceMode] = useState<ServiceMode>("physical");
-  const [calendarType, setCalendarType] = useState<CalendarType>("north");
+  const [calendarType, setCalendarType] = useState<CalendarType>("solar");
   const [bookingDate, setBookingDate] = useState<Date | undefined>();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [bookingTime, setBookingTime] = useState("10:00");
@@ -322,7 +324,7 @@ export default function BookingWizard({
         if (["basic", "standard", "premium"].includes(d.tier)) setTier(d.tier);
         if (["physical", "virtual"].includes(d.serviceMode)) setServiceMode(d.serviceMode);
         if (["saved", "new"].includes(d.addressMode)) setAddressMode(d.addressMode);
-        if (["north", "south", "lunar"].includes(d.calendarType)) setCalendarType(d.calendarType);
+        if (d.calendarType) setCalendarType(normalizeCalendarPref(d.calendarType));
         if (d.bookingDate) setBookingDate(new Date(`${d.bookingDate}T12:00:00`));
         if (d.bookingTime) setBookingTime(d.bookingTime);
         setLocationText(d.locationText || "");
@@ -1202,9 +1204,8 @@ export default function BookingWizard({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="north">{t("calendar.north")}</SelectItem>
-                  <SelectItem value="south">{t("calendar.south")}</SelectItem>
                   <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
+                  <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

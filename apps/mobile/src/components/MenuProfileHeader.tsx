@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from "react-native";
+import { useState } from "react";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -33,32 +34,22 @@ export function MenuProfileHeader({
   const { t } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
-  const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
   const [photoOk, setPhotoOk] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
+  const photoQ = useQuery({
+    queryKey: ["customer-photo", photoKind, user?.id],
+    enabled: Boolean(user?.id && photoKind !== "none"),
+    queryFn: async () => {
       try {
-        const src =
-          photoKind === "customer"
-            ? await apiClient.customerPhotoUri()
-            : photoKind === "pujari"
-              ? await apiClient.pujariMediaUri("photo")
-              : null;
-        if (!cancelled && src) {
-          setPhoto(src);
-          setPhotoOk(true);
-        }
+        if (photoKind === "customer") return await apiClient.customerPhotoUri();
+        if (photoKind === "pujari") return await apiClient.pujariMediaUri("photo");
       } catch {
-        if (!cancelled) setPhoto(null);
+        return null;
       }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [photoKind, user?.id]);
+      return null;
+    },
+    retry: false,
+  });
+  const photo = photoQ.data ?? null;
 
   return (
     <Pressable
