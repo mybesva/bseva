@@ -8,7 +8,7 @@ import { api, apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { Wallet, TrendingUp, CheckCircle2, Clock } from "lucide-react";
-import { pujariEarningsStats } from "@bseva/config";
+import { priestShare, pujariEarningsStats } from "@bseva/config";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export default function PujariEarningsPage() {
