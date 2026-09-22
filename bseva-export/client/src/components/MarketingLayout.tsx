@@ -145,8 +145,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       { label: t("nav.services"), path: "/services" },
       ...visiblePortals,
       { label: t("nav.astrology"), path: "/astrology" },
-      { label: t("nav.contact"), path: "/contact" },
       { label: t("nav.about"), path: "/about" },
+      { label: t("nav.contact"), path: "/contact" },
     ];
 
     if (user) {
