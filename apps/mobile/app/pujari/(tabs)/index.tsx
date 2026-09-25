@@ -41,7 +41,7 @@ export default function PujariHome() {
           <AppText variant="small">
             {t("mobile.verificationProgress", {
               status: String(p.verification_status || "pending"),
-              percent: String(p.profile_completeness_percent || p.completeness_percent || "—"),
+              percent: String(p.profile_completion_percentage ?? p.profile_completeness_percent ?? p.completeness_percent ?? "—"),
             })}
           </AppText>
           {!p.profile_submitted_at ? (

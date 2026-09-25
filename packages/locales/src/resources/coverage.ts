@@ -350,4 +350,4 @@ const ta: Dict = {
   "service.minutes": "{{count}} நிமிடங்கள்",
 };
 
-export const coverage: Record<Lang, Dict> = { en, te, hi, mr, kn, ta };
+export const coverage: Record<Lang, Dict> = { en, te, hi, mr, kn, ta, ml: en };

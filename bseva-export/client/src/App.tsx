@@ -50,6 +50,7 @@ import PujariReferralPage from "./pages/pujari/ReferralPage";
 import PujariAvailabilityPage from "./pages/pujari/AvailabilityPage";
 import PujariServicesPage from "./pages/pujari/ServicesPage";
 import PujariBookingsPage from "./pages/pujari/BookingsPage";
+import PujariBookingDetailPage from "./pages/pujari/BookingDetailPage";
 import PujariChangePasswordPage from "./pages/pujari/ChangePasswordPage";
 import PujariEarningsPage from "./pages/pujari/EarningsPage";
 import { CustomerTermsPage, PujariTermsPage } from "./pages/portal/TermsPage";
@@ -113,6 +114,7 @@ function Router() {
       <Route path="/customer/rewards" component={CustomerRewardsPage} />
       <Route path="/customer/terms" component={CustomerTermsPage} />
       <Route path="/pujari-profile/:id" component={PublicPujariProfile} />
+      <Route path="/pujari/bookings/:id" component={PujariBookingDetailPage} />
       <Route path="/pujari/bookings" component={PujariBookingsPage} />
       <Route path="/pujari/notifications" component={PujariNotificationsPage} />
       <Route path="/pujari" component={PujariDashboard} />

@@ -24,9 +24,11 @@ export default function AstrologyScreen() {
       return all.filter(
         (s) =>
           String(s.category || "").toLowerCase().includes("astro") ||
-          String(s.slug || "").includes("astro") ||
-          String(s.slug || "").includes("muhurta") ||
-          String(s.name || "").toLowerCase().includes("astro")
+          String(s.category || "").toLowerCase().includes("muhur") ||
+          String(s.slug || "").toLowerCase().includes("astro") ||
+          String(s.slug || "").toLowerCase().includes("muhur") ||
+          String(s.name || "").toLowerCase().includes("astro") ||
+          String(s.name || "").toLowerCase().includes("muhur")
       );
     },
   });
@@ -40,7 +42,13 @@ export default function AstrologyScreen() {
         </AppText>
         {!q.isLoading && !(q.data || []).length ? <EmptyState title={t("mobile.noAstrology")} /> : null}
         {(q.data || []).map((s) => (
-          <Pressable key={s.id || s.slug} onPress={() => router.push(s.slug ? `/service/${s.slug}` : "/customer/services")}>
+          <Pressable
+            key={s.id || s.slug}
+            onPress={() => {
+              const slug = String(s.slug || s.id || "").trim();
+              if (slug) router.push(`/service/${encodeURIComponent(slug)}`);
+            }}
+          >
             <Card>
               <PujaTitle name={s.name} variant="h3" />
               {s.standard_price_paise != null || s.fee_paise != null ? (

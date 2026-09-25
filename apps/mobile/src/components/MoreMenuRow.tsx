@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LANG_LABELS, type Lang } from "@bseva/locales";
+import { LANG_ENGLISH_NAMES, LANG_LABELS, type Lang } from "@bseva/locales";
 import { isLangCode } from "@bseva/config";
 import { spacing } from "@bseva/tokens";
-import type { ComponentProps } from "react";
-import { ActionSheetIOS, Alert, Platform, Pressable, StyleSheet, View } from "react-native";
+import { useState, type ComponentProps } from "react";
+import { ActionSheetIOS, Alert, Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -117,36 +117,66 @@ function showOptionSheet(title: string, options: { label: string; onPress: () =>
 
 export function MoreLanguageRow() {
   const { lang, setLang, t } = useI18n();
+  const { colors } = useAppTheme();
   const { user, refresh } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  async function choose(code: Lang) {
+    setOpen(false);
+    setLang(code);
+    if (user && isLangCode(code)) {
+      try {
+        await apiClient.patchMe({ preferred_language: code });
+        await refresh();
+      } catch {
+        /* local language still applies */
+      }
+    }
+  }
 
   return (
-    <MoreMenuRow
-      icon="globe-outline"
-      label={t("mobile.language")}
-      value={LANG_LABELS[lang]}
-      onPress={() =>
-        showOptionSheet(
-          t("mobile.language"),
-          LANGS.map((code) => ({
-            label: LANG_LABELS[code],
-            onPress: () => {
-              void (async () => {
-                setLang(code);
-                if (user && isLangCode(code)) {
-                  try {
-                    await apiClient.patchMe({ preferred_language: code });
-                    await refresh();
-                  } catch {
-                    /* local language still applies */
-                  }
-                }
-              })();
-            },
-          })),
-          t("common.cancel")
-        )
-      }
-    />
+    <>
+      <MoreMenuRow
+        icon="globe-outline"
+        label={t("mobile.language")}
+        value={LANG_LABELS[lang]}
+        onPress={() => setOpen(true)}
+      />
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }} onPress={() => setOpen(false)}>
+          <Pressable
+            onPress={() => undefined}
+            style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, gap: 8, paddingBottom: 28 }}
+          >
+            <AppText variant="h3">{t("mobile.language")}</AppText>
+            {LANGS.map((code) => (
+              <Pressable
+                key={code}
+                accessibilityRole="button"
+                onPress={() => void choose(code)}
+                style={{
+                  minHeight: 48,
+                  justifyContent: "center",
+                  paddingHorizontal: 12,
+                  borderRadius: 10,
+                  backgroundColor: code === lang ? colors.secondary : colors.card,
+                  borderWidth: 1,
+                  borderColor: code === lang ? colors.primary : colors.border,
+                }}
+              >
+                <AppText>
+                  {LANG_LABELS[code]}
+                  {LANG_ENGLISH_NAMES[code] !== LANG_LABELS[code] ? ` · ${LANG_ENGLISH_NAMES[code]}` : ""}
+                </AppText>
+              </Pressable>
+            ))}
+            <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={{ minHeight: 48, justifyContent: "center", alignItems: "center" }}>
+              <AppText color={colors.mutedForeground}>{t("common.cancel")}</AppText>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 

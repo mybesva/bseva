@@ -1,4 +1,4 @@
-export const LANGS = ["en", "hi", "te", "mr", "ta", "kn"] as const;
+export const LANGS = ["en", "hi", "te", "mr", "ta", "kn", "ml"] as const;
 export type Lang = (typeof LANGS)[number];
 
 export const DEFAULT_LANG: Lang = "en";
@@ -13,6 +13,7 @@ export const LANG_LABELS: Record<Lang, string> = {
   mr: "मराठी",
   kn: "ಕನ್ನಡ",
   ta: "தமிழ்",
+  ml: "മലയാളം",
 };
 
 export const LANG_ENGLISH_NAMES: Record<Lang, string> = {
@@ -22,6 +23,7 @@ export const LANG_ENGLISH_NAMES: Record<Lang, string> = {
   mr: "Marathi",
   kn: "Kannada",
   ta: "Tamil",
+  ml: "Malayalam",
 };
 
 /** BCP-47 tags used for Intl date/number formatting. */
@@ -32,6 +34,7 @@ export const INTL_LOCALES: Record<Lang, string> = {
   mr: "mr-IN",
   kn: "kn-IN",
   ta: "ta-IN",
+  ml: "ml-IN",
 };
 
 export const PREFERRED_LANGUAGES = LANGS.map((code) => ({

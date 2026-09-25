@@ -109,11 +109,13 @@ export default function BookingReceipt() {
   async function cancelBooking() {
     const reason = window.prompt(t("web.booking.cancelReason"));
     if (reason === null) return;
+    if (reason.trim().length < 5) {
+      toast.error(t("web.booking.cancelReason"));
+      return;
+    }
     try {
       await api(
-        `/bookings/${booking.id}/cancel${
-          reason.trim() ? `?reason=${encodeURIComponent(reason.trim())}` : ""
-        }`,
+        `/bookings/${booking.id}/cancel?reason=${encodeURIComponent(reason.trim())}`,
         { method: "POST" }
       );
       toast.success(t("web.booking.cancelled"));
@@ -358,7 +360,7 @@ export default function BookingReceipt() {
                   variant="outline"
                   onClick={() => void downloadInvoicePdf(String(booking.invoice_id)).catch((e) => toast.error(e.message))}
                 >
-                  <Download className="w-4 h-4 mr-1" /> {t("invoice.download")}
+                  <Download className="w-4 h-4 mr-1" /> {t("invoice.downloadPdf")}
                 </Button>
               ) : null}
             </div>

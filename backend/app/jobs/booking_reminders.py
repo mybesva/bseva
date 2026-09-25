@@ -66,7 +66,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         title = "Upcoming booking reminder"
                         body = f"Reminder: {service_name} ({booking_num}) is within {hours_ahead} hours."
                         cat = "booking_reminder"
-                    from app.routers.notifications import create_notification
+                    from app.routers.notifications import create_notification, pujari_booking_link
 
                     create_notification(
                         session,
@@ -74,7 +74,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         title=title,
                         body=body,
                         category=cat,
-                        link="/pujari/bookings",
+                        link=pujari_booking_link(str(b["id"])),
                         extra_data={"booking_id": str(b["id"])},
                         message_key="samagriReminder" if samagri else "reminder",
                         message_vars={
@@ -112,7 +112,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                             f"15 minutes before the puja."
                         ),
                         category="booking_reminder",
-                        link="/customer/bookings",
+                        link=f"/booking/{b['id']}",
                         extra_data={"booking_id": str(b["id"])},
                         message_key="reminder",
                         message_vars={
@@ -313,7 +313,7 @@ def notify_location_unlocked(db: Session | None = None) -> dict:
             if exists:
                 skipped += 1
                 continue
-            from app.routers.notifications import create_notification
+            from app.routers.notifications import create_notification, pujari_booking_link
 
             num = b.get("booking_number") or str(b["id"])[:8]
             create_notification(
@@ -325,7 +325,7 @@ def notify_location_unlocked(db: Session | None = None) -> dict:
                     "is now available. Open Bookings for maps and directions."
                 ),
                 category="location_unlocked",
-                link="/pujari/bookings",
+                link=pujari_booking_link(str(b["id"])),
                 extra_data={"booking_id": str(b["id"])},
                 message_key="locationUnlocked",
                 message_vars={

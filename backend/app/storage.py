@@ -179,7 +179,7 @@ def fetch_bytes(object_path: str) -> tuple[bytes, str]:
 
 def file_response(object_path: str, filename: str | None = None):
     data, ct = fetch_bytes(object_path)
-    headers = {}
+    headers = {"Cache-Control": "no-store, max-age=0"}
     if filename:
         headers["Content-Disposition"] = f'inline; filename="{_safe_segment(filename)}"'
     return Response(content=data, media_type=ct, headers=headers)

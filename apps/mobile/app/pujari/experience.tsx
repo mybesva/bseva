@@ -1,7 +1,8 @@
 import { PUJARI_LANGS, PUJARI_QUALS, PUJARI_SPECS, SAMPRADAYA_OPTS } from "@bseva/config";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView } from "react-native";
+import { Alert, ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -9,6 +10,8 @@ import { useI18n } from "@/providers/I18nProvider";
 
 export default function ExperienceScreen() {
   const { t } = useI18n();
+  const router = useRouter();
+  const qc = useQueryClient();
   const q = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const [years, setYears] = useState("");
   const [year, setYear] = useState("");
@@ -62,7 +65,9 @@ export default function ExperienceScreen() {
                 languages: langs,
                 specializations: specs,
               });
-              await q.refetch();
+              await qc.invalidateQueries({ queryKey: ["pujari-profile"] });
+              Alert.alert(t("mobile.experienceUpdated"));
+              router.back();
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.failed"));
             }

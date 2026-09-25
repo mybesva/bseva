@@ -65,7 +65,7 @@ export default function CustomerInvoicesPage() {
                   size="sm"
                   onClick={() => void downloadInvoicePdf(inv.id).catch((e) => toast.error(e.message))}
                 >
-                  {t("invoice.download")}
+                  {t("invoice.downloadPdf")}
                 </Button>
               </div>
             </CardContent>

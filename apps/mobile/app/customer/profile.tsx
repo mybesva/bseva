@@ -1,15 +1,17 @@
 import { LANGS } from "@bseva/config";
 import { LANG_LABELS, type Lang } from "@bseva/locales";
+import type { AuthUser } from "@bseva/types";
 import { ApiError } from "@bseva/api-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Image, ScrollView, View, type ImageSourcePropType } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { MediaPicker } from "@/components/MediaPicker";
+import { MediaPicker, type PickedMedia } from "@/components/MediaPicker";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
+import { fetchCustomerProfilePhotoSource } from "@/services/customerPhoto";
 import { useAppTheme } from "@/theme/ThemeContext";
 
 export default function CustomerProfile() {
@@ -22,6 +24,9 @@ export default function CustomerProfile() {
     queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, unknown>>,
     retry: false,
   });
+  const [fullName, setFullName] = useState(user?.name || "");
+  const [pendingPhoto, setPendingPhoto] = useState<PickedMedia | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -34,28 +39,37 @@ export default function CustomerProfile() {
 
   async function loadPhoto() {
     try {
-      const src = await apiClient.customerPhotoUri();
+      const src = await fetchCustomerProfilePhotoSource();
       setPhoto(src);
-      setPhotoOk(true);
-    } catch {
+      setPhotoOk(Boolean(src));
+    } catch (e: unknown) {
       setPhoto(null);
+      setPhotoOk(false);
+      if (e instanceof ApiError && e.status === 404) return;
+      setError(e instanceof Error ? e.message : t("mobile.uploadFailed"));
     }
   }
 
   useEffect(() => {
-    if (user?.phone) setPhone(user.phone);
-    if (user?.first_name || user?.last_name || user?.middle_name) {
-      setFirstName(String(user.first_name || ""));
-      setMiddleName(String(user.middle_name || ""));
-      setLastName(String(user.last_name || ""));
-    } else if (user?.name) {
-      const parts = user.name.trim().split(/\s+/).filter(Boolean);
+    const account = user as (AuthUser & {
+      first_name?: string | null;
+      middle_name?: string | null;
+      last_name?: string | null;
+    }) | null;
+    if (account?.name) setFullName(account.name);
+    if (account?.phone) setPhone(account.phone);
+    if (account?.first_name || account?.last_name || account?.middle_name) {
+      setFirstName(String(account.first_name || ""));
+      setMiddleName(String(account.middle_name || ""));
+      setLastName(String(account.last_name || ""));
+    } else if (account?.name) {
+      const parts = account.name.trim().split(/\s+/).filter(Boolean);
       setFirstName(parts[0] || "");
       setMiddleName(parts.length > 2 ? parts.slice(1, -1).join(" ") : "");
       setLastName(parts.length > 1 ? parts[parts.length - 1] : "");
     }
-    if (user?.preferred_language) setLangState(user.preferred_language as Lang);
-  }, [user?.name, user?.phone, user?.preferred_language, user?.first_name, user?.middle_name, user?.last_name]);
+    if (account?.preferred_language) setLangState(account.preferred_language as Lang);
+  }, [user]);
 
   useEffect(() => {
     void loadPhoto();
@@ -100,18 +114,42 @@ export default function CustomerProfile() {
               </AppText>
             </View>
           )}
-          <MediaPicker
-            onPicked={async (file) => {
-              setError(null);
-              try {
-                await apiClient.uploadCustomerPhoto(file);
-                await loadPhoto();
-                void qc.invalidateQueries({ queryKey: ["customer-photo"] });
-              } catch (e: unknown) {
-                setError(e instanceof Error ? e.message : t("mobile.uploadFailed"));
-              }
-            }}
-          />
+          {pendingPhoto ? (
+            <View style={{ gap: 8, marginBottom: 8 }}>
+              <Image source={{ uri: pendingPhoto.uri }} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.secondary }} />
+              <AppText variant="small">{t("mobile.photoConfirmHelp")}</AppText>
+              <PrimaryButton
+                title={photoBusy ? t("mobile.saving") : t("mobile.uploadPhoto")}
+                loading={photoBusy}
+                onPress={async () => {
+                  setPhotoBusy(true);
+                  setError(null);
+                  try {
+                    const updated = (await apiClient.uploadCustomerPhoto(pendingPhoto)) as {
+                      profile_photo_path?: string | null;
+                    };
+                    setPendingPhoto(null);
+                    setError(null);
+                    if (!updated?.profile_photo_path?.trim()) {
+                      throw new Error(t("mobile.uploadFailed"));
+                    }
+                    setPhoto(await apiClient.customerPhotoUri());
+                    setPhotoOk(true);
+                    void qc.invalidateQueries({ queryKey: ["customer-photo"] });
+                    void qc.invalidateQueries({ queryKey: ["customer-profile"] });
+                    await loadPhoto();
+                  } catch (e: unknown) {
+                    setError(e instanceof Error ? e.message : t("mobile.uploadFailed"));
+                  } finally {
+                    setPhotoBusy(false);
+                  }
+                }}
+              />
+              <PrimaryButton title={t("common.cancel")} variant="outline" disabled={photoBusy} onPress={() => setPendingPhoto(null)} />
+            </View>
+          ) : (
+            <MediaPicker aspect={[1, 1]} onPicked={(file) => setPendingPhoto(file)} />
+          )}
           {photo && photoOk ? (
             <View style={{ marginTop: 8 }}>
               <PrimaryButton
@@ -132,6 +170,7 @@ export default function CustomerProfile() {
           ) : null}
         </Card>
         <Card>
+          <Field label={t("mobile.name")} value={fullName} onChangeText={setFullName} />
           <Field label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
           <Field label={t("auth.middleName")} value={middleName} onChangeText={setMiddleName} />
           <Field label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
@@ -155,10 +194,20 @@ export default function CustomerProfile() {
               setBusy(true);
               setError(null);
               try {
+                const composed = [firstName.trim(), middleName.trim(), lastName.trim()].filter(Boolean).join(" ");
+                let saveFirst = firstName.trim();
+                let saveMiddle = middleName.trim();
+                let saveLast = lastName.trim();
+                if (fullName.trim() && fullName.trim() !== composed) {
+                  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+                  saveFirst = parts[0] || "";
+                  saveLast = parts.length > 1 ? parts[parts.length - 1] : saveLast;
+                  saveMiddle = parts.length > 2 ? parts.slice(1, -1).join(" ") : "";
+                }
                 await apiClient.patchMe({
-                  first_name: firstName.trim(),
-                  middle_name: middleName.trim(),
-                  last_name: lastName.trim(),
+                  first_name: saveFirst,
+                  middle_name: saveMiddle,
+                  last_name: saveLast,
                   phone: phone.trim() || undefined,
                   preferred_language: lang,
                 });

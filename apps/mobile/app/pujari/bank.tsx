@@ -17,6 +17,7 @@ export default function BankScreen() {
   const [accountNumber, setAccountNumber] = useState("");
   const [accountConfirm, setAccountConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!q.data) return;
     const acct = String(q.data.bank_account_number || "");
@@ -34,19 +35,30 @@ export default function BankScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
         <ErrorBanner message={error} />
         <AppText variant="small">{t("mobile.bankHelp")}</AppText>
-        <Field label="UPI ID" value={upiId} onChangeText={setUpiId} autoCapitalize="none" />
-        <Field label={t("mobile.accountHolder")} value={holder} onChangeText={setHolder} />
-        <Field label="Bank name" value={bankName} onChangeText={setBankName} />
-        <Field label={t("mobile.ifsc")} value={ifsc} onChangeText={setIfsc} autoCapitalize="characters" />
-        <Field label="Account number" value={accountNumber} onChangeText={setAccountNumber} keyboardType="number-pad" />
-        <Field label="Confirm account number" value={accountConfirm} onChangeText={setAccountConfirm} keyboardType="number-pad" />
+        <Field label={t("web.bank.upi")} value={upiId} onChangeText={setUpiId} autoCapitalize="none" error={fieldErrors.upiId} />
+        <Field label={t("web.bank.holder")} value={holder} onChangeText={setHolder} error={fieldErrors.holder} />
+        <Field label={t("web.bank.name")} value={bankName} onChangeText={setBankName} error={fieldErrors.bankName} />
+        <Field label={t("mobile.ifsc")} value={ifsc} onChangeText={setIfsc} autoCapitalize="characters" error={fieldErrors.ifsc} />
+        <Field label={t("web.bank.account")} value={accountNumber} onChangeText={setAccountNumber} keyboardType="number-pad" error={fieldErrors.accountNumber} />
+        <Field
+          label={t("web.bank.confirmAccount")}
+          value={accountConfirm}
+          onChangeText={setAccountConfirm}
+          keyboardType="number-pad"
+          error={fieldErrors.accountConfirm}
+        />
         <PrimaryButton
           title={t("mobile.save")}
           onPress={async () => {
             setError(null);
+            setFieldErrors({});
             const errs = validateSettlement(draft);
             if (Object.keys(errs).length) {
-              setError(t(String(Object.values(errs)[0])));
+              const next: Record<string, string> = {};
+              for (const [key, value] of Object.entries(errs)) {
+                next[key] = t(String(value));
+              }
+              setFieldErrors(next);
               return;
             }
             if (!hasSettlementMethod(draft)) {

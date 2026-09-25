@@ -58,6 +58,18 @@ export type UploadFile = {
   type: string;
 };
 
+/** Ensure mobile multipart uploads include a backend-accepted image extension. */
+export function normalizeUploadFile(file: UploadFile): UploadFile {
+  let name = (file.name || "").trim() || "photo.jpg";
+  if (!/\.(jpe?g|png|webp)$/i.test(name)) {
+    const ext =
+      file.type === "image/png" ? ".png" : file.type === "image/webp" ? ".webp" : ".jpg";
+    name = name.includes(".") ? `${name}${ext}` : `photo${ext}`;
+  }
+  const type = file.type?.startsWith("image/") ? file.type : "image/jpeg";
+  return { uri: file.uri, name, type };
+}
+
 function joinUrl(base: string, path: string) {
   const b = base.replace(/\/$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -606,8 +618,12 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     uploadCustomerPhoto(file: UploadFile) {
+      const normalized = normalizeUploadFile(file);
       const form = new FormData();
-      form.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+      form.append(
+        "file",
+        { uri: normalized.uri, name: normalized.name, type: normalized.type } as unknown as Blob,
+      );
       return upload("/customer/profile/photo", form);
     },
 
@@ -663,8 +679,12 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     uploadPujariAsset(kind: "photo" | "signature", file: UploadFile) {
+      const normalized = normalizeUploadFile(file);
       const form = new FormData();
-      form.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+      form.append(
+        "file",
+        { uri: normalized.uri, name: normalized.name, type: normalized.type } as unknown as Blob,
+      );
       return upload(`/pujari/profile/${kind}`, form);
     },
 

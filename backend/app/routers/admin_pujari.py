@@ -623,7 +623,7 @@ def assign_pujari_to_booking(
     try:
         from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
         from app.mail.senders import send_pujari_assigned_email
-        from app.routers.notifications import create_notification
+        from app.routers.notifications import create_notification, pujari_booking_link
 
         pujari_user = db.execute(
             text("SELECT id, email, name FROM users WHERE id = CAST(:id AS uuid)"),
@@ -664,7 +664,7 @@ def assign_pujari_to_booking(
                 title="New booking assignment",
                 body=f"Booking {b.get('booking_number') or booking_id[:8]} was assigned to you.",
                 category="booking",
-                link="/pujari",
+                link=pujari_booking_link(booking_id),
                 extra_data={"booking_id": booking_id},
             )
             create_notification(
@@ -673,7 +673,7 @@ def assign_pujari_to_booking(
                 title="Pujari assigned",
                 body=f"A pujari has been assigned to booking {b.get('booking_number') or booking_id[:8]}.",
                 category="booking",
-                link="/customer/bookings",
+                link=f"/booking/{booking_id}",
                 extra_data={"booking_id": booking_id},
             )
             if prev and str(prev) != str(body.pujari_id):
@@ -683,7 +683,7 @@ def assign_pujari_to_booking(
                     title="Booking changed",
                     body=f"Booking {b.get('booking_number') or booking_id[:8]} was reassigned.",
                     category="booking",
-                    link="/pujari/bookings",
+                    link=pujari_booking_link(booking_id),
                     extra_data={"booking_id": booking_id},
                 )
             db.commit()

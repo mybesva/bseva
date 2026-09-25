@@ -24,6 +24,8 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
         "NSLocationAlwaysUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
         "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it.",
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true,
         "UIBackgroundModes": [
           "remote-notification",
           "location"

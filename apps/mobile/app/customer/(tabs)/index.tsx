@@ -1,4 +1,4 @@
-import { CALENDARS, normalizeCalendarPref, rupees } from "@bseva/config";
+import { rupees } from "@bseva/config";
 import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -7,7 +7,7 @@ import { Image, Linking, Pressable, RefreshControl, ScrollView, View } from "rea
 import { CustomerWelcomeHero, customerGreetingName } from "@/components/CustomerWelcomeHero";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { SeasonalPopup } from "@/components/SeasonalPopup";
-import { AppText, Card, ChoiceChips, EmptyState, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
+import { AppText, Card, EmptyState, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { PujaTitle } from "@/components/PujaTitle";
 import { PujaServiceCard } from "@/components/PujaImage";
 import { useAuth } from "@/providers/AuthProvider";
@@ -17,12 +17,12 @@ import { useAppTheme } from "@/theme/ThemeContext";
 import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
 
 export default function CustomerHome() {
-  const { user, refresh } = useAuth();
+  const { user } = useAuth();
   const { t, lang } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
-  const calendar = normalizeCalendarPref(user?.calendar_preference);
+  const calendar = "lunar";
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   const services = useQuery({ queryKey: ["services", lang], queryFn: () => apiClient.listServices() });
   const wallet = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
@@ -142,16 +142,20 @@ export default function CustomerHome() {
           </Pressable>
         ))}
         <Card>
-          <AppText variant="small">{t("mobile.calendar")} · {today}</AppText>
-          <ChoiceChips
-            options={CALENDARS.map((c) => ({ id: c, label: t(`calendar.${c}`) }))}
-            value={calendar}
-            onChange={(v) => {
-              void apiClient.patchMe({ calendar_preference: v }).then(() => refresh());
-            }}
-          />
-          <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
-            {String(panchang.data?.tithi || panchang.data?.summary || panchang.data?.nakshatra || t("mobile.panchangToday"))}
+          <AppText variant="h3">{t("calendar.panchangam")}</AppText>
+          <AppText variant="small" color={colors.mutedForeground}>{today}</AppText>
+          <AppText style={{ marginTop: 8 }}>
+            {t("calendar.tithi")} {String(panchang.data?.tithi || "—")}
+            {panchang.data?.paksha ? ` (${String(panchang.data.paksha)})` : ""}
+          </AppText>
+          <AppText>
+            {t("calendar.nakshatra")} {String(panchang.data?.nakshatra || "—")}
+          </AppText>
+          <AppText>
+            {t("calendar.lunarMonth")} {String(panchang.data?.lunarMonth || "—")}
+          </AppText>
+          <AppText>
+            {t("calendar.rahuKalam")} {String(panchang.data?.rahukaalam || "—")}
           </AppText>
         </Card>
         {bookings.isLoading ? <LoadingBlock /> : null}

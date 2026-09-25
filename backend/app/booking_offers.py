@@ -132,7 +132,29 @@ def refresh_offers_for_open_bookings(
     ids = [str(r[0]) for r in db.execute(text(q), params).all()]
     invited: list[str] = []
     for bid in ids:
-        invited.extend(create_offers_for_booking(db, bid))
+        new_ids = create_offers_for_booking(db, bid)
+        if not new_ids:
+            continue
+        invited.extend(new_ids)
+        meta = db.execute(
+            text(
+                """
+                SELECT b.booking_number, b.service_id::text AS service_id, s.name AS service_name
+                FROM bookings b
+                LEFT JOIN services s ON s.id = b.service_id
+                WHERE b.id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": bid},
+        ).mappings().first()
+        notify_pujaris_new_offer(
+            db,
+            pujari_ids=new_ids,
+            booking_id=bid,
+            booking_number=str((meta or {}).get("booking_number") or bid[:8]),
+            service_name=str((meta or {}).get("service_name") or "Puja"),
+            service_id=str((meta or {}).get("service_id") or "") or None,
+        )
     return invited
 
 
@@ -291,14 +313,16 @@ def notify_pujaris_new_offer(
     booking_number: str,
     service_name: str,
     service_id: str | None = None,
+    booking_id: str | None = None,
 ) -> None:
     if not pujari_ids:
         return
     try:
-        from app.routers.notifications import create_notification
+        from app.routers.notifications import create_notification, pujari_booking_link
     except Exception:
         return
     body = f"New {service_name or 'puja'} request ({booking_number}) near you — accept or decline in Bookings."
+    link = pujari_booking_link(booking_id) if booking_id else "/pujari/bookings"
     for pid in pujari_ids:
         try:
             create_notification(
@@ -307,7 +331,7 @@ def notify_pujaris_new_offer(
                 title="New booking request",
                 body=body,
                 category="booking",
-                link="/pujari/bookings",
+                link=link,
                 message_key="newRequest",
                 message_vars={
                     "service": service_name or "Puja",

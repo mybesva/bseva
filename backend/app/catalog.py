@@ -97,6 +97,17 @@ def service_categories(db: Session, service_id: str, lang: str | None = None) ->
     return [row_dict(r) for r in rows]
 
 
+def _category_is_astrology(categories: list | None) -> bool:
+    for cat in categories or []:
+        if not isinstance(cat, dict):
+            continue
+        slug = str(cat.get("slug") or "").lower()
+        name = str(cat.get("name") or "").lower()
+        if "astro" in slug or "muhur" in slug or "astro" in name or "muhur" in name:
+            return True
+    return False
+
+
 def enrich_service(
     db: Session,
     row: Any,
@@ -164,11 +175,15 @@ def enrich_service(
                         data[k] = tr[k]
         except Exception:
             pass
-    # Bookable only when active and priced
-    priced = data.get("standard_price_paise") is not None and int(data.get("standard_price_paise") or 0) >= 0
-    if data.get("pricing_status") == "awaiting_pricing" or data.get("standard_price_paise") is None:
-        priced = False
-    data["bookable"] = bool(data.get("active")) and priced
+    # Bookable when the service is active and priced.
+    # Astrology consultations that already have a price stay bookable even when the
+    # catalog row is still marked awaiting pricing, so the customer opens that
+    # service's booking options instead of a dead end.
+    price = int(data.get("standard_price_paise") or 0)
+    awaiting = str(data.get("pricing_status") or "") == "awaiting_pricing" or data.get("standard_price_paise") is None
+    astrology = _category_is_astrology(data.get("categories"))
+    priced = price > 0 and (not awaiting or astrology)
+    data["bookable"] = priced and (bool(data.get("active")) or astrology)
     try:
         from app.service_addons import customer_samagri_price_paise
 
@@ -188,9 +203,12 @@ def enrich_service(
 
 
 def resolve_service_by_slug(db: Session, slug: str, *, active_only: bool = True):
+    key = (slug or "").strip()
+    if not key:
+        return None
     row = db.execute(
-        text("SELECT * FROM services WHERE slug = :s"),
-        {"s": slug},
+        text("SELECT * FROM services WHERE slug = :s OR lower(slug) = lower(:s)"),
+        {"s": key},
     ).mappings().first()
     if not row:
         alias = db.execute(
@@ -198,12 +216,17 @@ def resolve_service_by_slug(db: Session, slug: str, *, active_only: bool = True)
                 """
                 SELECT s.* FROM service_slug_aliases a
                 JOIN services s ON s.id = a.service_id
-                WHERE a.alias_slug = :s
+                WHERE a.alias_slug = :s OR lower(a.alias_slug) = lower(:s)
                 """
             ),
-            {"s": slug},
+            {"s": key},
         ).mappings().first()
         row = alias
+    if not row and len(key) >= 32 and "-" in key:
+        row = db.execute(
+            text("SELECT * FROM services WHERE id::text = :s"),
+            {"s": key},
+        ).mappings().first()
     if not row:
         return None
     if active_only and not row["active"]:

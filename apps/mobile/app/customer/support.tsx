@@ -9,6 +9,83 @@ import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
 
+function TicketCard({
+  ticket,
+  onError,
+  onChanged,
+}: {
+  ticket: { id: string; subject?: string; ticket_number?: string; category?: string; status?: string };
+  onError: (message: string) => void;
+  onChanged: () => Promise<void>;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [reply, setReply] = useState("");
+  const detail = useQuery({
+    queryKey: ["ticket", ticket.id],
+    queryFn: () => apiClient.getSupportTicket(ticket.id),
+    enabled: open,
+  });
+  const detailId = detail.data?.id ? String(detail.data.id) : "";
+  const showDetail = open && detail.data && (!detailId || detailId === String(ticket.id));
+  return (
+    <Card>
+      <AppText variant="h3">{ticket.subject}</AppText>
+      <AppText variant="small">{String(ticket.ticket_number || ticket.category || "")}</AppText>
+      {ticket.status ? <StatusBadge status={String(ticket.status)} /> : null}
+      <PrimaryButton
+        title={open ? t("common.back") : t("common.viewAll")}
+        variant="outline"
+        onPress={() => {
+          setReply("");
+          setOpen((current) => !current);
+        }}
+      />
+      {showDetail ? (
+        <>
+          {(detail.data?.events as { id?: string; body?: string; event_type?: string }[] | undefined)?.map((ev, index) => (
+            <AppText key={ev.id || `${ticket.id}-${index}`} variant="small">
+              {ev.event_type}: {ev.body}
+            </AppText>
+          ))}
+          {String(detail.data?.status) === "closed" || String(detail.data?.status) === "resolved" ? (
+            <PrimaryButton
+              title={t("web.support.reopen")}
+              variant="outline"
+              onPress={async () => {
+                try {
+                  await apiClient.reopenSupportTicket(ticket.id);
+                  await detail.refetch();
+                  await onChanged();
+                } catch (e: unknown) {
+                  onError(e instanceof Error ? e.message : t("mobile.failed"));
+                }
+              }}
+            />
+          ) : (
+            <>
+              <Field label={t("web.support.reply")} value={reply} onChangeText={setReply} multiline />
+              <PrimaryButton
+                title={t("web.support.reply")}
+                onPress={async () => {
+                  if (!reply.trim()) return;
+                  try {
+                    await apiClient.replySupportTicket(ticket.id, reply.trim());
+                    setReply("");
+                    await detail.refetch();
+                  } catch (e: unknown) {
+                    onError(e instanceof Error ? e.message : t("mobile.failed"));
+                  }
+                }}
+              />
+            </>
+          )}
+        </>
+      ) : null}
+    </Card>
+  );
+}
+
 export default function SupportScreen() {
   const { t } = useI18n();
   const { user } = useAuth();
@@ -21,13 +98,6 @@ export default function SupportScreen() {
   const [bookingId, setBookingId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [reply, setReply] = useState("");
-  const detail = useQuery({
-    queryKey: ["ticket", openId],
-    queryFn: () => apiClient.getSupportTicket(openId || ""),
-    enabled: Boolean(openId),
-  });
   const bookings = bookingsQ.data || [];
   return (
     <Screen>
@@ -65,7 +135,8 @@ export default function SupportScreen() {
           onPress={async () => {
             const parsed = supportSchema.safeParse({ subject, body });
             if (!parsed.success) {
-              setError(t("mobile.checkForm"));
+              const field = String(parsed.error.issues[0]?.path?.[0] || "");
+              setError(field === "subject" ? t("validation.subject") : t("validation.issue"));
               return;
             }
             setBusy(true);
@@ -91,57 +162,14 @@ export default function SupportScreen() {
         />
         {!q.isLoading && (q.data || []).length === 0 ? <EmptyState title={t("mobile.noTickets")} /> : null}
         {(q.data || []).map((ticket) => (
-          <Card key={ticket.id}>
-            <AppText variant="h3">{ticket.subject}</AppText>
-            <AppText variant="small">{String(ticket.ticket_number || ticket.category || "")}</AppText>
-            {ticket.status ? <StatusBadge status={String(ticket.status)} /> : null}
-            <PrimaryButton
-              title={openId === ticket.id ? t("common.back") : t("common.viewAll")}
-              variant="outline"
-              onPress={() => setOpenId(openId === ticket.id ? null : ticket.id)}
-            />
-            {openId === ticket.id && detail.data ? (
-              <>
-                {(detail.data.events as { id?: string; body?: string; event_type?: string }[] | undefined)?.map((ev) => (
-                  <AppText key={ev.id} variant="small">
-                    {ev.event_type}: {ev.body}
-                  </AppText>
-                ))}
-                {String(detail.data.status) === "closed" || String(detail.data.status) === "resolved" ? (
-                  <PrimaryButton
-                    title={t("web.support.reopen")}
-                    variant="outline"
-                    onPress={async () => {
-                      try {
-                        await apiClient.reopenSupportTicket(ticket.id);
-                        await detail.refetch();
-                        await q.refetch();
-                      } catch (e: unknown) {
-                        setError(e instanceof Error ? e.message : t("mobile.failed"));
-                      }
-                    }}
-                  />
-                ) : (
-                  <>
-                    <Field label={t("web.support.reply")} value={reply} onChangeText={setReply} multiline />
-                    <PrimaryButton
-                      title={t("web.support.reply")}
-                      onPress={async () => {
-                        if (!reply.trim()) return;
-                        try {
-                          await apiClient.replySupportTicket(ticket.id, reply.trim());
-                          setReply("");
-                          await detail.refetch();
-                        } catch (e: unknown) {
-                          setError(e instanceof Error ? e.message : t("mobile.failed"));
-                        }
-                      }}
-                    />
-                  </>
-                )}
-              </>
-            ) : null}
-          </Card>
+          <TicketCard
+            key={ticket.id}
+            ticket={ticket}
+            onError={setError}
+            onChanged={async () => {
+              await q.refetch();
+            }}
+          />
         ))}
       </ScrollView>
     </Screen>

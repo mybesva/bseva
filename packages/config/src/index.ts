@@ -39,7 +39,7 @@ export const ACTIVE_BOOKING_STATUSES = [
 
 export const DONE_BOOKING_STATUSES = ["completed", "cancelled", "rejected", "refunded"] as const;
 
-export const LANGS = ["en", "hi", "te", "mr", "ta", "kn"] as const;
+export const LANGS = ["en", "hi", "te", "mr", "ta", "kn", "ml"] as const;
 export type LangCode = (typeof LANGS)[number];
 
 export const PREFERRED_LANGUAGES = [
@@ -49,6 +49,7 @@ export const PREFERRED_LANGUAGES = [
   { code: "mr", label: "मराठी" },
   { code: "ta", label: "தமிழ்" },
   { code: "kn", label: "ಕನ್ನಡ" },
+  { code: "ml", label: "മലയാളം" },
 ] as const;
 
 export function isLangCode(code: string | null | undefined): code is LangCode {
@@ -210,6 +211,8 @@ export function mapNotificationLinkToMobile(
   if (pathname === "/customer/notifications") return `/customer/notifications${qs}`;
   if (pathname === "/pujari/notifications") return `/pujari/notifications${qs}`;
   if (pathname === "/pujari/bookings") return `/pujari/jobs${qs}`;
+  const pujariBooking = pathname.match(/^\/pujari\/bookings\/([^/]+)$/);
+  if (pujariBooking) return `/pujari/booking/${pujariBooking[1]}${qs}`;
   const join = pathname.match(/^\/join\/([^/]+)$/);
   if (join) return `/join/${join[1]}${qs}`;
   const service = pathname.match(/^\/services\/([^/]+)$/);
@@ -243,6 +246,7 @@ export {
   BOOKING_TIME_SLOTS,
   MUHURTA_TIME_SLOTS,
   bookingLeadHint,
+  bookingLeadHintKey,
   earliestBookingInstant,
   isBookingDateTimeBeforeLead,
   isCalendarDayBeforeLead,

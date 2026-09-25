@@ -20,6 +20,15 @@ export function isCalendarDayDisabled(date: Date, leadHours: number, now: Date =
   return isCalendarDayBeforeLead(date, leadHours, now);
 }
 
+export function bookingLeadHintKey(leadHours: number): { key: string; days?: number } {
+  const h = Math.max(1, leadHours || 48);
+  if (h <= 2) return { key: "booking.lead2h" };
+  if (h <= 24) return { key: "booking.lead24h" };
+  if (h <= 48) return { key: "booking.lead2d" };
+  if (h <= 72) return { key: "booking.lead3d" };
+  return { key: "booking.leadDays", days: Math.ceil(h / 24) };
+}
+
 export function bookingLeadHint(leadHours: number): string {
   const h = Math.max(1, leadHours || 48);
   if (h <= 2) return "This puja can be booked at least 2 hours from now.";

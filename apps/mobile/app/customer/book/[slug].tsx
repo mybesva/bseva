@@ -1,7 +1,4 @@
 import {
-  bookingLeadHint,
-  CALENDARS,
-  normalizeCalendarPref,
   buildCreateBookingPayload,
   composePhysicalServiceAddress,
   customerBookablePackages,
@@ -95,6 +92,14 @@ export default function BookService() {
   const { user } = useAuth();
   const { colors } = useAppTheme();
   const { lang, t } = useI18n();
+  const leadText = (hours: number) => {
+    const h = Math.max(1, hours || 48);
+    if (h <= 2) return t("booking.lead2h");
+    if (h <= 24) return t("booking.lead24h");
+    if (h <= 48) return t("booking.lead2d");
+    if (h <= 72) return t("booking.lead3d");
+    return t("booking.leadDays", { days: Math.ceil(h / 24) });
+  };
   const serviceQ = useQuery({ queryKey: ["service", slug, lang], queryFn: () => apiClient.getService(slug), enabled: !!slug });
   const profileQ = useQuery({ queryKey: ["customer-profile"], queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>> });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
@@ -107,7 +112,7 @@ export default function BookService() {
   const [step, setStep] = useState(1);
   const [pkg, setPkg] = useState<CustomerBookablePackage>("standard");
   const [mode, setMode] = useState<"in_person" | "virtual">(initialMode === "virtual" ? "virtual" : "in_person");
-  const [calendar, setCalendar] = useState(normalizeCalendarPref(user?.calendar_preference));
+  const [calendar] = useState("lunar");
   const [date, setDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -141,6 +146,9 @@ export default function BookService() {
   const restoredAddressFromDraft = useRef(false);
   const [muhurtaReceipt, setMuhurtaReceipt] = useState<MuhurtaReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const dateOffset = useRef(0);
   const [pending, setPending] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => newIdempotencyKey(slug || "service"));
@@ -174,7 +182,6 @@ export default function BookService() {
         if (d.pkg === "standard" || d.pkg === "premium") setPkg(d.pkg);
         if (initialMode === "virtual") setMode("virtual");
         else if (d.mode) setMode(d.mode);
-        if (d.calendar) setCalendar(d.calendar);
         if (d.date) setDate(d.date);
         if (d.time) setTime(d.time);
         if (d.address != null) setAddress(d.address);
@@ -341,22 +348,31 @@ export default function BookService() {
     return composePhysicalServiceAddress({ doorNumber, street: address, landmark });
   }
 
+  function focusDateError(message: string) {
+    setDateError(message);
+    setError(null);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, dateOffset.current - 12), animated: true });
+    });
+  }
+
   function validateStep2(): boolean {
     if (!date) {
-      setError(t("booking.needDate"));
+      focusDateError(t("booking.needDate"));
       return false;
     }
     const dateObj = new Date(`${date}T12:00:00`);
     if (isCalendarDayDisabled(dateObj, leadHours)) {
-      setError(bookingLeadHint(leadHours));
+      focusDateError(leadText(leadHours));
       return false;
     }
     if (!time || !/^\d{2}:\d{2}/.test(time)) {
+      setDateError(null);
       setError(t("web.muhurta.needTime"));
       return false;
     }
     if (leadBlocked) {
-      setError(bookingLeadHint(leadHours));
+      focusDateError(leadText(leadHours));
       return false;
     }
     if (mode === "in_person") {
@@ -388,6 +404,7 @@ export default function BookService() {
         }
       }
     }
+    setDateError(null);
     setError(null);
     return true;
   }
@@ -452,7 +469,7 @@ export default function BookService() {
     }
     const dateObj = new Date(`${date}T${time.length === 5 ? `${time}:00` : time}`);
     if (isCalendarDayDisabled(dateObj, leadHours)) {
-      setError(bookingLeadHint(leadHours));
+      focusDateError(leadText(leadHours));
       return;
     }
     try {
@@ -464,11 +481,11 @@ export default function BookService() {
         timezone: mode === "virtual" ? customerTimezone : undefined,
       });
       if (!leadCheck.valid) {
-        setError(bookingLeadHint(leadHours));
+        focusDateError(leadText(leadHours));
         return;
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : bookingLeadHint(leadHours));
+      focusDateError(e instanceof Error ? e.message : leadText(leadHours));
       return;
     }
     if (!terms) {
@@ -576,7 +593,7 @@ export default function BookService() {
   return (
     <Screen>
       <ScreenHeader title={<PujaTitle name={svc.name} onDark numberOfLines={1} />} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} keyboardShouldPersistTaps="always">
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} keyboardShouldPersistTaps="always">
         <AppText variant="small">{t("mobile.stepOf", { step, total: 4 })}</AppText>
         <ErrorBanner message={error} />
         {step === 1 ? (
@@ -597,24 +614,29 @@ export default function BookService() {
         ) : null}
         {step === 2 ? (
           <>
-            <AppText variant="small">{t("mobile.calendar")}</AppText>
-            <ChoiceChips options={CALENDARS.map((c) => ({ id: c, label: t(`calendar.${c}`) }))} value={calendar} onChange={(v) => setCalendar(String(v))} />
             {panchang.data ? (
               <AppText variant="small" color={colors.mutedForeground}>
-                {String(panchang.data.tithi || panchang.data.summary || JSON.stringify(panchang.data).slice(0, 180))}
+                {t("calendar.tithi")} {String(panchang.data.tithi || "—")} · {t("calendar.nakshatra")} {String(panchang.data.nakshatra || "—")} · {t("calendar.rahuKalam")} {String(panchang.data.rahukaalam || "—")}
               </AppText>
             ) : null}
-            <DatePickerField
-              value={date}
-              onChange={setDate}
-              leadHours={leadHours}
-              label={t("booking.selectDate")}
-              hint={bookingLeadHint(leadHours)}
-            />
+            <View
+              onLayout={(e) => {
+                dateOffset.current = e.nativeEvent.layout.y;
+              }}
+            >
+              <DatePickerField
+                value={date}
+                onChange={(iso) => {
+                  setDate(iso);
+                  setDateError(null);
+                }}
+                leadHours={leadHours}
+                label={t("booking.selectDate")}
+                hint={leadText(leadHours)}
+                error={dateError}
+              />
+            </View>
             <TimePicker value={time.slice(0, 5) || "10:00"} onChange={setTime} />
-            {leadBlocked ? (
-              <AppText variant="small" color={colors.mutedForeground}>{bookingLeadHint(leadHours)}</AppText>
-            ) : null}
             {mode === "virtual" ? (
               <>
                 <AppText variant="small">{t("booking.yourCountry")}</AppText>

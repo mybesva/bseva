@@ -161,21 +161,15 @@ def booking_preparation(booking_id: str, user=Depends(current_user), db: Session
 def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
     if not body.terms_accepted:
         raise HTTPException(400, "Terms must be accepted")
-    b = db.execute(
-        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid) FOR UPDATE"),
-        {"id": booking_id},
-    ).mappings().first()
-    if not b:
-        raise HTTPException(404, "Booking not found")
-    pid = str(user["id"])
-    from app.booking_offers import pujari_invited_offer, withdraw_open_offers
+    from app.booking_access import accept_denied, prepare_pujari_booking_action, same_id
+    from app.booking_offers import withdraw_open_offers
 
-    assigned = b.get("pujari_id") and str(b["pujari_id"]) == pid
-    offer = None if assigned else pujari_invited_offer(db, booking_id, pid)
-    if not assigned and not offer:
-        raise HTTPException(403, "Not allowed")
-    if not assigned and b.get("pujari_id"):
-        raise HTTPException(409, "Another pujari already accepted this booking")
+    b, booking_id = prepare_pujari_booking_action(db, booking_id, user)
+    pid = str(user["id"])
+    assigned = same_id(b.get("pujari_id"), pid)
+    denial = accept_denied(assigned, b.get("pujari_id"), pid)
+    if denial:
+        raise HTTPException(409, denial)
     if b["status"] not in ("pending", "pending_acceptance", "confirmed"):
         raise HTTPException(400, "Booking cannot be accepted in current status")
     if not assigned:
@@ -195,7 +189,7 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             text("SELECT pujari_id FROM bookings WHERE id = CAST(:id AS uuid)"),
             {"id": booking_id},
         ).scalar()
-        if str(chk) != pid:
+        if not same_id(chk, pid):
             raise HTTPException(409, "Another pujari already accepted this booking")
         withdraw_open_offers(db, booking_id, except_pujari_id=pid, mark_accepted_for=pid)
         b = {**dict(b), "pujari_id": pid}
@@ -237,25 +231,13 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
     write_audit(db, str(user["id"]), "booking_accept", "booking", booking_id)
 
     try:
-        from app.booking_offers import notify_pujaris_new_offer, refresh_offers_for_open_bookings
+        from app.booking_offers import refresh_offers_for_open_bookings
 
-        new_pujari_ids = refresh_offers_for_open_bookings(
+        refresh_offers_for_open_bookings(
             db,
             booking_date=b["booking_date"],
             customer_id=str(b["customer_id"]),
         )
-        if new_pujari_ids:
-            svc = db.execute(
-                text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"),
-                {"id": str(b["service_id"])},
-            ).scalar()
-            notify_pujaris_new_offer(
-                db,
-                pujari_ids=list(dict.fromkeys(new_pujari_ids)),
-                booking_number=str(b.get("booking_number") or booking_id[:8]),
-                service_name=str(svc or "Puja"),
-                service_id=str(b["service_id"]),
-            )
     except Exception:
         pass
 
@@ -287,7 +269,7 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             meet_info = {}
 
     try:
-        from app.routers.notifications import create_notification
+        from app.routers.notifications import create_notification, customer_booking_link
 
         meet_note = ""
         if meet_info.get("meeting_url") or meet_info.get("public_invite_url"):
@@ -298,7 +280,7 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             title="Booking confirmed",
             body=f"Your booking {b.get('booking_number') or booking_id[:8]} was accepted by the pujari.{meet_note}",
             category="booking",
-            link="/customer/bookings",
+            link=customer_booking_link(booking_id),
             extra_data={"booking_id": booking_id},
             message_key="accepted",
             message_vars={"number": str(b.get("booking_number") or booking_id[:8])},
@@ -357,13 +339,12 @@ def reject_booking(
     db: Session = Depends(get_db),
 ):
     reason = body.reason
-    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
-    if not b:
-        raise HTTPException(404, "Booking not found")
-    pid = str(user["id"])
+    from app.booking_access import prepare_pujari_booking_action, same_id
     from app.booking_offers import count_invited_offers, reject_offer
 
-    assigned = b.get("pujari_id") and str(b["pujari_id"]) == pid
+    b, booking_id = prepare_pujari_booking_action(db, booking_id, user)
+    pid = str(user["id"])
+    assigned = same_id(b.get("pujari_id"), pid)
     if not assigned:
         if b.get("pujari_id"):
             raise HTTPException(403, "Not allowed")
@@ -412,7 +393,7 @@ def reject_booking(
     )
     write_audit(db, str(user["id"]), f"booking_reject:{reason or 'no_reason'}", "booking", booking_id)
     try:
-        from app.routers.notifications import create_notification, notify_super_admins
+        from app.routers.notifications import create_notification, customer_booking_link, notify_super_admins
 
         create_notification(
             db,
@@ -420,7 +401,8 @@ def reject_booking(
             title="Booking declined",
             body=f"Booking {b.get('booking_number') or booking_id[:8]} was declined by the pujari. We will reassign shortly.",
             category="booking",
-            link="/customer/bookings",
+            link=customer_booking_link(booking_id),
+            extra_data={"booking_id": booking_id},
         )
         notify_super_admins(
             db,
@@ -561,7 +543,7 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
     set_booking_status(db, booking_id, "in_progress", actor_id=str(user["id"]))
     write_audit(db, str(user["id"]), "puja_started", "booking", booking_id)
     try:
-        from app.routers.notifications import create_notification
+        from app.routers.notifications import create_notification, customer_booking_link, pujari_booking_link
 
         num = str(b.get("booking_number") or booking_id[:8])
         create_notification(
@@ -570,7 +552,7 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
             title="Puja started",
             body=f"Your puja {num} has started.",
             category="booking",
-            link="/customer/bookings",
+            link=customer_booking_link(booking_id),
             extra_data={"booking_id": booking_id},
             message_key="pujaStarted",
             message_vars={"number": num},
@@ -581,7 +563,7 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
             title="Puja started",
             body=f"Booking {num} is now in progress.",
             category="booking",
-            link="/pujari/bookings",
+            link=pujari_booking_link(booking_id),
             extra_data={"booking_id": booking_id},
             message_key="pujaStarted",
             message_vars={"number": num},
@@ -670,7 +652,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
         pass
     write_audit(db, actor_id, "puja_completed", "booking", booking_id)
     try:
-        from app.routers.notifications import create_notification
+        from app.routers.notifications import create_notification, pujari_booking_link
 
         num = str(b.get("booking_number") or booking_id[:8])
         create_notification(
@@ -691,7 +673,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
                 title="Booking completed",
                 body=f"Booking {num} was marked complete.",
                 category="booking",
-                link="/pujari/bookings",
+                link=pujari_booking_link(booking_id),
                 extra_data={"booking_id": booking_id},
                 message_key="completed",
                 message_vars={"number": num},
@@ -1072,7 +1054,7 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
                 title="Pujari is on the way",
                 body=f"Live tracking is available for booking {num}.",
                 category="pujari_arriving",
-                link=f"/customer/bookings?booking={booking_id}",
+                link=f"/booking/{booking_id}",
                 extra_data={"booking_id": booking_id},
                 message_key="arriving",
                 message_vars={"number": num},
@@ -1099,7 +1081,7 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
                     title="Pujari has arrived",
                     body=f"Your pujari has reached the puja location for booking {num}.",
                     category="pujari_arrived",
-                    link=f"/customer/bookings?booking={booking_id}",
+                    link=f"/booking/{booking_id}",
                     extra_data={"booking_id": booking_id},
                     message_key="arrived",
                     message_vars={"number": num},

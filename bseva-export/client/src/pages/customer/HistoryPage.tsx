@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CustomerPortal } from "@/components/RolePortals";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,6 @@ import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
 import { PujaTitle } from "@/components/PujaTitle";
-
-const HISTORY = new Set(["completed", "cancelled", "refunded"]);
 
 function statusColor(status: string) {
   switch (status) {
@@ -31,19 +29,13 @@ export default function CustomerHistoryPage() {
 
   useEffect(() => {
     setLoading(true);
-    apiBookings(1, 100)
+    apiBookings(1, 100, { bucket: "history" })
       .then((r) => setBookings(r.items))
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const history = useMemo(
-    () =>
-      (bookings || [])
-        .filter((b) => HISTORY.has(b.status))
-        .sort((a, b) => String(b.booking_date || "").localeCompare(String(a.booking_date || ""))),
-    [bookings]
-  );
+  const history = bookings || [];
 
   return (
     <CustomerPortal>

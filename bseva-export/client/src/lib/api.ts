@@ -227,7 +227,7 @@ export type AuthUser = {
   last_name?: string | null;
   email: string;
   phone: string;
-  role: "customer" | "pujari" | "admin" | "super_admin";
+  role: "customer" | "pujari" | "head_pujari" | "admin" | "super_admin";
   blocked: boolean;
   preferred_language?: string;
   calendar_preference?: string;

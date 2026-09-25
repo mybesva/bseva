@@ -521,7 +521,7 @@ _FOUNDATION_STMTS = [
       END LOOP;
       BEGIN
         ALTER TABLE users ADD CONSTRAINT users_preferred_language_check
-          CHECK (preferred_language IN ('en', 'hi', 'te', 'mr', 'ta', 'kn'));
+          CHECK (preferred_language IN ('en', 'hi', 'te', 'mr', 'ta', 'kn', 'ml'));
       EXCEPTION WHEN duplicate_object THEN NULL;
       END;
     END $$
@@ -542,7 +542,7 @@ _FOUNDATION_STMTS = [
       END LOOP;
       BEGIN
         ALTER TABLE customer_profiles ADD CONSTRAINT customer_profiles_preferred_language_check
-          CHECK (preferred_language IS NULL OR preferred_language IN ('en', 'hi', 'te', 'mr', 'ta', 'kn'));
+          CHECK (preferred_language IS NULL OR preferred_language IN ('en', 'hi', 'te', 'mr', 'ta', 'kn', 'ml'));
       EXCEPTION WHEN duplicate_object THEN NULL;
       END;
     END $$

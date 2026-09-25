@@ -5,6 +5,7 @@
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
+    "target": "ES2022",
     "module": "ESNext",
     "strict": true,
     "lib": ["esnext", "dom", "dom.iterable"],
@@ -17,7 +18,10 @@
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@bseva/locales": ["../packages/locales/src/index.ts"],
+      "@bseva/config": ["../packages/config/src/index.ts"],
+      "@bseva/types": ["../packages/types/src/index.ts"]
     }
   }
 }

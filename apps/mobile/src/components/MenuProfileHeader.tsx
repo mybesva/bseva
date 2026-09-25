@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
+import { fetchCustomerProfilePhotoSource } from "@/services/customerPhoto";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { isAdminRole, isPujariRole } from "@bseva/config";
@@ -40,7 +41,7 @@ export function MenuProfileHeader({
     enabled: Boolean(user?.id && photoKind !== "none"),
     queryFn: async () => {
       try {
-        if (photoKind === "customer") return await apiClient.customerPhotoUri();
+        if (photoKind === "customer") return await fetchCustomerProfilePhotoSource();
         if (photoKind === "pujari") return await apiClient.pujariMediaUri("photo");
       } catch {
         return null;
@@ -50,6 +51,10 @@ export function MenuProfileHeader({
     retry: false,
   });
   const photo = photoQ.data ?? null;
+
+  useEffect(() => {
+    if (photo) setPhotoOk(true);
+  }, [photo]);
 
   return (
     <Pressable

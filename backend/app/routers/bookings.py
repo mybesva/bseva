@@ -265,8 +265,13 @@ def get_service(slug: str, request: Request, lang: str | None = None, db: Sessio
     if not row:
         raise coded_http(404, "SERVICE_NOT_FOUND", "Service not found")
     data = enrich_service(db, row, lang=resolve_request_lang(lang, request))
-    # Public detail: active services always; inactive featured allowed for "coming soon"
-    if not row["active"] and not row.get("is_featured_home"):
+    # Same visibility as the public catalog list, so a listed service can be opened.
+    publicly_listed = (
+        bool(row["active"])
+        or bool(row.get("is_featured_home"))
+        or str(row.get("pricing_status") or "") == "awaiting_pricing"
+    )
+    if not publicly_listed:
         raise HTTPException(404, "Service not found")
     # Canonical slug for client redirects
     data["canonical_slug"] = row["slug"]
@@ -1236,7 +1241,7 @@ def create_booking(
 
     try:
         from app.booking_offers import notify_pujaris_new_offer
-        from app.routers.notifications import create_notification, notify_ops_staff
+        from app.routers.notifications import create_notification, customer_booking_link, notify_ops_staff, pujari_booking_link
 
         create_notification(
             db,
@@ -1244,7 +1249,7 @@ def create_booking(
             title="Booking created",
             body=f"Your booking {number} is confirmed. We will update you as it progresses.",
             category="booking",
-            link="/customer/bookings",
+            link=customer_booking_link(booking_id),
             extra_data={"booking_id": booking_id},
             message_key="bookingCreated",
             message_vars={"number": number},
@@ -1263,7 +1268,7 @@ def create_booking(
                 title="New booking request",
                 body=f"New booking {number} awaiting your acceptance.",
                 category="booking",
-                link="/pujari/bookings",
+                link=pujari_booking_link(booking_id),
                 extra_data={"booking_id": booking_id},
                 message_key="awaiting",
                 message_vars={"number": number},
@@ -1273,6 +1278,7 @@ def create_booking(
                 notify_pujaris_new_offer(
                     db,
                     pujari_ids=invited_pujari_ids,
+                    booking_id=booking_id,
                     booking_number=number,
                     service_name=str(svc.get("name") or "Puja"),
                     service_id=str(body.service_id),
@@ -1426,6 +1432,7 @@ def list_bookings(
     assignment: str | None = Query(None, description="unassigned | assigned"),
     payment_status: str | None = Query(None),
     stats: bool = Query(False),
+    bucket: str | None = Query(None, description="history — past and completed customer bookings"),
     user=Depends(current_user),
     db: Session = Depends(get_db),
 ):
@@ -1582,23 +1589,44 @@ def list_bookings(
             )
             item["schedule_display"] = display_pair(item.get("start_at_utc"), item.get("customer_timezone"))
     else:
+        history_sql = ""
+        history_order = "b.created_at DESC"
+        if (bucket or "").strip().lower() == "history":
+            history_sql = """
+                  AND (
+                    lower(COALESCE(b.status, '')) IN ('completed', 'cancelled', 'rejected', 'refunded')
+                    OR (
+                      b.booking_date < (timezone('Asia/Kolkata', now()))::date
+                      AND lower(COALESCE(b.status, '')) IN ('confirmed', 'in_progress')
+                    )
+                  )
+            """
+            history_order = "b.booking_date DESC NULLS LAST, b.start_time DESC NULLS LAST, b.created_at DESC"
         total = int(
             db.execute(
-                text("SELECT COUNT(*) FROM bookings WHERE customer_id = :id"),
+                text(
+                    f"""
+                    SELECT COUNT(*) FROM bookings b
+                    WHERE b.customer_id = :id
+                      AND COALESCE(b.booking_kind, 'puja') = 'puja'
+                      {history_sql}
+                    """
+                ),
                 {"id": user["id"]},
             ).scalar()
             or 0
         )
         rows = db.execute(
             text(
-                """
+                f"""
                 SELECT b.*, pu.name AS pujari_name, s.name AS service_name, s.duration_minutes
                 FROM bookings b
                 LEFT JOIN users pu ON pu.id = b.pujari_id
                 JOIN services s ON s.id = b.service_id
                 WHERE b.customer_id = :id
                   AND COALESCE(b.booking_kind, 'puja') = 'puja'
-                ORDER BY b.created_at DESC
+                  {history_sql}
+                ORDER BY {history_order}
                 LIMIT :lim OFFSET :off
                 """
             ),
@@ -1766,7 +1794,12 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             db.rollback()
             raise HTTPException(400, f"Pujari cancel fee could not be deducted: {e}") from e
     try:
-        from app.routers.notifications import create_notification, notify_ops_staff
+        from app.routers.notifications import (
+            create_notification,
+            customer_booking_link,
+            notify_ops_staff,
+            pujari_booking_link,
+        )
 
         num = str(b.get("booking_number") or booking_id[:8])
         refund_note = ""
@@ -1778,7 +1811,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             title="Booking cancelled",
             body=f"Booking {num} was cancelled.{refund_note}",
             category="booking",
-            link="/customer/bookings",
+            link=customer_booking_link(booking_id),
             extra_data={"booking_id": booking_id, "refund_paise": refund or 0},
             message_key="cancelled",
             message_vars={"number": num},
@@ -1790,7 +1823,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
                 title="Booking cancelled",
                 body=f"Booking {num} was cancelled.",
                 category="booking",
-                link="/pujari/bookings",
+                link=pujari_booking_link(booking_id),
                 extra_data={"booking_id": booking_id},
                 message_key="cancelled",
                 message_vars={"number": num},
@@ -1926,7 +1959,7 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
         {"id": booking_id, "amt": total},
     )
     try:
-        from app.routers.notifications import create_notification
+        from app.routers.notifications import create_notification, customer_booking_link
 
         create_notification(
             db,
@@ -1934,7 +1967,7 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
             title="Payment received",
             body=f"Payment for booking {b.get('booking_number') or booking_id[:8]} was successful.",
             category="payment",
-            link="/customer/bookings",
+            link=customer_booking_link(booking_id),
             extra_data={"booking_id": booking_id},
             message_key="paymentOk",
             message_vars={"number": str(b.get("booking_number") or booking_id[:8])},

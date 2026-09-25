@@ -1,4 +1,4 @@
-export type Lang = "en" | "hi" | "te" | "mr" | "ta" | "kn";
+export type Lang = "en" | "hi" | "te" | "mr" | "ta" | "kn" | "ml";
 
 export const LANG_LABELS: Record<Lang, string> = {
   en: "English",
@@ -7,6 +7,7 @@ export const LANG_LABELS: Record<Lang, string> = {
   mr: "मराठी",
   ta: "தமிழ்",
   kn: "ಕನ್ನಡ",
+  ml: "മലയാളം",
 };
 
 type Dict = Record<string, string>;
@@ -966,4 +967,4 @@ const mr: Dict = { ...en };
 const ta: Dict = { ...en };
 const kn: Dict = { ...en };
 
-export const dictionaries: Record<Lang, Dict> = { en, hi, te, mr, ta, kn };
+export const dictionaries: Record<Lang, Dict> = { en, hi, te, mr, ta, kn, ml: en };

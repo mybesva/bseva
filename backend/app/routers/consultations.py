@@ -426,11 +426,26 @@ def astrology_services(db: Session = Depends(get_db)):
     rows = db.execute(
         text(
             """
-            SELECT id, name, slug, description, category, standard_price_paise, premium_price_paise,
-                   duration_minutes, virtual_available, muhurta_consultation_enabled
-            FROM services
-            WHERE active = TRUE AND category = 'astrology'
-            ORDER BY name
+            SELECT DISTINCT s.id, s.name, s.slug, s.description, s.category,
+                   s.standard_price_paise, s.premium_price_paise,
+                   s.duration_minutes, s.virtual_available, s.muhurta_consultation_enabled
+            FROM services s
+            LEFT JOIN service_category_map m ON m.service_id = s.id
+            LEFT JOIN service_categories c ON c.id = m.category_id AND c.active = TRUE
+            WHERE (
+                s.active = TRUE
+                OR s.is_featured_home = TRUE
+                OR COALESCE(s.pricing_status, '') = 'awaiting_pricing'
+              )
+              AND (
+                lower(COALESCE(s.category, '')) LIKE '%astro%'
+                OR lower(COALESCE(s.category, '')) LIKE '%muhur%'
+                OR lower(COALESCE(c.slug, '')) LIKE '%astro%'
+                OR lower(COALESCE(c.slug, '')) LIKE '%muhur%'
+                OR lower(COALESCE(c.name, '')) LIKE '%astro%'
+                OR lower(COALESCE(c.name, '')) LIKE '%muhur%'
+              )
+            ORDER BY s.name
             """
         )
     ).mappings().all()

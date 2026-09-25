@@ -323,4 +323,4 @@ const kn: Dict = {
   "web.customer.noOngoing": "ಈಗ ನಡೆಯುತ್ತಿರುವ ಅಥವಾ ಮುಂಬರುವ ದೃಢ ಪೂಜೆಗಳಿಲ್ಲ.",
 };
 
-export const customerRequirements: Record<Lang, Dict> = { en, hi, te, mr, ta, kn };
+export const customerRequirements: Record<Lang, Dict> = { en, hi, te, mr, ta, kn, ml: en };

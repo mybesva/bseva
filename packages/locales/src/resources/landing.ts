@@ -597,4 +597,4 @@ const ta: Dict = {
   "a11y.email": "{{email}}க்கு மின்னஞ்சல் அனுப்பவும்",
 };
 
-export const landing: Record<Lang, Dict> = { en, hi, te, mr, kn, ta };
+export const landing: Record<Lang, Dict> = { en, hi, te, mr, kn, ta, ml: en };

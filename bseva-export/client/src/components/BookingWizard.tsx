@@ -58,7 +58,7 @@ import { friendlyBookingError, isServiceAreaUnavailableError, COMING_SOON_TITLE,
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
 import { isDeathRelatedService } from "@/lib/serviceCategories";
 import {
-  bookingLeadHint,
+  bookingLeadHintKey,
   earliestBookingInstant,
   isCalendarDayDisabled,
 } from "@/lib/bookingLeadTime";
@@ -249,6 +249,10 @@ export default function BookingWizard({
   durationMinutes,
 }: BookingWizardProps) {
   const { t } = useI18n();
+  const leadText = (hours: number) => {
+    const spec = bookingLeadHintKey(hours);
+    return spec.days != null ? t(spec.key, { days: spec.days }) : t(spec.key);
+  };
   const [, setLocation] = useLocation();
   const { refresh: refreshServiceAvailability } = useServiceAvailability();
   const { isAuthenticated, loading: authLoading, user } = useAuth();
@@ -306,6 +310,7 @@ export default function BookingWizard({
   const restoredAddress = useRef(false);
   const bookingCompleted = useRef(false);
   const lastSubmitSignature = useRef<string | null>(null);
+  const dateFieldRef = useRef<HTMLDivElement>(null);
   const { config: publicConfig } = usePublicConfig();
   const settings = {
     virtualPujaEnabled: publicConfig.virtual_puja_enabled ? "true" : "false",
@@ -383,11 +388,11 @@ export default function BookingWizard({
       setPanchang(null);
       return;
     }
-    const qs = new URLSearchParams({ date: format(bookingDate, "yyyy-MM-dd"), calendar: calendarType });
+    const qs = new URLSearchParams({ date: format(bookingDate, "yyyy-MM-dd"), calendar: "lunar" });
     api(`/panchang?${qs}`)
       .then(setPanchang)
       .catch(() => setPanchang(null));
-  }, [bookingDate, calendarType]);
+  }, [bookingDate]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -875,11 +880,11 @@ export default function BookingWizard({
     const err: Step2FieldErrors = {};
     if (!bookingDate) err.bookingDate = t("booking.needDate");
     else if (isCalendarDayDisabled(bookingDate, bookingLeadHours)) {
-      err.bookingDate = bookingLeadHint(bookingLeadHours);
+      err.bookingDate = leadText(bookingLeadHours);
     } else {
       const start = selectedBookingStart();
       if (start && start < earliestBookingInstant(bookingLeadHours)) {
-        err.bookingDate = bookingLeadHint(bookingLeadHours);
+        err.bookingDate = leadText(bookingLeadHours);
       }
     }
     if (serviceMode === "virtual") {
@@ -898,6 +903,11 @@ export default function BookingWizard({
       }
     }
     setStep2Errors(err);
+    if (err.bookingDate) {
+      requestAnimationFrame(() => {
+        dateFieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
     if (Object.keys(err).length > 0) {
       toast.error(t("booking.completeFields"));
       return false;
@@ -1084,8 +1094,7 @@ export default function BookingWizard({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-8 px-4">
-      <PujaTitle name={pujaName} className="block text-xl md:text-2xl tracking-tight" />
+    <div className="space-y-6 max-w-4xl mx-auto px-4">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         {steps.map((step, index) => (
           <div key={step.number} className="flex items-center">
@@ -1196,26 +1205,12 @@ export default function BookingWizard({
         <div className="space-y-6">
           <h3 className="text-xl font-semibold text-foreground">{t("booking.details")}</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t("calendar.preference")}</Label>
-              <Select value={calendarType} onValueChange={(v) => setCalendarType(v as CalendarType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
-                  <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("booking.preferredTime")}</Label>
-              <Input type="time" value={bookingTime} onChange={(e) => setBookingTime(e.target.value)} />
-            </div>
+          <div className="space-y-2 max-w-xs">
+            <Label>{t("booking.preferredTime")}</Label>
+            <Input type="time" value={bookingTime} onChange={(e) => setBookingTime(e.target.value)} />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" ref={dateFieldRef}>
             <Label>
               {t("booking.selectDate")}
               <RequiredMark />
@@ -1250,7 +1245,7 @@ export default function BookingWizard({
                 />
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-muted-foreground">{bookingLeadHint(bookingLeadHours)}</p>
+            <p className="text-xs text-muted-foreground">{leadText(bookingLeadHours)}</p>
             {step2Errors.bookingDate && (
               <p className="text-xs text-destructive">{step2Errors.bookingDate}</p>
             )}

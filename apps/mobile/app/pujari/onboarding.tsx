@@ -24,6 +24,45 @@ import { useI18n } from "@/providers/I18nProvider";
 
 type Profile = Record<string, unknown>;
 
+function hasValue(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length > 0;
+  return value != null && value !== "" && value !== false;
+}
+
+function ProfileGaps({ profile }: { profile: Profile }) {
+  const { t } = useI18n();
+  const addressOk =
+    hasValue(profile.address_line1) &&
+    hasValue(profile.city) &&
+    hasValue(profile.state) &&
+    hasValue(profile.pincode) &&
+    profile.latitude != null &&
+    profile.longitude != null;
+  const gaps = [
+    hasValue(profile.first_name) && hasValue(profile.last_name) ? null : t("auth.name"),
+    hasValue(profile.mobile_number) ? null : t("pujari.mobile"),
+    hasValue(profile.date_of_birth) ? null : t("pujari.dob"),
+    hasValue(profile.gotra) ? null : t("pujari.gotra"),
+    hasValue(profile.pravara) ? null : t("pujari.pravara"),
+    hasValue(profile.profile_photo_path) ? null : t("pujari.photo"),
+    addressOk ? null : t("mobile.address"),
+    hasValue(profile.qualifications) ? null : t("mobile.qualifications"),
+    hasValue(profile.qualification_year) ? null : t("mobile.qualificationYear"),
+    hasValue(profile.sampradaya) ? null : t("pujari.sampradaya"),
+  ].filter((label): label is string => Boolean(label));
+  if (!gaps.length) return null;
+  return (
+    <Card>
+      <AppText variant="h3">{t("mobile.profileStillNeeded")}</AppText>
+      {gaps.map((label, index) => (
+        <AppText key={`${label}-${index}`} variant="small">
+          • {label}
+        </AppText>
+      ))}
+    </Card>
+  );
+}
+
 export default function PujariOnboarding() {
   const router = useRouter();
   const { colors } = useAppTheme();
@@ -31,6 +70,7 @@ export default function PujariOnboarding() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [consent, setConsent] = useState(false);
   const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
@@ -42,12 +82,9 @@ export default function PujariOnboarding() {
 
   async function load() {
     const p = await apiClient.getPujariProfile();
-    if (p.profile_submitted_at) {
-      router.replace("/pujari");
-      return;
-    }
     setProfile(p);
-    setStep(Math.min(6, Math.max(1, Number(p.onboarding_step || 1))));
+    const submitted = Boolean(p.profile_submitted_at);
+    setStep(submitted ? 1 : Math.min(6, Math.max(1, Number(p.onboarding_step || 1))));
     setConsent(!!p.final_submission_consent);
     if (p.profile_photo_path) setPhoto(await apiClient.pujariMediaUri("photo"));
   }
@@ -105,6 +142,7 @@ export default function PujariOnboarding() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
         <ErrorBanner message={error} />
         <AppText variant="small">{t("mobile.percentComplete", { percent: Number(profile.profile_completion_percentage || 0) })}</AppText>
+        <ProfileGaps profile={profile} />
         {String(profile.joining_fee_status) === "pending" ? (
           <PrimaryButton title={t("mobile.payJoiningFee")} onPress={() => void apiClient.payJoiningFee().then(load).catch((e) => setError(e.message))} />
         ) : null}
@@ -261,12 +299,18 @@ export default function PujariOnboarding() {
               <Switch value={!!profile.available} onValueChange={(v) => set("available", v)} />
             </View>
             <Field label={t("mobile.serviceRadius")} value={String(profile.service_radius_km || "")} onChangeText={(v) => set("service_radius_km", Number(v) || 0)} keyboardType="number-pad" />
-            <Field label="UPI ID" value={String(profile.upi_id || "")} onChangeText={(v) => set("upi_id", v)} autoCapitalize="none" />
-            <Field label={t("mobile.accountHolder")} value={String(profile.bank_holder_name || "")} onChangeText={(v) => set("bank_holder_name", v)} />
-            <Field label="Bank name" value={String(profile.bank_name || "")} onChangeText={(v) => set("bank_name", v)} />
-            <Field label={t("mobile.ifsc")} value={String(profile.bank_ifsc || "")} onChangeText={(v) => set("bank_ifsc", v)} autoCapitalize="characters" />
-            <Field label="Account number" value={String(profile.bank_account_number || "")} onChangeText={(v) => set("bank_account_number", v)} keyboardType="number-pad" />
-            <Field label="Confirm account" value={String(profile.bank_account_confirm || profile.bank_account_number || "")} onChangeText={(v) => set("bank_account_confirm", v)} keyboardType="number-pad" />
+            <Field label={t("web.bank.upi")} value={String(profile.upi_id || "")} onChangeText={(v) => set("upi_id", v)} autoCapitalize="none" error={fieldErrors.upiId} />
+            <Field label={t("web.bank.holder")} value={String(profile.bank_holder_name || "")} onChangeText={(v) => set("bank_holder_name", v)} error={fieldErrors.holder} />
+            <Field label={t("web.bank.name")} value={String(profile.bank_name || "")} onChangeText={(v) => set("bank_name", v)} error={fieldErrors.bankName} />
+            <Field label={t("mobile.ifsc")} value={String(profile.bank_ifsc || "")} onChangeText={(v) => set("bank_ifsc", v)} autoCapitalize="characters" error={fieldErrors.ifsc} />
+            <Field label={t("web.bank.account")} value={String(profile.bank_account_number || "")} onChangeText={(v) => set("bank_account_number", v)} keyboardType="number-pad" error={fieldErrors.accountNumber} />
+            <Field
+              label={t("web.bank.confirmAccount")}
+              value={String(profile.bank_account_confirm || "")}
+              onChangeText={(v) => set("bank_account_confirm", v)}
+              keyboardType="number-pad"
+              error={fieldErrors.accountConfirm}
+            />
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(4)} />
             <PrimaryButton
               title={busy ? t("mobile.saving") : t("mobile.saveContinue")}
@@ -287,20 +331,24 @@ export default function PujariOnboarding() {
                   bankName: String(profile.bank_name || ""),
                   ifsc: String(profile.bank_ifsc || ""),
                   accountNumber: String(profile.bank_account_number || ""),
-                  accountConfirm: String(profile.bank_account_confirm || profile.bank_account_number || ""),
+                  accountConfirm: String(profile.bank_account_confirm || ""),
                 });
-                const errs = validateSettlement({
+                const settlementDraft = {
                   upiId: String(profile.upi_id || ""),
                   holder: String(profile.bank_holder_name || ""),
                   bankName: String(profile.bank_name || ""),
                   ifsc: String(profile.bank_ifsc || ""),
                   accountNumber: String(profile.bank_account_number || ""),
-                  accountConfirm: String(profile.bank_account_confirm || profile.bank_account_number || ""),
-                });
+                  accountConfirm: String(profile.bank_account_confirm || ""),
+                };
+                const errs = validateSettlement(settlementDraft);
                 if (Object.keys(errs).length) {
-                  setError(t(String(Object.values(errs)[0])));
+                  const next: Record<string, string> = {};
+                  for (const [key, value] of Object.entries(errs)) next[key] = t(String(value));
+                  setFieldErrors(next);
                   return;
                 }
+                setFieldErrors({});
                 void saveStep(6, {
                   available: !!profile.available,
                   service_radius_km: profile.service_radius_km ? Number(profile.service_radius_km) : null,

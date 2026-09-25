@@ -14,6 +14,8 @@ import webUiGaps from "./resources/webUiGaps";
 import { extras } from "./extras";
 import { landing } from "./resources/landing";
 import { gapTranslations } from "./resources/gapTranslations";
+import { mlCustomer } from "./resources/mlCustomer";
+import { mlCatalog } from "./resources/mlCatalog";
 
 export {
   DEFAULT_LANG,
@@ -86,6 +88,7 @@ export const localeOverrides: Record<Exclude<Lang, "en">, Record<string, string>
   mr: localeDict("mr", mr),
   kn: localeDict("kn", kn),
   ta: localeDict("ta", ta),
+  ml: { ...localeDict("ml", {}), ...mlCatalog, ...mlCustomer },
 };
 
 export const dictionaries: Record<Lang, Record<string, string>> = {
@@ -95,6 +98,7 @@ export const dictionaries: Record<Lang, Record<string, string>> = {
   mr: { ...base, ...localeOverrides.mr },
   kn: { ...base, ...localeOverrides.kn },
   ta: { ...base, ...localeOverrides.ta },
+  ml: { ...base, ...localeOverrides.ml },
 };
 
 export function translate(lang: Lang | string, key: string, vars?: TranslateVars): string {

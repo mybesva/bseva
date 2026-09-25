@@ -43,7 +43,7 @@ export const registerSchema = z
     password: z.string().min(8, "validation.password"),
     confirmPassword: z.string().min(1, "validation.confirmPassword"),
     otp: z.string().min(4, "validation.otp").max(8),
-    language: z.enum(["en", "hi", "te", "mr", "ta", "kn"]).default("en"),
+    language: z.enum(["en", "hi", "te", "mr", "ta", "kn", "ml"]).default("en"),
     calendar_preference: z
       .enum(["lunar", "solar", "north", "south"])
       .default("solar")

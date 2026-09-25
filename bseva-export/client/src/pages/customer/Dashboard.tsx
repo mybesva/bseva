@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { api, apiBookings } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useServiceAvailability } from "@/lib/ServiceAvailabilityContext";
@@ -29,22 +28,12 @@ import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import WalletPanel from "@/components/WalletPanel";
 import { useI18n } from "@/i18n/I18nProvider";
-import { normalizeCalendarPref, type CalendarPref } from "@bseva/config";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
 function CustomerDashboardContent() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { canBook, checking, status } = useServiceAvailability();
   const { startBooking, bookingBlocked } = useStartBooking();
-  const [calPref, setCalPref] = useState<CalendarPref>("solar");
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujas, setPujas] = useState<any[]>([]);
@@ -52,13 +41,9 @@ function CustomerDashboardContent() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
-    setCalPref(normalizeCalendarPref(user?.calendar_preference));
-  }, [user?.calendar_preference]);
-
-  useEffect(() => {
-    const qs = new URLSearchParams({ date: format(new Date(), "yyyy-MM-dd"), calendar: calPref });
+    const qs = new URLSearchParams({ date: format(new Date(), "yyyy-MM-dd"), calendar: "lunar" });
     api(`/panchang?${qs}`).then(setPanchang).catch(() => setPanchang(null));
-  }, [calPref]);
+  }, []);
 
   useEffect(() => {
     if (!user || user.role !== "customer") return;
@@ -293,42 +278,40 @@ function CustomerDashboardContent() {
             </div>
           </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <WalletPanel variant="customer" />
-          <Card>
-            <CardHeader>
-              <CardTitle className="">{t("calendar.panchangam")}</CardTitle>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+          <Card className="xl:col-span-2 border-2 border-primary/50 bg-gradient-to-br from-orange-50 via-background to-orange-50/40 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-2xl md:text-3xl text-primary flex items-center gap-2">
+                <Calendar size={28} />
+                {t("calendar.panchangam")}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-sm">{t("calendar.preference")}</Label>
-                <Select
-                  value={calPref}
-                  onValueChange={(v) => {
-                    const pref = normalizeCalendarPref(v);
-                    setCalPref(pref);
-                    void api("/auth/me", { method: "PATCH", body: JSON.stringify({ calendar_preference: pref }) });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
-                    <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {panchang && (
-                <div className="text-sm space-y-1 bg-orange-50 border border-orange-100 rounded-lg p-3">
-                  <p><strong>Tithi:</strong> {panchang.tithi} ({panchang.paksha})</p>
-                  <p><strong>Nakshatra:</strong> {panchang.nakshatra}</p>
-                  <p><strong>Month:</strong> {panchang.lunarMonth} · Day {panchang.lunarDay}</p>
-                  <p><strong>Rahu Kalam:</strong> {panchang.rahukaalam}</p>
+            <CardContent>
+              {panchang ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-primary/25 bg-white/80 px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("calendar.tithi")}</p>
+                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.tithi} ({panchang.paksha})</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/25 bg-white/80 px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("calendar.nakshatra")}</p>
+                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.nakshatra}</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/25 bg-white/80 px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("calendar.lunarMonth")}</p>
+                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.lunarMonth} · {t("calendar.lunarDay", { day: panchang.lunarDay })}</p>
+                  </div>
+                  <div className="rounded-xl border-2 border-primary bg-primary/10 px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t("calendar.rahuKalam")}</p>
+                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.rahukaalam}</p>
+                  </div>
                 </div>
+              ) : (
+                <Skeleton className="h-40 w-full" />
               )}
             </CardContent>
           </Card>
+          <WalletPanel variant="customer" compact />
         </div>
 
         {recommendations.length > 0 && (

@@ -1,12 +1,58 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import type { ReactNode } from "react";
-import { Pressable, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, type ReactNode } from "react";
+import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandLockup } from "@/components/BrandLockup";
+import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
 import { AppText } from "./ui";
+
+function UnreadBell({ color, onPress, label }: { color: string; onPress: () => void; label: string }) {
+  const q = useQuery({
+    queryKey: ["notifications-unread"],
+    queryFn: () => apiClient.unreadNotificationCount(),
+    refetchInterval: 30_000,
+  });
+  const refetchUnread = q.refetch;
+  useFocusEffect(
+    useCallback(() => {
+      void refetchUnread();
+    }, [refetchUnread]),
+  );
+  const count = Number(q.data?.unread ?? q.data?.count ?? 0);
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel={count > 0 ? `${label}, ${count}` : label}
+      style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
+    >
+      <Ionicons name="notifications-outline" size={24} color={color} />
+      {count > 0 ? (
+        <View
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 0,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            paddingHorizontal: 3,
+            backgroundColor: "#C2410C",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 10, lineHeight: 12, fontWeight: "700" }}>{count > 99 ? "99+" : String(count)}</Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
 
 export function ScreenHeader({
   title,
@@ -56,15 +102,11 @@ export function ScreenHeader({
           )}
         </View>
         {notificationsHref ? (
-          <Pressable
+          <UnreadBell
+            color={colors.cream}
+            label={t("mobile.notifications")}
             onPress={() => router.push(notificationsHref as never)}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t("mobile.notifications")}
-            style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
-          >
-            <Ionicons name="notifications-outline" size={22} color={colors.cream} />
-          </Pressable>
+          />
         ) : null}
         {right}
       </View>
@@ -103,14 +145,11 @@ export function HomeBrandBar({
           ) : null}
         </View>
         {notificationsHref ? (
-          <Pressable
+          <UnreadBell
+            color={colors.navy}
+            label={t("mobile.notifications")}
             onPress={() => router.push(notificationsHref as never)}
-            accessibilityRole="button"
-            accessibilityLabel={t("mobile.notifications")}
-            style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
-          >
-            <Ionicons name="notifications-outline" size={24} color={colors.navy} />
-          </Pressable>
+          />
         ) : null}
       </View>
     </SafeAreaView>

@@ -243,6 +243,11 @@ function PortalShell({
               <BSevaLogo variant="full" size="portal" />
             </a>
           </Link>
+          {role === "pujari" && user?.name ? (
+            <p className="hidden sm:block min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+              {t("web.pujari.headerWelcome", { name: user.name })}
+            </p>
+          ) : null}
           <div className="ml-auto flex items-center gap-1 sm:gap-2 min-w-0">
             {role === "customer" ? (
               <Link href="/services">

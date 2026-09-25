@@ -13,12 +13,14 @@ export function DatePickerField({
   leadHours = 48,
   label,
   hint,
+  error,
 }: {
   value: string;
   onChange: (iso: string) => void;
   leadHours?: number;
   label?: string;
   hint?: string;
+  error?: string | null;
 }) {
   const { colors } = useAppTheme();
   const { t } = useI18n();
@@ -35,8 +37,8 @@ export function DatePickerField({
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
-          borderWidth: 1,
-          borderColor: colors.border,
+          borderWidth: error ? 2 : 1,
+          borderColor: error ? colors.destructive || "#B42318" : colors.border,
           borderRadius: 10,
           paddingVertical: 14,
           paddingHorizontal: 14,
@@ -47,6 +49,7 @@ export function DatePickerField({
         <AppText style={{ flex: 1 }}>{value ? formatDisplayDate(value) : t("booking.selectDate")}</AppText>
         <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
       </Pressable>
+      {error ? <AppText variant="small" color={colors.destructive || "#B42318"}>{error}</AppText> : null}
       {hint ? <AppText variant="small" color={colors.mutedForeground}>{hint}</AppText> : null}
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={{ flex: 1, justifyContent: "flex-end" }}>

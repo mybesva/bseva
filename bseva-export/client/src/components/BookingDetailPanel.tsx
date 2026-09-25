@@ -230,10 +230,10 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     try {
       await action();
       toast.success(okMsg);
+      await load();
       if (decision === "accepted" || decision === "rejected" || decision === "cancelled") {
         onUpdated?.({ decision });
       } else {
-        await load();
         onUpdated?.();
       }
     } catch (e: any) {
@@ -246,7 +246,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   if (!booking && loading) {
     return <p className="text-sm text-muted-foreground">{t("mobile.loading")}</p>;
   }
-  if (!booking) return null;
+  if (!booking) return <p className="text-sm text-muted-foreground">{t("web.booking.notFound")}</p>;
 
   const base = Number(booking.base_price_paise || 0);
   const platform = Number(booking.platform_fee_paise || 0);
@@ -940,7 +940,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           }
         >
           <Download className="h-4 w-4 mr-2" />
-          {t("invoice.download")}
+          {t("invoice.downloadPdf")}
           {booking.invoice_number ? ` · ${booking.invoice_number}` : ""}
         </Button>
       )}

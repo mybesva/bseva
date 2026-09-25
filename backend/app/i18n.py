@@ -8,7 +8,7 @@ from fastapi import HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-SUPPORTED_LANGS = ("en", "hi", "te", "mr", "ta", "kn")
+SUPPORTED_LANGS = ("en", "hi", "te", "mr", "ta", "kn", "ml")
 FALLBACK_LANG = "en"
 ADMIN_ROLES = frozenset({"admin", "super_admin"})
 

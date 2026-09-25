@@ -18,7 +18,7 @@ const en: Dict = {
   "web.booking.noHistory": "No completed or cancelled bookings yet.",
   "web.booking.loadFailed": "Could not load booking",
   "web.booking.notFound": "Booking not found",
-  "web.booking.cancelReason": "Reason for cancellation? (optional)",
+  "web.booking.cancelReason": "Cancellation reason (required)",
   "web.booking.cancelled": "Booking cancelled",
   "web.booking.cancelFailed": "Could not cancel booking",
   "web.booking.printReceipt": "Print receipt",
@@ -213,7 +213,7 @@ const hi: Dict = {
   "web.book.notOpen": "अभी बुकिंग के लिए खुला नहीं", "web.book.notOpenBody": "यह पूजा केवल जानकारी के लिए सूचीबद्ध है। डैशबोर्ड से दूसरी सेवा चुनें।",
   "web.book.areaUnavailableBody": "आप सेवाएँ देख सकते हैं। आपके क्षेत्र में सेवा उपलब्ध होने पर बुकिंग खुलेगी।",
   "web.booking.detailsReceipt": "विवरण / रसीद", "web.booking.history": "बुकिंग इतिहास", "web.booking.noHistory": "अभी कोई पूर्ण या रद्द बुकिंग नहीं है।",
-  "web.booking.loadFailed": "बुकिंग लोड नहीं हुई", "web.booking.notFound": "बुकिंग नहीं मिली", "web.booking.cancelReason": "रद्द करने का कारण? (वैकल्पिक)",
+  "web.booking.loadFailed": "बुकिंग लोड नहीं हुई", "web.booking.notFound": "बुकिंग नहीं मिली", "web.booking.cancelReason": "रद्दीकरण का कारण (अनिवार्य)",
   "web.booking.cancelled": "बुकिंग रद्द हुई", "web.booking.cancelFailed": "बुकिंग रद्द नहीं हो सकी", "web.booking.printReceipt": "रसीद प्रिंट करें",
   "web.booking.receipt": "बुकिंग रसीद", "web.booking.internalRef": "आंतरिक संदर्भ", "web.booking.date": "बुकिंग तिथि", "web.booking.time": "बुकिंग समय",
   "web.booking.slot": "पूजा स्लॉट (तिथि और समय)", "web.booking.endsApprox": "लगभग {{time}} पर समाप्त", "web.booking.base": "मूल शुल्क",
@@ -289,7 +289,7 @@ const te: Dict = {
   "web.book.notOpen": "ఇంకా బుకింగ్‌కు అందుబాటులో లేదు", "web.book.notOpenBody": "ఈ పూజ సమాచారం కోసం మాత్రమే ఉంది. డాష్‌బోర్డ్ నుండి వేరే సేవను ఎంచుకోండి.",
   "web.book.areaUnavailableBody": "మీరు సేవలను చూడవచ్చు. మీ ప్రాంతంలో సేవ అందుబాటులోకి వచ్చినప్పుడు బుకింగ్ ప్రారంభమవుతుంది.",
   "web.booking.detailsReceipt": "వివరాలు / రసీదు", "web.booking.history": "బుకింగ్ చరిత్ర", "web.booking.noHistory": "పూర్తయిన లేదా రద్దయిన బుకింగ్‌లు ఇంకా లేవు.",
-  "web.booking.loadFailed": "బుకింగ్ లోడ్ కాలేదు", "web.booking.notFound": "బుకింగ్ కనిపించలేదు", "web.booking.cancelReason": "రద్దుకు కారణం? (ఐచ్ఛికం)",
+  "web.booking.loadFailed": "బుకింగ్ లోడ్ కాలేదు", "web.booking.notFound": "బుకింగ్ కనిపించలేదు", "web.booking.cancelReason": "రద్దు కారణం (తప్పనిసరి)",
   "web.booking.cancelled": "బుకింగ్ రద్దయింది", "web.booking.cancelFailed": "బుకింగ్ రద్దు కాలేదు", "web.booking.printReceipt": "రసీదు ప్రింట్ చేయండి",
   "web.booking.receipt": "బుకింగ్ రసీదు", "web.booking.internalRef": "అంతర్గత రిఫరెన్స్", "web.booking.date": "బుకింగ్ తేదీ", "web.booking.time": "బుకింగ్ సమయం",
   "web.booking.slot": "పూజ స్లాట్ (తేదీ మరియు సమయం)", "web.booking.endsApprox": "సుమారు {{time}}కు ముగుస్తుంది", "web.booking.base": "మూల ధర",
@@ -365,7 +365,7 @@ const mr: Dict = {
   "web.book.notOpen": "अद्याप बुकिंगसाठी उपलब्ध नाही", "web.book.notOpenBody": "ही पूजा केवळ माहितीसाठी आहे. डॅशबोर्डवरून दुसरी सेवा निवडा.",
   "web.book.areaUnavailableBody": "तुम्ही सेवा पाहू शकता. तुमच्या भागात सेवा उपलब्ध झाल्यावर बुकिंग सुरू होईल.",
   "web.booking.detailsReceipt": "तपशील / पावती", "web.booking.history": "बुकिंग इतिहास", "web.booking.noHistory": "अद्याप पूर्ण किंवा रद्द झालेल्या बुकिंग नाहीत.",
-  "web.booking.loadFailed": "बुकिंग लोड झाली नाही", "web.booking.notFound": "बुकिंग सापडली नाही", "web.booking.cancelReason": "रद्द करण्याचे कारण? (ऐच्छिक)",
+  "web.booking.loadFailed": "बुकिंग लोड झाली नाही", "web.booking.notFound": "बुकिंग सापडली नाही", "web.booking.cancelReason": "रद्द करण्याचे कारण (आवश्यक)",
   "web.booking.cancelled": "बुकिंग रद्द झाली", "web.booking.cancelFailed": "बुकिंग रद्द होऊ शकली नाही", "web.booking.printReceipt": "पावती प्रिंट करा",
   "web.booking.receipt": "बुकिंग पावती", "web.booking.internalRef": "अंतर्गत संदर्भ", "web.booking.date": "बुकिंग तारीख", "web.booking.time": "बुकिंग वेळ",
   "web.booking.slot": "पूजा स्लॉट (तारीख आणि वेळ)", "web.booking.endsApprox": "अंदाजे {{time}} वाजता संपेल", "web.booking.base": "मूळ शुल्क",
@@ -441,7 +441,7 @@ const kn: Dict = {
   "web.book.notOpen": "ಇನ್ನೂ ಬುಕಿಂಗ್‌ಗೆ ಲಭ್ಯವಿಲ್ಲ", "web.book.notOpenBody": "ಈ ಪೂಜೆ ಮಾಹಿತಿಗಾಗಿ ಮಾತ್ರ ಪಟ್ಟಿ ಮಾಡಲಾಗಿದೆ. ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಿಂದ ಬೇರೆ ಸೇವೆ ಆಯ್ಕೆಮಾಡಿ.",
   "web.book.areaUnavailableBody": "ನೀವು ಸೇವೆಗಳನ್ನು ನೋಡಬಹುದು. ನಿಮ್ಮ ಪ್ರದೇಶದಲ್ಲಿ ಸೇವೆ ಲಭ್ಯವಾದಾಗ ಬುಕಿಂಗ್ ತೆರೆಯುತ್ತದೆ.",
   "web.booking.detailsReceipt": "ವಿವರ / ರಸೀದಿ", "web.booking.history": "ಬುಕಿಂಗ್ ಇತಿಹಾಸ", "web.booking.noHistory": "ಇನ್ನೂ ಪೂರ್ಣಗೊಂಡ ಅಥವಾ ರದ್ದಾದ ಬುಕಿಂಗ್‌ಗಳಿಲ್ಲ.",
-  "web.booking.loadFailed": "ಬುಕಿಂಗ್ ಲೋಡ್ ಆಗಲಿಲ್ಲ", "web.booking.notFound": "ಬುಕಿಂಗ್ ಸಿಗಲಿಲ್ಲ", "web.booking.cancelReason": "ರದ್ದತಿಗೆ ಕಾರಣ? (ಐಚ್ಛಿಕ)",
+  "web.booking.loadFailed": "ಬುಕಿಂಗ್ ಲೋಡ್ ಆಗಲಿಲ್ಲ", "web.booking.notFound": "ಬುಕಿಂಗ್ ಸಿಗಲಿಲ್ಲ", "web.booking.cancelReason": "ರದ್ದತಿ ಕಾರಣ (ಅಗತ್ಯ)",
   "web.booking.cancelled": "ಬುಕಿಂಗ್ ರದ್ದಾಗಿದೆ", "web.booking.cancelFailed": "ಬುಕಿಂಗ್ ರದ್ದು ಮಾಡಲಾಗಲಿಲ್ಲ", "web.booking.printReceipt": "ರಸೀದಿ ಮುದ್ರಿಸಿ",
   "web.booking.receipt": "ಬುಕಿಂಗ್ ರಸೀದಿ", "web.booking.internalRef": "ಆಂತರಿಕ ಉಲ್ಲೇಖ", "web.booking.date": "ಬುಕಿಂಗ್ ದಿನಾಂಕ", "web.booking.time": "ಬುಕಿಂಗ್ ಸಮಯ",
   "web.booking.slot": "ಪೂಜಾ ಸ್ಲಾಟ್ (ದಿನಾಂಕ ಮತ್ತು ಸಮಯ)", "web.booking.endsApprox": "ಸುಮಾರು {{time}}ಕ್ಕೆ ಮುಗಿಯುತ್ತದೆ", "web.booking.base": "ಮೂಲ ಶುಲ್ಕ",
@@ -517,7 +517,7 @@ const ta: Dict = {
   "web.book.notOpen": "இன்னும் முன்பதிவுக்குத் திறக்கப்படவில்லை", "web.book.notOpenBody": "இந்த பூஜை தகவலுக்காக மட்டுமே பட்டியலிடப்பட்டுள்ளது. டாஷ்போர்டில் இருந்து வேறு சேவையைத் தேர்வுசெய்யவும்.",
   "web.book.areaUnavailableBody": "நீங்கள் சேவைகளைப் பார்க்கலாம். உங்கள் பகுதியில் சேவை கிடைக்கும்போது முன்பதிவு திறக்கப்படும்.",
   "web.booking.detailsReceipt": "விவரம் / ரசீது", "web.booking.history": "முன்பதிவு வரலாறு", "web.booking.noHistory": "இன்னும் முடிந்த அல்லது ரத்தான முன்பதிவுகள் இல்லை.",
-  "web.booking.loadFailed": "முன்பதிவை ஏற்ற முடியவில்லை", "web.booking.notFound": "முன்பதிவு கிடைக்கவில்லை", "web.booking.cancelReason": "ரத்து செய்வதற்கான காரணம்? (விருப்பம்)",
+  "web.booking.loadFailed": "முன்பதிவை ஏற்ற முடியவில்லை", "web.booking.notFound": "முன்பதிவு கிடைக்கவில்லை", "web.booking.cancelReason": "ரத்து காரணம் (கட்டாயம்)",
   "web.booking.cancelled": "முன்பதிவு ரத்து செய்யப்பட்டது", "web.booking.cancelFailed": "முன்பதிவை ரத்து செய்ய முடியவில்லை", "web.booking.printReceipt": "ரசீதை அச்சிடு",
   "web.booking.receipt": "முன்பதிவு ரசீது", "web.booking.internalRef": "உள் குறிப்பு", "web.booking.date": "முன்பதிவு தேதி", "web.booking.time": "முன்பதிவு நேரம்",
   "web.booking.slot": "பூஜை நேரம் (தேதி மற்றும் நேரம்)", "web.booking.endsApprox": "தோராயமாக {{time}}க்கு முடிவடையும்", "web.booking.base": "அடிப்படைக் கட்டணம்",
@@ -587,4 +587,4 @@ const ta: Dict = {
 
 // Shared keys above are complete for every locale. Language-specific dictionaries can
 // be expanded independently without changing consumers or the package entry point.
-export const webCoverage: Record<Lang, Dict> = { en, hi, te, mr, kn, ta };
+export const webCoverage: Record<Lang, Dict> = { en, hi, te, mr, kn, ta, ml: en };

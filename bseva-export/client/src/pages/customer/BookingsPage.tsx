@@ -177,25 +177,31 @@ export default function CustomerBookingsPage() {
     cancelled: t("status.cancelled"),
   };
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <CustomerPortal>
-      <Card>
-        <CardHeader>
+      <Card className="overflow-visible">
+        <CardHeader className="pb-2">
           <CardTitle>{t("nav.bookings")}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 overflow-visible">
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="bg-secondary/30 h-auto flex flex-wrap justify-start gap-1 mb-2">
-              <TabsTrigger value="upcoming" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <div className="sticky top-16 z-30 -mx-1 bg-background/95 backdrop-blur-sm py-3">
+            <TabsList className="bg-secondary/30 h-auto min-h-12 w-full flex flex-wrap justify-start gap-2 overflow-visible p-1.5">
+              <TabsTrigger value="upcoming" className="h-auto min-h-10 flex-none px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
                 {t("customer.upcoming")} ({upcoming.length})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger value="completed" className="h-auto min-h-10 flex-none px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
                 {t("status.completed")} ({completed.length})
               </TabsTrigger>
-              <TabsTrigger value="cancelled" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger value="cancelled" className="h-auto min-h-10 flex-none px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
                 {t("status.cancelled")} ({cancelled.length})
               </TabsTrigger>
             </TabsList>
+            </div>
 
             {(["upcoming", "completed", "cancelled"] as const).map((key) => (
               <TabsContent key={key} value={key} className="space-y-3 mt-0">

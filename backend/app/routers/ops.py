@@ -428,6 +428,26 @@ def my_invoices(user=Depends(current_user), db: Session = Depends(get_db)):
     return [row_dict(r) for r in rows]
 
 
+def _invoice_visible(db: Session, row, user) -> bool:
+    """Customer invoices stay with the customer; the assigned pujari may open them too."""
+    if user["role"] in ("admin", "super_admin"):
+        return True
+    if str(row["user_id"]) == str(user["id"]):
+        return True
+    if user["role"] not in ("pujari", "head_pujari"):
+        return False
+    booking_id = row.get("booking_id")
+    if not booking_id:
+        return False
+    from app.booking_access import same_id
+
+    owner = db.execute(
+        text("SELECT pujari_id::text FROM bookings WHERE id = CAST(:id AS uuid)"),
+        {"id": str(booking_id)},
+    ).scalar()
+    return same_id(owner, user["id"])
+
+
 @router.get("/invoices/{invoice_id}")
 def get_invoice(invoice_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
     row = db.execute(
@@ -436,7 +456,7 @@ def get_invoice(invoice_id: str, user=Depends(current_user), db: Session = Depen
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Invoice not found")
-    if user["role"] not in ("admin", "super_admin") and str(row["user_id"]) != str(user["id"]):
+    if not _invoice_visible(db, row, user):
         raise HTTPException(403, "Not allowed")
     return row_dict(row)
 
@@ -452,7 +472,7 @@ def invoice_html(invoice_id: str, user=Depends(current_user), db: Session = Depe
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Invoice not found")
-    if user["role"] not in ("admin", "super_admin") and str(row["user_id"]) != str(user["id"]):
+    if not _invoice_visible(db, row, user):
         raise HTTPException(403, "Not allowed")
     return HTMLResponse(render_invoice_html(db, dict(row)))
 
@@ -469,7 +489,7 @@ def invoice_pdf(invoice_id: str, user=Depends(current_user), db: Session = Depen
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Invoice not found")
-    if user["role"] not in ("admin", "super_admin") and str(row["user_id"]) != str(user["id"]):
+    if not _invoice_visible(db, row, user):
         raise HTTPException(403, "Not allowed")
     try:
         data = render_invoice_pdf(dict(row))

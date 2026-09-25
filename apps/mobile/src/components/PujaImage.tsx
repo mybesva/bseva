@@ -53,12 +53,29 @@ export function PujaImage({
     );
   }
   return (
-    <Image
-      source={{ uri: photo.uri }}
-      resizeMode="cover"
-      onError={photo.onError}
-      style={[{ width: "100%", height, borderRadius: 12, backgroundColor: colors.secondary }, imageStyle]}
-    />
+    <View
+      style={[
+        {
+          width: "100%",
+          aspectRatio: 16 / 9,
+          height: undefined,
+          minHeight: height,
+          borderRadius: 12,
+          backgroundColor: colors.secondary,
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        style,
+      ]}
+    >
+      <Image
+        source={{ uri: photo.uri }}
+        resizeMode="contain"
+        onError={photo.onError}
+        style={[{ width: "100%", height: "100%" }, imageStyle]}
+      />
+    </View>
   );
 }
 

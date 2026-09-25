@@ -19,13 +19,13 @@ export default function PujariMore() {
     { href: "/pujari/onboarding", label: t("nav.onboarding"), icon: "flag-outline" as const },
     { href: "/pujari/profile", label: t("mobile.profile"), icon: "person-outline" as const },
     { href: "/pujari/documents", label: t("nav.documents"), icon: "document-outline" as const },
-    { href: "/pujari/angikara", label: t("pujari.angikara.title"), icon: "ribbon-outline" as const },
     { href: "/pujari/availability", label: t("nav.availability"), icon: "calendar-outline" as const },
     { href: "/pujari/services", label: t("mobile.serviceOffers"), icon: "layers-outline" as const },
     { href: "/pujari/experience", label: t("pujari.experience"), icon: "school-outline" as const },
     { href: "/pujari/address", label: t("mobile.address"), icon: "location-outline" as const },
     { href: "/pujari/bank", label: t("nav.bank"), icon: "card-outline" as const },
-    { href: "/pujari/referral", label: t("mobile.rewards"), icon: "gift-outline" as const },
+    { href: "/pujari/rewards", label: t("mobile.rewards"), icon: "gift-outline" as const },
+    { href: "/pujari/referral", label: t("nav.referral"), icon: "share-social-outline" as const },
     ...(showHeadRatings
       ? [{ href: "/pujari/ratings", label: t("admin.headRatings"), icon: "star-outline" as const }]
       : []),

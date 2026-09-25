@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-PreferredLang = Literal["en", "hi", "te", "mr", "ta", "kn"]
+PreferredLang = Literal["en", "hi", "te", "mr", "ta", "kn", "ml"]
 CalendarPref = Literal["lunar", "solar"]
 
 

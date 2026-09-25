@@ -102,20 +102,61 @@ def _format_address(body: CustomerProfileIn) -> str:
     return ", ".join(p for p in parts if p)
 
 
-@router.post("/profile/photo")
-async def upload_photo(file: UploadFile = File(...), user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
-    ext = Path(file.filename or "").suffix.lower()
+def _infer_image_ext(raw_name: str, content_type: str, data: bytes) -> str:
+    ext = Path(raw_name).suffix.lower()
+    ctype = (content_type or "").lower().split(";")[0].strip()
+    ctype_ext = {
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/pjpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
+    if ext not in ALLOWED_IMG:
+        ext = ctype_ext.get(ctype, "")
+    if ext not in ALLOWED_IMG:
+        if data[:3] == b"\xff\xd8\xff":
+            ext = ".jpg"
+        elif data[:8] == b"\x89PNG\r\n\x1a\n":
+            ext = ".png"
+        elif len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            ext = ".webp"
+    if ext == ".jpeg":
+        ext = ".jpg"
     if ext not in ALLOWED_IMG:
         raise HTTPException(400, "Upload a JPG, PNG or WebP image")
-    rel = f"{user['id']}/customer_photo{ext}"
+    return ext
+
+
+@router.post("/profile/photo")
+async def upload_photo(file: UploadFile = File(...), user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
     data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty file — choose a photo and try again")
     if len(data) > 5 * 1024 * 1024:
         raise HTTPException(400, "File must be under 5 MB")
+    ext = _infer_image_ext(file.filename or "", file.content_type or "", data)
+    rel = f"{user['id']}/customer_photo{ext}"
     upload_bytes(rel, data, content_type_for(file.filename or rel))
-    db.execute(
+    result = db.execute(
         text("UPDATE customer_profiles SET profile_photo_path = :p, updated_at = NOW() WHERE user_id = CAST(:id AS uuid)"),
         {"p": rel, "id": user["id"]},
     )
+    if result.rowcount == 0:
+        db.execute(
+            text(
+                """
+                INSERT INTO customer_profiles (user_id, profile_photo_path, preferred_language, calendar_preference, country, updated_at)
+                VALUES (CAST(:id AS uuid), :p, :lang, :cal, 'India', NOW())
+                """
+            ),
+            {
+                "id": user["id"],
+                "p": rel,
+                "lang": user.get("preferred_language") or "en",
+                "cal": user.get("calendar_preference") or "north",
+            },
+        )
     db.commit()
     return _load_profile(db, user)
 

@@ -90,7 +90,7 @@ def list_my_referrals(db: Session, referrer_id: str) -> list[dict]:
     rows = db.execute(
         text(
             """
-            SELECT u.name
+            SELECT u.name, r.status, r.created_at
             FROM referrals r
             JOIN users u ON u.id = r.referee_id
             WHERE r.referrer_id = CAST(:id AS uuid)
@@ -99,7 +99,19 @@ def list_my_referrals(db: Session, referrer_id: str) -> list[dict]:
         ),
         {"id": referrer_id},
     ).mappings().all()
-    return [{"name": (r["name"] or "").strip() or "—"} for r in rows]
+    out = []
+    for r in rows:
+        created = r.get("created_at")
+        if hasattr(created, "isoformat"):
+            created = created.isoformat()
+        out.append(
+            {
+                "name": (r["name"] or "").strip() or "—",
+                "status": str(r.get("status") or "pending"),
+                "created_at": created,
+            }
+        )
+    return out
 
 
 def apply_referral_code(db: Session, referee_id: str, code: str) -> dict:

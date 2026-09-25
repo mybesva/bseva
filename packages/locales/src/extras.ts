@@ -638,4 +638,4 @@ const kn: Dict = {
   "customer.hero.trust.wellness": "ಆಧ್ಯಾತ್ಮಿಕ ಕ್ಷೇಮ",
 };
 
-export const extras: Record<Lang, Dict> = { en, hi, te, mr, ta, kn };
+export const extras: Record<Lang, Dict> = { en, hi, te, mr, ta, kn, ml: en };

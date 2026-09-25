@@ -432,7 +432,11 @@ export default function BookingDetail() {
         ) : null}
 
         {b.invoice_id ? (
-          <PrimaryButton title={t("mobile.viewInvoice")} variant="outline" onPress={() => router.push(`/customer/invoice/${b.invoice_id}`)} />
+          <PrimaryButton
+            title={t("mobile.viewInvoice")}
+            variant="outline"
+            onPress={() => router.push(pujari ? `/pujari/invoice/${b.invoice_id}` : `/customer/invoice/${b.invoice_id}`)}
+          />
         ) : null}
 
         {!pujari && b.payment_status === "pending" ? (
@@ -448,6 +452,10 @@ export default function BookingDetail() {
               disabled={busy}
               onPress={() =>
                 void (async () => {
+                  if (cancelReason.trim().length < 5) {
+                    setError(t("mobile.cancelReasonOptional"));
+                    return;
+                  }
                   try {
                     const preview = (await apiClient.cancelPreview(b.id)) as {
                       refund_paise?: number;
@@ -463,7 +471,7 @@ export default function BookingDetail() {
                         {
                           text: t("booking.cancel"),
                           style: "destructive",
-                          onPress: () => void run(() => apiClient.cancelBooking(b.id, cancelReason || undefined)),
+                          onPress: () => void run(() => apiClient.cancelBooking(b.id, cancelReason.trim())),
                         },
                       ]
                     );
@@ -532,7 +540,18 @@ export default function BookingDetail() {
               onPress={() => void resendOtp("start")}
             />
             <Field label={t("mobile.cancelReasonOptional")} value={cancelReason} onChangeText={setCancelReason} />
-            <PrimaryButton title={t("mobile.cancelServerPolicy")} variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.cancelBooking(b.id, cancelReason || undefined))} />
+            <PrimaryButton
+              title={t("mobile.cancelServerPolicy")}
+              variant="ghost"
+              disabled={busy}
+              onPress={() => {
+                if (cancelReason.trim().length < 5) {
+                  setError(t("mobile.cancelReasonOptional"));
+                  return;
+                }
+                void run(() => apiClient.cancelBooking(b.id, cancelReason.trim()));
+              }}
+            />
           </>
         ) : null}
 

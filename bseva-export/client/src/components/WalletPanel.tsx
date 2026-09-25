@@ -7,6 +7,7 @@ import { api, rupees } from "@/lib/api";
 import { publicWalletDescription } from "@/lib/walletCopy";
 import { toast } from "sonner";
 import { Wallet } from "lucide-react";
+import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -15,7 +16,13 @@ type WalletResp = {
   transactions: { id: string; amount_paise: number; type: string; description: string; created_at: string }[];
 };
 
-export default function WalletPanel({ variant = "customer" }: { variant?: "customer" | "priest" }) {
+export default function WalletPanel({
+  variant = "customer",
+  compact = false,
+}: {
+  variant?: "customer" | "priest";
+  compact?: boolean;
+}) {
   const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const [data, setData] = useState<WalletResp | null>(null);
@@ -43,7 +50,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
           <Wallet size={20} className="text-primary" />
           {variant === "priest" ? t("web.wallet.pujari") : t("web.wallet.customer")}
         </CardTitle>
-        <CardDescription>{t("web.wallet.liveBalance")}</CardDescription>
+        {!compact && <CardDescription>{t("web.wallet.liveBalance")}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -87,17 +94,23 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
             </Button>
           </div>
         )}
-        <div className="space-y-2 max-h-48 overflow-auto text-sm">
-          {data.transactions.slice(0, 8).map((tx) => (
-            <div key={tx.id} className="flex justify-between border-b py-1">
-              <span>{publicWalletDescription(tx.description)}</span>
-              <span className={tx.type ==="credit" ?"text-green-700" :"text-red-700"}>
-                {tx.type === "credit" ? "+" : "-"}
-                {rupees(tx.amount_paise)}
-              </span>
-            </div>
-          ))}
-        </div>
+        {compact && variant === "customer" ? (
+          <Button asChild variant="link" className="h-auto p-0 text-primary">
+            <Link href="/customer/wallet">{t("nav.wallet")}</Link>
+          </Button>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-auto text-sm">
+            {data.transactions.slice(0, 8).map((tx) => (
+              <div key={tx.id} className="flex justify-between border-b py-1">
+                <span>{publicWalletDescription(tx.description)}</span>
+                <span className={tx.type === "credit" ? "text-green-700" : "text-red-700"}>
+                  {tx.type === "credit" ? "+" : "-"}
+                  {rupees(tx.amount_paise)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

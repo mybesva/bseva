@@ -24,6 +24,7 @@ export function NotificationsInbox({ app }: { app: "consumer" | "admin" }) {
       try {
         await apiClient.markNotificationRead(n.id);
         await qc.invalidateQueries({ queryKey: ["notifications"] });
+        await qc.invalidateQueries({ queryKey: ["notifications-unread"] });
       } catch {
         /* still navigate */
       }
@@ -39,7 +40,15 @@ export function NotificationsInbox({ app }: { app: "consumer" | "admin" }) {
       {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : t("mobile.networkError")} /> : null}
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={q.isRefetching}
+            onRefresh={() => {
+              void q.refetch();
+              void qc.invalidateQueries({ queryKey: ["notifications-unread"] });
+            }}
+          />
+        }
       >
         <PrimaryButton
           title={t("mobile.markAllRead")}
@@ -47,6 +56,7 @@ export function NotificationsInbox({ app }: { app: "consumer" | "admin" }) {
           onPress={async () => {
             await apiClient.markAllNotificationsRead();
             await q.refetch();
+            await qc.invalidateQueries({ queryKey: ["notifications-unread"] });
           }}
         />
         {(q.data?.items || []).length === 0 && !q.isLoading ? (

@@ -124,8 +124,9 @@ export function Field({
   label,
   style,
   multiline,
+  error,
   ...props
-}: TextInputProps & { label: string }) {
+}: TextInputProps & { label: string; error?: string | null }) {
   const { colors } = useAppTheme();
   return (
     <View style={{ gap: 6 }}>
@@ -140,7 +141,7 @@ export function Field({
             backgroundColor: colors.input,
             borderRadius: radius.md,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: error ? colors.destructive : colors.border,
             paddingHorizontal: 12,
             paddingVertical: 12,
             minHeight: multiline ? 128 : 48,
@@ -151,6 +152,7 @@ export function Field({
         ]}
         {...props}
       />
+      {error ? <Text style={{ color: colors.destructive, fontSize: 13 }}>{error}</Text> : null}
     </View>
   );
 }

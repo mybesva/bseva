@@ -6,6 +6,7 @@ FCM push is fanned out from create_notification so existing event call sites
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Mapping
 from uuid import uuid4
 
@@ -22,6 +23,157 @@ from app.schemas import FcmTokenIn, FcmTokenRemoveIn
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["notifications"])
+
+_BOOKING_NUMBER = re.compile(r"\b(BSV-[A-Z0-9]+(?:-[A-Z0-9]+)*)\b", re.I)
+_GENERIC_CUSTOMER_BOOKING_LINKS = {"/customer/bookings", "/customer/bookings/"}
+_GENERIC_PUJARI_BOOKING_LINKS = {"/pujari/bookings", "/pujari/bookings/", "/pujari"}
+
+
+def customer_booking_link(booking_id: str) -> str:
+    """Deep link to one booking. Web uses /booking/:id; mobile maps that route."""
+    return f"/booking/{str(booking_id).strip()}"
+
+
+def pujari_booking_link(booking_id: str) -> str:
+    """Deep link to one pujari booking. Web uses /pujari/bookings/:id."""
+    return f"/pujari/bookings/{str(booking_id).strip()}"
+
+
+def rewrite_customer_booking_link(
+    link: str | None,
+    body: str | None,
+    booking_ids_by_number: Mapping[str, str],
+) -> str | None:
+    """Point generic My Bookings links at the booking named in the notification."""
+    raw = (link or "").strip()
+    path, _, query = raw.partition("?")
+    if path.startswith("/booking/") and len(path) > len("/booking/"):
+        return raw
+    booking_q = re.search(r"(?:^|&)booking=([^&]+)", query)
+    if booking_q and booking_q.group(1):
+        return customer_booking_link(booking_q.group(1))
+    if path not in _GENERIC_CUSTOMER_BOOKING_LINKS:
+        return raw or None
+    found = _BOOKING_NUMBER.search(body or "")
+    if not found:
+        return raw or None
+    booking_id = booking_ids_by_number.get(found.group(1).upper())
+    if not booking_id:
+        return raw or None
+    return customer_booking_link(booking_id)
+
+
+def rewrite_pujari_booking_link(
+    link: str | None,
+    body: str | None,
+    booking_ids_by_number: Mapping[str, str],
+) -> str | None:
+    """Point generic My Bookings links at the booking identified in the notification."""
+    raw = (link or "").strip()
+    path, _, query = raw.partition("?")
+    if path.startswith("/pujari/bookings/") and len(path) > len("/pujari/bookings/"):
+        return raw
+    booking_q = re.search(r"(?:^|&)booking=([^&]+)", query)
+    if booking_q and booking_q.group(1):
+        return pujari_booking_link(booking_q.group(1))
+    if path not in _GENERIC_PUJARI_BOOKING_LINKS:
+        return raw or None
+    found = _BOOKING_NUMBER.search(body or "")
+    if not found:
+        return raw or None
+    booking_id = booking_ids_by_number.get(found.group(1).upper())
+    if not booking_id:
+        return raw or None
+    return pujari_booking_link(booking_id)
+
+
+def _booking_ids_for_user(db: Session, user_id: str, numbers: list[str]) -> dict[str, str]:
+    """Map booking numbers to ids the user may open as customer, assignee, or invitee."""
+    if not numbers:
+        return {}
+    unique = list(dict.fromkeys(numbers))
+    params: dict[str, Any] = {"uid": user_id}
+    holders = []
+    for i, number in enumerate(unique):
+        key = f"n{i}"
+        holders.append(f":{key}")
+        params[key] = number
+    in_list = ", ".join(holders)
+    rows = db.execute(
+        text(
+            f"""
+            SELECT id::text AS id, upper(booking_number) AS booking_number
+            FROM bookings
+            WHERE upper(booking_number) IN ({in_list})
+              AND (
+                customer_id = CAST(:uid AS uuid)
+                OR pujari_id = CAST(:uid AS uuid)
+              )
+            """
+        ),
+        params,
+    ).mappings().all()
+    lookup = {str(r["booking_number"]): str(r["id"]) for r in rows if r.get("id")}
+    missing = [n for n in unique if n not in lookup]
+    if not missing:
+        return lookup
+    try:
+        from app.booking_offers import ensure_offers_table
+
+        ensure_offers_table(db)
+        offer_params: dict[str, Any] = {"uid": user_id}
+        offer_holders = []
+        for i, number in enumerate(missing):
+            key = f"m{i}"
+            offer_holders.append(f":{key}")
+            offer_params[key] = number
+        offer_rows = db.execute(
+            text(
+                f"""
+                SELECT b.id::text AS id, upper(b.booking_number) AS booking_number
+                FROM bookings b
+                JOIN booking_pujari_offers o
+                  ON o.booking_id = b.id
+                 AND o.pujari_id = CAST(:uid AS uuid)
+                 AND o.status = 'invited'
+                WHERE upper(b.booking_number) IN ({", ".join(offer_holders)})
+                  AND b.pujari_id IS NULL
+                """
+            ),
+            offer_params,
+        ).mappings().all()
+        for row in offer_rows:
+            if row.get("id") and row.get("booking_number"):
+                lookup[str(row["booking_number"])] = str(row["id"])
+    except Exception:
+        logger.exception("Could not resolve invited booking links")
+    return lookup
+
+
+def _apply_booking_links(db: Session, user_id: str, items: list[dict]) -> list[dict]:
+    numbers: list[str] = []
+    for item in items:
+        link = str(item.get("link") or "")
+        path = link.split("?", 1)[0]
+        generic = (
+            path in _GENERIC_CUSTOMER_BOOKING_LINKS
+            or path in _GENERIC_PUJARI_BOOKING_LINKS
+            or "booking=" in link
+        )
+        if not generic:
+            continue
+        found = _BOOKING_NUMBER.search(str(item.get("body") or ""))
+        if found:
+            numbers.append(found.group(1).upper())
+    lookup = _booking_ids_for_user(db, user_id, numbers)
+    for item in items:
+        link = str(item.get("link") or "")
+        path = link.split("?", 1)[0]
+        if path in _GENERIC_PUJARI_BOOKING_LINKS or path.startswith("/pujari/bookings"):
+            item["link"] = rewrite_pujari_booking_link(item.get("link"), item.get("body"), lookup)
+        else:
+            item["link"] = rewrite_customer_booking_link(item.get("link"), item.get("body"), lookup)
+    return items
 
 
 def create_notification(
@@ -200,8 +352,9 @@ def list_notifications(
         ),
         params,
     ).mappings().all()
+    items = _apply_booking_links(db, str(user["id"]), [row_dict(r) for r in rows])
     return {
-        "items": [row_dict(r) for r in rows],
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,

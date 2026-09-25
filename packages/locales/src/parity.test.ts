@@ -44,8 +44,8 @@ const IDENTICAL_OK = new Set([
 describe("locale catalog", () => {
   const enKeys = collectKeys(dictionaries.en);
 
-  it("registers all six languages", () => {
-    expect(LANGS).toEqual(["en", "hi", "te", "mr", "ta", "kn"]);
+  it("registers all supported languages", () => {
+    expect(LANGS).toEqual(["en", "hi", "te", "mr", "ta", "kn", "ml"]);
     expect(Object.keys(dictionaries).sort()).toEqual([...LANGS].sort());
   });
 
@@ -58,7 +58,7 @@ describe("locale catalog", () => {
 
   it("translates in-scope keys instead of leaving English copies", () => {
     const publicKeys = enKeys.filter((k) => !k.startsWith("admin."));
-    for (const lang of ["hi", "te", "mr", "kn", "ta"] as const) {
+    for (const lang of ["hi", "te", "mr", "kn", "ta", "ml"] as const) {
       const missingReal = publicKeys.filter((key) => {
         if (IDENTICAL_OK.has(key)) return false;
         const value = localeOverrides[lang][key];
@@ -66,6 +66,13 @@ describe("locale catalog", () => {
       });
       expect(missingReal, `${lang} still English`).toEqual([]);
     }
+  });
+
+  it("switches customer chrome into Malayalam", () => {
+    expect(translate("ml", "nav.home")).not.toBe(dictionaries.en["nav.home"]);
+    expect(translate("ml", "mobile.language")).toBe("ഭാഷ");
+    expect(translate("ml", "mobile.name")).toBe("പൂർണ്ണ നാമം");
+    expect(translate("ml", "calendar.panchangam")).not.toBe(dictionaries.en["calendar.panchangam"]);
   });
 
   it("falls back to English for unknown keys and invalid locales", () => {

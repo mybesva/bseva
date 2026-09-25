@@ -12,11 +12,11 @@ import { Copy, Loader2, Share2 } from "lucide-react";
 export default function PujariReferralPage() {
   const { t } = useI18n();
   const [code, setCode] = useState<string | null>(null);
-  const [myReferrals, setMyReferrals] = useState<{ name: string }[]>([]);
+  const [myReferrals, setMyReferrals] = useState<{ name: string; status?: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<{ referral_code: string; my_referrals?: { name: string }[] }>("/pujari/referral-code")
+    api<{ referral_code: string; my_referrals?: { name: string; status?: string }[] }>("/pujari/referral-code")
       .then((r) => {
         setCode(r.referral_code);
         setMyReferrals(r.my_referrals || []);
@@ -99,14 +99,21 @@ export default function PujariReferralPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("auth.name")}</TableHead>
+                      <TableHead>{t("web.booking.status")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {myReferrals.map((r, i) => (
-                      <TableRow key={`${r.name}-${i}`}>
-                        <TableCell>{r.name}</TableCell>
-                      </TableRow>
-                    ))}
+                    {myReferrals.map((r, i) => {
+                      const status = String(r.status || "");
+                      const statusLabel = status ? t(`status.${status}`) : "";
+                      const shown = statusLabel.startsWith("status.") ? status : statusLabel;
+                      return (
+                        <TableRow key={`${r.name}-${i}`}>
+                          <TableCell>{r.name}</TableCell>
+                          <TableCell>{shown || "—"}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

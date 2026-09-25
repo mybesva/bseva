@@ -36,5 +36,15 @@ describe("validation parity with web", () => {
     });
     expect(payload.bank_account_last4).toBe("9012");
     expect(payload.bank_account_number).toBe("123456789012");
+    expect(
+      validateSettlement({
+        upiId: "2369007544",
+        holder: "Ram Kumar",
+        bankName: "SBI",
+        ifsc: "SBIN0001234",
+        accountNumber: "123456789012",
+        accountConfirm: "999999999999",
+      }).accountConfirm,
+    ).toBe("web.validation.accountMatch");
   });
 });

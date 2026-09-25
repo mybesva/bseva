@@ -6,6 +6,7 @@ describe("mapNotificationLinkToMobile", () => {
     expect(mapNotificationLinkToMobile("/booking/abc", "consumer")).toBe("/customer/booking/abc");
     expect(mapNotificationLinkToMobile("/customer/notifications", "consumer")).toBe("/customer/notifications");
     expect(mapNotificationLinkToMobile("/pujari/bookings", "consumer")).toBe("/pujari/jobs");
+    expect(mapNotificationLinkToMobile("/pujari/bookings/abc-123", "consumer")).toBe("/pujari/booking/abc-123");
     expect(mapNotificationLinkToMobile("/join/tok", "consumer")).toBe("/join/tok");
   });
 

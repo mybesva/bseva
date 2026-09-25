@@ -188,7 +188,7 @@ def check_resend_allowed(db: Session, booking_id: str, purpose: str) -> dict[str
 
 
 def _notify_otp(db: Session, *, user_id: str, purpose: str, code: str, booking: dict, is_resend: bool) -> None:
-    from app.routers.notifications import create_notification
+    from app.routers.notifications import create_notification, pujari_booking_link
 
     number = str(booking.get("booking_number") or booking.get("id") or "")
     service = booking.get("service_name") or "Puja"
@@ -199,7 +199,7 @@ def _notify_otp(db: Session, *, user_id: str, purpose: str, code: str, booking: 
             "Share this OTP with your Pujari when they arrive to begin the Puja."
         )
         key = "startOtpResend" if is_resend else "startOtp"
-        link = "/customer/bookings"
+        link = f"/booking/{booking['id']}"
         cat = "puja_start_otp"
     else:
         title = "Completion OTP ready" if not is_resend else "New Completion OTP"
@@ -208,7 +208,7 @@ def _notify_otp(db: Session, *, user_id: str, purpose: str, code: str, booking: 
             "Share this OTP with the customer when the Puja is complete."
         )
         key = "completeOtpResend" if is_resend else "completeOtp"
-        link = "/pujari/bookings"
+        link = pujari_booking_link(str(booking["id"]))
         cat = "puja_complete_otp"
     create_notification(
         db,

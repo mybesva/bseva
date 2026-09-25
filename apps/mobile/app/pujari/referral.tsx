@@ -14,7 +14,7 @@ export default function PujariReferral() {
       apiClient.pujariReferral() as Promise<{
         code?: string;
         referral_code?: string;
-        my_referrals?: { name?: string }[];
+        my_referrals?: { name?: string; status?: string }[];
       }>,
   });
   const code = q.data?.code || q.data?.referral_code || "";
@@ -22,10 +22,12 @@ export default function PujariReferral() {
   return (
     <Screen>
       <ScreenHeader title={t("mobile.referral")} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
+        <AppText>{t("web.referral.description")}</AppText>
         <Card>
           <AppText variant="small">{t("mobile.referralCode")}</AppText>
           <AppText variant="h1">{code || "—"}</AppText>
+          <AppText variant="small">{t("web.referral.rewardHint")}</AppText>
           <PrimaryButton
             title={t("mobile.copy")}
             variant="outline"
@@ -43,11 +45,19 @@ export default function PujariReferral() {
             }}
           />
         </Card>
-        {referrals.map((r, i) => (
-          <Card key={i}>
-            <AppText>{r.name || "—"}</AppText>
-          </Card>
-        ))}
+        <AppText variant="h3">{t("web.referral.myReferrals")}</AppText>
+        {referrals.length === 0 ? <AppText>{t("web.referral.empty")}</AppText> : null}
+        {referrals.map((r, i) => {
+          const status = String(r.status || "");
+          const statusLabel = status ? t(`status.${status}`) : "";
+          const shown = statusLabel && !statusLabel.startsWith("status.") ? statusLabel : status;
+          return (
+            <Card key={i}>
+              <AppText>{r.name || "—"}</AppText>
+              {shown ? <AppText variant="small">{shown}</AppText> : null}
+            </Card>
+          );
+        })}
       </ScrollView>
     </Screen>
   );
