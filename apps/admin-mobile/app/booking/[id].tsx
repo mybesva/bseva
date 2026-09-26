@@ -29,8 +29,8 @@ export default function AdminBookingDetail() {
   const b = q.data as Booking | undefined;
 
   async function assign() {
-    if (!pujariId) {
-      setError("Select a pujari");
+    if (!pujariId.trim()) {
+      setError("Pujari ID is required.");
       return;
     }
     setBusy(true);
@@ -90,7 +90,7 @@ export default function AdminBookingDetail() {
         {can("manage_bookings") ? (
           <>
             <AppText variant="h3">{t("admin.assign")}</AppText>
-            <Field label="Pujari id" value={pujariId} onChangeText={setPujariId} />
+            <Field label="Pujari ID" value={pujariId} onChangeText={setPujariId} placeholder="Select below or enter ID" />
             {rows.slice(0, 12).map((p) => (
               <PrimaryButton
                 key={p.id}

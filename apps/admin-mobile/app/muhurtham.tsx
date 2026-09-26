@@ -29,7 +29,7 @@ export default function MuhurthamScreen() {
   const { t } = useI18n();
   const { colors } = useAppTheme();
   const { refresh: refreshBadges } = useAdmin();
-  const [filter, setFilter] = useState("actionable");
+  const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Consultation | null>(null);
   const [status, setStatus] = useState<ConsultationStatus>("requested");
@@ -89,13 +89,18 @@ export default function MuhurthamScreen() {
         <Field label={t("admin.search")} value={query} onChangeText={setQuery} />
         <ChoiceChips
           options={[
-            { id: "actionable", label: t("mobile.actionRequired") },
             { id: "all", label: t("mobile.allStatuses") },
+            { id: "actionable", label: t("mobile.actionRequired") },
             ...statuses.map((item) => ({ id: item, label: t(`status.${item}`) })),
           ]}
           value={filter}
           onChange={(value) => setFilter(String(value))}
         />
+        {filter === "actionable" ? (
+          <AppText variant="small" color={colors.mutedForeground}>
+            Shows consultations awaiting admin action (requested or in progress).
+          </AppText>
+        ) : null}
         {list.isLoading ? <LoadingBlock /> : null}
         {!list.isLoading && rows.length === 0 ? <EmptyState title={t("mobile.noMuhurtham")} /> : null}
         {rows.map((row) => (

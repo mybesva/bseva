@@ -5,7 +5,9 @@ Every PDF and HTML document must go through this module instead of duplicating b
 """
 from __future__ import annotations
 
+import base64
 import html
+import mimetypes
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -65,6 +67,16 @@ def html_logo_src(configured: str | None = None) -> str:
     if value.startswith(("http://", "https://", "/")):
         return value
     return DEFAULT_LOGO_WEB
+
+
+def embedded_logo_data_uri(configured: str | None = None) -> str | None:
+    """Inline logo for HTML/PDF so mobile WebViews and email clients do not need auth or static hosting."""
+    path = resolve_logo_file(configured)
+    if not path or not path.is_file():
+        return None
+    mime = mimetypes.guess_type(str(path))[0] or "image/png"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
 
 
 def contact_line(company: dict[str, Any] | None = None) -> str:
@@ -194,7 +206,8 @@ def wrap_html_document(
     """Wrap document-specific HTML in the official BSeva header, watermark, and footer."""
     company = company or {}
     title = (page_title or document_title or BRAND_NAME).strip()
-    src = html.escape(logo_src or html_logo_src(company.get("logo_path")), quote=True)
+    embedded = embedded_logo_data_uri(company.get("logo_path"))
+    src = html.escape(logo_src or embedded or html_logo_src(company.get("logo_path")), quote=True)
     doc_title = html.escape(document_title or BRAND_NAME)
     ref = html.escape(str(reference).strip()) if reference else ""
     contacts = html.escape(contact_line(company))
@@ -202,8 +215,16 @@ def wrap_html_document(
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"/>
 <title>{html.escape(title)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
 {document_chrome_css()}
+@media (max-width: 720px) {{
+  body {{ font-size: 14px; padding: 12px; }}
+  .bseva-doc-body {{ overflow-x: auto; }}
+  table {{ font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }}
+  .grid {{ grid-template-columns: 1fr; }}
+  .issuer {{ flex-direction: column; }}
+}}
 {extra_css}
 </style></head><body>
 <div class="bseva-doc-watermark" aria-hidden="true"><img src="{src}" alt=""/></div>

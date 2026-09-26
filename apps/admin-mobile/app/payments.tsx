@@ -1,4 +1,4 @@
-import { rupees } from "@bseva/config";
+import { ADMIN_PAYMENT_STATUS_FILTERS, rupees } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -24,11 +24,7 @@ export default function AdminPayments() {
       <ScreenHeader title={t("admin.payments")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <Field label={t("admin.search")} value={q} onChangeText={setQ} />
-        <ChoiceChips
-          options={[{ id: "", label: "All" }, { id: "paid", label: "Paid" }, { id: "pending", label: "Pending" }, { id: "failed", label: "Failed" }, { id: "refunded", label: "Refunded" }]}
-          value={status}
-          onChange={(v) => setStatus(String(v))}
-        />
+        <ChoiceChips options={[...ADMIN_PAYMENT_STATUS_FILTERS]} value={status} onChange={(v) => setStatus(String(v))} />
         {list.isLoading ? <LoadingBlock /> : null}
         {(list.data?.items || []).map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/booking/${b.id}`)}>

@@ -3,13 +3,15 @@ import {
   buildAdminServicePayload,
   emptyAdminServiceForm,
   emptyServiceCategoryForm,
+  filterServiceCategories,
+  matchesServiceSearch,
   paiseFromRupees,
   rupees,
   rupeesField,
   type AdminServiceForm,
 } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
 import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -37,25 +39,37 @@ function formFromRow(s: Svc): AdminServiceForm {
 
 type Cat = { id: string; slug: string; name: string; description?: string; sort_order: number; active: boolean };
 
-function ServiceCategories({ onError }: { onError: (v: string | null) => void }) {
+function ServiceCategories({ onError, search }: { onError: (v: string | null) => void; search: string }) {
   const list = useQuery({
     queryKey: ["admin-service-categories"],
     queryFn: () => apiClient.api<Cat[] | { items?: Cat[] }>("/admin/service-categories"),
   });
-  const rows = Array.isArray(list.data) ? list.data : list.data?.items || [];
-  const [form, setForm] = useState({ ...emptyServiceCategoryForm });
+  const allRows = Array.isArray(list.data) ? list.data : list.data?.items || [];
+  const rows = useMemo(() => filterServiceCategories(allRows, search), [allRows, search]);
+  const [addForm, setAddForm] = useState({ ...emptyServiceCategoryForm });
   const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ ...emptyServiceCategoryForm });
   const [busy, setBusy] = useState(false);
-  async function save() {
+
+  async function saveNew() {
     setBusy(true);
     onError(null);
     try {
-      if (editId) {
-        await apiClient.api(`/admin/service-categories/${editId}`, { method: "PUT", body: JSON.stringify(form) });
-      } else {
-        await apiClient.api("/admin/service-categories", { method: "POST", body: JSON.stringify(form) });
-      }
-      setForm({ ...emptyServiceCategoryForm });
+      await apiClient.api("/admin/service-categories", { method: "POST", body: JSON.stringify(addForm) });
+      setAddForm({ ...emptyServiceCategoryForm });
+      await list.refetch();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveEdit(categoryId: string) {
+    setBusy(true);
+    onError(null);
+    try {
+      await apiClient.api(`/admin/service-categories/${categoryId}`, { method: "PUT", body: JSON.stringify(editForm) });
       setEditId(null);
       await list.refetch();
     } catch (e: unknown) {
@@ -64,31 +78,60 @@ function ServiceCategories({ onError }: { onError: (v: string | null) => void })
       setBusy(false);
     }
   }
+
   return (
     <Card style={{ gap: 8 }}>
       <AppText variant="h3">Service categories</AppText>
-      {rows.map((c) => (
-        <Card key={c.id}>
-          <AppText>{c.name} · {c.slug} · {c.active ? "active" : "off"}</AppText>
-          <PrimaryButton
-            title="Edit"
-            variant="outline"
-            onPress={() => {
-              setEditId(c.id);
-              setForm({ slug: c.slug, name: c.name, description: c.description || "", sort_order: c.sort_order, active: c.active });
-            }}
-          />
-        </Card>
-      ))}
-      <Field label="Name" value={form.name} onChangeText={(name) => setForm({ ...form, name })} />
-      <Field label="Slug" value={form.slug} onChangeText={(slug) => setForm({ ...form, slug })} />
-      <Field label="Description" value={form.description} onChangeText={(description) => setForm({ ...form, description })} />
-      <Field label="Sort order" value={String(form.sort_order)} onChangeText={(v) => setForm({ ...form, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
+      {rows.map((c) => {
+        const editing = editId === c.id;
+        return (
+          <Card key={c.id} style={{ gap: 8 }}>
+            {editing ? (
+              <>
+                <AppText variant="h3">Edit category</AppText>
+                <Field label="Name" value={editForm.name} onChangeText={(name) => setEditForm({ ...editForm, name })} />
+                <Field label="Slug" value={editForm.slug} onChangeText={(slug) => setEditForm({ ...editForm, slug })} />
+                <Field label="Description" value={editForm.description} onChangeText={(description) => setEditForm({ ...editForm, description })} />
+                <Field label="Sort order" value={String(editForm.sort_order)} onChangeText={(v) => setEditForm({ ...editForm, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <AppText>Active</AppText>
+                  <Switch value={editForm.active} onValueChange={(active) => setEditForm({ ...editForm, active })} />
+                </View>
+                <PrimaryButton title="Update category" loading={busy} onPress={() => void saveEdit(c.id)} />
+                <PrimaryButton title="Cancel" variant="ghost" onPress={() => setEditId(null)} />
+              </>
+            ) : (
+              <>
+                <AppText>{c.name} · {c.slug} · {c.active ? "active" : "off"}</AppText>
+                <PrimaryButton
+                  title="Edit"
+                  variant="outline"
+                  onPress={() => {
+                    setEditId(c.id);
+                    setEditForm({
+                      slug: c.slug,
+                      name: c.name,
+                      description: c.description || "",
+                      sort_order: c.sort_order,
+                      active: c.active,
+                    });
+                  }}
+                />
+              </>
+            )}
+          </Card>
+        );
+      })}
+      <AppText variant="h3">Add category</AppText>
+      <Field label="Name" value={addForm.name} onChangeText={(name) => setAddForm({ ...addForm, name })} />
+      <Field label="Slug" value={addForm.slug} onChangeText={(slug) => setAddForm({ ...addForm, slug })} />
+      <Field label="Description" value={addForm.description} onChangeText={(description) => setAddForm({ ...addForm, description })} />
+      <Field label="Sort order" value={String(addForm.sort_order)} onChangeText={(v) => setAddForm({ ...addForm, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <AppText>Active</AppText>
-        <Switch value={form.active} onValueChange={(active) => setForm({ ...form, active })} />
+        <Switch value={addForm.active} onValueChange={(active) => setAddForm({ ...addForm, active })} />
       </View>
-      <PrimaryButton title={editId ? "Update category" : "Add category"} loading={busy} onPress={() => void save()} />
+      <PrimaryButton title="Add category" loading={busy && !editId} onPress={() => void saveNew()} />
     </Card>
   );
 }
@@ -105,7 +148,7 @@ export default function AdminServices() {
     queryFn: () => apiClient.api<Svc[] | { items?: Svc[] }>("/admin/services"),
   });
   const rows = (Array.isArray(list.data) ? list.data : list.data?.items || []).filter((s) =>
-    !q.trim() ? true : String(s.name || "").toLowerCase().includes(q.trim().toLowerCase())
+    matchesServiceSearch(s, q)
   );
 
   async function save() {
@@ -200,9 +243,9 @@ export default function AdminServices() {
           </Card>
         ) : (
           <>
-            <Field label={t("admin.search")} value={q} onChangeText={setQ} />
-            <PrimaryButton title="Add service" onPress={() => { setEditId(null); setForm(emptyAdminServiceForm()); }} />
-            <ServiceCategories onError={setError} />
+            <PrimaryButton title="+ Add service" onPress={() => { setEditId(null); setForm(emptyAdminServiceForm()); }} />
+            <Field label="Search services" placeholder="Search services…" value={q} onChangeText={setQ} />
+            <ServiceCategories onError={setError} search={q} />
             {list.isLoading ? <LoadingBlock /> : null}
             {rows.map((s) => (
               <Card key={String(s.id)}>

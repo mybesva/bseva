@@ -1,3 +1,4 @@
+import { chipSelectionValue } from "@bseva/config";
 import { radius, spacing, typography } from "@bseva/tokens";
 import type { ReactNode } from "react";
 import {
@@ -121,8 +122,9 @@ export function PrimaryButton({
 
 export function Field({
   label,
+  error,
   ...props
-}: TextInputProps & { label: string }) {
+}: TextInputProps & { label: string; error?: string | null }) {
   const { colors } = useAppTheme();
   return (
     <View style={{ gap: 6 }}>
@@ -134,7 +136,7 @@ export function Field({
           backgroundColor: colors.input,
           borderRadius: radius.md,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: error ? colors.destructive : colors.border,
           paddingHorizontal: 12,
           paddingVertical: 12,
           minHeight: 48,
@@ -143,6 +145,7 @@ export function Field({
         }}
         {...props}
       />
+      {error ? <Text style={{ color: colors.destructive, fontSize: 13 }}>{error}</Text> : null}
     </View>
   );
 }
@@ -159,7 +162,7 @@ export function ChoiceChips({
   multiple?: boolean;
 }) {
   const { colors } = useAppTheme();
-  const selected = new Set(Array.isArray(value) ? value : value ? [value] : []);
+  const selected = chipSelectionValue(value);
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {options.map((opt) => {
@@ -172,7 +175,7 @@ export function ChoiceChips({
                 const next = new Set(selected);
                 if (next.has(opt.id)) next.delete(opt.id);
                 else next.add(opt.id);
-                onChange(Array.from(next));
+                onChange(Array.from(next) as string[]);
               } else {
                 onChange(opt.id);
               }
@@ -206,11 +209,36 @@ export function StatusBadge({ status }: { status: string }) {
     rejected: colors.destructive,
   };
   const color = map[status] || colors.mutedForeground;
+  const label = status.replace(/_/g, " ");
   return (
-    <View style={{ backgroundColor: color + "22", paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill }}>
-      <Text style={{ color, fontSize: 11, fontWeight: "700", textTransform: "uppercase" }}>
-        {status.replace(/_/g, " ")}
+    <View
+      style={{
+        backgroundColor: color + "22",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: radius.pill,
+        alignSelf: "flex-start",
+        maxWidth: "100%",
+      }}
+    >
+      <Text
+        style={{ color, fontSize: 11, fontWeight: "700", textTransform: "uppercase" }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >
+        {label}
       </Text>
+    </View>
+  );
+}
+
+export function SuccessBanner({ message }: { message: string | null }) {
+  const { colors } = useAppTheme();
+  if (!message) return null;
+  return (
+    <View style={{ backgroundColor: colors.success + "22", padding: 12, borderRadius: radius.md }}>
+      <Text style={{ color: colors.success }}>{message}</Text>
     </View>
   );
 }

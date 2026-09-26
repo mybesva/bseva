@@ -169,7 +169,8 @@ export function ChoiceChips({
   multiple?: boolean;
 }) {
   const { colors } = useAppTheme();
-  const selected = new Set(Array.isArray(value) ? value : value ? [value] : []);
+  const selected =
+    Array.isArray(value) ? new Set(value) : typeof value === "string" ? new Set([value]) : new Set();
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {options.map((opt) => {

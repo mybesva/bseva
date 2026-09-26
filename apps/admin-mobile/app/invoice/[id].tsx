@@ -31,7 +31,16 @@ export default function AdminInvoiceHtml() {
       </View>
       {q.isLoading ? <LoadingBlock /> : null}
       {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : "Failed"} /> : null}
-      {q.data ? <WebView originWhitelist={["*"]} source={{ html: q.data }} style={{ flex: 1 }} /> : null}
+      {q.data ? (
+        <WebView
+          originWhitelist={["*"]}
+          source={{ html: q.data }}
+          style={{ flex: 1 }}
+          scalesPageToFit
+          setBuiltInZoomControls
+          setDisplayZoomControls
+        />
+      ) : null}
     </Screen>
   );
 }

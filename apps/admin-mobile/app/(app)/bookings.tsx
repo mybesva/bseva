@@ -1,4 +1,4 @@
-import { rupees } from "@bseva/config";
+import { ADMIN_ASSIGNMENT_FILTERS, ADMIN_BOOKING_STATUS_FILTERS, rupees } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -43,24 +43,12 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
       >
         <Field label={t("admin.search")} value={q} onChangeText={(v) => { setQ(v); setPage(1); }} />
         <ChoiceChips
-          options={[
-            { id: "", label: "All" },
-            { id: "pending", label: "Pending" },
-            { id: "pending_acceptance", label: "Acceptance" },
-            { id: "confirmed", label: "Confirmed" },
-            { id: "in_progress", label: "In progress" },
-            { id: "completed", label: "Completed" },
-            { id: "cancelled", label: "Cancelled" },
-          ]}
+          options={[...ADMIN_BOOKING_STATUS_FILTERS]}
           value={status}
           onChange={(v) => { setStatus(String(v)); setPage(1); }}
         />
         <ChoiceChips
-          options={[
-            { id: "", label: "Any assignment" },
-            { id: "unassigned", label: "Unassigned" },
-            { id: "assigned", label: "Assigned" },
-          ]}
+          options={[...ADMIN_ASSIGNMENT_FILTERS]}
           value={assignment}
           onChange={(v) => { setAssignment(String(v)); setPage(1); }}
         />

@@ -25,7 +25,7 @@ export default function Settings() {
   const updateSettings = trpc.settings.update.useMutation({
     onSuccess: async () => {
       await utils.settings.get.invalidate();
-      toast.success("Demo settings saved");
+      toast.success("GST percentage updated successfully.");
     },
     onError: (e) => toast.error(e.message),
   });

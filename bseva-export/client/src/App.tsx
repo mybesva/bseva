@@ -30,6 +30,7 @@ import AdminSamagri from "./pages/admin/Samagri";
 import AdminNotifications from "./pages/admin/Notifications";
 import AdminPromos from "./pages/admin/PromosAdmin";
 import AdminSettings from "./pages/admin/Settings";
+import AdminProfile from "./pages/admin/AdminProfile";
 import AdminLegal from "./pages/admin/Legal";
 import AdminSupport from "./pages/admin/Support";
 import AdminEmailTemplates from "./pages/admin/EmailTemplates";
@@ -167,6 +168,7 @@ function Router() {
       <Route path={`${ops}/samagri`} component={AdminSamagri} />
       <Route path={`${ops}/notifications`} component={AdminNotifications} />
       <Route path={`${ops}/promos`} component={AdminPromos} />
+      <Route path={`${ops}/profile`} component={AdminProfile} />
       <Route path={`${ops}/settings`} component={AdminSettings} />
       <Route path={`${ops}/pricing`} component={AdminPricingRules} />
       <Route path={`${ops}/support`} component={AdminSupport} />

@@ -1,8 +1,9 @@
+import { ADMIN_CUSTOMER_BLOCKED_FILTERS, normalizeIndianMobile, validateAdminCustomerForm } from "@bseva/config";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
+import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge, SuccessBanner } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
@@ -22,6 +23,9 @@ export default function AdminCustomers() {
   const [password, setPassword] = useState("");
   const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [creating, setCreating] = useState(false);
   const list = useQuery({
     queryKey: ["admin-customers", q, blocked, page],
     queryFn: () =>
@@ -35,8 +39,13 @@ export default function AdminCustomers() {
       <ScreenHeader title={t("admin.customers")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}>
         <ErrorBanner message={error} />
+        <SuccessBanner message={success} />
         <Field label={t("admin.search")} value={q} onChangeText={(v) => { setQ(v); setPage(1); }} />
-        <ChoiceChips options={[{ id: "", label: "All" }, { id: "false", label: "Active" }, { id: "true", label: "Blocked" }]} value={blocked} onChange={(v) => { setBlocked(String(v)); setPage(1); }} />
+        <ChoiceChips
+          options={[...ADMIN_CUSTOMER_BLOCKED_FILTERS]}
+          value={blocked}
+          onChange={(v) => { setBlocked(String(v)); setPage(1); }}
+        />
         {list.isLoading ? <LoadingBlock /> : null}
         {items.length === 0 && !list.isLoading ? <EmptyState title="No customers" /> : null}
         {items.map((u) => (
@@ -80,21 +89,43 @@ export default function AdminCustomers() {
         {can("create_customers") ? (
           <Card>
             <AppText variant="h3">Create customer</AppText>
-            <Field label="Name" value={name} onChangeText={setName} />
-            <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
-            <Field label="Phone" value={phone} onChangeText={setPhone} />
-            <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-            <Field label="Location" value={location} onChangeText={setLocation} />
+            <Field label="Name" value={name} onChangeText={setName} error={fieldErrors.name} />
+            <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" error={fieldErrors.email} />
+            <Field label="Phone" value={phone} onChangeText={setPhone} error={fieldErrors.phone} />
+            <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry error={fieldErrors.password} />
+            <Field label="Location" value={location} onChangeText={setLocation} error={fieldErrors.location} />
             <PrimaryButton
               title="Create"
+              loading={creating}
               onPress={async () => {
                 setError(null);
+                setSuccess(null);
+                const errors = validateAdminCustomerForm({ name, email, phone, password, location });
+                setFieldErrors(errors);
+                if (Object.keys(errors).length) return;
+                setCreating(true);
                 try {
-                  await apiClient.api("/admin/users", { method: "POST", body: JSON.stringify({ name, email, phone, password, role: "customer", location }) });
+                  const normalizedPhone = normalizeIndianMobile(phone);
+                  await apiClient.api("/admin/users", {
+                    method: "POST",
+                    body: JSON.stringify({
+                      name: name.trim(),
+                      email: email.trim(),
+                      phone: normalizedPhone,
+                      password,
+                      role: "customer",
+                      location: location.trim(),
+                    }),
+                  });
                   setName(""); setEmail(""); setPhone(""); setPassword(""); setLocation("");
+                  setFieldErrors({});
+                  setSuccess("Customer created successfully.");
+                  setPage(1);
                   await qc.invalidateQueries({ queryKey: ["admin-customers"] });
                 } catch (e: unknown) {
-                  setError(e instanceof Error ? e.message : "Create failed");
+                  setError(e instanceof Error ? e.message : "Customer creation failed.");
+                } finally {
+                  setCreating(false);
                 }
               }}
             />

@@ -18,11 +18,74 @@ import { apiClient } from "@/services/api";
 type Ticket = { id: string; subject?: string; status?: string; category?: string; description?: string; body?: string };
 type Person = { id: string; name?: string; phone?: string; email?: string };
 
+function SupportTicketCard({
+  ticket,
+  onError,
+  onUpdated,
+}: {
+  ticket: Ticket;
+  onError: (msg: string | null) => void;
+  onUpdated: () => Promise<void>;
+}) {
+  const router = useRouter();
+  const initial = String(ticket.status || "open");
+  const [status, setStatus] = useState(initial);
+  const [reply, setReply] = useState("");
+  const [updating, setUpdating] = useState(false);
+
+  return (
+    <Card>
+      <StatusBadge status={initial} />
+      <AppText variant="h3">{ticket.subject}</AppText>
+      <AppText variant="small">{ticket.category}</AppText>
+      <PrimaryButton title="Open workspace" onPress={() => router.push(`/support/${ticket.id}`)} />
+      <ChoiceChips
+        options={TICKET_STATUSES.map((id) => ({ id, label: id.replace(/_/g, " ") }))}
+        value={status}
+        onChange={(v) => setStatus(String(v))}
+      />
+      <PrimaryButton
+        title="Update status"
+        variant="outline"
+        loading={updating}
+        onPress={async () => {
+          onError(null);
+          setUpdating(true);
+          try {
+            await apiClient.api(`/support/tickets/${ticket.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ status }),
+            });
+            await onUpdated();
+          } catch (e: unknown) {
+            onError(e instanceof Error ? e.message : "Failed");
+          } finally {
+            setUpdating(false);
+          }
+        }}
+      />
+      <Field label="Reply" value={reply} onChangeText={setReply} />
+      <PrimaryButton
+        title="Send reply"
+        variant="outline"
+        onPress={async () => {
+          if (!reply.trim()) return;
+          onError(null);
+          try {
+            await apiClient.replySupportTicket(ticket.id, reply.trim(), "agent");
+            setReply("");
+            await onUpdated();
+          } catch (e: unknown) {
+            onError(e instanceof Error ? e.message : "Failed");
+          }
+        }}
+      />
+    </Card>
+  );
+}
+
 export default function AdminSupport() {
   const { t } = useI18n();
-  const router = useRouter();
-  const [status, setStatus] = useState("");
-  const [reply, setReply] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_SUPPORT_TICKET });
@@ -127,46 +190,14 @@ export default function AdminSupport() {
         </Card>
         {list.isLoading ? <LoadingBlock /> : null}
         {rows.map((ticket) => (
-          <Card key={ticket.id}>
-            <StatusBadge status={String(ticket.status || "open")} />
-            <AppText variant="h3">{ticket.subject}</AppText>
-            <AppText variant="small">{ticket.category}</AppText>
-            <PrimaryButton title="Open workspace" onPress={() => router.push(`/support/${ticket.id}`)} />
-            <ChoiceChips
-              options={TICKET_STATUSES.map((id) => ({ id, label: id.replace(/_/g, " ") }))}
-              value={status || String(ticket.status || "open")}
-              onChange={(v) => setStatus(String(v))}
-            />
-            <PrimaryButton
-              title="Update status"
-              variant="outline"
-              onPress={async () => {
-                setError(null);
-                try {
-                  await apiClient.api(`/support/tickets/${ticket.id}`, { method: "PATCH", body: JSON.stringify({ status: status || ticket.status }) });
-                  await list.refetch();
-                } catch (e: unknown) {
-                  setError(e instanceof Error ? e.message : "Failed");
-                }
-              }}
-            />
-            <Field label="Reply" value={reply} onChangeText={setReply} />
-            <PrimaryButton
-              title="Send reply"
-              variant="outline"
-              onPress={async () => {
-                if (!reply.trim()) return;
-                setError(null);
-                try {
-                  await apiClient.replySupportTicket(ticket.id, reply.trim(), "agent");
-                  setReply("");
-                  await list.refetch();
-                } catch (e: unknown) {
-                  setError(e instanceof Error ? e.message : "Failed");
-                }
-              }}
-            />
-          </Card>
+          <SupportTicketCard
+            key={ticket.id}
+            ticket={ticket}
+            onError={setError}
+            onUpdated={async () => {
+              await list.refetch();
+            }}
+          />
         ))}
       </ScrollView>
     </Screen>

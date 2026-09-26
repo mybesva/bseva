@@ -222,7 +222,7 @@ function AdminShell({ children }: AdminLayoutProps) {
             >
               <X size={20} />
             </Button>
-            <Link href={adminPath("/settings")}>
+            <Link href={adminPath("/profile")}>
               <a
                 className="flex flex-col items-center gap-2 py-2 text-center"
                 onClick={() => setSidebarOpen(false)}

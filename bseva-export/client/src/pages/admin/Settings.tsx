@@ -1,3 +1,4 @@
+import { filterPujariRoles } from "@bseva/config";
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -522,6 +523,7 @@ export default function Settings() {
   const [editingRole, setEditingRole] = useState<PujariLevelRow | null>(null);
   const [roleForm, setRoleForm] = useState(emptyRoleForm);
   const [savingRole, setSavingRole] = useState(false);
+  const [roleSearch, setRoleSearch] = useState("");
 
   const visiblePlatformKeys = useMemo(
     () => PLATFORM_KEYS.filter((item) => !item.superOnly || isSuper),
@@ -529,6 +531,7 @@ export default function Settings() {
   );
 
   const pricingDirty = useMemo(() => gst.trim() !== savedGst.trim(), [gst, savedGst]);
+  const filteredRoles = useMemo(() => filterPujariRoles(roles, roleSearch), [roles, roleSearch]);
 
   async function loadPricing() {
     const p = await api<any>("/admin/pricing");
@@ -604,7 +607,7 @@ export default function Settings() {
         }),
       });
       setSavedGst(gst);
-      toast.success("GST saved");
+      toast.success("GST percentage updated successfully.");
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -870,12 +873,17 @@ export default function Settings() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
+            <Input
+              placeholder="Search roles or levels…"
+              value={roleSearch}
+              onChange={(e) => setRoleSearch(e.target.value)}
+            />
             {rolesLoading && <p className="text-sm text-muted-foreground">Loading roles…</p>}
             {!rolesLoading && roles.length === 0 && (
               <p className="text-sm text-muted-foreground py-4 text-center">No roles yet. Add your first pujari role.</p>
             )}
             {!rolesLoading &&
-              roles.map((role) => {
+              filteredRoles.map((role) => {
                 const examples = normalizeExamples(role.examples);
                 return (
                   <div

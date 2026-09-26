@@ -29,7 +29,7 @@ export function MenuProfileHeader() {
 
   return (
     <Pressable
-      onPress={() => router.push("/settings")}
+      onPress={() => router.push("/profile")}
       accessibilityRole="button"
       accessibilityLabel={t("mobile.profile")}
       style={{

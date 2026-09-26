@@ -1,8 +1,9 @@
+import { normalizeIndianMobile, validateAdminTempleForm } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Alert, ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, SuccessBanner } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
@@ -37,6 +38,9 @@ export default function AdminTemples() {
   const [pujariName, setPujariName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [creating, setCreating] = useState(false);
   const list = useQuery({
     queryKey: ["admin-temples", q],
     queryFn: () => apiClient.api<Temple[]>(`/admin/temples${q ? `?q=${encodeURIComponent(q)}` : ""}`),
@@ -47,6 +51,7 @@ export default function AdminTemples() {
       <ScreenHeader title={t("admin.temples")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
+        <SuccessBanner message={success} />
         <Field label={t("admin.search")} value={q} onChangeText={setQ} />
         {list.isLoading ? <LoadingBlock /> : null}
         {items.map((temple) => (
@@ -98,40 +103,50 @@ export default function AdminTemples() {
         {can("manage_services") ? (
           <Card>
             <AppText variant="h3">Add temple</AppText>
-            <Field label="Name" value={name} onChangeText={setName} />
+            <Field label="Name *" value={name} onChangeText={setName} error={fieldErrors.name} />
             <Field label="City" value={city} onChangeText={setCity} />
-            <Field label="State" value={state} onChangeText={setState} />
-            <Field label="Pincode" value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
+            <Field label="State *" value={state} onChangeText={setState} error={fieldErrors.state} />
+            <Field label="Pincode *" value={pincode} onChangeText={setPincode} keyboardType="number-pad" error={fieldErrors.pincode} />
             <Field label="Address" value={address} onChangeText={setAddress} />
-            <Field label="Deity" value={deity} onChangeText={setDeity} />
+            <Field label="Deity *" value={deity} onChangeText={setDeity} error={fieldErrors.deity} />
             <Field label="Timings" value={timings} onChangeText={setTimings} />
-            <Field label="Contact phone" value={contactPhone} onChangeText={setContactPhone} />
+            <Field label="Contact phone *" value={contactPhone} onChangeText={setContactPhone} error={fieldErrors.contactPhone} />
             <Field label="Pujari name" value={pujariName} onChangeText={setPujariName} />
             <Field label="Description" value={description} onChangeText={setDescription} />
             <PrimaryButton
               title="Create"
+              loading={creating}
               onPress={async () => {
                 setError(null);
+                setSuccess(null);
+                const errors = validateAdminTempleForm({ name, state, pincode, deity, contactPhone });
+                setFieldErrors(errors);
+                if (Object.keys(errors).length) return;
+                setCreating(true);
                 try {
                   await apiClient.api("/admin/temples", {
                     method: "POST",
                     body: JSON.stringify({
-                      name,
-                      city,
-                      state,
-                      pincode,
-                      address,
-                      deity,
-                      timings,
-                      contact_phone: contactPhone,
-                      pujari_name: pujariName,
-                      description,
+                      name: name.trim(),
+                      city: city.trim() || null,
+                      state: state.trim(),
+                      pincode: pincode.trim(),
+                      address: address.trim() || null,
+                      deity: deity.trim(),
+                      timings: timings.trim() || null,
+                      contact_phone: normalizeIndianMobile(contactPhone),
+                      pujari_name: pujariName.trim() || null,
+                      description: description.trim() || null,
                     }),
                   });
                   setName(""); setCity(""); setState(""); setPincode(""); setAddress(""); setDeity(""); setTimings(""); setContactPhone(""); setPujariName(""); setDescription("");
+                  setFieldErrors({});
+                  setSuccess("Temple created successfully.");
                   await list.refetch();
                 } catch (e: unknown) {
-                  setError(e instanceof Error ? e.message : "Failed");
+                  setError(e instanceof Error ? e.message : "Temple creation failed.");
+                } finally {
+                  setCreating(false);
                 }
               }}
             />

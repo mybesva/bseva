@@ -6,6 +6,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
+import { formatDisplayDateTime } from "@bseva/locales";
 
 type Inv = { id: string; invoice_number?: string; type?: string; booking_id?: string; created_at?: string };
 
@@ -29,7 +30,7 @@ export default function AdminInvoices() {
         {rows.map((inv) => (
           <Card key={inv.id}>
             <AppText variant="h3">{inv.invoice_number || inv.id}</AppText>
-            <AppText variant="small">{inv.type} · {inv.created_at}</AppText>
+            <AppText variant="small">{inv.type} · {formatDisplayDateTime(inv.created_at)}</AppText>
             <PrimaryButton title="View invoice" onPress={() => router.push(`/invoice/${inv.id}`)} />
             <PrimaryButton
               title="Resend email"

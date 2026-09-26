@@ -2,10 +2,17 @@ from app.document_brand import (
     FOOTER_LOCKUP,
     MOTTO,
     build_bseva_pdf,
+    embedded_logo_data_uri,
     wrap_html_document,
 )
 from app.invoice_docs import render_invoice_html
 from app.invoice_pdf import render_invoice_pdf
+
+
+def test_embedded_logo_data_uri_is_available():
+    uri = embedded_logo_data_uri("/bseva-logo-transparent.png")
+    assert uri is not None
+    assert uri.startswith("data:image/")
 
 
 def test_html_document_wrap_includes_official_chrome():

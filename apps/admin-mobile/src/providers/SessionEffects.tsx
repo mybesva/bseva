@@ -1,4 +1,4 @@
-import { isLangCode, mapNotificationLinkToMobile } from "@bseva/config";
+import { mapNotificationLinkToMobile } from "@bseva/config";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
@@ -13,7 +13,7 @@ export function SessionEffects() {
 
   useEffect(() => {
     const pref = user?.preferred_language;
-    if (isLangCode(pref) && pref !== lang) setLang(pref);
+    if (pref === "en" && lang !== "en") setLang("en");
   }, [user?.preferred_language, lang, setLang]);
 
   useEffect(() => {

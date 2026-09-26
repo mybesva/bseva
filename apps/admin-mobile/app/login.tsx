@@ -25,7 +25,8 @@ export default function AdminLogin() {
     setError(null);
     const parsed = loginSchema.safeParse({ identifier, password });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || "Check your details");
+      const key = parsed.error.issues[0]?.message;
+      setError(key ? t(key) : t("auth.checkDetails"));
       return;
     }
     setPending(true);
