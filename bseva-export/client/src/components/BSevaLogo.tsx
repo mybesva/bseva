@@ -41,7 +41,7 @@ const FULL_HEIGHT = {
   md: "h-14",
   lg: "h-16",
   xl: "h-20",
-  header: "h-12 sm:h-14 lg:h-[3.75rem]",
+  header: "h-12 sm:h-14 lg:h-[calc(7.5rem*0.95)]",
   portal: "h-10 sm:h-11",
 } as const;
 
@@ -60,7 +60,7 @@ export default function BSevaLogo({
         className={cn(
           "w-auto object-contain object-left",
           size === "header"
-            ? "max-w-[min(100%,11.5rem)]"
+            ? "max-w-[min(100%,11.5rem)] lg:max-w-[min(100%,22.25rem)]"
             : size === "portal"
               ? "max-w-[9.5rem]"
               : "max-w-[min(100%,16rem)]",
