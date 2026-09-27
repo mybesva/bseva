@@ -20,6 +20,10 @@ import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 
+const TODAY_ACTIVE_TEXT = "#10203D";
+const TODAY_ORANGE = "#FF8A2A";
+const TODAY_INACTIVE_BORDER = "rgba(255, 138, 42, 0.35)";
+
 const NAV_SIZE = 44;
 const OUTER_PAD = 16;
 const SECTION_GAP = 16;
@@ -280,6 +284,7 @@ export function PanchangCard() {
         {/* Today — always centered below nav on mobile */}
         <Pressable
           accessibilityRole="button"
+          accessibilityState={{ selected: onToday }}
           disabled={onToday}
           onPress={() => setSelectedDate(todayIsoDate())}
           style={{
@@ -288,15 +293,14 @@ export function PanchangCard() {
             paddingHorizontal: 20,
             paddingVertical: 8,
             borderRadius: radius.md,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: onToday ? colors.secondary : colors.white,
-            opacity: onToday ? 0.65 : 1,
+            borderWidth: onToday ? 3 : 1,
+            borderColor: onToday ? TODAY_ORANGE : TODAY_INACTIVE_BORDER,
+            backgroundColor: "#FFFFFF",
           }}
         >
           <AppText
-            style={{ fontSize: 14, fontWeight: "600" }}
-            color={onToday ? colors.mutedForeground : colors.navy}
+            style={{ fontSize: 14, fontWeight: onToday ? "700" : "600" }}
+            color={onToday ? TODAY_ACTIVE_TEXT : colors.primary}
           >
             {t("calendar.today")}
           </AppText>

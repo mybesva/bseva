@@ -116,6 +116,12 @@ export default function PanchangCard({ className }: { className?: string }) {
   const dateLabel = formatPanchangSelectedDate(calendarType, selectedDate, panchang);
   const dateSubtitle = formatPanchangDateSubtitle(calendarType, selectedDate, panchang);
   const onToday = isTodayIsoDate(selectedDate);
+  const todayButtonClass = cn(
+    "rounded-lg bg-[#FFFFFF] shadow-none transition-colors disabled:pointer-events-none disabled:opacity-100",
+    onToday
+      ? "border-[3px] border-[#FF8A2A] font-bold text-[#10203D] hover:bg-[#FFFFFF]"
+      : "border border-primary/30 font-semibold text-brand-orange hover:bg-secondary/30",
+  );
 
   const handleCalendarChange = (next: PanchangCalendarType) => {
     setCalendarType(next);
@@ -208,7 +214,7 @@ export default function PanchangCard({ className }: { className?: string }) {
               type="button"
               variant="outline"
               size="sm"
-              className="hidden h-11 shrink-0 rounded-lg border-primary/30 bg-white px-4 font-semibold text-sidebar hover:bg-secondary/30 disabled:opacity-60 md:inline-flex"
+              className={cn("hidden h-11 shrink-0 px-4 md:inline-flex", todayButtonClass)}
               disabled={onToday}
               onClick={() => setSelectedDate(todayIsoDate())}
             >
@@ -220,7 +226,7 @@ export default function PanchangCard({ className }: { className?: string }) {
             type="button"
             variant="outline"
             size="sm"
-            className="mx-auto h-10 w-full max-w-[10rem] rounded-lg border-primary/30 bg-white font-semibold text-sidebar hover:bg-secondary/30 disabled:opacity-60 md:hidden"
+            className={cn("mx-auto h-10 w-full max-w-[10rem] md:hidden", todayButtonClass)}
             disabled={onToday}
             onClick={() => setSelectedDate(todayIsoDate())}
           >
