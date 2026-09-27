@@ -19,8 +19,9 @@ function pluralKey(key: string, count: number): string {
 
 function lookup(dict: Record<string, string> | undefined, key: string): string | undefined {
   if (!dict) return undefined;
+  if (!(key in dict)) return undefined;
   const value = dict[key];
-  return value == null || value === "" ? undefined : value;
+  return value == null ? undefined : value;
 }
 
 export function translateWith(
@@ -50,6 +51,10 @@ export function translateWith(
         missing.add(`${locale}:${key}`);
       }
     }
+  }
+
+  if (resolved === "") {
+    return "";
   }
 
   if (!resolved) {

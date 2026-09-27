@@ -78,7 +78,7 @@ function HeaderContact({
       className={cn(
         compact
           ? "flex flex-col gap-3 text-sm font-semibold"
-          : "hidden lg:flex flex-col justify-center gap-0.5 pl-3 ml-0.5 border-l border-border/60 text-[11px] xl:text-xs font-semibold leading-tight text-foreground/80",
+          : "hidden 2xl:flex flex-col justify-center gap-0.5 text-[11px] font-semibold leading-tight text-foreground/80",
       )}
     >
       <a
@@ -146,7 +146,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       ...visiblePortals,
       { label: t("nav.astrology"), path: "/astrology" },
       { label: t("nav.about"), path: "/about" },
-      { label: t("nav.contact"), path: "/contact" },
+      { label: t("nav.help"), path: "/contact" },
     ];
 
     if (user) {
@@ -176,56 +176,21 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="container flex h-16 lg:h-[7.5rem] items-center justify-between gap-3 lg:gap-4">
-          <Link href="/">
-            <a className="flex h-full items-center shrink-0 -ml-1">
-              <BSevaLogo variant="full" size="header" />
-            </a>
-          </Link>
-
-          <nav className="hidden lg:flex items-center gap-2.5 xl:gap-3.5 flex-nowrap justify-end min-w-0">
-            {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={`text-sm font-bold whitespace-nowrap transition-colors hover:text-primary ${
-                    isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground"
-                  }`}
-                >
-                  {item.label}
+        <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center gap-2 sm:gap-3 min-[1400px]:hidden">
+            <Link href="/">
+              <a className="flex min-w-0 flex-1 items-center max-w-[58%] sm:max-w-[50%]">
+                <BSevaLogo variant="full" size="header" />
+              </a>
+            </Link>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Link href="/services">
+                <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
+                  <span className="book-puja-nav-cta book-puja-nav-cta-compact">{t("nav.bookPuja")}</span>
                 </a>
               </Link>
-            ))}
-            <Link href="/services">
-              <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
-                <span className="book-puja-nav-cta">{t("nav.bookPuja")}</span>
-              </a>
-            </Link>
-            <LanguageSelect triggerClassName="w-[118px] xl:w-[148px]" />
-            <ThemeToggle className="h-8 w-8 shrink-0" />
-            {user && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-1 shrink-0"
-                onClick={async () => {
-                  await logout();
-                  setLocation("/");
-                }}
-              >
-                {t("nav.logout")}
-              </Button>
-            )}
-            <HeaderContact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
-          </nav>
-
-          <div className="flex items-center gap-2 lg:hidden">
-            <Link href="/services">
-              <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
-                <span className="book-puja-nav-cta book-puja-nav-cta-compact">{t("nav.bookPuja")}</span>
-              </a>
-            </Link>
-            <ThemeToggle />
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <ThemeToggle className="h-8 w-8 shrink-0" />
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Open menu">
                   <Menu className="h-6 w-6" />
@@ -286,27 +251,83 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 </div>
               </SheetContent>
             </Sheet>
-            {user && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  await logout();
-                  setLocation("/");
-                }}
+              {user && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={async () => {
+                    await logout();
+                    setLocation("/");
+                  }}
+                >
+                  {t("nav.logout")}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden min-[1400px]:flex min-[1400px]:h-[7.5rem] min-[1400px]:w-full min-[1400px]:items-center">
+            <Link href="/">
+              <a className="flex h-full shrink-0 items-center">
+                <BSevaLogo variant="full" size="header" />
+              </a>
+            </Link>
+
+            <div className="w-8 shrink-0 2xl:w-10" aria-hidden />
+
+            <div className="flex min-w-0 flex-1 items-center justify-end">
+              <nav
+                className="flex shrink-0 items-center gap-x-2.5 pr-4 2xl:pr-5"
+                aria-label="Primary"
               >
-                {t("nav.logout")}
-              </Button>
-            )}
+                {navItems.map((item) => (
+                  <Link key={item.path} href={item.path}>
+                    <a
+                      className={cn(
+                        "shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none transition-colors hover:text-primary",
+                        isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground",
+                      )}
+                    >
+                      {item.label}
+                    </a>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2 border-l border-border/60 pl-3 2xl:gap-3 2xl:pl-4">
+              <Link href="/services">
+                <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
+                  <span className="book-puja-nav-cta">{t("nav.bookPuja")}</span>
+                </a>
+              </Link>
+              <LanguageSelect triggerClassName="w-[7.25rem] 2xl:w-[9.25rem]" />
+              <ThemeToggle className="h-8 w-8 shrink-0" />
+              {user && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={async () => {
+                    await logout();
+                    setLocation("/");
+                  }}
+                >
+                  {t("nav.logout")}
+                </Button>
+              )}
+              <HeaderContact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
+            </div>
           </div>
         </div>
       </header>
 
       <aside
         className={cn(
-          "fixed z-40 print:hidden flex flex-col gap-1.5 sm:gap-2",
-          "right-[max(0.375rem,env(safe-area-inset-right))] sm:right-3",
-          "bottom-20 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2",
+          "fixed z-40 print:hidden hidden lg:flex flex-col gap-2",
+          "right-[max(0.5rem,env(safe-area-inset-right))] lg:right-3",
+          "top-1/2 -translate-y-1/2",
           isMobileMenuOpen && "invisible pointer-events-none",
         )}
         aria-label="Social media"
@@ -342,16 +363,26 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <p className="text-sidebar-foreground/70 text-sm leading-relaxed mb-4">
               {t("footer.tagline")}
             </p>
+            <div className="space-y-2 text-sm">
+              <Link href="/services">
+                <a className="text-sidebar-foreground/80 hover:text-primary block">{t("footer.dualCtaClient")}</a>
+              </Link>
+              <Link href="/register?role=pujari">
+                <a className="text-sidebar-foreground/80 hover:text-primary block">{t("footer.dualCtaPujari")}</a>
+              </Link>
+            </div>
           </div>
           <div>
             <h4 className="text-h4 mb-4 text-primary">{t("footer.quickLinks")}</h4>
             <ul className="space-y-2 text-sm text-sidebar-foreground/80">
               <li><Link href="/services"><a className="hover:text-primary">{t("nav.services")}</a></Link></li>
+              <li><Link href="/#how-it-works"><a className="hover:text-primary">{t("nav.howItWorks")}</a></Link></li>
               <li><Link href="/astrology"><a className="hover:text-primary">{t("nav.astrology")}</a></Link></li>
               <li><Link href="/customer"><a className="hover:text-primary">{t("nav.customer")}</a></Link></li>
-              <li><Link href="/pujari"><a className="hover:text-primary">{t("nav.pujaris")}</a></Link></li>
+              <li><Link href="/register?role=pujari"><a className="hover:text-primary">{t("nav.joinPujari")}</a></Link></li>
               <li><Link href="/about"><a className="hover:text-primary">{t("nav.about")}</a></Link></li>
-              <li><Link href="/contact"><a className="hover:text-primary">{t("nav.contact")}</a></Link></li>
+              <li><Link href="/contact"><a className="hover:text-primary">{t("nav.help")}</a></Link></li>
+              <li><Link href="/support"><a className="hover:text-primary">{t("nav.support")}</a></Link></li>
             </ul>
           </div>
           <div>

@@ -78,9 +78,6 @@ export default function LandingScreen() {
               <AppText variant="display" color={colors.navy} style={heroStyles.heroTitle}>
                 {t("home.heroTitle1")}
               </AppText>
-              <AppText variant="display" color={colors.primary} style={heroStyles.heroTitleAccent}>
-                {t("home.heroTitle2")}
-              </AppText>
               <AppText color="rgba(26,43,74,0.9)" style={heroStyles.heroDesc}>
                 {t("home.heroDesc")}
               </AppText>
@@ -249,15 +246,10 @@ const heroStyles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 40,
     fontWeight: "700",
-  },
-  heroTitleAccent: {
-    fontSize: 34,
-    lineHeight: 40,
-    fontWeight: "700",
-    marginBottom: 2,
+    marginBottom: 4,
   },
   heroDesc: {
-    marginTop: 12,
+    marginTop: 8,
     marginBottom: 20,
     fontSize: 15,
     lineHeight: 22,

@@ -4,8 +4,12 @@ const en: Record<string, string> = {
   "app.tagline": "Authentic Vedic rituals at home",
 
   "nav.home": "Home",
-  "nav.services": "Services",
-  "nav.ourServices": "Services",
+  "nav.services": "Explore Services",
+  "nav.ourServices": "Explore Services",
+  "nav.exploreServices": "Explore Services",
+  "nav.howItWorks": "How B-Seva Works",
+  "nav.joinPujari": "Join as a Pujari",
+  "nav.help": "Help / Contact",
   "nav.astrology": "Astrology",
   "nav.pujaris": "Pujaris",
   "nav.customer": "Customer",
@@ -105,7 +109,10 @@ const en: Record<string, string> = {
   "common.showingCount_one": "Showing {{count}} result",
   "common.showingCount_other": "Showing {{count}} results",
 
-  "footer.tagline": "Connecting devotees with verified Vedic priests for authentic spiritual services across India.",
+  "footer.tagline":
+    "B-Seva is a bridge between people seeking meaningful ritual and the Pujaris who carry that knowledge forward.",
+  "footer.dualCtaClient": "Looking for a ritual? Explore Services",
+  "footer.dualCtaPujari": "A Pujari or ritual practitioner? Join B-Seva",
   "footer.quickLinks": "Quick Links",
   "footer.contact": "Contact",
   "footer.demoAccess": "Demo Access",
@@ -183,8 +190,6 @@ const en: Record<string, string> = {
   "portal.admin.subtitle": "Manage customers, pujaris, services, bookings, and payments.",
 
   "home.badge": "Authentic Vedic Rituals",
-  "home.heroTitle1": "Experience Divine",
-  "home.heroTitle2": "Spiritual Connection",
   "home.heroDesc": "Connect with verified pujaris for authentic pujas, havans, and temple rituals. Bring the sanctity of the temple to your home.",
   "home.selectPuja": "Select Puja Type",
   "home.selectLocation": "Select Location",
@@ -217,8 +222,21 @@ const en: Record<string, string> = {
   "home.contactSupport": "Contact Support",
   "home.verifiedCount": "Verified Pujaris",
 
-  "services.title": "Spiritual Services",
-  "services.subtitle": "Comprehensive Vedic rituals performed by verified priests to bring peace, prosperity, and divine blessings to your life.",
+  "services.badge": "DISCOVER THE RITUAL. MEET THE PERSON BEHIND IT.",
+  "services.title": "Find the Right Ritual—and the Right Guidance.",
+  "services.subtitle":
+    "Explore meaningful pujas, havans, homams, and ceremonies with clear service information, context you can understand, and Pujaris whose knowledge and approach are presented with care.",
+  "services.introP1":
+    "Every service has two parts: the ritual itself and the person who guides it.",
+  "services.introP2":
+    "B-Seva helps you understand both. Explore what a ceremony is traditionally associated with, what it may involve, how to prepare, and which Pujaris offer relevant experience, language, tradition, and service support.",
+  "services.introP3":
+    "Because practices vary across families and lineages, service information should help you begin an informed conversation—not replace one.",
+  "services.discoveryTitle": "Choose with understanding. Appreciate the person guiding you.",
+  "services.discoveryP1":
+    "When exploring a service, look beyond the name of the ritual. Consider the Pujari's relevant experience, tradition, language, service area, communication, and approach.",
+  "services.discoveryP2":
+    "B-Seva is designed to help you make a more informed choice while giving Pujaris a clearer way to showcase the knowledge and skill they bring to their work.",
   "services.all": "All Services",
   "services.pujas": "Pujas",
   "services.havans": "Havans",
@@ -266,27 +284,66 @@ const en: Record<string, string> = {
   "svc.dosha.title": "Dosha Parihara",
   "svc.dosha.desc": "Remedial pujas for planetary doshas including Kaal Sarp Dosh, Mangal Dosh, and Shani Shanti.",
 
-  "about.badge": "Our Story",
-  "about.title": "Bridging Tradition with Modern Convenience",
-  "about.heroDesc": "BSeva is dedicated to preserving ancient Vedic traditions while making spiritual services accessible to the modern devotee. We connect you with the divine through authentic rituals and verified priests.",
-  "about.mission": "Our Mission",
-  "about.missionP1": "In today's fast-paced world, finding a knowledgeable priest and arranging for authentic rituals can be challenging. BSeva was founded to solve this problem by creating a trusted platform for spiritual services.",
-  "about.missionP2": "We strive to uphold the sanctity of Sanatana Dharma by ensuring that every ritual performed through our platform adheres strictly to Vedic scriptures. Our mission is to bring peace, prosperity, and spiritual fulfillment to every home.",
-  "about.point1": "Preserving Vedic authenticity",
-  "about.point2": "Empowering knowledgeable priests",
-  "about.point3": "Simplifying the booking process",
-  "about.point4": "Ensuring transparency in services",
-  "about.valuesTitle": "Our Core Values",
-  "about.valuesDesc": "The principles that guide every service we offer.",
-  "about.v1": "Authenticity",
-  "about.v1d": "We never compromise on the traditional methods and procedures prescribed in the Vedas.",
-  "about.v2": "Trust",
-  "about.v2d": "Every priest on our platform is background-verified and vetted for their knowledge.",
-  "about.v3": "Devotion",
-  "about.v3d": "We believe that rituals must be performed with Bhakti (devotion) to be truly effective.",
-  "about.v4": "Accessibility",
-  "about.v4d": "Making spiritual services available to everyone, regardless of location or language.",
-  "about.statPriests": "Verified Priests",
+  "about.badge": "A BRIDGE BETWEEN TRADITION AND MODERN LIFE",
+  "about.title": "Preserving Consciousness. Honouring Those Who Carry It Forward.",
+  "about.heroDesc":
+    "B-Seva was created around a simple belief: tradition remains alive when people understand it, trust the people who carry it, and can participate in it meaningfully.",
+  "about.heroIntro":
+    "Our purpose is to help preserve the consciousness behind sacred practices while giving Pujaris a respectful platform to share their knowledge, showcase their skills, and be appreciated for their service.",
+  "about.mission": "We are preserving more than the ceremony.",
+  "about.missionP1":
+    "A tradition is not preserved only when a ceremony is performed. It is preserved when its intention is understood, when its knowledge is carried responsibly, and when the people who hold that knowledge are respected.",
+  "about.missionP2":
+    "That is why B-Seva is designed around both the client and the Pujari.",
+  "about.missionP3":
+    "We help clients understand what they are arranging and why it matters. We help Pujaris present their experience, traditions, languages, and skills in a way that can be discovered by the right people.",
+  "about.missionP4":
+    "In this way, B-Seva seeks to support a living connection between knowledge and participation, between the person who seeks guidance and the person who provides it.",
+  "about.combinedStatement":
+    "We help clients approach tradition with greater understanding, while helping Pujaris be discovered and valued for the knowledge, skill, and care behind their service.",
+  "about.pujariCommitTitle": "A platform that respects the work behind the ritual",
+  "about.pujariCommitP1":
+    "Pujaris are not simply names attached to a booking. They are practitioners, teachers, guides, and custodians of traditions that have been carried across generations.",
+  "about.pujariCommitP2":
+    "Their work requires knowledge, preparation, communication, and care. B-Seva aims to create a more structured and visible way for Pujaris to present that work.",
+  "about.pujariCommitP3":
+    "Through a dedicated profile and booking platform, Pujaris can share relevant information about their experience, traditions, languages, service categories, and approach. Clients can make more informed choices, and Pujaris can be appreciated for the particular knowledge and service they bring.",
+  "about.pujariCommitP4":
+    "We also seek to make expectations clearer on both sides: what the client is booking, what the Pujari is being asked to provide, how the service is coordinated, and how concerns are addressed.",
+  "about.pujariCommitHighlight":
+    "We help the right Pujari be found—and help clients understand the value of the person guiding their ritual.",
+  "about.point1": "",
+  "about.point2": "",
+  "about.point3": "",
+  "about.point4": "",
+  "about.valuesTitle": "Our Principles",
+  "about.valuesDesc": "",
+  "about.v1": "Meaning before mechanics",
+  "about.v1d":
+    "We use technology to simplify coordination, but the purpose remains human: helping people understand and participate in meaningful ritual.",
+  "about.v2": "Respect for the knowledge-holder",
+  "about.v2d":
+    "We value the experience, practice, and cultural knowledge that Pujaris bring. Profiles should represent their skills accurately and respectfully.",
+  "about.v3": "Recognition through transparency",
+  "about.v3d":
+    "Clear information helps clients make informed choices and helps Pujaris receive appreciation for the specific service they offer.",
+  "about.v4": "Trust on both sides",
+  "about.v4d":
+    "A strong ritual experience depends on mutual trust. Clients should know what to expect, and Pujaris should know the service requirements before accepting a Booking.",
+  "about.v5": "Tradition with room for diversity",
+  "about.v5d":
+    "Practices differ across regions, lineages, languages, communities, and families. B-Seva makes space for that diversity rather than presenting a single form as universal.",
+  "about.v6": "Technology in service of presence",
+  "about.v6d":
+    "The platform should reduce avoidable coordination so that clients and Pujaris can give more attention to the ritual itself.",
+  "about.onboardingTitle": "We look for service, knowledge, and integrity.",
+  "about.onboardingP1":
+    "B-Seva's Pujari network is built with care. We seek to understand each Pujari's relevant experience, service categories, traditions, languages, communication, and approach to guiding clients.",
+  "about.onboardingP2":
+    "Our review process is intended to support informed discovery and a respectful service experience. It is not a claim that one person represents every tradition, and it is not a guarantee of a particular spiritual outcome.",
+  "about.onboardingP3":
+    "The goal is simple: help clients find a suitable Pujari, and help Pujaris present their work with the dignity and clarity it deserves.",
+  "about.statPriests": "Pujaris on B-Seva",
   "about.statPujas": "Pujas Performed",
   "about.statCities": "Cities Covered",
   "about.statRating": "Customer Rating",

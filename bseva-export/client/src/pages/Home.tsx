@@ -2,7 +2,6 @@ import Layout from "@/components/Layout";
 import SectionHeader from "@/components/SectionHeader";
 import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Bell,
@@ -24,7 +23,7 @@ import {
 import { useI18n } from "@/i18n/I18nProvider";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { api, dashboardPath } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { serviceImageUrl } from "@/lib/serviceImage";
 import { formatStartingFrom } from "@/lib/servicePricing";
@@ -36,7 +35,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LandingHeroBackground from "@/components/LandingHeroBackground";
+
+const PUJARI_REGISTER = "/register?role=pujari";
 
 const ICONS = [Sparkles, Heart, HomeIcon, Users, UserCheck, Search];
 
@@ -118,11 +120,20 @@ export default function Home() {
     setLocation(s ? `/services?${s}` : "/services");
   }
 
-  const howSteps = [
-    { icon: Search, title: t("home.howStep1Title"), desc: t("home.howStep1Desc") },
-    { icon: ClipboardList, title: t("home.howStep2Title"), desc: t("home.howStep2Desc") },
-    { icon: CalendarCheck, title: t("home.howStep3Title"), desc: t("home.howStep3Desc") },
-    { icon: Bell, title: t("home.howStep4Title"), desc: t("home.howStep4Desc") },
+  const clientHowSteps = [
+    { icon: Search, title: t("home.clientStep1Title"), desc: t("home.clientStep1Desc") },
+    { icon: ClipboardList, title: t("home.clientStep2Title"), desc: t("home.clientStep2Desc") },
+    { icon: UserCheck, title: t("home.clientStep3Title"), desc: t("home.clientStep3Desc") },
+    { icon: CalendarCheck, title: t("home.clientStep4Title"), desc: t("home.clientStep4Desc") },
+    { icon: Heart, title: t("home.clientStep5Title"), desc: t("home.clientStep5Desc") },
+  ];
+
+  const pujariHowSteps = [
+    { icon: UserCheck, title: t("home.pujariStep1Title"), desc: t("home.pujariStep1Desc") },
+    { icon: Search, title: t("home.pujariStep2Title"), desc: t("home.pujariStep2Desc") },
+    { icon: ClipboardList, title: t("home.pujariStep3Title"), desc: t("home.pujariStep3Desc") },
+    { icon: Bell, title: t("home.pujariStep4Title"), desc: t("home.pujariStep4Desc") },
+    { icon: Sparkles, title: t("home.pujariStep5Title"), desc: t("home.pujariStep5Desc") },
   ];
 
   const valuePillars = [
@@ -140,121 +151,215 @@ export default function Home() {
 
   return (
     <Layout>
-      <section className="relative min-h-[78vh] lg:min-h-[90vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[72vh] sm:min-h-[78vh] lg:min-h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <LandingHeroBackground />
         </div>
 
-        <div className="container relative z-10 pt-8 pb-20 xl:pt-16 xl:pb-12 text-center px-4 xl:pr-16">
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 motion-reduce:animate-none motion-reduce:translate-y-0">
-            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-eyebrow mb-5">
+        <div className="container relative z-10 w-full py-10 sm:py-12 md:py-14 lg:py-16">
+          <div className="mx-auto flex w-full flex-col items-center text-center animate-in fade-in duration-700 motion-reduce:animate-none">
+            <span className="inline-flex w-fit max-w-[calc(100%-0.5rem)] items-center justify-center rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[0.625rem] font-semibold uppercase leading-snug tracking-[0.12em] text-white backdrop-blur-sm sm:max-w-full sm:px-4 sm:text-[0.6875rem] sm:tracking-[0.14em] md:text-xs md:tracking-widest">
               {t("home.badge")}
             </span>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-5 drop-shadow-lg text-balance text-primary">
-              <span>{t("home.heroTitle1")}</span> <span>{t("home.heroTitle2")}</span>
+
+            <h1 className="mt-4 w-full max-w-[62.5rem] text-balance text-[clamp(1.75rem,3.8vw+0.75rem,3.125rem)] font-bold leading-[1.12] tracking-tight text-primary drop-shadow-lg sm:mt-5 md:mt-6">
+              {t("home.heroTitle1")}
             </h1>
-            <p className="text-body-lg text-white/95 max-w-2xl mx-auto mb-6 drop-shadow">
+
+            <p className="mt-4 w-full max-w-[52.5rem] text-base leading-relaxed text-white/95 drop-shadow sm:mt-5 sm:text-lg md:mt-6 md:leading-[1.65]">
               {t("home.heroDesc")}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
+            <div className="mt-5 flex w-full max-w-md flex-col gap-3 sm:mt-8 sm:max-w-none sm:w-auto sm:flex-row sm:justify-center md:mt-8">
               <Button
                 size="lg"
-                className="h-12 px-8 bg-primary text-primary-foreground font-bold shadow-lg"
+                className="h-12 w-full min-h-12 px-8 bg-primary text-primary-foreground font-bold shadow-lg sm:w-auto sm:min-w-[11rem]"
                 onClick={() => setLocation("/services")}
               >
-                {t("nav.bookPuja")}
+                {t("home.exploreServices")}
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="h-12 px-8 border-white/50 bg-white/10 text-white hover:bg-white/20 hover:text-white font-semibold"
-                onClick={() => scrollToId("popular-pujas")}
+                className="h-12 w-full min-h-12 border-white/50 bg-white/10 px-8 font-semibold text-white hover:bg-white/20 hover:text-white sm:w-auto sm:min-w-[11rem]"
+                onClick={() => setLocation(PUJARI_REGISTER)}
               >
-                {t("home.exploreCeremonies")}
+                {t("home.joinAsPujari")}
               </Button>
             </div>
-            <p className="text-sm text-white/80 mb-8">{t("home.heroTrust")}</p>
 
-            <div className="max-w-2xl mx-auto bg-card rounded-xl shadow-2xl p-2 md:p-3 flex flex-col md:flex-row gap-2 items-center">
-              <div className="w-full md:w-44">
-                <Select
-                  value={heroCity || "all"}
-                  onValueChange={(v) => setHeroCity(v === "all" ? "" : v)}
-                >
-                  <SelectTrigger
-                    aria-label={t("home.whereTakePlace")}
-                    className="h-12 w-full rounded-md border border-input bg-secondary/40 px-3 text-sm font-bold text-foreground"
+            <div className="mt-8 w-full max-w-[52.5rem] rounded-xl bg-card p-2.5 shadow-2xl sm:p-3 md:mt-10">
+              <div className="flex w-full flex-col gap-2 sm:gap-2.5 md:flex-row md:items-stretch">
+                <div className="w-full md:w-[10.5rem] md:shrink-0 lg:w-[11.5rem] xl:w-[12.5rem]">
+                  <Select
+                    value={heroCity || "all"}
+                    onValueChange={(v) => setHeroCity(v === "all" ? "" : v)}
                   >
-                    <SelectValue placeholder={t("home.whereTakePlace")} />
-                  </SelectTrigger>
-                  <SelectContent className="border-primary/30 bg-card shadow-lg">
-                    {CITIES.map((city) => (
-                      <SelectItem
-                        key={city.value}
-                        value={city.value}
-                        className="font-bold text-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
-                      >
-                        {"labelKey" in city ? t(city.labelKey) : city.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectTrigger
+                      aria-label={t("home.whereTakePlace")}
+                      className="h-12 w-full rounded-md border border-input bg-secondary/40 px-3 text-sm font-bold text-foreground"
+                    >
+                      <SelectValue placeholder={t("home.whereTakePlace")} />
+                    </SelectTrigger>
+                    <SelectContent className="border-primary/30 bg-card shadow-lg">
+                      {CITIES.map((city) => (
+                        <SelectItem
+                          key={city.value}
+                          value={city.value}
+                          className="font-bold text-foreground data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                        >
+                          {"labelKey" in city ? t(city.labelKey) : city.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative min-w-0 flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground stroke-[2.5]" size={20} aria-hidden />
+                  <Input
+                    value={heroQ}
+                    onChange={(e) => setHeroQ(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && goSearch()}
+                    placeholder={t("services.searchPujas")}
+                    aria-label={t("home.whatPlanning")}
+                    className="h-12 w-full pl-10 border-none bg-secondary/30 focus-visible:ring-0 font-bold text-foreground placeholder:font-semibold placeholder:text-foreground/55"
+                  />
+                </div>
+                <Button className="h-12 w-full shrink-0 bg-primary px-8 font-bold text-white md:w-auto md:min-w-[7.5rem]" onClick={goSearch}>
+                  {t("common.search")}
+                </Button>
               </div>
-              <div className="flex-1 w-full relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground stroke-[2.5]" size={20} aria-hidden />
-                <Input
-                  value={heroQ}
-                  onChange={(e) => setHeroQ(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && goSearch()}
-                  placeholder={t("services.searchPujas")}
-                  aria-label={t("home.whatPlanning")}
-                  className="h-12 pl-10 border-none bg-secondary/30 focus-visible:ring-0 font-bold text-foreground placeholder:font-semibold placeholder:text-foreground/55"
-                />
-              </div>
-              <Button className="h-12 px-8 w-full md:w-auto bg-primary text-white font-bold" onClick={goSearch}>
-                {t("common.search")}
-              </Button>
             </div>
-            <p className="mt-3 text-xs md:text-sm text-white/75 max-w-xl mx-auto">
+
+            <p className="mt-3 max-w-[32rem] text-xs leading-relaxed text-white/75 sm:mt-4 sm:text-sm md:max-w-[36rem]">
               {t("home.searchHint")}
             </p>
           </div>
         </div>
       </section>
 
+      <section className="py-14 md:py-16 bg-secondary/15 scroll-mt-20">
+        <div className="container mx-auto max-w-4xl">
+          <SectionHeader title={t("home.twoSidedTitle")} className="mb-8 md:mb-10" />
+          <div className="space-y-5 text-base sm:text-lg text-muted-foreground leading-relaxed md:leading-[1.7]">
+            <p>{t("home.twoSidedP1")}</p>
+            <p>{t("home.twoSidedP2")}</p>
+            <p>{t("home.twoSidedP3")}</p>
+            <p>{t("home.twoSidedP4")}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-14 md:py-16 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+          <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="container relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            {valuePillars.map((pillar) => (
+              <div
+                key={pillar.eyebrow}
+                className="card-hover-premium flex h-full flex-col items-center p-6 text-center rounded-2xl border border-border/60 bg-card/50 shadow-sm sm:p-7"
+              >
+                <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <pillar.icon size={28} aria-hidden />
+                </div>
+                <h3 className="text-h3 mb-3 text-balance text-foreground">{pillar.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground sm:text-[0.9375rem] sm:leading-[1.65]">{pillar.desc}</p>
+              </div>
+            ))}
+          </div>
+          {t("home.valueBody") ? (
+            <p className="mt-8 text-center text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              {t("home.valueBody")}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="py-14 md:py-20 relative overflow-hidden bg-secondary/15">
+        <div className="container">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="relative order-2 lg:order-1">
+              <div className="absolute -top-4 -left-4 w-24 h-24 border-t-4 border-l-4 border-primary rounded-tl-3xl" />
+              <div className="absolute -bottom-4 -right-4 w-24 h-24 border-b-4 border-r-4 border-primary rounded-br-3xl" />
+              <img
+                src="/images/temple-ritual.png"
+                alt={t("home.missionImageAlt")}
+                className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]"
+              />
+            </div>
+            <div className="order-1 lg:order-2 text-center lg:text-left">
+              <h2 className="text-h2 text-2xl sm:text-3xl md:text-4xl text-primary mb-5 md:mb-6">{t("home.providerTitle")}</h2>
+              <p className="text-base sm:text-lg text-muted-foreground mb-4 sm:mb-5 leading-relaxed md:leading-[1.7]">{t("home.providerP1")}</p>
+              <p className="text-base sm:text-lg text-muted-foreground mb-4 sm:mb-5 leading-relaxed md:leading-[1.7]">{t("home.providerP2")}</p>
+              <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 leading-relaxed md:leading-[1.7]">{t("home.providerP3")}</p>
+              <Button
+                className="h-12 w-full sm:w-auto bg-sidebar px-8 text-sidebar-foreground hover:bg-sidebar/90"
+                onClick={() => setLocation(PUJARI_REGISTER)}
+              >
+                {t("home.providerCta")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="how-it-works" className="py-12 md:py-16 bg-background scroll-mt-20">
         <div className="container">
-          <SectionHeader
-            title={t("home.howItWorksTitle")}
-            description={t("home.howItWorksDesc")}
-            className="mb-8"
-          />
-          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {howSteps.map((step, i) => (
-              <li
-                key={step.title}
-                className="card-hover-premium relative rounded-xl border border-border/60 bg-card p-4 md:p-5 shadow-sm"
-              >
-                {i < howSteps.length - 1 ? (
-                  <span
-                    className="hidden lg:block absolute top-8 -right-2 w-4 h-px bg-primary/40"
-                    aria-hidden
-                  />
-                ) : null}
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <step.icon size={18} aria-hidden />
-                  </span>
-                  <span className="text-xs font-bold tracking-widest uppercase text-primary">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                </div>
-                <h3 className="text-base font-bold text-foreground mb-1">{step.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
-              </li>
-            ))}
-          </ol>
+          <SectionHeader title={t("home.howItWorksTitle")} className="mb-8" />
+          <Tabs defaultValue="clients" className="w-full">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8 h-auto">
+              <TabsTrigger value="clients" className="py-3 text-sm md:text-base">
+                {t("home.howClientsTab")}
+              </TabsTrigger>
+              <TabsTrigger value="pujaris" className="py-3 text-sm md:text-base">
+                {t("home.howPujarisTab")}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="clients" className="mt-0">
+              <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                {clientHowSteps.map((step, i) => (
+                  <li
+                    key={step.title}
+                    className="card-hover-premium rounded-xl border border-border/60 bg-card p-4 md:p-5 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <step.icon size={18} aria-hidden />
+                      </span>
+                      <span className="text-xs font-bold tracking-widest uppercase text-primary">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-bold text-foreground mb-1">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                  </li>
+                ))}
+              </ol>
+            </TabsContent>
+            <TabsContent value="pujaris" className="mt-0">
+              <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                {pujariHowSteps.map((step, i) => (
+                  <li
+                    key={step.title}
+                    className="card-hover-premium rounded-xl border border-border/60 bg-card p-4 md:p-5 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <step.icon size={18} aria-hidden />
+                      </span>
+                      <span className="text-xs font-bold tracking-widest uppercase text-primary">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-bold text-foreground mb-1">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                  </li>
+                ))}
+              </ol>
+            </TabsContent>
+          </Tabs>
         </div>
       </section>
 
@@ -330,73 +435,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-14 md:py-16 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-          <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
-        </div>
-        <div className="container relative z-10">
-          <SectionHeader title={t("home.valueTitle")} description={t("home.valueBody")} className="mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {valuePillars.map((pillar) => (
-              <div
-                key={pillar.eyebrow}
-                className="card-hover-premium flex flex-col items-center text-center p-6 rounded-2xl bg-card/50 border border-border/60 shadow-sm"
-              >
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                  <pillar.icon size={28} aria-hidden />
-                </div>
-                <span className="text-eyebrow font-bold text-primary mb-2">{pillar.eyebrow}</span>
-                <h3 className="text-h3 text-foreground mb-3">{pillar.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{pillar.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 max-w-4xl mx-auto">
-            {[
-              t("home.occasionNewHome"),
-              t("home.occasionFestival"),
-              t("home.occasionParents"),
-              t("home.occasionRitual"),
-            ].map((line) => (
-              <p key={line} className="text-sm text-muted-foreground italic max-w-xs text-center leading-relaxed">
-                {line}
-              </p>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-14 md:py-20 relative overflow-hidden bg-secondary/15">
-        <div className="container">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <div className="relative">
-              <div className="absolute -top-4 -left-4 w-24 h-24 border-t-4 border-l-4 border-primary rounded-tl-3xl" />
-              <div className="absolute -bottom-4 -right-4 w-24 h-24 border-b-4 border-r-4 border-primary rounded-br-3xl" />
-              <img
-                src="/images/temple-ritual.png"
-                alt={t("home.missionImageAlt")}
-                className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]"
-              />
-            </div>
-
-            <div>
-              <span className="text-sm font-bold tracking-[0.2em] uppercase text-primary mb-2 block">
-                {t("home.missionLabel")}
-              </span>
-              <h2 className="text-h2 text-3xl md:text-4xl text-primary mb-6">{t("home.missionTitle")}</h2>
-              <p className="text-lg text-muted-foreground mb-6 leading-relaxed">{t("home.missionP1")}</p>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{t("home.missionP2")}</p>
-              <Button
-                className="bg-sidebar text-sidebar-foreground hover:bg-sidebar/90 px-8 h-12"
-                onClick={() => scrollToId("how-it-works")}
-              >
-                {t("home.seeHowItWorks")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="py-14 md:py-16 bg-secondary/15">
         <div className="container">
           <SectionHeader
@@ -425,13 +463,13 @@ export default function Home() {
               <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
             </div>
 
-            <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="text-h2 text-3xl md:text-4xl text-foreground mb-6">{t("home.ctaTitle")}</h2>
-              <p className="text-xl text-foreground/80 mb-8 font-medium">{t("home.ctaDesc")}</p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="relative z-10 mx-auto w-full max-w-3xl px-1">
+              <h2 className="text-h2 text-2xl sm:text-3xl md:text-4xl text-foreground mb-5 md:mb-6">{t("home.ctaTitle")}</h2>
+              <p className="mb-6 text-base sm:text-lg md:mb-8 font-medium leading-relaxed text-foreground/80 md:text-xl">{t("home.ctaDesc")}</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
                 <Button
                   size="lg"
-                  className="bg-sidebar text-white hover:bg-sidebar/90 h-14 px-10 text-lg shadow-lg"
+                  className="h-12 w-full min-h-12 bg-sidebar px-8 text-base text-white shadow-lg hover:bg-sidebar/90 sm:h-14 sm:w-auto sm:min-w-[11rem] sm:px-10 sm:text-lg"
                   onClick={() => setLocation("/services")}
                 >
                   {t("home.bookNow")}
@@ -439,10 +477,10 @@ export default function Home() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="bg-transparent border-2 border-sidebar text-foreground hover:bg-sidebar/10 h-14 px-10 text-lg font-bold"
-                  onClick={() => setLocation("/contact")}
+                  className="h-12 w-full min-h-12 border-2 border-sidebar bg-transparent px-8 text-base font-bold text-foreground hover:bg-sidebar/10 sm:h-14 sm:w-auto sm:min-w-[11rem] sm:px-10 sm:text-lg"
+                  onClick={() => setLocation(PUJARI_REGISTER)}
                 >
-                  {t("home.contactSupport")}
+                  {t("home.joinAsPujari")}
                 </Button>
               </div>
             </div>
@@ -452,49 +490,32 @@ export default function Home() {
 
       {!user && (
         <section className="py-14 bg-secondary/10">
-          <div className="container">
-            <SectionHeader
-              subtitle={t("home.portalsSub")}
-              title={t("home.choosePortal")}
-              description={t("home.choosePortalDescription")}
-              className="mb-8"
-            />
-            <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-              {[
-                { role: "customer", title: t("auth.customer"), desc: t("home.customerBlurb"), icon: Users, href: "/customer" },
-                { role: "pujari", title: t("auth.pujari"), desc: t("home.pujariBlurb"), icon: UserCheck, href: "/pujari" },
-              ].map((card) => (
-                <Card key={card.role} className="border-border shadow-sm">
-                  <CardHeader>
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
-                      <card.icon size={24} aria-hidden />
-                    </div>
-                    <CardTitle>{card.title}</CardTitle>
-                    <CardDescription>{card.desc}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {user?.role === card.role ? (
-                      <Link href={dashboardPath(card.role)}>
-                        <Button className="w-full">{t("home.goDashboard")}</Button>
-                      </Link>
-                    ) : user ? (
-                      <Button className="w-full" variant="outline" disabled>
-                        {t("home.signedInAs", { role: user.role })}
-                      </Button>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <Link href={card.href}>
-                          <Button className="w-full">{t("auth.signIn")}</Button>
-                        </Link>
-                        <Link href={`/register?role=${card.role}`}>
-                          <Button variant="outline" className="w-full">{t("auth.register")}</Button>
-                        </Link>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+          <div className="container mx-auto max-w-3xl">
+            <SectionHeader title={t("home.pujariPartnerTitle")} className="mb-6 md:mb-8" />
+            <div className="mb-8 space-y-4 text-base sm:text-lg text-muted-foreground leading-relaxed md:leading-[1.7]">
+              <p>{t("home.pujariPartnerP1")}</p>
+              <p>{t("home.pujariPartnerP2")}</p>
+              <p>{t("home.pujariPartnerP3")}</p>
             </div>
+            <ul className="space-y-3 mb-8">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <li key={n} className="flex items-start gap-3 text-foreground">
+                  <ListChecks className="text-primary shrink-0 mt-0.5" size={18} aria-hidden />
+                  <span>{t(`home.pujariPartnerBenefit${n}`)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button className="h-12 w-full min-h-12 px-8 sm:w-auto" onClick={() => setLocation(PUJARI_REGISTER)}>
+                {t("home.pujariPartnerCta")}
+              </Button>
+              <Link href="/pujari" className="w-full sm:w-auto">
+                <Button variant="outline" className="h-12 w-full min-h-12 px-8 sm:w-auto">
+                  {t("auth.signIn")}
+                </Button>
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground mt-6 leading-relaxed">{t("home.pujariPartnerNote")}</p>
           </div>
         </section>
       )}

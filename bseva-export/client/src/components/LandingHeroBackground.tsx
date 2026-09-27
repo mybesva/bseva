@@ -64,7 +64,7 @@ export default function LandingHeroBackground() {
           )}
         </div>
       ))}
-      <div className="absolute inset-0 z-[2] bg-gradient-to-b from-sidebar/80 via-sidebar/65 to-background" />
+      <div className="absolute inset-0 z-[2] bg-gradient-to-b from-sidebar/75 via-sidebar/50 to-background/90" />
     </>
   );
 }

@@ -106,6 +106,9 @@ export default function Services() {
           <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10 text-center">
+          <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
+            {t("services.badge")}
+          </span>
           <h1 className="text-h1 md:text-display text-primary mb-3">{t("services.title")}</h1>
           <p className="text-base text-white/80 max-w-2xl mx-auto mb-6">{t("services.subtitle")}</p>
           <div className="max-w-xl mx-auto relative">
@@ -122,6 +125,11 @@ export default function Services() {
 
       <section className="py-10 md:py-14">
         <div className="container">
+          <div className="max-w-3xl mx-auto mb-10 space-y-4 text-muted-foreground leading-relaxed text-center md:text-left">
+            <p>{t("services.introP1")}</p>
+            <p>{t("services.introP2")}</p>
+            <p className="text-sm">{t("services.introP3")}</p>
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-4 mb-8 -mx-1 px-1 scrollbar-thin">
             {chips.map((c) => (
               <button
@@ -258,6 +266,14 @@ export default function Services() {
               })()}
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="py-16 bg-secondary/15">
+        <div className="container max-w-3xl text-center md:text-left">
+          <SectionHeader title={t("services.discoveryTitle")} className="mb-6" />
+          <p className="text-muted-foreground leading-relaxed mb-4">{t("services.discoveryP1")}</p>
+          <p className="text-muted-foreground leading-relaxed">{t("services.discoveryP2")}</p>
         </div>
       </section>
 
