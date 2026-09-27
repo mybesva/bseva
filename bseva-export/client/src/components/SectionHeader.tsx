@@ -7,6 +7,7 @@ interface SectionHeaderProps {
   align?: "left" | "center" | "right";
   className?: string;
   light?: boolean;
+  variant?: "default" | "landingDoc";
 }
 
 export default function SectionHeader({ 
@@ -15,11 +16,14 @@ export default function SectionHeader({
   description, 
   align = "center", 
   className,
-  light = false
+  light = false,
+  variant = "default",
 }: SectionHeaderProps) {
+  const isLandingDoc = variant === "landingDoc";
+
   return (
     <div className={cn(
-      "flex flex-col gap-3 mb-12", 
+      isLandingDoc ? "flex flex-col gap-2 mb-5 md:mb-6" : "flex flex-col gap-3 mb-12",
       align === "center" && "items-center text-center",
       align === "right" && "items-end text-right",
       className
@@ -33,7 +37,11 @@ export default function SectionHeader({
         </span>
       )}
       
-      <h2 className="text-h2 text-3xl md:text-4xl leading-tight font-bold text-primary">
+      <h2 className={cn(
+        isLandingDoc
+          ? "landing-doc-heading"
+          : "text-h2 text-3xl md:text-4xl leading-tight font-bold text-primary"
+      )}>
         {title}
       </h2>
       

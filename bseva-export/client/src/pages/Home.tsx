@@ -239,9 +239,9 @@ export default function Home() {
       </section>
 
       <section className="py-14 md:py-16 bg-secondary/15 scroll-mt-20">
-        <div className="container mx-auto max-w-4xl">
-          <SectionHeader title={t("home.twoSidedTitle")} className="mb-8 md:mb-10" />
-          <div className="space-y-5 text-base sm:text-lg text-muted-foreground leading-relaxed md:leading-[1.7]">
+        <div className="container">
+          <SectionHeader variant="landingDoc" title={t("home.twoSidedTitle")} />
+          <div className="landing-doc-prose landing-doc-body">
             <p>{t("home.twoSidedP1")}</p>
             <p>{t("home.twoSidedP2")}</p>
             <p>{t("home.twoSidedP3")}</p>
@@ -264,13 +264,13 @@ export default function Home() {
                 <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <pillar.icon size={28} aria-hidden />
                 </div>
-                <h3 className="text-h3 mb-3 text-balance text-foreground">{pillar.title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground sm:text-[0.9375rem] sm:leading-[1.65]">{pillar.desc}</p>
+                <h3 className="landing-doc-card-title mb-2">{pillar.title}</h3>
+                <p className="landing-doc-card-body">{pillar.desc}</p>
               </div>
             ))}
           </div>
           {t("home.valueBody") ? (
-            <p className="mt-8 text-center text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            <p className="landing-doc-body mt-8 text-center landing-doc-prose">
               {t("home.valueBody")}
             </p>
           ) : null}
@@ -290,10 +290,12 @@ export default function Home() {
               />
             </div>
             <div className="order-1 lg:order-2 text-center lg:text-left">
-              <h2 className="text-h2 text-2xl sm:text-3xl md:text-4xl text-primary mb-5 md:mb-6">{t("home.providerTitle")}</h2>
-              <p className="text-base sm:text-lg text-muted-foreground mb-4 sm:mb-5 leading-relaxed md:leading-[1.7]">{t("home.providerP1")}</p>
-              <p className="text-base sm:text-lg text-muted-foreground mb-4 sm:mb-5 leading-relaxed md:leading-[1.7]">{t("home.providerP2")}</p>
-              <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 leading-relaxed md:leading-[1.7]">{t("home.providerP3")}</p>
+              <h2 className="landing-doc-heading mb-5 md:mb-6">{t("home.providerTitle")}</h2>
+              <div className="landing-doc-prose landing-doc-body mb-6 sm:mb-8 lg:mx-0">
+                <p>{t("home.providerP1")}</p>
+                <p>{t("home.providerP2")}</p>
+                <p>{t("home.providerP3")}</p>
+              </div>
               <Button
                 className="h-12 w-full sm:w-auto bg-sidebar px-8 text-sidebar-foreground hover:bg-sidebar/90"
                 onClick={() => setLocation(PUJARI_REGISTER)}
@@ -307,7 +309,7 @@ export default function Home() {
 
       <section id="how-it-works" className="py-12 md:py-16 bg-background scroll-mt-20">
         <div className="container">
-          <SectionHeader title={t("home.howItWorksTitle")} className="mb-8" />
+          <SectionHeader variant="landingDoc" title={t("home.howItWorksTitle")} />
           <Tabs defaultValue="clients" className="w-full">
             <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8 h-auto">
               <TabsTrigger value="clients" className="py-3 text-sm md:text-base">
@@ -332,8 +334,8 @@ export default function Home() {
                         {String(i + 1).padStart(2, "0")}
                       </span>
                     </div>
-                    <h3 className="text-base font-bold text-foreground mb-1">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                    <h3 className="landing-doc-card-title mb-1.5">{step.title}</h3>
+                    <p className="landing-doc-card-body">{step.desc}</p>
                   </li>
                 ))}
               </ol>
@@ -353,8 +355,8 @@ export default function Home() {
                         {String(i + 1).padStart(2, "0")}
                       </span>
                     </div>
-                    <h3 className="text-base font-bold text-foreground mb-1">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                    <h3 className="landing-doc-card-title mb-1.5">{step.title}</h3>
+                    <p className="landing-doc-card-body">{step.desc}</p>
                   </li>
                 ))}
               </ol>
@@ -463,9 +465,9 @@ export default function Home() {
               <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
             </div>
 
-            <div className="relative z-10 mx-auto w-full max-w-3xl px-1">
-              <h2 className="text-h2 text-2xl sm:text-3xl md:text-4xl text-foreground mb-5 md:mb-6">{t("home.ctaTitle")}</h2>
-              <p className="mb-6 text-base sm:text-lg md:mb-8 font-medium leading-relaxed text-foreground/80 md:text-xl">{t("home.ctaDesc")}</p>
+            <div className="relative z-10 mx-auto w-full max-w-[58rem] px-1">
+              <h2 className="landing-doc-heading text-foreground mb-5 md:mb-6">{t("home.ctaTitle")}</h2>
+              <p className="landing-doc-copy mb-6 text-foreground/80 md:mb-8">{t("home.ctaDesc")}</p>
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
                 <Button
                   size="lg"
