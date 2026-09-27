@@ -24,6 +24,7 @@ export default function PujariMore() {
     { href: "/pujari/bank", label: t("nav.bank"), icon: "card-outline" as const },
     { href: "/pujari/referral", label: t("nav.referral"), icon: "share-social-outline" as const },
     { href: "/pujari/support", label: t("mobile.support"), icon: "help-circle-outline" as const },
+    { href: "/legal/about", label: t("mobile.about"), icon: "information-circle-outline" as const },
     { href: "/pujari/password", label: t("mobile.password"), icon: "lock-closed-outline" as const },
     { href: "/legal/terms", label: t("mobile.terms"), icon: "book-outline" as const },
   ];

@@ -43,10 +43,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: t("nav.services"), path: "/services" },
     { label: t("nav.pujaris"), path: "/pujaris" },
     { label: t("nav.customer"), path: "/customer" },
-    { label: t("nav.about"), path: "/about" },
     { label: t("nav.contact"), path: "/contact" },
     { label: t("nav.bookings"), path: "/my-bookings" },
     { label: t("nav.admin"), path: "/admin" },
+    { label: t("nav.about"), path: "/about" },
   ];
 
   const socialLinks = [

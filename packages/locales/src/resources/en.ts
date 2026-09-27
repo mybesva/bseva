@@ -290,6 +290,19 @@ const en: Record<string, string> = {
     "B-Seva was created around a simple belief: tradition remains alive when people understand it, trust the people who carry it, and can participate in it meaningfully.",
   "about.heroIntro":
     "Our purpose is to help preserve the consciousness behind sacred practices while giving Pujaris a respectful platform to share their knowledge, showcase their skills, and be appreciated for their service.",
+  "about.visionTitle": "Our Vision",
+  "about.visionStatement":
+    "To become the most trusted digital platform connecting devotees with authentic spiritual services, making devotion accessible, seamless, and meaningful for everyone.",
+  "about.missionTitle": "Our Mission",
+  "about.missionStatement":
+    "B-SEVA makes it simple for people to access meaningful spiritual and service-oriented experiences, nurturing belief, enabling acts of devotion, and spreading blessings through trustworthy, accessible, and heartfelt service.",
+  "about.brandEssenceTitle": "Our Brand Essence",
+  "about.brandEssenceBook": "Book",
+  "about.brandEssenceBelieve": "Believe",
+  "about.brandEssenceBless": "Bless",
+  "about.brandEssenceWithEase": " with Ease.",
+  "about.brandEssenceWithFaith": " with Faith.",
+  "about.brandEssenceThroughSeva": " through Seva.",
   "about.mission": "We are preserving more than the ceremony.",
   "about.missionP1":
     "A tradition is not preserved only when a ceremony is performed. It is preserved when its intention is understood, when its knowledge is carried responsibly, and when the people who hold that knowledge are respected.",

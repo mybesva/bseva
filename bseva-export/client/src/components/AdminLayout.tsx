@@ -22,6 +22,7 @@ import {
   LifeBuoy,
   IndianRupee,
   Lightbulb,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,9 @@ interface AdminLayoutProps {
 interface NavItem {
   nameKey: string;
   /** Path under the private admin base, e.g. "" or "/customers" */
-  suffix: string;
+  suffix?: string;
+  /** Public site route outside the admin console (e.g. About Us). */
+  externalHref?: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   permissions?: string[];
   superOnly?: boolean;
@@ -121,6 +124,7 @@ const navigation: NavItem[] = [
   { nameKey: "admin.promos", suffix: "/promos", icon: Sparkles, permissions: ["manage_config"] },
   { nameKey: "admin.reports", suffix: "/reports", icon: BarChart3, permissions: ["view_reports"] },
   { nameKey: "admin.settings", suffix: "/settings", icon: Settings, permissions: ["manage_config"] },
+  { nameKey: "nav.about", externalHref: "/about", icon: Info },
 ];
 
 const adminSidebarActionClass =
@@ -163,7 +167,7 @@ function AdminShell({ children }: AdminLayoutProps) {
     return navigation.filter((item) => {
       if (isSuper) return true;
       if (item.superOnly) return false;
-      if (permissions == null) return item.suffix === "";
+      if (permissions == null) return item.suffix === "" || !!item.externalHref;
       if (!item.permissions?.length) return true;
       return item.permissions.some((p) => permissions.includes(p));
     });
@@ -244,14 +248,17 @@ function AdminShell({ children }: AdminLayoutProps) {
 
           <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-1">
               {filteredNavigation.map((item) => {
-                const href = adminPath(item.suffix);
-                const badgeKey = NAV_BADGE_KEYS[item.suffix];
+                const href = item.externalHref ?? adminPath(item.suffix ?? "");
+                const active = item.externalHref
+                  ? location === item.externalHref
+                  : navActive(item.suffix ?? "");
+                const badgeKey = item.suffix ? NAV_BADGE_KEYS[item.suffix] : undefined;
                 return (
-                  <Link key={item.suffix || "dashboard"} href={href}>
+                  <Link key={item.externalHref ?? item.suffix ?? "dashboard"} href={href}>
                     <a
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-w-0",
-                        navActive(item.suffix)
+                        active
                           ? "bg-primary/15 text-primary font-semibold"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       )}

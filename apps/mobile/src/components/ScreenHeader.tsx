@@ -1,13 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandLockup } from "@/components/BrandLockup";
-import { apiClient } from "@/services/api";
-import { useAppTheme } from "@/theme/ThemeContext";
+import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
+import { apiClient } from "@/services/api";
+import { fetchCustomerProfilePhotoSource } from "@/services/customerPhoto";
+import { useAppTheme } from "@/theme/ThemeContext";
 import { AppText } from "./ui";
 
 function UnreadBell({ color, onPress, label }: { color: string; onPress: () => void; label: string }) {
@@ -50,6 +52,86 @@ function UnreadBell({ color, onPress, label }: { color: string; onPress: () => v
           <Text style={{ color: "#fff", fontSize: 10, lineHeight: 12, fontWeight: "700" }}>{count > 99 ? "99+" : String(count)}</Text>
         </View>
       ) : null}
+    </Pressable>
+  );
+}
+
+function HeaderProfileAvatar({
+  onPress,
+  label,
+  photoKind = "customer",
+}: {
+  onPress: () => void;
+  label: string;
+  photoKind?: "customer" | "pujari";
+}) {
+  const { user } = useAuth();
+  const { colors } = useAppTheme();
+  const qc = useQueryClient();
+  const [photoOk, setPhotoOk] = useState(true);
+  const photoQ = useQuery({
+    queryKey: ["customer-photo", photoKind, user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      if (photoKind === "customer") return await fetchCustomerProfilePhotoSource();
+      return await apiClient.pujariMediaUri("photo");
+    },
+    retry: false,
+    staleTime: 0,
+  });
+  const photo = photoQ.data ?? null;
+  const photoUri =
+    photo && typeof photo === "object" && "uri" in photo && typeof photo.uri === "string" ? photo.uri : null;
+  const initial = (user?.name || "?").slice(0, 1).toUpperCase();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) void qc.invalidateQueries({ queryKey: ["customer-photo", photoKind, user.id] });
+    }, [user?.id, photoKind, qc]),
+  );
+
+  useEffect(() => {
+    if (photo) setPhotoOk(true);
+  }, [photo]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{ flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44 }}
+    >
+      {photo && photoOk ? (
+        <Image
+          key={photoUri || "photo"}
+          source={photo}
+          onError={() => setPhotoOk(false)}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: colors.secondary,
+            borderWidth: 2,
+            borderColor: colors.primary + "55",
+          }}
+        />
+      ) : (
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: colors.secondary,
+            borderWidth: 2,
+            borderColor: colors.primary + "55",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <AppText style={{ fontSize: 15, fontWeight: "700", color: colors.primary }}>{initial}</AppText>
+        </View>
+      )}
+      <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
     </Pressable>
   );
 }
@@ -117,9 +199,11 @@ export function ScreenHeader({
 export function HomeBrandBar({
   notificationsHref,
   subtitle,
+  profileHref = "/customer/profile",
 }: {
   notificationsHref?: string;
   subtitle?: string;
+  profileHref?: string;
 }) {
   const { colors } = useAppTheme();
   const { t } = useI18n();
@@ -129,15 +213,15 @@ export function HomeBrandBar({
       <View
         style={{
           paddingHorizontal: 16,
-          paddingTop: 8,
-          paddingBottom: 10,
+          paddingTop: 4,
+          paddingBottom: 8,
           flexDirection: "row",
           alignItems: "center",
           gap: 8,
         }}
       >
         <View style={{ flex: 1 }}>
-          <BrandLockup height={88} />
+          <BrandLockup variant="compact" height={60} />
           {subtitle ? (
             <AppText variant="small" color={colors.mutedForeground} numberOfLines={1} style={{ marginTop: 2 }}>
               {subtitle}
@@ -151,6 +235,10 @@ export function HomeBrandBar({
             onPress={() => router.push(notificationsHref as never)}
           />
         ) : null}
+        <HeaderProfileAvatar
+          label={t("mobile.profile")}
+          onPress={() => router.push(profileHref as never)}
+        />
       </View>
     </SafeAreaView>
   );

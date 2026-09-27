@@ -1,5 +1,4 @@
-import Layout from "@/components/Layout";
-import RolePortalGate from "@/components/RolePortalGate";
+import CustomerLayout from "@/components/CustomerLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,8 +76,8 @@ function CustomerDashboardContent() {
   };
 
   return (
-    <Layout>
-      <section className="bg-sidebar text-sidebar-foreground py-12">
+    <>
+      <section className="bg-sidebar text-sidebar-foreground py-12 -mx-4 lg:-mx-6 -mt-4 lg:-mt-6 px-4 lg:px-6">
         <div className="container flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">
@@ -242,14 +241,14 @@ function CustomerDashboardContent() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }
 
 export default function CustomerDashboard() {
   return (
-    <RolePortalGate role="customer">
+    <CustomerLayout>
       <CustomerDashboardContent />
-    </RolePortalGate>
+    </CustomerLayout>
   );
 }

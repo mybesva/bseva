@@ -67,7 +67,10 @@ export default function RolePortalGate({
   const login = trpc.auth.login.useMutation({
     onSuccess: async (data) => {
       await utils.auth.me.invalidate();
-      if (data.user.role !== role && !(allowAdminBypass && data.user.role === "admin")) {
+      if (
+        data.user.role !== role &&
+        !(allowAdminBypass && (data.user.role === "admin" || data.user.role === "super_admin"))
+      ) {
         toast.error(`This portal is for ${role}s. You signed in as ${data.user.role}.`);
         await utils.client.auth.logout.mutate();
         await utils.auth.me.invalidate();
@@ -120,9 +123,9 @@ export default function RolePortalGate({
     );
   }
 
+  const isAdminLike = (r: string) => r === "admin" || r === "super_admin";
   const canEnter =
-    user &&
-    (user.role === role || (role === "admin" && user.role === "admin"));
+    user && (user.role === role || (role === "admin" && isAdminLike(user.role)));
 
   if (canEnter) {
     return <>{children}</>;

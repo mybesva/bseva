@@ -38,7 +38,9 @@ function Router() {
       {/* Public Routes */}
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/customer/about"} component={About} />
       <Route path={"/customer"} component={CustomerDashboard} />
+      <Route path={"/pujari/about"} component={About} />
       <Route path={"/pujari"} component={PujariDashboard} />
       <Route path={"/pujaris"} component={PujariDashboard} />
       <Route path={"/book/:slug"} component={Book} />
@@ -66,6 +68,7 @@ function Router() {
       <Route path={"/admin/email-templates"} component={AdminEmailTemplates} />
       <Route path={"/admin/sms-templates"} component={AdminSMSTemplates} />
       <Route path={"/admin/reports"} component={AdminReports} />
+      <Route path={"/admin/about"} component={About} />
       
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

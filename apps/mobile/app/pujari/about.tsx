@@ -1,5 +1,5 @@
 import { Redirect } from "expo-router";
 
-export default function CustomerAboutScreen() {
+export default function PujariAboutScreen() {
   return <Redirect href="/legal/about" />;
 }

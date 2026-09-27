@@ -137,7 +137,7 @@ export function PujariHomeHeader({ notificationsHref = "/pujari/notifications" }
         }}
       >
         <View style={{ flex: 1 }}>
-          <BrandLockup height={52} />
+          <BrandLockup variant="compact" height={60} />
         </View>
         <UnreadBell
           color={colors.navy}

@@ -1,30 +1,11 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { 
-  LayoutDashboard, 
-  Users, 
-  UserCog, 
-  Church, 
-  Sparkles, 
-  Calendar, 
-  CreditCard, 
-  Star, 
-  Bell, 
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  Flower2,
-  BarChart3,
-  Info
-} from "lucide-react";
+import { LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
-import RolePortalGate from "@/components/RolePortalGate";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang } from "@/i18n/translations";
 import {
@@ -35,47 +16,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface AdminLayoutProps {
-  children: ReactNode;
-}
-
-type UserRole = "admin" | "manager" | "staff";
-
-interface NavItem {
+export interface PortalNavItem {
   nameKey: string;
   href: string;
-  icon: React.ComponentType<{ size?: number }>;
-  roles: UserRole[];
+  icon: LucideIcon;
 }
 
-const navigation: NavItem[] = [
-  { nameKey: "admin.dashboard", href: "/admin", icon: LayoutDashboard, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.customers", href: "/admin/customers", icon: Users, roles: ["admin", "manager"] },
-  { nameKey: "admin.pujaris", href: "/admin/pujaris", icon: UserCog, roles: ["admin", "manager"] },
-  { nameKey: "admin.temples", href: "/admin/temples", icon: Church, roles: ["admin", "manager"] },
-  { nameKey: "admin.services", href: "/admin/services", icon: Sparkles, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.samagri", href: "/admin/samagri", icon: Flower2, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.bookings", href: "/admin/bookings", icon: Calendar, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.payments", href: "/admin/payments", icon: CreditCard, roles: ["admin", "manager"] },
-  { nameKey: "admin.reviews", href: "/admin/reviews", icon: Star, roles: ["admin", "manager", "staff"] },
-  { nameKey: "admin.notifications", href: "/admin/notifications", icon: Bell, roles: ["admin", "manager"] },
-  { nameKey: "admin.reports", href: "/admin/reports", icon: BarChart3, roles: ["admin", "manager"] },
-  { nameKey: "admin.settings", href: "/admin/settings", icon: Settings, roles: ["admin"] },
-  { nameKey: "nav.about", href: "/about", icon: Info, roles: ["admin", "manager", "staff"] },
-];
+interface RoleSidebarLayoutProps {
+  children: ReactNode;
+  portalHome: string;
+  portalLabel: string;
+  navigation: PortalNavItem[];
+  logoutRedirect: string;
+}
 
-function AdminShell({ children }: AdminLayoutProps) {
+function isNavActive(location: string, href: string, portalHome: string) {
+  if (location === href) return true;
+  if (href === portalHome) return location === portalHome;
+  return location.startsWith(`${href}/`) || location.startsWith(href);
+}
+
+export default function RoleSidebarLayout({
+  children,
+  portalHome,
+  portalLabel,
+  navigation,
+  logoutRedirect,
+}: RoleSidebarLayoutProps) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, loading } = useAuth();
   const { lang, setLang, labels, t } = useI18n();
-  const userRole: UserRole = "admin";
-  const filteredNavigation = navigation.filter((item) => item.roles.includes(userRole));
 
   const handleLogout = async () => {
     await logout();
-    setLocation("/admin");
+    setLocation(logoutRedirect);
   };
+
+  const activeItem = navigation.find((item) => isNavActive(location, item.href, portalHome));
 
   if (loading) {
     return (
@@ -87,9 +65,9 @@ function AdminShell({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {sidebarOpen && (
+      {sidebarOpen ? (
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+      ) : null}
 
       <aside
         className={cn(
@@ -99,11 +77,11 @@ function AdminShell({ children }: AdminLayoutProps) {
       >
         <div className="flex flex-col h-full">
           <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border">
-            <Link href="/admin">
-              <div className="flex items-center gap-2">
+            <Link href={portalHome}>
+              <a className="flex items-center gap-2">
                 <img src="/bseva-logo.png" alt="B-Seva" className="h-8" />
-                <span className="font-heading font-bold text-lg text-sidebar-foreground">Admin</span>
-              </div>
+                <span className="font-heading font-bold text-lg text-sidebar-foreground">{portalLabel}</span>
+              </a>
             </Link>
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
               <X size={20} />
@@ -112,9 +90,8 @@ function AdminShell({ children }: AdminLayoutProps) {
 
           <ScrollArea className="flex-1 px-3 py-4">
             <nav className="space-y-1">
-              {filteredNavigation.map((item) => {
-                const isActive =
-                  location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
+              {navigation.map((item) => {
+                const isActive = isNavActive(location, item.href, portalHome);
                 return (
                   <Link key={item.href} href={item.href}>
                     <a
@@ -150,13 +127,13 @@ function AdminShell({ children }: AdminLayoutProps) {
             </Select>
             <div className="flex items-center gap-3 px-3 py-2">
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                {(user?.name || "A").charAt(0).toUpperCase()}
+                {(user?.name || portalLabel.charAt(0)).charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || "Admin User"}</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email || "admin@bseva.com"}</p>
+                <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || portalLabel}</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email || ""}</p>
               </div>
-              <Button variant="ghost" size="icon" className="shrink-0" onClick={handleLogout} title="Logout">
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={handleLogout} title={t("nav.logout")}>
                 <LogOut size={16} />
               </Button>
             </div>
@@ -170,17 +147,11 @@ function AdminShell({ children }: AdminLayoutProps) {
             <Menu size={20} />
           </Button>
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-foreground">
-              {t(
-                navigation.find(
-                  (item) => location === item.href || (item.href !== "/admin" && location.startsWith(item.href))
-                )?.nameKey || "admin.dashboard"
-              )}
-            </h1>
+            <h1 className="text-lg font-semibold text-foreground">{t(activeItem?.nameKey || navigation[0]?.nameKey || "nav.home")}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1" onClick={handleLogout}>
-              <LogOut size={14} /> Logout
+              <LogOut size={14} /> {t("nav.logout")}
             </Button>
             <Link href="/">
               <Button variant="outline" size="sm">
@@ -192,13 +163,5 @@ function AdminShell({ children }: AdminLayoutProps) {
         <main className="p-4 lg:p-6">{children}</main>
       </div>
     </div>
-  );
-}
-
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  return (
-    <RolePortalGate role="admin">
-      <AdminShell>{children}</AdminShell>
-    </RolePortalGate>
   );
 }

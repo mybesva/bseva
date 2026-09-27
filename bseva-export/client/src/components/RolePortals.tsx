@@ -21,6 +21,7 @@ import {
   Gift,
   Bell,
   Flower2,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -56,6 +57,7 @@ const customerNav: NavItem[] = [
   { labelKey: "nav.support", href: "/customer/support", icon: FileText },
   { labelKey: "nav.password", href: "/customer/change-password", icon: KeyRound },
   { labelKey: "nav.terms", href: "/customer/terms", icon: ScrollText },
+  { labelKey: "nav.about", href: "/about", icon: Info },
 ];
 
 const pujariNav: NavItem[] = [
@@ -75,6 +77,7 @@ const pujariNav: NavItem[] = [
   { labelKey: "nav.support", href: "/pujari/support", icon: FileText },
   { labelKey: "nav.password", href: "/pujari/change-password", icon: KeyRound },
   { labelKey: "nav.terms", href: "/pujari/terms", icon: ScrollText },
+  { labelKey: "nav.about", href: "/about", icon: Info },
 ];
 
 function PortalShell({

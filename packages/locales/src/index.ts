@@ -120,3 +120,9 @@ export function formatPujaDuration(lang: Lang | string, minutes: number | null |
 }
 
 export { LANG_LABELS as labels };
+export {
+  ABOUT_APPROVED,
+  ABOUT_APPROVED_I18N_KEYS,
+  aboutText,
+  type AboutApprovedField,
+} from "./aboutContent";

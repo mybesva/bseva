@@ -1,12 +1,11 @@
 import { AboutEssenceCards } from "@/components/AboutEssenceCards";
-import Layout from "@/components/Layout";
 import SectionHeader from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/i18n/I18nProvider";
 import { BookOpen, Globe, Heart, Layers, Shield, Sparkles, Users } from "lucide-react";
 
-export default function About() {
+export default function AboutPageContent({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
 
   const values = [
@@ -19,31 +18,55 @@ export default function About() {
   ];
 
   return (
-    <Layout>
-      <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
-        </div>
-        <div className="container relative z-10">
-          <div className="max-w-3xl">
-            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
-              {t("about.badge")}
-            </span>
-            <h1 className="text-h1 md:text-display text-primary mb-3">{t("about.title")}</h1>
-            <p className="text-base text-on-dark leading-relaxed mb-4">{t("about.heroDesc")}</p>
-            <p className="text-base text-on-dark leading-relaxed">{t("about.heroIntro")}</p>
+    <>
+      {!embedded ? (
+        <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" aria-hidden="true" />
           </div>
+          <div className="container relative z-10 px-4">
+            <div className="max-w-3xl">
+              <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
+                {t("about.badge")}
+              </span>
+              <h1 className="font-heading font-bold text-3xl md:text-5xl lg:text-6xl text-primary mb-3 leading-tight">
+                {t("about.title")}
+              </h1>
+              {t("about.heroDesc") ? (
+                <p className="text-base md:text-lg text-on-dark leading-relaxed mb-4">{t("about.heroDesc")}</p>
+              ) : null}
+              {t("about.heroIntro") ? (
+                <p className="text-base md:text-lg text-on-dark leading-relaxed">{t("about.heroIntro")}</p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <div className="mb-8 max-w-3xl">
+          <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
+            {t("about.badge")}
+          </span>
+          <h1 className="font-heading font-bold text-2xl md:text-3xl text-foreground mb-3">{t("about.title")}</h1>
+          {t("about.heroDesc") ? (
+            <p className="text-base text-muted-foreground leading-relaxed mb-3">{t("about.heroDesc")}</p>
+          ) : null}
+          {t("about.heroIntro") ? (
+            <p className="text-base text-muted-foreground leading-relaxed">{t("about.heroIntro")}</p>
+          ) : null}
         </div>
-      </section>
+      )}
 
       <section className="py-20">
-        <div className="container grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className={`${embedded ? "" : "container"} grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-4`}>
           <div className="relative">
             <div className="absolute -top-4 -left-4 w-24 h-24 border-t-4 border-l-4 border-primary rounded-tl-3xl" />
             <div className="absolute -bottom-4 -right-4 w-24 h-24 border-b-4 border-r-4 border-primary rounded-br-3xl" />
-            <img src="/images/temple-ritual.png" alt="" className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]" />
+            <img
+              src="/images/temple-ritual.png"
+              alt=""
+              className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]"
+            />
           </div>
-
           <div>
             <SectionHeader title={t("about.mission")} align="left" className="mb-6" />
             <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
@@ -59,7 +82,7 @@ export default function About() {
       <AboutEssenceCards />
 
       <section className="py-16 bg-secondary/20">
-        <div className="container max-w-4xl">
+        <div className={`${embedded ? "" : "container"} max-w-4xl px-4`}>
           <SectionHeader title={t("about.pujariCommitTitle")} className="mb-8" />
           <div className="space-y-5 text-lg text-muted-foreground leading-relaxed mb-8">
             <p>{t("about.pujariCommitP1")}</p>
@@ -75,9 +98,8 @@ export default function About() {
       </section>
 
       <section className="py-20">
-        <div className="container">
+        <div className={`${embedded ? "" : "container"} px-4`}>
           <SectionHeader title={t("about.valuesTitle")} description={t("about.valuesDesc") || undefined} />
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {values.map((value, i) => (
               <Card key={i} className="border-none shadow-sm hover:shadow-md transition-all h-full">
@@ -85,7 +107,7 @@ export default function About() {
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
                     {value.icon}
                   </div>
-                  <h3 className="font-bold text-xl text-foreground mb-3">{value.title}</h3>
+                  <h3 className="font-heading font-bold text-xl text-foreground mb-3">{value.title}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">{value.desc}</p>
                 </CardContent>
               </Card>
@@ -95,7 +117,7 @@ export default function About() {
       </section>
 
       <section className="py-16 bg-secondary/20">
-        <div className="container max-w-3xl">
+        <div className={`${embedded ? "" : "container"} max-w-3xl px-4`}>
           <SectionHeader title={t("about.onboardingTitle")} className="mb-8" />
           <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
             <p>{t("about.onboardingP1")}</p>
@@ -106,30 +128,38 @@ export default function About() {
       </section>
 
       <section className="py-20 bg-sidebar text-white">
-        <div className="container">
+        <div className={`${embedded ? "" : "container"} px-4`}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-price text-primary mb-2">500+</div>
-              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statPriests")}</div>
+              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">500+</div>
+              <div className="text-sm text-on-dark-secondary uppercase tracking-wider font-medium">
+                {t("about.statPriests")}
+              </div>
             </div>
             <div>
-              <div className="text-price text-primary mb-2">10k+</div>
-              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statPujas")}</div>
+              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">10k+</div>
+              <div className="text-sm text-on-dark-secondary uppercase tracking-wider font-medium">
+                {t("about.statPujas")}
+              </div>
             </div>
             <div>
-              <div className="text-price text-primary mb-2">15+</div>
-              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statCities")}</div>
+              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">15+</div>
+              <div className="text-sm text-on-dark-secondary uppercase tracking-wider font-medium">
+                {t("about.statCities")}
+              </div>
             </div>
             <div>
-              <div className="text-price text-primary mb-2">4.9</div>
-              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statRating")}</div>
+              <div className="text-4xl md:text-5xl font-heading font-bold text-primary mb-2">4.9</div>
+              <div className="text-sm text-on-dark-secondary uppercase tracking-wider font-medium">
+                {t("about.statRating")}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section className="py-24 text-center">
-        <div className="container max-w-2xl">
+        <div className={`${embedded ? "" : "container"} max-w-2xl px-4`}>
           <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{t("about.combinedStatement")}</p>
           <Button
             size="lg"
@@ -140,6 +170,6 @@ export default function About() {
           </Button>
         </div>
       </section>
-    </Layout>
+    </>
   );
 }

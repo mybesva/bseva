@@ -1,5 +1,4 @@
-import Layout from "@/components/Layout";
-import RolePortalGate from "@/components/RolePortalGate";
+import PujariLayout from "@/components/PujariLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -271,9 +270,9 @@ function PujariDashboardContent() {
   );
 
   return (
-    <Layout>
-      <section className="bg-sidebar text-sidebar-foreground py-12">
-        <div className="container flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <>
+      <section className="bg-sidebar text-sidebar-foreground py-12 -mx-4 lg:-mx-6 -mt-4 lg:-mt-6 px-4 lg:px-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">{t("priest.dashboard")}</h1>
             <p className="text-sidebar-foreground/80">
@@ -547,14 +546,14 @@ function PujariDashboardContent() {
           )}
         </DialogContent>
       </Dialog>
-    </Layout>
+    </>
   );
 }
 
 export default function PujariDashboard() {
   return (
-    <RolePortalGate role="priest">
+    <PujariLayout>
       <PujariDashboardContent />
-    </RolePortalGate>
+    </PujariLayout>
   );
 }

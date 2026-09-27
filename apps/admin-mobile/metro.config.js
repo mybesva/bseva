@@ -4,12 +4,13 @@ const path = require("path");
 
 const projectRoot = __dirname;
 const packagesRoot = path.resolve(projectRoot, "../../packages");
+const mobileSharedRoot = path.resolve(projectRoot, "../mobile/src");
 
 const config = getDefaultConfig(projectRoot);
 
 // Shared TS packages live outside apps/admin-mobile. Watch only packages/, not the
 // whole repo, so Metro does not pick up bseva-export / backend.
-config.watchFolders = [packagesRoot];
+config.watchFolders = [packagesRoot, mobileSharedRoot];
 config.resolver.nodeModulesPaths = [path.resolve(projectRoot, "node_modules")];
 config.resolver.unstable_enableSymlinks = true;
 

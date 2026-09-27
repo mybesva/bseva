@@ -174,10 +174,18 @@ export default function Home() {
             </div>
 
             <div>
-              <span className="text-sm font-bold tracking-[0.2em] uppercase text-primary mb-2 block">{t("home.missionLabel")}</span>
-              <h2 className="font-heading font-bold text-4xl lg:text-5xl text-sidebar mb-6 leading-tight">{t("home.missionTitle")}</h2>
-              <p className="text-lg text-muted-foreground mb-6 leading-relaxed">{t("home.missionP1")}</p>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{t("home.missionP2")}</p>
+              <span className="text-sm font-bold tracking-[0.2em] uppercase text-primary mb-2 block">{t("about.visionTitle")}</span>
+              <h2 className="font-heading font-bold text-3xl lg:text-4xl text-sidebar mb-6 leading-tight">{t("about.visionStatement")}</h2>
+              <span className="text-sm font-bold tracking-[0.2em] uppercase text-primary mb-2 block">{t("about.missionTitle")}</span>
+              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{t("about.missionStatement")}</p>
+              <p className="text-lg text-foreground mb-8 leading-relaxed">
+                <span className="text-primary font-bold">{t("about.brandEssenceBook")}</span>
+                {t("about.brandEssenceWithEase")}{" "}
+                <span className="text-primary font-bold">{t("about.brandEssenceBelieve")}</span>
+                {t("about.brandEssenceWithFaith")}{" "}
+                <span className="text-primary font-bold">{t("about.brandEssenceBless")}</span>
+                {t("about.brandEssenceThroughSeva")}
+              </p>
 
               <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="flex items-start gap-3">

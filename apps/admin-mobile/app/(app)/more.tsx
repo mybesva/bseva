@@ -55,6 +55,7 @@ export default function AdminMore() {
     { href: "/support", label: t("admin.support"), show: can("manage_support"), icon: "help-circle-outline" },
     { href: "/legal", label: t("admin.legal"), show: can("manage_legal"), icon: "book-outline" },
     { href: "/head-ratings", label: t("admin.headRatings"), show: true, icon: "ribbon-outline" },
+    { href: "/about", label: t("mobile.about"), show: true, icon: "information-circle-outline" },
   ];
 
   return (

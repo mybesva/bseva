@@ -28,7 +28,7 @@ export default function CustomerMore() {
     { href: "/customer/astrology", label: t("nav.astrology"), icon: "planet-outline" as const },
     { href: "/customer/support", label: t("mobile.support"), icon: "help-circle-outline" as const },
     { href: "/customer/contact", label: t("mobile.contact"), icon: "call-outline" as const },
-    { href: "/customer/about", label: t("mobile.about"), icon: "information-circle-outline" as const },
+    { href: "/legal/about", label: t("mobile.about"), icon: "information-circle-outline" as const },
     { href: "/customer/password", label: t("mobile.password"), icon: "lock-closed-outline" as const },
     { href: "/legal/terms", label: t("mobile.terms"), icon: "book-outline" as const },
   ];
