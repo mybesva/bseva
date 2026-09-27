@@ -110,8 +110,8 @@ export default function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         {metrics.map((m) => (
           <Link key={m.title} href={m.href}>
-            <a>
-              <Card className="hover:border-primary/40 transition-colors">
+            <a className="block cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+              <Card className="hover:border-primary/40 hover:bg-muted/20 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">{m.title}</CardTitle>
                   <m.icon className="h-5 w-5 text-primary" />
@@ -128,8 +128,8 @@ export default function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {pujariMetrics.map((m) => (
           <Link key={m.title} href={m.href}>
-            <a>
-              <Card className="hover:border-primary/40 transition-colors">
+            <a className="block cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+              <Card className="hover:border-primary/40 hover:bg-muted/20 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">{m.title}</CardTitle>
                   <m.icon className={`h-5 w-5 ${m.color}`} />

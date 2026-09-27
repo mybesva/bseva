@@ -1,205 +1,69 @@
-import {
-  EMPTY_SUPPORT_TICKET,
-  SUPPORT_CATEGORIES,
-  SUPPORT_CONTACT_SOURCES,
-  SUPPORT_PRIORITIES,
-  SUPPORT_REPORTER_TYPES,
-  TICKET_STATUSES,
-} from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import { ScrollView } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
+import {
+  SupportFilter,
+  SupportTicketCard,
+  type SupportTicketRow,
+} from "@/components/support";
+import { AppText, EmptyState, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
+import { OPEN_TICKET_STATUSES } from "@/lib/supportLabels";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 
-type Ticket = { id: string; subject?: string; status?: string; category?: string; description?: string; body?: string };
-type Person = { id: string; name?: string; phone?: string; email?: string };
-
-function SupportTicketCard({
-  ticket,
-  onError,
-  onUpdated,
-}: {
-  ticket: Ticket;
-  onError: (msg: string | null) => void;
-  onUpdated: () => Promise<void>;
-}) {
-  const router = useRouter();
-  const initial = String(ticket.status || "open");
-  const [status, setStatus] = useState(initial);
-  const [reply, setReply] = useState("");
-  const [updating, setUpdating] = useState(false);
-
-  return (
-    <Card>
-      <StatusBadge status={initial} />
-      <AppText variant="h3">{ticket.subject}</AppText>
-      <AppText variant="small">{ticket.category}</AppText>
-      <PrimaryButton title="Open workspace" onPress={() => router.push(`/support/${ticket.id}`)} />
-      <ChoiceChips
-        options={TICKET_STATUSES.map((id) => ({ id, label: id.replace(/_/g, " ") }))}
-        value={status}
-        onChange={(v) => setStatus(String(v))}
-      />
-      <PrimaryButton
-        title="Update status"
-        variant="outline"
-        loading={updating}
-        onPress={async () => {
-          onError(null);
-          setUpdating(true);
-          try {
-            await apiClient.api(`/support/tickets/${ticket.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ status }),
-            });
-            await onUpdated();
-          } catch (e: unknown) {
-            onError(e instanceof Error ? e.message : "Failed");
-          } finally {
-            setUpdating(false);
-          }
-        }}
-      />
-      <Field label="Reply" value={reply} onChangeText={setReply} />
-      <PrimaryButton
-        title="Send reply"
-        variant="outline"
-        onPress={async () => {
-          if (!reply.trim()) return;
-          onError(null);
-          try {
-            await apiClient.replySupportTicket(ticket.id, reply.trim(), "agent");
-            setReply("");
-            await onUpdated();
-          } catch (e: unknown) {
-            onError(e instanceof Error ? e.message : "Failed");
-          }
-        }}
-      />
-    </Card>
-  );
-}
-
 export default function AdminSupport() {
   const { t } = useI18n();
-  const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ ...EMPTY_SUPPORT_TICKET });
-  const [dirQ, setDirQ] = useState("");
-  const [person, setPerson] = useState<Person | null>(null);
-  const [hits, setHits] = useState<Person[]>([]);
-  const [bookingId, setBookingId] = useState("");
+  const router = useRouter();
+  const params = useLocalSearchParams<{ status?: string }>();
+  const [statusFilter, setStatusFilter] = useState("");
   const list = useQuery({
     queryKey: ["support-tickets"],
     queryFn: () => apiClient.listSupportTickets(),
   });
-  const rows = (list.data || []) as Ticket[];
 
-  async function searchPeople() {
-    if (!dirQ.trim()) return;
-    const found = await apiClient.supportDirectory(dirQ.trim(), form.reporter_type);
-    setHits(found as Person[]);
-  }
+  useEffect(() => {
+    const next = typeof params.status === "string" ? params.status : "";
+    if (next) setStatusFilter(next);
+  }, [params.status]);
 
-  async function createTicket() {
-    setCreating(true);
-    setError(null);
-    try {
-      const payload: Record<string, unknown> = {
-        ...form,
-        sla_hours: form.sla_hours ? Number(form.sla_hours) : undefined,
-        assigned_admin_id: form.assigned_admin_id || undefined,
-        related_booking_id: bookingId || undefined,
-        user_id: person && form.reporter_type !== "temple" ? person.id : undefined,
-        guest_name: form.reporter_type === "other" || form.reporter_type === "temple" ? form.guest_name || person?.name : undefined,
-        guest_phone: form.reporter_type === "other" || form.reporter_type === "temple" ? form.guest_phone || person?.phone : undefined,
-        guest_email: form.reporter_type === "other" || form.reporter_type === "temple" ? form.guest_email || person?.email : undefined,
-      };
-      await apiClient.createSupportTicket(payload);
-      setForm({ ...EMPTY_SUPPORT_TICKET });
-      setPerson(null);
-      setBookingId("");
-      await list.refetch();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setCreating(false);
+  const rows = useMemo(() => {
+    const all = (list.data || []) as SupportTicketRow[];
+    if (statusFilter === "open") {
+      return all.filter((ticket) => OPEN_TICKET_STATUSES.has(String(ticket.status || "open").toLowerCase()));
     }
-  }
+    if (statusFilter) {
+      return all.filter((ticket) => String(ticket.status || "").toLowerCase() === statusFilter.toLowerCase());
+    }
+    return all;
+  }, [list.data, statusFilter]);
 
   return (
     <Screen>
       <ScreenHeader title={t("admin.support")} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
-        <ErrorBanner message={error} />
-        <Card style={{ gap: 8 }}>
-          <AppText variant="h3">Create ticket</AppText>
-          <AppText variant="small">Reported by</AppText>
-          <ChoiceChips
-            options={SUPPORT_REPORTER_TYPES.map((o) => ({ id: o.id, label: o.label }))}
-            value={form.reporter_type}
-            onChange={(v) => {
-              setForm({ ...form, reporter_type: String(v) });
-              setPerson(null);
-              setHits([]);
-            }}
-          />
-          <Field label="Find person" value={dirQ} onChangeText={setDirQ} />
-          <PrimaryButton title="Search directory" variant="outline" onPress={() => void searchPeople()} />
-          {hits.map((h) => (
-            <PrimaryButton
-              key={h.id}
-              title={`${h.name || h.id} · ${h.phone || h.email || ""}`}
-              variant={person?.id === h.id ? "primary" : "outline"}
-              onPress={() => setPerson(h)}
-            />
-          ))}
-          <Field label="Subject *" value={form.subject} onChangeText={(subject) => setForm({ ...form, subject })} />
-          <Field label="Description *" value={form.description} onChangeText={(description) => setForm({ ...form, description })} multiline />
-          <ChoiceChips
-            options={SUPPORT_CATEGORIES.map((o) => ({ id: o.id, label: o.label }))}
-            value={form.category}
-            onChange={(v) => setForm({ ...form, category: String(v) })}
-          />
-          <ChoiceChips
-            options={SUPPORT_PRIORITIES.map((o) => ({ id: o.id, label: o.label }))}
-            value={form.priority}
-            onChange={(v) => setForm({ ...form, priority: String(v) })}
-          />
-          <ChoiceChips
-            options={SUPPORT_CONTACT_SOURCES.map((o) => ({ id: o.id, label: o.label }))}
-            value={form.contact_source}
-            onChange={(v) => setForm({ ...form, contact_source: String(v) })}
-          />
-          <Field label="Expected resolution" value={form.expected_resolution} onChangeText={(expected_resolution) => setForm({ ...form, expected_resolution })} />
-          <Field label="Additional info" value={form.additional_info} onChangeText={(additional_info) => setForm({ ...form, additional_info })} />
-          <Field label="SLA hours" value={form.sla_hours} onChangeText={(sla_hours) => setForm({ ...form, sla_hours })} keyboardType="number-pad" />
-          <Field label="Related booking ID" value={bookingId} onChangeText={setBookingId} />
-          {(form.reporter_type === "other" || form.reporter_type === "temple") ? (
-            <>
-              <Field label="Guest name" value={form.guest_name} onChangeText={(guest_name) => setForm({ ...form, guest_name })} />
-              <Field label="Guest phone" value={form.guest_phone} onChangeText={(guest_phone) => setForm({ ...form, guest_phone })} />
-              <Field label="Guest email" value={form.guest_email} onChangeText={(guest_email) => setForm({ ...form, guest_email })} />
-            </>
-          ) : null}
-          <PrimaryButton title="Create ticket" loading={creating} onPress={() => void createTicket()} />
-        </Card>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={list.isFetching} onRefresh={() => void list.refetch()} />}
+        keyboardShouldPersistTaps="handled"
+      >
+        <PrimaryButton title="+ Create Ticket" onPress={() => router.push("/support/create")} />
+        <View style={{ gap: 8 }}>
+          <AppText variant="small" style={{ fontWeight: "700" }}>
+            Filter tickets
+          </AppText>
+          <SupportFilter value={statusFilter} onChange={setStatusFilter} />
+        </View>
         {list.isLoading ? <LoadingBlock /> : null}
+        {!list.isLoading && rows.length === 0 ? (
+          <EmptyState title="No tickets found" subtitle="Create a ticket or adjust your filters." />
+        ) : null}
         {rows.map((ticket) => (
-          <SupportTicketCard
-            key={ticket.id}
-            ticket={ticket}
-            onError={setError}
-            onUpdated={async () => {
-              await list.refetch();
-            }}
-          />
+          <SupportTicketCard key={ticket.id} ticket={ticket} />
         ))}
       </ScrollView>
+      <SafeAreaView edges={["bottom"]} />
     </Screen>
   );
 }

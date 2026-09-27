@@ -1,26 +1,82 @@
 /** Shared admin QA helpers — validation, filters, chip selection. */
 
 export const ADMIN_BOOKING_STATUS_FILTERS = [
-  { id: "", label: "All" },
+  { id: "", label: "All statuses" },
+  { id: "pending", label: "Pending" },
   { id: "pending_acceptance", label: "Pending acceptance" },
   { id: "confirmed", label: "Confirmed" },
   { id: "in_progress", label: "In progress" },
   { id: "completed", label: "Completed" },
   { id: "cancelled", label: "Cancelled" },
   { id: "rejected", label: "Rejected" },
+  { id: "needs_reassignment", label: "Needs reassignment" },
 ] as const;
 
 export const ADMIN_ASSIGNMENT_FILTERS = [
-  { id: "", label: "Any assignment" },
-  { id: "unassigned", label: "Unassigned" },
+  { id: "", label: "All assignments" },
+  { id: "unassigned", label: "Needs assignment" },
   { id: "assigned", label: "Assigned" },
 ] as const;
+
+export const ADMIN_DATE_RANGE_FILTERS = [
+  { id: "", label: "All dates" },
+  { id: "last_30", label: "Last 30 days" },
+  { id: "custom", label: "Between dates" },
+] as const;
+
+/** ISO date strings for admin booking list “last 30 days” filter (matches web). */
+export function adminBookingLast30Range(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 29);
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { from: iso(from), to: iso(to) };
+}
 
 export const ADMIN_CUSTOMER_BLOCKED_FILTERS = [
   { id: "", label: "All" },
   { id: "false", label: "Active" },
   { id: "true", label: "Blocked" },
 ] as const;
+
+export const ADMIN_PUJARI_STATUS_FILTERS = [
+  { id: "", label: "All" },
+  { id: "pending", label: "Pending" },
+  { id: "approved", label: "Approved" },
+  { id: "correction_required", label: "Correction" },
+  { id: "rejected", label: "Rejected" },
+  { id: "blocked", label: "Blocked" },
+] as const;
+
+/** Default page size for admin list screens (matches web AdminPager). */
+export const DEFAULT_ADMIN_PAGE_SIZE = 10;
+
+export function personLocation(u: {
+  location?: string;
+  location_label?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+}) {
+  const parts = [u.location_label, u.city, u.district, u.state, u.location]
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+  const unique = [...new Set(parts)];
+  return unique.join(", ") || "—";
+}
+
+export function formatIndianPhone(raw: string | null | undefined): string {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length === 10) return `+91 ${digits}`;
+  if (digits.length === 12 && digits.startsWith("91")) return `+91 ${digits.slice(2)}`;
+  return raw?.trim() || "—";
+}
+
+export function pujariDisplayStatus(u: { blocked?: boolean; verification_status?: string | null }) {
+  if (u.blocked) return "blocked";
+  return u.verification_status || "pending";
+}
 
 export const ADMIN_PAYMENT_STATUS_FILTERS = [
   { id: "", label: "All" },
@@ -68,6 +124,28 @@ export function validateAdminCustomerForm(input: {
   if (password.length < 8) errors.password = "Password must be at least 8 characters.";
   if (!location) errors.location = "Location is required.";
 
+  return errors;
+}
+
+export function validateAdminPujariForm(input: {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  location: string;
+  requested_level: number;
+}): Record<string, string> {
+  const errors = validateAdminCustomerForm({
+    name: input.name,
+    email: input.email,
+    phone: input.phone,
+    password: input.password,
+    location: input.location,
+  });
+  const level = Number(input.requested_level);
+  if (!Number.isFinite(level) || level < 1 || level > 4) {
+    errors.requested_level = "Select a valid level.";
+  }
   return errors;
 }
 

@@ -1,8 +1,8 @@
 import { ADMIN_PAYMENT_STATUS_FILTERS, rupees } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView } from "react-native";
 import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -13,8 +13,22 @@ import { apiClient } from "@/services/api";
 export default function AdminPayments() {
   const { t } = useI18n();
   const router = useRouter();
+  const params = useLocalSearchParams<{ status?: string }>();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
+  const statusOptions = useMemo(
+    () => [
+      ...ADMIN_PAYMENT_STATUS_FILTERS,
+      { id: "refund_pending", label: "Refund pending" },
+      { id: "refund_requested", label: "Refund requested" },
+    ],
+    []
+  );
+
+  useEffect(() => {
+    const next = typeof params.status === "string" ? params.status : "";
+    if (next) setStatus(next);
+  }, [params.status]);
   const list = useQuery({
     queryKey: ["admin-payments", q, status],
     queryFn: () => apiClient.listBookingsPage({ page: 1, limit: 40, stats: true, q: q || undefined, payment_status: status || undefined }),
@@ -24,7 +38,7 @@ export default function AdminPayments() {
       <ScreenHeader title={t("admin.payments")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <Field label={t("admin.search")} value={q} onChangeText={setQ} />
-        <ChoiceChips options={[...ADMIN_PAYMENT_STATUS_FILTERS]} value={status} onChange={(v) => setStatus(String(v))} />
+        <ChoiceChips options={statusOptions} value={status} onChange={(v) => setStatus(String(v))} />
         {list.isLoading ? <LoadingBlock /> : null}
         {(list.data?.items || []).map((b: Booking) => (
           <Pressable key={b.id} onPress={() => router.push(`/booking/${b.id}`)}>

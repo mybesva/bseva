@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,11 +15,11 @@ import {
 import { BrandWatermark } from "@/components/BrandWatermark";
 import { useAppTheme } from "@/theme/ThemeContext";
 
-export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Screen({ children, style, watermark = true }: { children: ReactNode; style?: ViewStyle; watermark?: boolean }) {
   const { colors } = useAppTheme();
   return (
     <View style={[{ flex: 1, backgroundColor: colors.background }, style]}>
-      <BrandWatermark />
+      {watermark ? <BrandWatermark /> : null}
       {children}
     </View>
   );
@@ -48,7 +49,7 @@ export function AppText({
   );
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Card({ children, style, compact }: { children: ReactNode; style?: ViewStyle; compact?: boolean }) {
   const { colors } = useAppTheme();
   return (
     <View
@@ -58,7 +59,7 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
           borderRadius: radius.lg,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: colors.border,
-          padding: spacing.lg,
+          padding: compact ? spacing.md : spacing.lg,
         },
         style,
       ]}
@@ -155,46 +156,64 @@ export function ChoiceChips({
   value,
   onChange,
   multiple,
+  horizontal,
 }: {
   options: { id: string; label: string }[];
   value: string | string[];
   onChange: (next: string | string[]) => void;
   multiple?: boolean;
+  horizontal?: boolean;
 }) {
   const { colors } = useAppTheme();
   const selected = chipSelectionValue(value);
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-      {options.map((opt) => {
-        const on = selected.has(opt.id);
-        return (
-          <Pressable
-            key={opt.id}
-            onPress={() => {
-              if (multiple) {
-                const next = new Set(selected);
-                if (next.has(opt.id)) next.delete(opt.id);
-                else next.add(opt.id);
-                onChange(Array.from(next) as string[]);
-              } else {
-                onChange(opt.id);
-              }
-            }}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 999,
-              backgroundColor: on ? colors.primary : colors.secondary,
-            }}
-          >
-            <Text style={{ color: on ? colors.primaryForeground : colors.foreground, fontWeight: "600", fontSize: 13 }}>
-              {opt.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+  const content = options.map((opt) => {
+    const on = selected.has(opt.id);
+    const isDefaultAll = opt.id === "";
+    const highlighted = on && !isDefaultAll;
+    return (
+      <Pressable
+        key={opt.id || "__all__"}
+        onPress={() => {
+          if (multiple) {
+            const next = new Set(selected);
+            if (next.has(opt.id)) next.delete(opt.id);
+            else next.add(opt.id);
+            onChange(Array.from(next) as string[]);
+          } else {
+            onChange(opt.id);
+          }
+        }}
+        style={{
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          borderRadius: 999,
+          backgroundColor: highlighted ? colors.primary : colors.card,
+          borderWidth: highlighted ? 0 : 1,
+          borderColor: on && isDefaultAll ? colors.primary + "66" : colors.border,
+        }}
+      >
+        <Text
+          style={{
+            color: highlighted ? colors.primaryForeground : colors.foreground,
+            fontWeight: on ? "700" : "600",
+            fontSize: 12,
+          }}
+        >
+          {opt.label}
+        </Text>
+      </Pressable>
+    );
+  });
+
+  if (horizontal) {
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+        {content}
+      </ScrollView>
+    );
+  }
+
+  return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{content}</View>;
 }
 
 export function StatusBadge({ status }: { status: string }) {
@@ -204,9 +223,14 @@ export function StatusBadge({ status }: { status: string }) {
     completed: colors.mutedForeground,
     pending: colors.warning,
     pending_acceptance: colors.warning,
+    under_review: colors.warning,
     in_progress: colors.info,
     cancelled: colors.destructive,
     rejected: colors.destructive,
+    approved: colors.success,
+    correction_required: colors.primary,
+    active: colors.success,
+    blocked: colors.destructive,
   };
   const color = map[status] || colors.mutedForeground;
   const label = status.replace(/_/g, " ");
@@ -214,15 +238,15 @@ export function StatusBadge({ status }: { status: string }) {
     <View
       style={{
         backgroundColor: color + "22",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
         borderRadius: radius.pill,
         alignSelf: "flex-start",
-        maxWidth: "100%",
+        maxWidth: "46%",
       }}
     >
       <Text
-        style={{ color, fontSize: 11, fontWeight: "700", textTransform: "uppercase" }}
+        style={{ color, fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 }}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.75}

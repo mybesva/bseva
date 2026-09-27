@@ -61,15 +61,28 @@ export function ScreenHeader({
   );
 }
 
-export function HomeBrandBar({ subtitle, right }: { subtitle?: string; right?: ReactNode }) {
+export function HomeBrandBar({
+  title,
+  subtitle,
+  right,
+}: {
+  title?: string;
+  subtitle?: string;
+  right?: ReactNode;
+}) {
   const { colors } = useAppTheme();
   return (
     <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.background }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, flexDirection: "row", alignItems: "center" }}>
-        <View style={{ flex: 1 }}>
-          <BrandLockup height={88} />
+      <View style={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 8, flexDirection: "row", alignItems: "center" }}>
+        <BrandLockup height={44} />
+        <View style={{ flex: 1, marginLeft: 10, justifyContent: "center" }}>
+          {title ? (
+            <AppText variant="h3" color={colors.navy} numberOfLines={1}>
+              {title}
+            </AppText>
+          ) : null}
           {subtitle ? (
-            <AppText variant="small" color={colors.mutedForeground} numberOfLines={1} style={{ marginTop: 2 }}>
+            <AppText variant="small" color={colors.mutedForeground} numberOfLines={1} style={{ marginTop: title ? 1 : 0 }}>
               {subtitle}
             </AppText>
           ) : null}

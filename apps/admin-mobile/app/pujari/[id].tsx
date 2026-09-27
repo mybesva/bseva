@@ -1,8 +1,8 @@
-import { PUJARI_DOC_TYPES } from "@bseva/config";
+import { PUJARI_DOC_TYPES, formatIndianPhone, personLocation, pujariDisplayStatus } from "@bseva/config";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Alert, ScrollView } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
@@ -10,6 +10,7 @@ import { useAdmin } from "@/providers/AdminProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { downloadAuthorizedFile } from "@/utils/files";
+import { useAppTheme } from "@/theme/ThemeContext";
 
 type OfferSvc = { id: string; name: string; verified?: boolean };
 type Doc = { id: string; document_type?: string; status?: string; uploaded_at?: string; uploaded_by_name?: string };
@@ -18,6 +19,7 @@ export default function AdminPujariDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useI18n();
   const { can } = useAdmin();
+  const { colors } = useAppTheme();
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["admin-pujari", id],
@@ -46,6 +48,11 @@ export default function AdminPujariDetail() {
     return offers.data?.verified_service_ids || offerServices.filter((s) => s.verified).map((s) => s.id);
   }, [verified, offers.data, offerServices]);
 
+  useEffect(() => {
+    if (p?.approved_level != null) setLevel(String(p.approved_level));
+    else if (p?.requested_level != null) setLevel(String(p.requested_level));
+  }, [p?.approved_level, p?.requested_level]);
+
   if (q.isLoading) {
     return (
       <Screen>
@@ -73,40 +80,91 @@ export default function AdminPujariDetail() {
     }
   }
   return (
-    <Screen>
+    <Screen watermark={false}>
       <ScreenHeader title={String(p.name || "Pujari")} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
-        <Card>
-          <StatusBadge status={String(p.verification_status || "pending")} />
-          {p.is_head_pujari || p.role === "head_pujari" ? (
-            <AppText variant="small">Head Pujari</AppText>
+        <Card compact>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <AppText variant="h3" style={{ flex: 1 }} numberOfLines={1}>
+              {String(p.name || "Pujari")}
+            </AppText>
+            <StatusBadge status={pujariDisplayStatus({ blocked: Boolean(p.blocked), verification_status: String(p.verification_status || "pending") })} />
+          </View>
+          {p.public_id ? (
+            <AppText variant="small" color={colors.mutedForeground} style={{ fontFamily: "monospace", marginTop: 4 }}>
+              {String(p.public_id)}
+            </AppText>
           ) : null}
-          <AppText>{String(p.email || "")}</AppText>
-          <AppText>{String(p.phone || "")}</AppText>
-          <AppText>Level {String(p.approved_level ?? "—")}</AppText>
-          <AppText variant="small">{String(p.city || p.location_label || "")}</AppText>
+          {p.is_head_pujari || p.role === "head_pujari" ? (
+            <AppText variant="small" color={colors.primary} style={{ marginTop: 4 }}>
+              Head Pujari
+            </AppText>
+          ) : null}
+          <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 4 }}>
+            {String(p.email || "—")}
+          </AppText>
+          <AppText variant="small" color={colors.mutedForeground}>
+            {formatIndianPhone(String(p.phone || ""))}
+          </AppText>
+          <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 4 }}>
+            {personLocation({
+              location: String(p.location || ""),
+              location_label: String(p.location_label || ""),
+              city: String(p.city || ""),
+              district: String(p.district || ""),
+              state: String(p.state || ""),
+            })}
+          </AppText>
+          <AppText variant="small" style={{ marginTop: 6 }}>
+            Approved level {String(p.approved_level ?? "—")} · Requested {String(p.requested_level ?? "—")}
+          </AppText>
+          {p.experience_years != null ? (
+            <AppText variant="small" color={colors.mutedForeground}>
+              {String(p.experience_years)} years experience
+            </AppText>
+          ) : null}
+          {p.profile_completion_percentage != null ? (
+            <AppText variant="small" color={colors.mutedForeground}>
+              Profile {String(p.profile_completion_percentage)}% complete
+            </AppText>
+          ) : null}
         </Card>
         {offerServices.length ? (
-          <Card>
-            <AppText variant="h3">Admin verified services</AppText>
-            <AppText variant="small">{verifiedIds.length} verified for bookings</AppText>
-            {offerServices.map((s) => {
-              const on = verifiedIds.includes(s.id);
-              return (
-                <PrimaryButton
-                  key={s.id}
-                  title={`${on ? "✓ " : ""}${s.name}`}
-                  variant={on ? "primary" : "outline"}
-                  onPress={() =>
-                    setVerified((prev) => {
-                      const cur = prev ?? verifiedIds;
-                      return cur.includes(s.id) ? cur.filter((x) => x !== s.id) : [...cur, s.id];
-                    })
-                  }
-                />
-              );
-            })}
+          <Card compact>
+            <AppText variant="h3">Verified services</AppText>
+            <AppText variant="small" color={colors.mutedForeground}>
+              {verifiedIds.length} verified · {offerServices.length} applied
+            </AppText>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+              {offerServices.map((s) => {
+                const on = verifiedIds.includes(s.id);
+                return (
+                  <Pressable
+                    key={s.id}
+                    onPress={() =>
+                      setVerified((prev) => {
+                        const cur = prev ?? verifiedIds;
+                        return cur.includes(s.id) ? cur.filter((x) => x !== s.id) : [...cur, s.id];
+                      })
+                    }
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: on ? colors.primary : colors.border,
+                      backgroundColor: on ? colors.primary + "18" : colors.secondary,
+                    }}
+                  >
+                    <AppText variant="small" style={{ fontWeight: "600" }}>
+                      {on ? "✓ " : ""}
+                      {s.name}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
             <PrimaryButton
               title="Save verified services"
               onPress={() =>
@@ -122,13 +180,13 @@ export default function AdminPujariDetail() {
             />
           </Card>
         ) : null}
-        <Card>
+        <Card compact>
           <AppText variant="h3">Documents</AppText>
-          {documents.length === 0 ? <AppText variant="small">No documents uploaded yet.</AppText> : null}
+          {documents.length === 0 ? <AppText variant="small" color={colors.mutedForeground}>No documents uploaded yet.</AppText> : null}
           {documents.map((d) => (
-            <Card key={d.id}>
-              <AppText variant="small">
-                {d.document_type} · {d.status || ""} · {d.uploaded_by_name || ""} · {d.uploaded_at || ""}
+            <View key={d.id} style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+              <AppText variant="small" color={colors.mutedForeground}>
+                {d.document_type} · {d.status || ""}
               </AppText>
               <PrimaryButton
                 title="View / share"
@@ -141,7 +199,7 @@ export default function AdminPujariDetail() {
                   ).catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed"))
                 }
               />
-            </Card>
+            </View>
           ))}
           {PUJARI_DOC_TYPES.map((typ) => (
             <PrimaryButton
@@ -201,7 +259,8 @@ export default function AdminPujariDetail() {
           )
         ) : null}
         {can(["verify_pujaris", "edit_pujaris"]) ? (
-          <>
+          <Card compact>
+            <AppText variant="h3">Verification</AppText>
             <Field label="Approved level" value={level} onChangeText={setLevel} keyboardType="number-pad" />
             <Field label="Rejection / notes" value={reason} onChangeText={setReason} />
             <PrimaryButton
@@ -258,12 +317,12 @@ export default function AdminPujariDetail() {
                 void act(() =>
                   apiClient.api(`/admin/users/${id}/block`, {
                     method: "POST",
-                    body: JSON.stringify({ blocked: !p.blocked, reason }),
+                    body: JSON.stringify({ blocked: !p.blocked, reason: reason || "Admin action" }),
                   })
                 )
               }
             />
-          </>
+          </Card>
         ) : null}
       </ScrollView>
     </Screen>

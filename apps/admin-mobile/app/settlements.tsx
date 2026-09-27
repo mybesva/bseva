@@ -1,6 +1,7 @@
 import { rupees } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
@@ -11,13 +12,24 @@ type Row = { id: string; pujari_name?: string; status?: string; amount_paise?: n
 
 export default function AdminSettlements() {
   const { t } = useI18n();
+  const params = useLocalSearchParams<{ status?: string }>();
   const [q, setQ] = useState("");
+  const [status, setStatus] = useState("");
   const [reason, setReason] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const next = typeof params.status === "string" ? params.status : "";
+    if (next) setStatus(next);
+  }, [params.status]);
+
   const list = useQuery({
-    queryKey: ["settlements", q],
-    queryFn: () => apiClient.api<{ items?: Row[] } | Row[]>(`/settlements?page=1&limit=50${q ? `&q=${encodeURIComponent(q)}` : ""}`),
+    queryKey: ["settlements", q, status],
+    queryFn: () =>
+      apiClient.api<{ items?: Row[] } | Row[]>(
+        `/settlements?page=1&limit=50${q ? `&q=${encodeURIComponent(q)}` : ""}${status ? `&status=${encodeURIComponent(status)}` : ""}`
+      ),
   });
   const rows = Array.isArray(list.data) ? list.data : list.data?.items || [];
   return (
