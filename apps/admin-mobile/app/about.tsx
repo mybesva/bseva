@@ -1,5 +1,5 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AboutScreenContent } from "../../../mobile/src/components/AboutScreenContent";
+import { AboutScreenContent } from "../../mobile/src/components/AboutScreenContent";
 import { Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 
