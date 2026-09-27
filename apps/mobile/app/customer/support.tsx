@@ -45,7 +45,7 @@ function TicketCard({
       </View>
       <AppText variant="small">{String(ticket.ticket_number || ticket.category || "")}</AppText>
       <PrimaryButton
-        title={open ? t("common.back") : t("common.viewDetails")}
+        title={open ? t("mobile.back") : t("mobile.viewDetails")}
         variant="outline"
         onPress={() => {
           setReply("");

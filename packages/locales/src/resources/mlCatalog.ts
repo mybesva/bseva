@@ -1370,7 +1370,7 @@ export const mlCatalog: Record<string, string> = {
   "web.earnings.blocked": "തടഞ്ഞു · ഹാജരായില്ല",
   "web.earnings.completed": "പൂർത്തിയായ ദക്ഷിണ",
   "web.earnings.completedPuja": "പൂർത്തിയായ പൂജ ദക്ഷിണ",
-  "web.earnings.description": "ദക്ഷിണ, വാലറ്റ് ബാലൻസ്, തീർപ്പുകൾ എന്നിവ കാണുക.",
+  "web.earnings.description": "ദക്ഷിണയും തീർപ്പുകളും കാണുക.",
   "web.earnings.inProgress": "പുരോഗമിക്കുന്നു / സ്ഥിരീകരിച്ചു",
   "web.earnings.loadFailed": "വരുമാനം ലോഡ് ചെയ്യാനായില്ല",
   "web.earnings.noCompleted": "പൂർത്തിയായ പൂജകൾ ഇതുവരെയില്ല.",
