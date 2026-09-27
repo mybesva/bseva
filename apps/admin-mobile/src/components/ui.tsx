@@ -168,8 +168,6 @@ export function ChoiceChips({
   const selected = chipSelectionValue(value);
   const content = options.map((opt) => {
     const on = selected.has(opt.id);
-    const isDefaultAll = opt.id === "";
-    const highlighted = on && !isDefaultAll;
     return (
       <Pressable
         key={opt.id || "__all__"}
@@ -187,14 +185,14 @@ export function ChoiceChips({
           paddingHorizontal: 12,
           paddingVertical: 7,
           borderRadius: 999,
-          backgroundColor: highlighted ? colors.primary : colors.card,
-          borderWidth: highlighted ? 0 : 1,
-          borderColor: on && isDefaultAll ? colors.primary + "66" : colors.border,
+          backgroundColor: on ? colors.primary : colors.card,
+          borderWidth: on ? 0 : 1,
+          borderColor: colors.border,
         }}
       >
         <Text
           style={{
-            color: highlighted ? colors.primaryForeground : colors.foreground,
+            color: on ? colors.primaryForeground : colors.foreground,
             fontWeight: on ? "700" : "600",
             fontSize: 12,
           }}

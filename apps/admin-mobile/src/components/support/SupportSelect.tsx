@@ -26,6 +26,7 @@ export function SupportSelect({
   const { colors } = useAppTheme();
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.id === value);
+  const hasSelection = selected !== undefined;
 
   return (
     <View style={{ gap: 6 }}>
@@ -41,8 +42,8 @@ export function SupportSelect({
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
-          borderWidth: 1,
-          borderColor: error ? colors.destructive : colors.border,
+          borderWidth: hasSelection ? 2 : 1,
+          borderColor: error ? colors.destructive : hasSelection ? colors.primary : colors.border,
           borderRadius: 10,
           paddingVertical: 14,
           paddingHorizontal: 14,
@@ -51,8 +52,8 @@ export function SupportSelect({
           opacity: disabled ? 0.5 : 1,
         }}
       >
-        <AppText style={{ flex: 1 }} numberOfLines={2}>
-          {selected?.label || placeholder || "Select…"}
+        <AppText style={{ flex: 1, fontWeight: hasSelection ? "600" : "400" }} numberOfLines={2}>
+          {selected?.label ?? placeholder ?? "Select…"}
         </AppText>
         <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
       </Pressable>
@@ -74,9 +75,11 @@ export function SupportSelect({
           >
             <AppText variant="h3">{label}</AppText>
             <ScrollView keyboardShouldPersistTaps="handled">
-              {options.map((o) => (
+              {options.map((o) => {
+                const active = value === o.id;
+                return (
                 <Pressable
-                  key={o.id}
+                  key={o.id || "__all__"}
                   onPress={() => {
                     onChange(o.id);
                     setOpen(false);
@@ -86,18 +89,21 @@ export function SupportSelect({
                     paddingHorizontal: 8,
                     borderBottomWidth: 0.5,
                     borderBottomColor: colors.border,
-                    backgroundColor: value === o.id ? colors.secondary : "transparent",
+                    backgroundColor: active ? colors.primary : "transparent",
                     borderRadius: 8,
                   }}
                 >
-                  <AppText variant={value === o.id ? "h3" : "body"}>{o.label}</AppText>
+                  <AppText variant={active ? "h3" : "body"} color={active ? colors.primaryForeground : colors.foreground}>
+                    {o.label}
+                  </AppText>
                   {o.subtitle ? (
                     <AppText variant="small" color={colors.mutedForeground}>
                       {o.subtitle}
                     </AppText>
                   ) : null}
                 </Pressable>
-              ))}
+              );
+              })}
             </ScrollView>
             <PrimaryButton title="Close" variant="outline" onPress={() => setOpen(false)} />
           </View>

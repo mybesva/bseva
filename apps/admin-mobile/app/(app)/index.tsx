@@ -203,7 +203,12 @@ export default function AdminDashboard() {
 
   return (
     <Screen watermark={false}>
-      <HomeBrandBar title={dashboardTitle(user?.role)} subtitle={user?.name} />
+      <HomeBrandBar
+        title={dashboardTitle(user?.role)}
+        subtitle={user?.name}
+        notificationsHref="/notifications"
+        profileHref="/profile"
+      />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
