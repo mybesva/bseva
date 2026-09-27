@@ -100,7 +100,7 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
       >
         {isVirtual ? (
           <AppText variant="small" color={colors.mutedForeground}>
-            virtual and online Puja bookings with customer local time and India (IST) assignment time.
+            Virtual & Online Puja bookings with customer local time and India (IST) assignment time.
           </AppText>
         ) : null}
 

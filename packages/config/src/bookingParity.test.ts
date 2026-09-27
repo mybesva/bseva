@@ -17,7 +17,7 @@ describe("bookingParity", () => {
   it("builds virtual location like web BookingWizard", () => {
     expect(virtualPujaCity("US")).toBe("United States");
     expect(virtualPujaLocationLabel("US", "America/New_York")).toBe(
-      "virtual and online Puja · United States · America/New_York"
+      "Virtual & Online Puja · United States · America/New_York"
     );
   });
 
@@ -40,7 +40,7 @@ describe("bookingParity", () => {
       customer_timezone: "America/New_York",
     });
     expect(body.city).toBe("United States");
-    expect(body.address).toBe("virtual and online Puja · United States · America/New_York");
+    expect(body.address).toBe("Virtual & Online Puja · United States · America/New_York");
     expect(body.location_label).toBe(body.address);
     expect(body.latitude).toBeUndefined();
     expect(body.longitude).toBeUndefined();

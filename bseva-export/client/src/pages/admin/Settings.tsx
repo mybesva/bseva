@@ -57,10 +57,10 @@ const PLATFORM_KEYS: PlatformKey[] = [
   { key: "bseva_whatsapp_number", label: "WhatsApp number (digits, with country code)", type: "string", group: "contact" },
   {
     key: "virtual_puja_enabled",
-    label: "virtual and online Puja",
+    label: "Virtual & Online Puja",
     type: "boolean",
     group: "features",
-    hint: "When off, customers cannot create virtual and online Puja bookings. Admin and Super Admin can turn this on without a deployment.",
+    hint: "When off, customers cannot create Virtual & Online Puja bookings. Admin and Super Admin can turn this on without a deployment.",
   },
   {
     key: "registration_captcha_enabled",

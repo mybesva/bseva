@@ -258,7 +258,7 @@ export default function Bookings() {
     <AdminLayout>
       <AdminPageHeader
         title="Bookings"
-        description="In-person puja bookings. virtual and online Puja and Muhurtham requests are managed in their own queues."
+        description="In-person puja bookings. Virtual & Online Puja and Muhurtham requests are managed in their own queues."
         actions={
           <AdminPager
             page={page}

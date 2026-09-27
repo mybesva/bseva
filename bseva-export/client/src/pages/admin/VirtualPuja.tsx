@@ -257,9 +257,9 @@ export default function VirtualPuja() {
   return (
     <AdminLayout>
       <AdminPageHeader
-        title="virtual and online Puja"
+        title="Virtual & Online Puja"
         description={
-          <>virtual and online Puja bookings are managed here, separately from in-person bookings and Muhurtham consultations. Times below show the customer’s local time and the matching India (IST) time used for pujari assignment.</>
+          <>Virtual & Online Puja bookings are managed here, separately from in-person bookings and Muhurtham consultations. Times below show the customer’s local time and the matching India (IST) time used for pujari assignment.</>
         }
         actions={
           <AdminPager

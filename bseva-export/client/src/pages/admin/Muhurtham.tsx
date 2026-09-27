@@ -132,7 +132,7 @@ export default function Muhurtham() {
     <AdminLayout>
       <AdminPageHeader
         title="Muhurtham"
-        description="Manage Muhurtham consultation requests independently from in-person and virtual and online Puja booking queues."
+        description="Manage Muhurtham consultation requests independently from in-person and Virtual & Online Puja booking queues."
         actions={
           <div className="text-sm text-muted-foreground">
             {visibleRows.length} {visibleRows.length === 1 ? "consultation" : "consultations"}

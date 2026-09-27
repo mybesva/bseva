@@ -143,7 +143,7 @@ const en: Dict = {
   "mobile.continue": "Continue", "mobile.submitVerification": "Submit for verification",
   "mobile.consentRequired": "Consent is required", "mobile.submitFailed": "Submit failed",
   "mobile.upcoming": "Upcoming", "mobile.recommended": "Recommended", "mobile.inviteNotReady": "This invite is not ready yet. Try again closer to the scheduled time.",
-  "mobile.inviteNotFound": "Invite not found", "mobile.virtualPuja": "virtual and online Puja",
+  "mobile.inviteNotFound": "Invite not found", "mobile.virtualPuja": "Virtual & Online Puja",
   "mobile.location": "Location", "mobile.experienceYears": "{{count}} years", "mobile.ratingValue": "Rating",
   "mobile.verification": "Verification", "mobile.continueOnboarding": "Continue onboarding", "mobile.payJoiningFeeShort": "Pay joining fee",
   "mobile.completedEarnings": "Completed earnings", "mobile.awaitingAcceptance": "Awaiting acceptance",
