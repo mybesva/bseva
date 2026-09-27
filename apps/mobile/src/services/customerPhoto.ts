@@ -1,18 +1,30 @@
 import { ApiError } from "@bseva/api-client";
+import * as FileSystem from "expo-file-system";
+import * as SecureStore from "expo-secure-store";
+import { TOKEN_KEY } from "@bseva/tokens";
 import type { ImageSourcePropType } from "react-native";
-import { apiClient } from "@/services/api";
+import { resolveApiBase } from "@/services/api";
 
-type CustomerProfileRow = { profile_photo_path?: string | null };
+const CACHE_FILE = `${FileSystem.cacheDirectory}bseva_customer_profile_photo.jpg`;
 
-/** Authenticated image source for customer profile photo (same pattern as pujari media). */
+/** Download authenticated profile photo to cache (RN Image headers are unreliable). */
 export async function fetchCustomerProfilePhotoSource(): Promise<ImageSourcePropType | null> {
-  let profile: CustomerProfileRow | null = null;
-  try {
-    profile = (await apiClient.getCustomerProfile()) as CustomerProfileRow;
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 404) return null;
-    throw e;
+  const token = await SecureStore.getItemAsync(TOKEN_KEY);
+  const url = `${resolveApiBase()}/api/v1/customer/profile/photo?t=${Date.now()}`;
+  const result = await FileSystem.downloadAsync(url, CACHE_FILE, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (result.status === 404) return null;
+  if (result.status >= 400) {
+    throw new ApiError("Could not load profile photo", result.status);
   }
-  if (!profile?.profile_photo_path?.trim()) return null;
-  return apiClient.customerPhotoUri();
+  return { uri: `${result.uri}?v=${Date.now()}` };
+}
+
+export async function clearCustomerProfilePhotoCache() {
+  try {
+    await FileSystem.deleteAsync(CACHE_FILE, { idempotent: true });
+  } catch {
+    /* cache may not exist */
+  }
 }

@@ -23,11 +23,9 @@ def test_html_document_wrap_includes_official_chrome():
         company={"legal_name": "BSeva Services Private Limited", "email": "support@b-seva.com"},
     )
     assert 'class="bseva-doc-watermark"' in html
-    assert 'class="bseva-doc-header"' in html
-    assert 'class="bseva-doc-footer"' in html
-    assert 'bseva-doc-motto' not in html
-    assert FOOTER_LOCKUP in html
-    assert "SAMAGRI LIST" in html.upper()
+    assert 'class="bseva-doc-viewport"' in html
+    assert 'class="bseva-doc-page"' in html
+    assert "data:image/" in html
     assert "Turmeric 100g" in html
     assert "Page " in html and "counter(pages)" in html
 
@@ -57,9 +55,14 @@ def test_invoice_html_uses_shared_document_template():
     assert MOTTO in html
     assert FOOTER_LOCKUP in html
     assert "TAX INVOICE" in html.upper()
-    assert 'bseva-doc-motto' not in html
-    assert "Puja Duration:</strong> 2 Hours 15 Minutes" in html
+    assert "B-SEVA" in html
+    assert "BOOKING DETAILS" in html
+    assert "Duration: 2 Hours 15 Minutes" in html
     assert "BSEVA/2030-31/1" in html
+    assert "data:image/" in html
+    assert 'class="bseva-doc-table-wrap"' in html
+    assert 'class="bseva-doc-items-mobile bseva-doc-screen-only"' in html
+    assert 'class="noprint bseva-doc-toolbar"' in html
 
 
 def test_pdf_chrome_repeats_motto_and_page_numbers():
@@ -78,7 +81,6 @@ def test_pdf_chrome_repeats_motto_and_page_numbers():
     assert "BSeva - Book, Believe, Bless" in raw
     assert "Page 1 of 2" in raw
     assert "Page 2 of 2" in raw
-    assert "BOOKING CONFIRMATION" in raw
 
 
 def test_render_invoice_pdf_from_snapshot_keeps_content_and_branding():

@@ -515,6 +515,14 @@ export function createApiClient(opts: ApiClientOptions) {
       return apiBlob(`/invoices/${id}/pdf`);
     },
 
+    bookingReceiptHtml(id: string) {
+      return apiText(`/bookings/${id}/receipt/html`);
+    },
+
+    bookingReceiptPdf(id: string) {
+      return apiBlob(`/bookings/${id}/receipt/pdf`);
+    },
+
     virtualPrecheck(body: Record<string, unknown> = {}) {
       return api<{ ok: boolean; blocked?: boolean; message?: string; country_code?: string }>(
         "/bookings/virtual-precheck",

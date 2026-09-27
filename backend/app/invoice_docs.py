@@ -12,14 +12,15 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.document_brand import wrap_html_document
+from app.document_brand import (
+    render_document_footer,
+    render_document_header,
+    render_info_box,
+    wrap_html_document,
+)
 from app.platform_config import get_setting
 
 logger = logging.getLogger("bseva.invoice")
-
-ORANGE = "#FF9933"
-NAVY = "#1A2B4A"
-
 
 def _s(db: Session, key: str, default: str = "") -> str:
     return str(get_setting(db, key, default) or default)
@@ -75,6 +76,13 @@ def company_block(db: Session) -> dict[str, str]:
 def paise_inr(paise: int | None) -> str:
     v = (paise or 0) / 100.0
     return f"₹{v:,.2f}"
+
+
+def format_payment_date(value: str | None) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return "—"
+    return raw[:19].replace("T", " ")
 
 
 def format_duration_minutes(minutes: int | None) -> str:
@@ -566,6 +574,109 @@ def create_credit_note(db: Session, *, booking: dict, original: dict, refund_pai
     return inv_no
 
 
+def _invoice_duration_minutes(db: Session, inv: dict[str, Any], snap: dict[str, Any]) -> int | None:
+    duration = snap.get("duration_minutes")
+    if duration is not None:
+        return int(duration)
+    bid = inv.get("booking_id") or snap.get("booking_id")
+    if not bid:
+        return None
+    booking_row = db.execute(
+        text(
+            """
+            SELECT s.duration_minutes
+            FROM bookings b
+            JOIN services s ON s.id = b.service_id
+            WHERE CAST(b.id AS text) = :id
+            """
+        ),
+        {"id": str(bid)},
+    ).first()
+    if booking_row and booking_row[0] is not None:
+        return int(booking_row[0])
+    return None
+
+
+def _invoice_booking_mode(db: Session, inv: dict[str, Any], snap: dict[str, Any]) -> str:
+    mode = str(snap.get("booking_mode") or "").strip()
+    if mode:
+        return mode.title()
+    bid = inv.get("booking_id") or snap.get("booking_id")
+    if not bid:
+        return ""
+    row = db.execute(
+        text("SELECT mode FROM bookings WHERE CAST(id AS text) = :id"),
+        {"id": str(bid)},
+    ).first()
+    return str(row[0] or "").title() if row and row[0] else ""
+
+
+def _render_invoice_line_rows(lines: list[dict[str, Any]]) -> list[str]:
+    row_html: list[str] = []
+    for i, r in enumerate(lines, 1):
+        desc = html.escape(str(r.get("description") or r.get("label") or ""))
+        sac = html.escape(str(r.get("hsn_sac") or ""))
+        qty = int(r.get("qty") or 1)
+        rate = paise_inr(int(r.get("rate_paise") or r.get("taxable_paise") or r.get("amount_paise") or 0))
+        amt = paise_inr(int(r.get("amount_paise") or r.get("taxable_paise") or 0))
+        row_html.append(
+            f"<tr><td class='num'>{i}</td><td class='desc'>{desc}</td><td class='code'>{sac}</td>"
+            f"<td class='qty'>{qty}</td><td class='r'>{rate}</td><td class='r'>{amt}</td></tr>"
+        )
+    if not row_html:
+        row_html.append("<tr><td colspan='6'>No line items</td></tr>")
+    return row_html
+
+
+def _render_mobile_line_items(lines: list[dict[str, Any]]) -> str:
+    """Screen-only card layout for mobile invoice preview (hidden in print/PDF)."""
+    if not lines:
+        return (
+            '<div class="bseva-doc-items-mobile bseva-doc-screen-only">'
+            '<div class="bseva-doc-item-card"><div class="bseva-doc-item-title">No line items</div></div>'
+            "</div>"
+        )
+    cards: list[str] = []
+    for i, r in enumerate(lines, 1):
+        desc = html.escape(str(r.get("description") or r.get("label") or ""))
+        sac = html.escape(str(r.get("hsn_sac") or "—"))
+        qty = int(r.get("qty") or 1)
+        rate = paise_inr(int(r.get("rate_paise") or r.get("taxable_paise") or r.get("amount_paise") or 0))
+        amt = paise_inr(int(r.get("amount_paise") or r.get("taxable_paise") or 0))
+        cards.append(
+            f"""<div class="bseva-doc-item-card">
+  <div class="bseva-doc-item-title">{i}. {desc}</div>
+  <div class="bseva-doc-item-meta"><span>HSN/SAC: {sac}</span><span>Qty: {qty}</span></div>
+  <div class="bseva-doc-item-amounts">
+    <div class="bseva-doc-item-row"><span class="lbl">Rate</span><span class="val">{rate}</span></div>
+    <div class="bseva-doc-item-row bseva-doc-item-amt"><span class="lbl">Amount</span><span class="val">{amt}</span></div>
+  </div>
+</div>"""
+        )
+    return f'<div class="bseva-doc-items-mobile bseva-doc-screen-only">{"".join(cards)}</div>'
+
+
+def _invoice_pujari_name(db: Session, inv: dict[str, Any], snap: dict[str, Any]) -> str:
+    name = str(snap.get("pujari_name") or "").strip()
+    if name:
+        return name
+    bid = inv.get("booking_id") or snap.get("booking_id")
+    if not bid:
+        return ""
+    row = db.execute(
+        text(
+            """
+            SELECT pu.name
+            FROM bookings b
+            LEFT JOIN users pu ON pu.id = b.pujari_id
+            WHERE CAST(b.id AS text) = :id
+            """
+        ),
+        {"id": str(bid)},
+    ).first()
+    return str(row[0] or "") if row else ""
+
+
 def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     """Render from the stored snapshot only (settings changes do not rewrite issued invoices)."""
     snap = _parse_snap(inv)
@@ -576,143 +687,121 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     title = str(snap.get("title") or ("TAX INVOICE" if inv.get("invoice_type") == "customer" else "INVOICE"))
     if inv.get("invoice_type") == "settlement":
         title = "SETTLEMENT STATEMENT"
-    gstin = company.get("gstin") or ""
-    rows = []
-    for i, r in enumerate(lines, 1):
-        desc = html.escape(str(r.get("description") or r.get("label") or ""))
-        sac = html.escape(str(r.get("hsn_sac") or ""))
-        qty = int(r.get("qty") or 1)
-        rate = paise_inr(int(r.get("rate_paise") or r.get("amount_paise") or 0))
-        taxable = paise_inr(int(r.get("taxable_paise") or r.get("amount_paise") or 0))
-        gst = paise_inr(int(r.get("gst_paise") or 0))
-        amt = paise_inr(int(r.get("amount_paise") or 0))
-        rows.append(
-            f"<tr><td>{i}</td><td>{desc}</td><td>{sac}</td><td>{qty}</td>"
-            f"<td class='r'>{rate}</td><td class='r'>{taxable}</td><td class='r'>{gst}</td><td class='r'>{amt}</td></tr>"
-        )
-    if not rows:
-        rows.append("<tr><td colspan='8'>No line items</td></tr>")
-    tax_rows = ""
-    if int(tax.get("cgst_paise") or 0):
-        tax_rows += f"<tr><td colspan='7' class='r'>CGST</td><td class='r'>{paise_inr(int(tax['cgst_paise']))}</td></tr>"
-        tax_rows += f"<tr><td colspan='7' class='r'>SGST</td><td class='r'>{paise_inr(int(tax['sgst_paise']))}</td></tr>"
-    elif int(tax.get("igst_paise") or 0):
-        tax_rows += f"<tr><td colspan='7' class='r'>IGST</td><td class='r'>{paise_inr(int(tax['igst_paise']))}</td></tr>"
-    elif int(tax.get("gst_paise") or snap.get("gst_paise") or 0):
-        tax_rows += f"<tr><td colspan='7' class='r'>GST</td><td class='r'>{paise_inr(int(tax.get('gst_paise') or snap.get('gst_paise') or 0))}</td></tr>"
+    invoice_no = str(inv.get("invoice_number") or snap.get("invoice_number") or "")
+    invoice_date = str(snap.get("invoice_date") or str(inv.get("created_at") or "")[:10])
+    booking_ref = str(snap.get("booking_number") or snap.get("booking_id") or "")
+    payment_status = str(snap.get("payment_status") or inv.get("payment_status") or "PAID")
+    duration = _invoice_duration_minutes(db, inv, snap)
+    booking_mode = _invoice_booking_mode(db, inv, snap)
+    pujari_name = _invoice_pujari_name(db, inv, snap)
+
+    row_html = _render_invoice_line_rows(lines)
+
+    totals: list[tuple[str, str]] = [
+        ("Subtotal", paise_inr(int(snap.get("subtotal_paise") or 0))),
+    ]
     disc = int(snap.get("discount_paise") or 0)
-    disc_row = (
-        f"<tr><td colspan='7' class='r'>Discount / coupon</td><td class='r'>-{paise_inr(disc)}</td></tr>" if disc else ""
+    if disc:
+        totals.append(("Discount", f"-{paise_inr(disc)}"))
+    if int(tax.get("cgst_paise") or 0):
+        totals.append(("CGST", paise_inr(int(tax["cgst_paise"]))))
+        totals.append(("SGST", paise_inr(int(tax["sgst_paise"]))))
+    elif int(tax.get("igst_paise") or 0):
+        totals.append(("IGST", paise_inr(int(tax["igst_paise"]))))
+    elif int(tax.get("gst_paise") or snap.get("gst_paise") or 0):
+        totals.append(("GST", paise_inr(int(tax.get("gst_paise") or snap.get("gst_paise") or 0))))
+    total_paise = int(snap.get("total_paise") or inv.get("total_paise") or 0)
+    totals.append(("TOTAL", paise_inr(total_paise)))
+    totals_html = "".join(
+        f"<tr class='{'grand' if label == 'TOTAL' else ''}'><td class='label'>{html.escape(label)}</td>"
+        f"<td class='value'>{html.escape(value)}</td></tr>"
+        for label, value in totals
     )
-    signatory = " ".join(
-        x for x in [company.get("signatory_name"), company.get("signatory_designation")] if x
-    )
-    legal = html.escape(str(company.get("legal_name") or company.get("name") or "BSeva"))
-    duration = snap.get("duration_minutes")
-    if duration is None:
-        bid = inv.get("booking_id") or snap.get("booking_id")
-        if bid:
-            booking_row = db.execute(
-                text(
-                    """
-                    SELECT s.duration_minutes
-                    FROM bookings b
-                    JOIN services s ON s.id = b.service_id
-                    WHERE CAST(b.id AS text) = :id
-                    """
-                ),
-                {"id": str(bid)},
-            ).first()
-            if booking_row and booking_row[0] is not None:
-                duration = booking_row[0]
-    duration_line = (
-        f"<br/><strong>Puja Duration:</strong> {html.escape(format_duration_minutes(duration))}"
-        if duration is not None
+
+    bill_lines = [
+        f"<strong>{html.escape(str(bill.get('name') or 'Customer'))}</strong>",
+        html.escape(str(bill.get("address") or "—")),
+        html.escape(" ".join(x for x in [bill.get("city"), bill.get("state"), bill.get("pincode")] if x)),
+    ]
+    if bill.get("phone"):
+        bill_lines.append(f"Mobile: {html.escape(str(bill['phone']))}")
+    if bill.get("email"):
+        bill_lines.append(f"Email: {html.escape(str(bill['email']))}")
+    if bill.get("gstin"):
+        bill_lines.append(f"GSTIN: {html.escape(str(bill['gstin']))}")
+
+    booking_lines = [
+        html.escape(str(snap.get("service_name") or "Puja")),
+        f"Package: {html.escape(str(snap.get('package_type') or '—').title())}",
+        f"Booking ID: {html.escape(booking_ref)}",
+        f"Service Date: {html.escape(str(snap.get('booking_date') or ''))}",
+        f"Service Time: {html.escape(str(snap.get('start_time') or '')[:5])}",
+    ]
+    if duration is not None:
+        booking_lines.append(f"Duration: {html.escape(format_duration_minutes(duration))}")
+    if booking_mode:
+        booking_lines.append(f"Mode: {html.escape(booking_mode)}")
+    if pujari_name:
+        booking_lines.append(f"Pujari: {html.escape(pujari_name)}")
+
+    paid_badge = (
+        '<div class="bseva-doc-paid">PAID</div>'
+        if payment_status.upper() == "PAID"
         else ""
     )
-    extra_css = f"""
-.muted {{ color: #555; line-height: 1.45; }}
-.issuer {{ display: flex; justify-content: space-between; gap: 16px; }}
-table {{ width: 100%; border-collapse: collapse; margin-top: 12px; }}
-th, td {{ border: 1px solid #d7dde8; padding: 6px 8px; text-align: left; }}
-th {{ background: {NAVY}; color: #fff; font-weight: 600; font-size: 11px; }}
-.r {{ text-align: right; white-space: nowrap; }}
-.total td {{ font-weight: 700; background: #f7f8fb; }}
-.grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }}
-.box {{ border: 1px solid #d7dde8; padding: 10px 12px; }}
-.box h3 {{ margin: 0 0 6px; font-size: 11px; letter-spacing: .08em; color: {ORANGE}; }}
-.invoice-notes {{ margin-top: 18px; font-size: 11px; color: #444; }}
-"""
-    invoice_no = str(inv.get("invoice_number") or snap.get("invoice_number") or "")
+    signatory = " ".join(x for x in [company.get("signatory_name"), company.get("signatory_designation")] if x)
+    legal = html.escape(str(company.get("legal_name") or company.get("name") or "BSeva"))
+
+    toolbar = (
+        '<div class="noprint bseva-doc-toolbar">'
+        '<button type="button" onclick="window.print()">Print / Save PDF</button>'
+        "</div>"
+    )
     body = f"""
-  <p class="noprint"><button onclick="window.print()">Print / Save PDF</button></p>
-  <div class="issuer">
-    <div class="muted">{legal}<br/>
-      {html.escape(str(company.get('address') or ''))}<br/>
-      {html.escape(str(company.get('state') or ''))} {html.escape(str(company.get('pincode') or ''))}<br/>
-      Email: {html.escape(str(company.get('email') or ''))}
-      {" | Phone: " + html.escape(company['phone']) if company.get('phone') else ""}<br/>
-      Website: {html.escape(str(company.get('website') or ''))}<br/>
-      {("GSTIN: " + html.escape(gstin) + "<br/>") if gstin else ""}
-      {("PAN: " + html.escape(company.get('pan') or '') + "<br/>") if company.get('pan') else ""}
-    </div>
-    <div class="muted" style="text-align:right">
-        <strong>Invoice No.</strong> {html.escape(invoice_no)}<br/>
-        <strong>Invoice Date</strong> {html.escape(str(snap.get('invoice_date') or str(inv.get('created_at') or '')[:10]))}<br/>
-        <strong>Booking ID</strong> {html.escape(str(snap.get('booking_number') or snap.get('booking_id') or ''))}<br/>
-        <strong>Payment ID</strong> {html.escape(str(snap.get('payment_id') or '—'))}<br/>
-        <strong>Payment Date</strong> {html.escape(str(snap.get('payment_date') or '')[:19])}<br/>
-        <strong>Payment Method</strong> {html.escape(str(snap.get('payment_method') or '—'))}<br/>
-        <strong>Status</strong> {html.escape(str(snap.get('payment_status') or inv.get('payment_status') or 'PAID'))}
-    </div>
+  {render_document_header(
+      company=company,
+      document_title=title,
+      meta_rows=[
+          ("Invoice No", invoice_no),
+          ("Invoice Date", invoice_date),
+          ("Booking ID", booking_ref),
+          ("Payment Status", payment_status),
+      ],
+  )}
+  <div class="bseva-doc-grid">
+    {render_info_box("BILL TO", "<br/>".join(x for x in bill_lines if x))}
+    {render_info_box("BOOKING DETAILS", "<br/>".join(x for x in booking_lines if x))}
   </div>
-  <div class="grid">
-    <div class="box">
-      <h3>BILL TO</h3>
-      <div class="muted">
-        <strong>{html.escape(str(bill.get('name') or 'Customer'))}</strong><br/>
-        {html.escape(str(bill.get('address') or '—'))}<br/>
-        {html.escape(" ".join(x for x in [bill.get('city'), bill.get('state'), bill.get('pincode')] if x))}<br/>
-        {("Mobile: " + html.escape(bill.get('phone') or '') + "<br/>") if bill.get('phone') else ""}
-        {("Email: " + html.escape(bill.get('email') or '') + "<br/>") if bill.get('email') else ""}
-        {("GSTIN: " + html.escape(bill.get('gstin') or '')) if bill.get('gstin') else ""}
-      </div>
-    </div>
-    <div class="box">
-      <h3>SERVICE</h3>
-      <div class="muted">
-        {html.escape(str(snap.get('service_name') or 'Puja'))}<br/>
-        Package: {html.escape(str(snap.get('package_type') or '—'))}<br/>
-        Service date: {html.escape(str(snap.get('booking_date') or ''))}
-        {html.escape(str(snap.get('start_time') or '')[:5])}
-        {duration_line}
-      </div>
-    </div>
+  <div class="bseva-doc-table-wrap">
+    <table class="bseva-doc-table">
+      <thead>
+        <tr>
+          <th class="num">#</th><th class="desc">Description</th><th class="code">HSN/SAC</th>
+          <th class="qty">Qty</th><th class="r">Rate</th><th class="r">Amount</th>
+        </tr>
+      </thead>
+      <tbody>{''.join(row_html)}</tbody>
+    </table>
   </div>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th><th>Description</th><th>HSN/SAC</th><th>Qty</th>
-        <th class="r">Rate</th><th class="r">Taxable Amount</th><th class="r">GST</th><th class="r">Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      {''.join(rows)}
-      <tr><td colspan="7" class="r">Subtotal</td><td class="r">{paise_inr(int(snap.get('subtotal_paise') or 0))}</td></tr>
-      {disc_row}
-      <tr><td colspan="7" class="r">Taxable Amount</td><td class="r">{paise_inr(int(snap.get('taxable_paise') or snap.get('subtotal_paise') or 0))}</td></tr>
-      {tax_rows}
-      <tr class="total"><td colspan="7" class="r">Grand Total</td><td class="r">{paise_inr(int(snap.get('total_paise') or inv.get('total_paise') or 0))}</td></tr>
-    </tbody>
-  </table>
-  <p><strong>Total Invoice Amount in Words:</strong> {html.escape(str(snap.get('amount_in_words') or amount_in_words(inv.get('total_paise'))))}</p>
-  <p><strong>Payment Status: {html.escape(str(snap.get('payment_status') or 'PAID'))}</strong></p>
-  <div class="invoice-notes">
+  {_render_mobile_line_items(lines)}
+  <div class="bseva-doc-totals-wrap">
+    <div class="bseva-doc-totals"><table>{totals_html}</table></div>
+  </div>
+  <p class="bseva-doc-words"><strong>Total Invoice Amount in Words:</strong> {html.escape(str(snap.get('amount_in_words') or amount_in_words(total_paise)))}</p>
+  {paid_badge}
+  <div class="bseva-doc-payment">
+    <h3>Payment Information</h3>
+    <div><strong>Payment Status:</strong> {html.escape(payment_status)}</div>
+    <div><strong>Payment Method:</strong> {html.escape(str(snap.get('payment_method') or '—'))}</div>
+    <div><strong>Transaction / Reference ID:</strong> {html.escape(str(snap.get('payment_id') or '—'))}</div>
+    <div><strong>Payment Date:</strong> {html.escape(format_payment_date(str(snap.get('payment_date') or '')))}</div>
+  </div>
+  <div class="bseva-doc-notes">
     <p>{html.escape(str(snap.get('notes') or company.get('notes') or 'Thank you for choosing BSeva.'))}</p>
-    <p>This is a computer-generated invoice and does not require a physical signature.</p>
     {f"<p>For {legal}<br/>{html.escape(signatory)}</p>" if signatory else ""}
     <p><strong>Terms &amp; Conditions</strong><br/>{html.escape(str(snap.get('terms') or company.get('terms') or ''))}</p>
   </div>
+  {render_document_footer(company, disclaimer="This is a computer-generated invoice and does not require a physical signature.")}
 """
     return wrap_html_document(
         document_title=title,
@@ -720,7 +809,7 @@ th {{ background: {NAVY}; color: #fff; font-weight: 600; font-size: 11px; }}
         page_title=invoice_no or title,
         reference=invoice_no,
         company=company,
-        extra_css=extra_css,
+        toolbar_html=toolbar,
     )
 
 

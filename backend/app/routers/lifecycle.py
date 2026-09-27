@@ -157,6 +157,75 @@ def booking_preparation(booking_id: str, user=Depends(current_user), db: Session
     return get_booking_preparation(db, str(row["id"]))
 
 
+def _load_booking_for_documents(db: Session, booking_id: str, user: dict) -> dict:
+    row = db.execute(
+        text(
+            """
+            SELECT b.*, cu.name AS customer_name, cu.phone AS customer_phone, cu.email AS customer_email,
+                   pu.name AS pujari_name, pu.phone AS pujari_phone, s.name AS service_name,
+                   s.duration_minutes
+            FROM bookings b
+            JOIN users cu ON cu.id = b.customer_id
+            LEFT JOIN users pu ON pu.id = b.pujari_id
+            JOIN services s ON s.id = b.service_id
+            WHERE b.id = CAST(:id AS uuid)
+              AND COALESCE(b.booking_kind, 'puja') = 'puja'
+            """
+        ),
+        {"id": booking_id},
+    ).mappings().first()
+    if not row:
+        row = db.execute(
+            text(
+                """
+                SELECT b.*, cu.name AS customer_name, cu.phone AS customer_phone, cu.email AS customer_email,
+                       pu.name AS pujari_name, pu.phone AS pujari_phone, s.name AS service_name,
+                       s.duration_minutes
+                FROM bookings b
+                JOIN users cu ON cu.id = b.customer_id
+                LEFT JOIN users pu ON pu.id = b.pujari_id
+                JOIN services s ON s.id = b.service_id
+                WHERE b.booking_number = :num
+                  AND COALESCE(b.booking_kind, 'puja') = 'puja'
+                """
+            ),
+            {"num": booking_id},
+        ).mappings().first()
+    if not row:
+        raise HTTPException(404, "Booking not found")
+    try:
+        return booking_for_role(db, dict(row), user)
+    except PermissionError:
+        raise HTTPException(403, "Not allowed")
+
+
+@router.get("/bookings/{booking_id}/receipt/html")
+def booking_receipt_html(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    from fastapi.responses import HTMLResponse
+    from app.booking_receipt_docs import render_booking_receipt_html
+
+    booking = _load_booking_for_documents(db, booking_id, user)
+    return HTMLResponse(render_booking_receipt_html(db, booking))
+
+
+@router.get("/bookings/{booking_id}/receipt/pdf")
+def booking_receipt_pdf(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    from fastapi.responses import Response
+    from app.booking_receipt_docs import receipt_pdf_filename, render_booking_receipt_pdf
+
+    booking = _load_booking_for_documents(db, booking_id, user)
+    try:
+        data = render_booking_receipt_pdf(booking, db)
+    except Exception as e:
+        raise HTTPException(500, f"Could not generate receipt PDF: {e}") from e
+    name = receipt_pdf_filename(str(booking.get("booking_number") or booking_id))
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
 @router.post("/bookings/{booking_id}/accept")
 def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
     if not body.terms_accepted:

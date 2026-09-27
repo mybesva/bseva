@@ -2,12 +2,21 @@ import { CUSTOMER_SUPPORT_CATS, PUJARI_SUPPORT_CATS, isPujariRole } from "@bseva
 import { supportSchema } from "@bseva/validation";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+import { ScrollView, View } from "react-native";
+import { SelectField } from "@/components/SelectField";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
+import { AppText, Card, EmptyState, ErrorBanner, Field, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
+import { showSuccessAlert } from "@/utils/actionFeedback";
 import { useI18n } from "@/providers/I18nProvider";
+import { userMessage } from "@/utils/userMessage";
+
+function categoryLabel(t: (key: string) => string, id: string) {
+  const key = `web.support.category.${id}`;
+  const translated = t(key);
+  return translated === key ? id : translated;
+}
 
 function TicketCard({
   ticket,
@@ -29,12 +38,14 @@ function TicketCard({
   const detailId = detail.data?.id ? String(detail.data.id) : "";
   const showDetail = open && detail.data && (!detailId || detailId === String(ticket.id));
   return (
-    <Card>
-      <AppText variant="h3">{ticket.subject}</AppText>
+    <Card style={{ gap: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <AppText variant="h3" style={{ flex: 1 }}>{ticket.subject}</AppText>
+        {ticket.status ? <StatusBadge status={String(ticket.status)} /> : null}
+      </View>
       <AppText variant="small">{String(ticket.ticket_number || ticket.category || "")}</AppText>
-      {ticket.status ? <StatusBadge status={String(ticket.status)} /> : null}
       <PrimaryButton
-        title={open ? t("common.back") : t("common.viewAll")}
+        title={open ? t("common.back") : t("common.viewDetails")}
         variant="outline"
         onPress={() => {
           setReply("");
@@ -105,27 +116,28 @@ export default function SupportScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
         <AppText variant="small">{user?.name} · {user?.phone || user?.email}</AppText>
-        <AppText variant="small">{t("mobile.category")}</AppText>
-        <ChoiceChips
-          options={cats.map((c) => ({ id: c, label: t(`web.support.category.${c}`) === `web.support.category.${c}` ? c : t(`web.support.category.${c}`) }))}
+        <SelectField
+          label={t("support.category")}
+          placeholder={t("support.category")}
           value={category}
-          onChange={(v) => setCategory(String(v))}
+          options={cats.map((c) => ({ id: c, label: categoryLabel(t, c) }))}
+          onChange={setCategory}
         />
         {bookings.length > 0 ? (
-          <>
-            <AppText variant="small">{t("web.support.relatedBooking")}</AppText>
-            <ChoiceChips
-              options={[
-                { id: "", label: t("web.support.noBooking") },
-                ...bookings.slice(0, 8).map((b) => ({
-                  id: String(b.id),
-                  label: String(b.booking_number || b.service_name || b.id),
-                })),
-              ]}
-              value={bookingId}
-              onChange={(v) => setBookingId(String(v))}
-            />
-          </>
+          <SelectField
+            label={t("web.support.relatedBooking")}
+            placeholder={t("web.support.noBooking")}
+            value={bookingId}
+            options={[
+              { id: "", label: t("web.support.noBooking") },
+              ...bookings.map((b) => ({
+                id: String(b.id),
+                label: String(b.booking_number || b.id),
+                subtitle: b.service_name ? String(b.service_name) : undefined,
+              })),
+            ]}
+            onChange={setBookingId}
+          />
         ) : null}
         <Field label={t("mobile.subject")} value={subject} onChangeText={setSubject} />
         <Field label={t("mobile.description")} value={body} onChangeText={setBody} multiline />
@@ -136,7 +148,8 @@ export default function SupportScreen() {
             const parsed = supportSchema.safeParse({ subject, body });
             if (!parsed.success) {
               const field = String(parsed.error.issues[0]?.path?.[0] || "");
-              setError(field === "subject" ? t("validation.subject") : t("validation.issue"));
+              const issueKey = parsed.error.issues[0]?.message;
+              setError(userMessage(t, issueKey, field === "subject" ? t("validation.subject") : t("validation.issue")) || (field === "subject" ? t("validation.subject") : t("validation.issue")));
               return;
             }
             setBusy(true);
@@ -153,6 +166,7 @@ export default function SupportScreen() {
               setBody("");
               setBookingId("");
               await q.refetch();
+              showSuccessAlert(t("mobile.ticketSubmitted"));
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.failed"));
             } finally {
@@ -160,6 +174,7 @@ export default function SupportScreen() {
             }
           }}
         />
+        {(q.data || []).length > 0 ? <AppText variant="h3">{t("web.support.yourTickets")}</AppText> : null}
         {!q.isLoading && (q.data || []).length === 0 ? <EmptyState title={t("mobile.noTickets")} /> : null}
         {(q.data || []).map((ticket) => (
           <TicketCard

@@ -1,30 +1,100 @@
-import { matchesPujariJobSegment, PUJARI_JOB_SEGMENTS, rupees, type PujariJobSegment } from "@bseva/config";
+import { isExpiredBooking, matchesPujariJobSegment, type PujariJobSegment } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { PujaTitle } from "@/components/PujaTitle";
-import { AppText, Card, ChoiceChips, EmptyState, Field, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
+import { PujariBookingsFilter, type PujariStatusFilter } from "@/components/PujariBookingsFilter";
+import { PujariDashboardBookingCard } from "@/components/PujariDashboardBookingCard";
+import { AppText, EmptyState, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
-import { formatDisplaySlot } from "@/utils/formatDate";
+import { compareBookingsBySchedule } from "@/utils/pujariBookings";
 import { useI18n } from "@/providers/I18nProvider";
+
+const STATUS_FILTERS: PujariStatusFilter[] = [
+  "all",
+  "pending",
+  "confirmed",
+  "in_progress",
+  "completed",
+  "cancelled",
+  "expired",
+];
+
+function paramOne(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] || "";
+  return value || "";
+}
+
+function parseSegment(value: string): PujariJobSegment {
+  const segments: PujariJobSegment[] = ["all", "upcoming", "completed", "cancelled", "expired"];
+  return segments.includes(value as PujariJobSegment) ? (value as PujariJobSegment) : "all";
+}
+
+function parseStatus(value: string): PujariStatusFilter {
+  return STATUS_FILTERS.includes(value as PujariStatusFilter) ? (value as PujariStatusFilter) : "all";
+}
 
 export default function PujariJobs() {
   const { colors } = useAppTheme();
-  const router = useRouter();
   const { t } = useI18n();
-  const [segment, setSegment] = useState<PujariJobSegment>("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [qtext, setQtext] = useState("");
+  const params = useLocalSearchParams<{
+    tab?: string | string[];
+    segment?: string | string[];
+    status?: string | string[];
+    q?: string | string[];
+    from?: string | string[];
+    to?: string | string[];
+  }>();
+
+  const [segment, setSegment] = useState<PujariJobSegment>(() =>
+    parseSegment(paramOne(params.tab) || paramOne(params.segment) || "all"),
+  );
+  const [status, setStatus] = useState<PujariStatusFilter>(() => parseStatus(paramOne(params.status) || "all"));
+  const [from, setFrom] = useState(() => paramOne(params.from));
+  const [to, setTo] = useState(() => paramOne(params.to));
+  const [qtext, setQtext] = useState(() => paramOne(params.q));
+
+  const syncFromParams = useCallback(() => {
+    setSegment(parseSegment(paramOne(params.tab) || paramOne(params.segment) || "all"));
+    setStatus(parseStatus(paramOne(params.status) || "all"));
+    setFrom(paramOne(params.from));
+    setTo(paramOne(params.to));
+    setQtext(paramOne(params.q));
+  }, [params.tab, params.segment, params.status, params.from, params.to, params.q]);
+
+  useEffect(() => {
+    syncFromParams();
+  }, [syncFromParams]);
+
   const q = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
+
+  useFocusEffect(
+    useCallback(() => {
+      syncFromParams();
+      void q.refetch();
+    }, [syncFromParams, q.refetch]),
+  );
+
+  const now = useMemo(() => new Date(), [q.dataUpdatedAt]);
+
   const rows = useMemo(() => {
     const needle = qtext.trim().toLowerCase();
     return [...(q.data || [])]
-      .filter((b) => matchesPujariJobSegment(segment, b.status, b.booking_date, b.start_time))
+      .filter((b) => matchesPujariJobSegment(segment, b.status, b.booking_date, b.start_time, now))
+      .filter((b) => {
+        if (status === "all") return true;
+        if (status === "expired") return isExpiredBooking(b.status, b.booking_date, b.start_time, now);
+        if (status === "pending") {
+          return (
+            ["pending", "pending_acceptance"].includes(String(b.status || "")) &&
+            !isExpiredBooking(b.status, b.booking_date, b.start_time, now)
+          );
+        }
+        return String(b.status || "") === status;
+      })
       .filter((b) => {
         if (!from && !to) return true;
         const d = String(b.booking_date || "").slice(0, 10);
@@ -40,43 +110,67 @@ export default function PujariJobs() {
           .some((x) => x.includes(needle));
       })
       .sort((a, b) => {
-        const da = `${a.booking_date || ""}T${a.start_time || "00:00:00"}`;
-        const db = `${b.booking_date || ""}T${b.start_time || "00:00:00"}`;
-        return da.localeCompare(db);
+        if (segment === "upcoming" || status === "pending" || status === "confirmed" || status === "in_progress") {
+          return compareBookingsBySchedule(a, b, "asc");
+        }
+        return compareBookingsBySchedule(a, b, "desc");
       });
-  }, [q.data, segment, from, to, qtext]);
+  }, [q.data, segment, status, from, to, qtext, now]);
+
+  const hasActiveFilters =
+    segment !== "all" || status !== "all" || !!from || !!to || !!qtext.trim();
+
+  function clearFilters() {
+    setSegment("all");
+    setStatus("all");
+    setFrom("");
+    setTo("");
+    setQtext("");
+  }
+
+  function handleFromChange(iso: string) {
+    setFrom(iso);
+    if (to && iso && iso > to) setTo("");
+  }
+
+  function handleToChange(iso: string) {
+    if (from && iso && iso < from) return;
+    setTo(iso);
+  }
+
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <AppText variant="h2">{t("mobile.jobs")}</AppText>
+        <AppText variant="h2">{t("mobile.bookings")}</AppText>
+        <AppText variant="small" color={colors.mutedForeground}>
+          {t("mobile.bookingsHelp")}
+        </AppText>
       </SafeAreaView>
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 10 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, gap: 12, paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
       >
-        <ChoiceChips
-          options={PUJARI_JOB_SEGMENTS.map((id) => ({ id, label: id[0].toUpperCase() + id.slice(1) }))}
-          value={segment}
-          onChange={(v) => setSegment(String(v) as PujariJobSegment)}
+        <PujariBookingsFilter
+          segment={segment}
+          status={status}
+          from={from}
+          to={to}
+          qtext={qtext}
+          count={rows.length}
+          loading={q.isLoading}
+          hasActiveFilters={hasActiveFilters}
+          onSegmentChange={setSegment}
+          onStatusChange={setStatus}
+          onFromChange={handleFromChange}
+          onToChange={handleToChange}
+          onQtextChange={setQtext}
+          onClear={clearFilters}
         />
-        <Field label="From (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
-        <Field label="To (YYYY-MM-DD)" value={to} onChangeText={setTo} />
-        <Field label="Search" value={qtext} onChangeText={setQtext} />
         {q.isLoading ? <LoadingBlock /> : null}
-        {rows.length === 0 ? <EmptyState title={t("mobile.noJobs")} /> : null}
+        {!q.isLoading && rows.length === 0 ? <EmptyState title={t("mobile.noBookingsList")} /> : null}
         {rows.map((b: Booking) => (
-          <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
-            <Card>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
-                <StatusBadge status={b.status} />
-              </View>
-              <AppText variant="small" color={colors.mutedForeground}>
-                {b.customer_name} · {formatDisplaySlot(b.booking_date, b.start_time)}
-              </AppText>
-              <AppText>{rupees(b.pujari_payable_paise || 0)}</AppText>
-            </Card>
-          </Pressable>
+          <PujariDashboardBookingCard key={b.id} booking={b} />
         ))}
       </ScrollView>
     </Screen>

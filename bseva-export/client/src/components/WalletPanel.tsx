@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, rupees } from "@/lib/api";
@@ -50,7 +50,6 @@ export default function WalletPanel({
           <Wallet size={20} className="text-primary" />
           {variant === "priest" ? t("web.wallet.pujari") : t("web.wallet.customer")}
         </CardTitle>
-        {!compact && <CardDescription>{t("web.wallet.liveBalance")}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

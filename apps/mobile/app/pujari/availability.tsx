@@ -1,12 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { ScrollView, Switch, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, ScrollView, Switch, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { DateCalendar } from "@/components/DateCalendar";
-import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
+import { formatDisplayDate } from "@/utils/formatDate";
+import { apiErrorMessage } from "@/utils/userMessage";
+
+function toIsoDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export function PujariAvailabilityScreen({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
@@ -14,14 +23,26 @@ export function PujariAvailabilityScreen({ embedded = false }: { embedded?: bool
   const q = useQuery({ queryKey: ["availability"], queryFn: () => apiClient.availabilityBlocks() });
   const [available, setAvailable] = useState(true);
   const [radius, setRadius] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => toIsoDate(new Date()));
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+
+  const blocks = q.data || [];
+  const blockedDates = useMemo(() => blocks.map((b) => b.blocked_date), [blocks]);
+
   useEffect(() => {
     if (!profile.data) return;
     setAvailable(!!profile.data.available);
     setRadius(profile.data.service_radius_km != null ? String(profile.data.service_radius_km) : "");
   }, [profile.data]);
+
+  function handleDateChange(iso: string) {
+    setDate(iso);
+    const existing = blocks.find((b) => b.blocked_date === iso);
+    setReason(existing?.reason || "");
+  }
+
   return (
     <Screen>
       {embedded ? (
@@ -32,50 +53,77 @@ export function PujariAvailabilityScreen({ embedded = false }: { embedded?: bool
         <ScreenHeader title={t("mobile.availability")} back />
       )}
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
-        <ErrorBanner message={error} />
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <AppText>{t("mobile.availableBookings")}</AppText>
           <Switch value={available} onValueChange={setAvailable} />
         </View>
         <Field label={t("mobile.serviceRadius")} value={radius} onChangeText={setRadius} keyboardType="number-pad" />
         <PrimaryButton
-          title={t("mobile.saveAvailability")}
+          title={saving ? t("mobile.saving") : t("mobile.saveAvailability")}
+          disabled={saving}
           onPress={async () => {
-            setError(null);
+            setSaving(true);
             try {
               await apiClient.patchPujariProfile({ available, service_radius_km: radius ? Number(radius) : null });
               await profile.refetch();
+              Alert.alert(t("mobile.availabilitySaved"));
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : t("mobile.failed"));
+              Alert.alert(t("mobile.failed"), apiErrorMessage(t, e, "mobile.failed"));
+            } finally {
+              setSaving(false);
             }
           }}
         />
         <AppText variant="h3">{t("mobile.blockedDates")}</AppText>
-        <DateCalendar value={date || new Date().toISOString().slice(0, 10)} onChange={setDate} leadHours={1} />
+        <DateCalendar
+          value={date}
+          onChange={handleDateChange}
+          blockedDates={blockedDates}
+          leadHours={1}
+        />
         <Field label={t("mobile.reason")} value={reason} onChangeText={setReason} />
         <PrimaryButton
-          title={t("mobile.addBlock")}
+          title={blocking ? t("web.pujariAvailability.blocking") : t("mobile.addBlock")}
+          disabled={blocking}
           onPress={async () => {
-            setError(null);
+            if (!date) {
+              Alert.alert(t("mobile.failed"), t("web.pujariAvailability.futureOnly"));
+              return;
+            }
+            setBlocking(true);
             try {
-              await apiClient.addAvailabilityBlock({ blocked_date: date, reason });
-              setDate("");
+              await apiClient.addAvailabilityBlock({
+                blocked_date: date,
+                reason: reason.trim() || null,
+              });
               await q.refetch();
+              Alert.alert(
+                t("web.pujariAvailability.blocked"),
+                t("mobile.calendarBlocked", { date: formatDisplayDate(date) }),
+              );
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : t("mobile.failed"));
+              Alert.alert(t("mobile.failed"), apiErrorMessage(t, e, "mobile.failed"));
+            } finally {
+              setBlocking(false);
             }
           }}
         />
-        {(q.data || []).map((b) => (
+        {blocks.map((b) => (
           <Card key={b.id}>
-            <AppText variant="h3">{b.blocked_date}</AppText>
-            <AppText variant="small">{b.reason}</AppText>
+            <AppText variant="h3">{formatDisplayDate(b.blocked_date)}</AppText>
+            <AppText variant="small">{b.reason || t("web.pujariAvailability.noReason")}</AppText>
             <PrimaryButton
               title={t("mobile.remove")}
               variant="outline"
               onPress={async () => {
-                await apiClient.deleteAvailabilityBlock(b.id);
-                await q.refetch();
+                try {
+                  await apiClient.deleteAvailabilityBlock(b.id);
+                  await q.refetch();
+                  if (date === b.blocked_date) setReason("");
+                  Alert.alert(t("web.pujariAvailability.unblocked"), t("mobile.calendarUnblocked"));
+                } catch (e: unknown) {
+                  Alert.alert(t("mobile.failed"), apiErrorMessage(t, e, "mobile.failed"));
+                }
               }}
             />
           </Card>

@@ -12,6 +12,16 @@ export function parseDisplayDateToIso(input: string): string | null {
   return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
 }
 
+/** Human-readable date for filter fields, e.g. 30 Sep 2026. API values stay yyyy-MM-dd. */
+export function formatHumanDate(value: string | null | undefined, fallback = ""): string {
+  if (!value) return fallback;
+  const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return fallback;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (Number.isNaN(d.getTime())) return fallback;
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function formatDisplayDate(value: string | Date | null | undefined, fallback = "—"): string {
   if (value == null || value === "") return fallback;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {

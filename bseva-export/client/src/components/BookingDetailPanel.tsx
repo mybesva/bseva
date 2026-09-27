@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { api, downloadInvoicePdf, rupees } from "@/lib/api";
+import { api, downloadBookingReceiptPdf, downloadInvoicePdf, openBookingReceiptHtml, rupees } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
@@ -35,7 +35,6 @@ import { mapsDirectionsUrl, mapsSearchUrl } from "@/lib/googleMaps";
 import { pujariTeamAcceptNotice, pujariTeamPaymentNotice, pujarisIncludedShort } from "@/lib/pujariTeam";
 import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
 import { shareSafely } from "@/lib/browserActions";
-import { downloadBSevaDocument, fieldsToDocumentBody } from "@/lib/bsevaDocument";
 
 export type BookingDetail = {
   id: string;
@@ -951,21 +950,24 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
-              downloadBSevaDocument(`BSeva-${booking.booking_number || booking.id}.html`, {
-                documentTitle: t("web.booking.detailsReceipt"),
-                reference: booking.booking_number || String(booking.id),
-                bodyHtml: fieldsToDocumentBody([
-                  [t("booking.id"), String(booking.booking_number || booking.id)],
-                  [t("booking.service"), booking.service_name || "—"],
-                  [t("common.total"), rupees(total)],
-                ]),
-              });
-            }}
+            onClick={() =>
+              void downloadBookingReceiptPdf(String(booking.id)).catch((e) =>
+                toast.error(e.message || t("web.booking.loadFailed")),
+              )
+            }
           >
             <Download className="h-4 w-4 mr-2" /> {t("common.download")}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void openBookingReceiptHtml(String(booking.id)).catch((e) =>
+                toast.error(e.message || t("web.booking.loadFailed")),
+              )
+            }
+          >
             <Printer className="h-4 w-4 mr-2" /> {t("common.print")}
           </Button>
           <Button

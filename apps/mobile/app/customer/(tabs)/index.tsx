@@ -1,10 +1,10 @@
-import { rupees } from "@bseva/config";
 import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { Image, Linking, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { CustomerWelcomeHero, customerGreetingName } from "@/components/CustomerWelcomeHero";
+import { PanchangCard } from "@/components/PanchangCard";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { SeasonalPopup } from "@/components/SeasonalPopup";
 import { AppText, Card, EmptyState, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
@@ -21,12 +21,8 @@ export default function CustomerHome() {
   const { t, lang } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
-  const calendar = "lunar";
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   const services = useQuery({ queryKey: ["services", lang], queryFn: () => apiClient.listServices() });
-  const wallet = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
-  const panchang = useQuery({ queryKey: ["panchang", today, calendar], queryFn: () => apiClient.panchang(today, calendar) as Promise<Record<string, unknown>> });
   const recs = useQuery({ queryKey: ["recommendations"], queryFn: () => apiClient.recommendations() });
   const banners = useQuery({
     queryKey: ["promos", "post_login"],
@@ -60,7 +56,6 @@ export default function CustomerHome() {
   );
   const ongoing = (bookings.data || []).filter((b) => b.status === "in_progress");
   const upcoming = (bookings.data || []).filter((b) => ["pending", "pending_acceptance", "confirmed"].includes(String(b.customer_display_status || b.status))).slice(0, 3);
-  const balance = wallet.data?.wallet?.balance_paise ?? wallet.data?.balance_paise ?? 0;
   const recItems = recs.data?.items || (Array.isArray(recs.data) ? recs.data : []);
 
   return (
@@ -74,9 +69,7 @@ export default function CustomerHome() {
             refreshing={bookings.isRefetching || profile.isRefetching || availability.isRefetching}
             onRefresh={() => {
               void bookings.refetch();
-              void wallet.refetch();
               void services.refetch();
-              void panchang.refetch();
               void profile.refetch();
               void availability.refetch();
               void config.refetch();
@@ -88,13 +81,6 @@ export default function CustomerHome() {
           customerName={customerGreetingName(user?.name, t("auth.customer"))}
           publicId={(user as { public_id?: string } | null)?.public_id}
         />
-        <Card>
-          <AppText variant="small">{t("customer.wallet")}</AppText>
-          <AppText variant="h1" color={colors.primary}>
-            {rupees(Number(balance))}
-          </AppText>
-          <PrimaryButton title={t("customer.loadWallet")} onPress={() => router.push("/customer/wallet")} />
-        </Card>
         {hasCoords && availability.data && availability.data.service_available === false ? (
           <Card style={{ gap: 8, borderColor: colors.warning }}>
             <AppText variant="h3">
@@ -141,23 +127,7 @@ export default function CustomerHome() {
             </Card>
           </Pressable>
         ))}
-        <Card>
-          <AppText variant="h3">{t("calendar.panchangam")}</AppText>
-          <AppText variant="small" color={colors.mutedForeground}>{today}</AppText>
-          <AppText style={{ marginTop: 8 }}>
-            {t("calendar.tithi")} {String(panchang.data?.tithi || "—")}
-            {panchang.data?.paksha ? ` (${String(panchang.data.paksha)})` : ""}
-          </AppText>
-          <AppText>
-            {t("calendar.nakshatra")} {String(panchang.data?.nakshatra || "—")}
-          </AppText>
-          <AppText>
-            {t("calendar.lunarMonth")} {String(panchang.data?.lunarMonth || "—")}
-          </AppText>
-          <AppText>
-            {t("calendar.rahuKalam")} {String(panchang.data?.rahukaalam || "—")}
-          </AppText>
-        </Card>
+        <PanchangCard />
         {bookings.isLoading ? <LoadingBlock /> : null}
         {ongoing.length > 0 ? (
           <>

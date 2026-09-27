@@ -1,5 +1,6 @@
 import { dashboardPath, isAdminRole } from "@bseva/config";
 import { errorKeyForCode } from "@bseva/locales";
+import { apiErrorMessage, userMessage } from "@/utils/userMessage";
 import { loginSchema } from "@bseva/validation";
 import { ApiError } from "@bseva/api-client";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -38,7 +39,7 @@ export default function LoginScreen() {
     const parsed = loginSchema.safeParse({ identifier, password });
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message || "auth.checkDetails";
-      setError(t(msg));
+      setError(userMessage(t, msg, t("auth.checkDetails")) || t("auth.checkDetails"));
       return;
     }
     setPending(true);
@@ -53,7 +54,7 @@ export default function LoginScreen() {
     } catch (e: unknown) {
       const code = e instanceof ApiError ? e.code : undefined;
       const key = errorKeyForCode(code);
-      let msg = key ? t(key) : e instanceof Error ? e.message : t("errors.loginFailed");
+      let msg = key ? userMessage(t, key, t("errors.loginFailed")) || t("errors.loginFailed") : apiErrorMessage(t, e, "errors.loginFailed");
       if (__DEV__ && code === "NETWORK") {
         msg = `${msg}\n\nAPI: ${resolveApiBase()}\nStart FastAPI on the host (uvicorn app.main:app --host 0.0.0.0 --port 8000) or set EXPO_PUBLIC_API_URL in apps/mobile/.env.`;
       }

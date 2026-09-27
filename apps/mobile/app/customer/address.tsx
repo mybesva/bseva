@@ -6,6 +6,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
+import { showSuccessAlert } from "@/utils/actionFeedback";
 
 export default function CustomerAddress() {
   const { t } = useI18n();
@@ -73,6 +74,7 @@ export default function CustomerAddress() {
               });
               await q.refetch();
               await qc.invalidateQueries({ queryKey: ["service-availability"] });
+              showSuccessAlert(t("mobile.addressSaved"));
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
             } finally {

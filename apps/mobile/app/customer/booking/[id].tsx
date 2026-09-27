@@ -8,8 +8,9 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, ScrollView, Share, Switch, View } from "react-native";
+import { Alert, Linking, ScrollView, Share, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { LegalAcceptRow } from "@/components/LegalAcceptRow";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
 import { TrackingMap } from "@/components/TrackingMap";
@@ -18,9 +19,24 @@ import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { isPujariTrackingStarted } from "@/services/pujariTracking";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { confirmDestructiveAction, showSuccessAlert } from "@/utils/actionFeedback";
 import { formatDisplaySlot } from "@/utils/formatDate";
 import { openMapsDirections, openMapsSearch } from "@/utils/maps";
 import { useI18n } from "@/providers/I18nProvider";
+
+type BusyAction =
+  | "accept"
+  | "reject"
+  | "pay"
+  | "cancel"
+  | "cancel-series"
+  | "verify-start"
+  | "verify-complete"
+  | "resend-start"
+  | "resend-complete"
+  | "rate"
+  | "general"
+  | null;
 
 type LocationPing = {
   available?: boolean;
@@ -200,7 +216,7 @@ export default function BookingDetail() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [resendWait, setResendWait] = useState(0);
   const [pujariOrigin, setPujariOrigin] = useState<{ lat: number; lng: number } | null>(null);
   const b = q.data as Booking | undefined;
@@ -219,29 +235,89 @@ export default function BookingDetail() {
       .catch(() => undefined);
   }, [pujari]);
 
-  async function run(fn: () => Promise<unknown>) {
-    setBusy(true);
+  const busy = busyAction != null;
+
+  async function refreshBookingData() {
+    await q.refetch();
+    void qc.invalidateQueries({ queryKey: ["bookings"] });
+    void qc.invalidateQueries({ queryKey: ["start-otp"] });
+    void qc.invalidateQueries({ queryKey: ["complete-otp"] });
+    void qc.invalidateQueries({ queryKey: ["booking-loc"] });
+  }
+
+  async function run(action: BusyAction, fn: () => Promise<unknown>, onSuccess?: () => void) {
+    setBusyAction(action);
     setError(null);
     try {
       await fn();
-      await q.refetch();
-      void qc.invalidateQueries({ queryKey: ["bookings"] });
-      void qc.invalidateQueries({ queryKey: ["start-otp"] });
-      void qc.invalidateQueries({ queryKey: ["complete-otp"] });
-      void qc.invalidateQueries({ queryKey: ["booking-loc"] });
+      await refreshBookingData();
+      onSuccess?.();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t("web.booking.actionFailed"));
     } finally {
-      setBusy(false);
+      setBusyAction(null);
+    }
+  }
+
+  async function handleAcceptBooking() {
+    if (!b || busy) return;
+    setBusyAction("accept");
+    setError(null);
+    try {
+      await apiClient.acceptBooking(b.id);
+      await refreshBookingData();
+      showSuccessAlert(t("mobile.bookingAcceptedTitle"), t("mobile.bookingAcceptedMessage"), [
+        { text: t("mobile.viewBooking") },
+        {
+          text: t("mobile.backToList"),
+          onPress: () => router.push(pujari ? "/pujari/jobs" : "/customer/bookings"),
+        },
+      ]);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : t("mobile.acceptBookingFailed"));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  function handleRejectPress() {
+    if (!b || busy) return;
+    confirmDestructiveAction(
+      t("mobile.rejectBookingQuestion"),
+      t("mobile.rejectBookingMessage"),
+      t("mobile.rejectBookingConfirm"),
+      () => void performRejectBooking(),
+      t("common.cancel"),
+    );
+  }
+
+  async function performRejectBooking() {
+    if (!b) return;
+    setBusyAction("reject");
+    setError(null);
+    try {
+      await apiClient.rejectBooking(b.id, rejectReason);
+      await refreshBookingData();
+      showSuccessAlert(t("mobile.bookingRejectedSuccess"), undefined, [
+        {
+          text: t("mobile.backToList"),
+          onPress: () => router.push("/pujari/jobs"),
+        },
+      ]);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : t("mobile.rejectBookingFailed"));
+    } finally {
+      setBusyAction(null);
     }
   }
 
   async function resendOtp(kind: "start" | "complete") {
-    await run(async () => {
+    await run(kind === "start" ? "resend-start" : "resend-complete", async () => {
       try {
         if (kind === "start") await apiClient.requestStartOtp(b!.id);
         else await apiClient.requestCompleteOtp(b!.id);
         setResendWait(60);
+        showSuccessAlert(t("mobile.otpSentSuccess"));
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "";
         const m = msg.match(/(\d+)\s*s/);
@@ -431,6 +507,14 @@ export default function BookingDetail() {
           </Card>
         ) : null}
 
+        {!pujari ? (
+          <PrimaryButton
+            title={t("web.booking.receipt")}
+            variant="outline"
+            onPress={() => router.push(`/customer/receipt/${b.id}`)}
+          />
+        ) : null}
+
         {b.invoice_id ? (
           <PrimaryButton
             title={t("mobile.viewInvoice")}
@@ -440,7 +524,16 @@ export default function BookingDetail() {
         ) : null}
 
         {!pujari && b.payment_status === "pending" ? (
-          <PrimaryButton title={t("mobile.payWallet")} disabled={busy} onPress={() => void run(() => apiClient.payBooking(b.id))} />
+          <PrimaryButton
+            title={busyAction === "pay" ? t("mobile.processing") : t("mobile.payWallet")}
+            loading={busyAction === "pay"}
+            disabled={busy}
+            onPress={() =>
+              void run("pay", () => apiClient.payBooking(b.id), () =>
+                showSuccessAlert(t("mobile.paymentSuccess")),
+              )
+            }
+          />
         ) : null}
 
         {!pujari && ["pending", "pending_acceptance", "confirmed"].includes(b.status) ? (
@@ -449,6 +542,7 @@ export default function BookingDetail() {
             <PrimaryButton
               title={t("booking.cancel")}
               variant="outline"
+              loading={busyAction === "cancel"}
               disabled={busy}
               onPress={() =>
                 void (async () => {
@@ -471,9 +565,12 @@ export default function BookingDetail() {
                         {
                           text: t("booking.cancel"),
                           style: "destructive",
-                          onPress: () => void run(() => apiClient.cancelBooking(b.id, cancelReason.trim())),
+                          onPress: () =>
+                            void run("cancel", () => apiClient.cancelBooking(b.id, cancelReason.trim()), () =>
+                              showSuccessAlert(t("mobile.bookingCancelledSuccess")),
+                            ),
                         },
-                      ]
+                      ],
                     );
                   } catch (e: unknown) {
                     setError(e instanceof Error ? e.message : "Could not preview cancellation");
@@ -485,7 +582,17 @@ export default function BookingDetail() {
         ) : null}
 
         {!pujari && b.recurring_series_id ? (
-          <PrimaryButton title={t("mobile.cancelSeries")} variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.cancelRecurring(String(b.recurring_series_id)))} />
+          <PrimaryButton
+            title={t("mobile.cancelSeries")}
+            variant="ghost"
+            loading={busyAction === "cancel-series"}
+            disabled={busy}
+            onPress={() =>
+              void run("cancel-series", () => apiClient.cancelRecurring(String(b.recurring_series_id)), () =>
+                showSuccessAlert(t("mobile.seriesCancelledSuccess")),
+              )
+            }
+          />
         ) : null}
 
         {!pujari && b.pujari_details_visible && b.pujari_id ? (
@@ -500,9 +607,14 @@ export default function BookingDetail() {
             </AppText>
             <Field label={t("mobile.otp")} value={completeCode} onChangeText={setCompleteCode} keyboardType="number-pad" maxLength={8} />
             <PrimaryButton
-              title={t("mobile.completePuja")}
+              title={busyAction === "verify-complete" ? t("mobile.verifying") : t("mobile.completePuja")}
+              loading={busyAction === "verify-complete"}
               disabled={busy || completeCode.trim().length < 4}
-              onPress={() => void run(() => apiClient.verifyCompleteOtp(b.id, completeCode.trim()))}
+              onPress={() =>
+                void run("verify-complete", () => apiClient.verifyCompleteOtp(b.id, completeCode.trim()), () =>
+                  showSuccessAlert(t("mobile.pujaCompletedSuccess")),
+                )
+              }
             />
           </Card>
         ) : null}
@@ -512,30 +624,63 @@ export default function BookingDetail() {
             <AppText variant="small">{t("mobile.rating")}</AppText>
             <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
             <Field label={t("mobile.comment")} value={comment} onChangeText={setComment} />
-            <PrimaryButton title={t("mobile.submitRating")} disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { stars: Number(stars), comment }))} />
-            <PrimaryButton title={t("mobile.skipRating")} variant="ghost" disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { skip: true }))} />
+            <PrimaryButton
+              title={t("mobile.submitRating")}
+              loading={busyAction === "rate"}
+              disabled={busy}
+              onPress={() =>
+                void run("rate", () => apiClient.rateBooking(b.id, { stars: Number(stars), comment }), () =>
+                  showSuccessAlert(t("mobile.ratingSubmitted")),
+                )
+              }
+            />
+            <PrimaryButton
+              title={t("mobile.skipRating")}
+              variant="ghost"
+              loading={busyAction === "rate"}
+              disabled={busy}
+              onPress={() => void run("rate", () => apiClient.rateBooking(b.id, { skip: true }))}
+            />
           </>
         ) : null}
 
         {pujari && (b.status === "pending_acceptance" || b.pujari_offer_invited || b.pujari_accept_required) && !["confirmed", "in_progress", "completed", "cancelled", "rejected"].includes(b.status) ? (
           <>
-            <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
-              <Switch value={acceptTerms} onValueChange={setAcceptTerms} />
-              <AppText variant="small" style={{ flex: 1 }}>{t("mobile.acceptTerms")}</AppText>
-            </View>
-            <PrimaryButton title={t("mobile.acceptBooking")} disabled={busy || !acceptTerms} onPress={() => void run(() => apiClient.acceptBooking(b.id))} />
+            <LegalAcceptRow accepted={acceptTerms} onAcceptedChange={setAcceptTerms} />
+            <PrimaryButton
+              title={busyAction === "accept" ? t("mobile.accepting") : t("mobile.acceptBooking")}
+              loading={busyAction === "accept"}
+              disabled={busy || !acceptTerms}
+              onPress={() => void handleAcceptBooking()}
+            />
             <Field label={t("mobile.rejectReason")} value={rejectReason} onChangeText={setRejectReason} />
-            <PrimaryButton title={t("mobile.reject")} variant="outline" disabled={busy} onPress={() => void run(() => apiClient.rejectBooking(b.id, rejectReason))} />
+            <PrimaryButton
+              title={busyAction === "reject" ? t("mobile.rejecting") : t("mobile.reject")}
+              variant="outline"
+              loading={busyAction === "reject"}
+              disabled={busy}
+              onPress={handleRejectPress}
+            />
           </>
         ) : null}
 
         {pujari && b.status === "confirmed" ? (
           <>
             <Field label={t("mobile.customerOtp")} value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={8} />
-            <PrimaryButton title={t("mobile.verifyStart")} disabled={busy || otp.trim().length < 4} onPress={() => void run(() => apiClient.verifyStartOtp(b.id, otp.trim()))} />
+            <PrimaryButton
+              title={busyAction === "verify-start" ? t("mobile.verifying") : t("mobile.verifyStart")}
+              loading={busyAction === "verify-start"}
+              disabled={busy || otp.trim().length < 4}
+              onPress={() =>
+                void run("verify-start", () => apiClient.verifyStartOtp(b.id, otp.trim()), () =>
+                  showSuccessAlert(t("mobile.pujaStartedSuccess")),
+                )
+              }
+            />
             <PrimaryButton
               title={resendWait > 0 ? t("otp.cooldown", { seconds: resendWait }) : t("otp.resend")}
               variant="outline"
+              loading={busyAction === "resend-start"}
               disabled={busy || resendWait > 0}
               onPress={() => void resendOtp("start")}
             />
@@ -543,13 +688,23 @@ export default function BookingDetail() {
             <PrimaryButton
               title={t("mobile.cancelServerPolicy")}
               variant="ghost"
+              loading={busyAction === "cancel"}
               disabled={busy}
               onPress={() => {
                 if (cancelReason.trim().length < 5) {
                   setError(t("mobile.cancelReasonOptional"));
                   return;
                 }
-                void run(() => apiClient.cancelBooking(b.id, cancelReason.trim()));
+                confirmDestructiveAction(
+                  t("mobile.cancelBookingQuestion"),
+                  t("mobile.pujariCancelMessage"),
+                  t("booking.cancel"),
+                  () =>
+                    void run("cancel", () => apiClient.cancelBooking(b.id, cancelReason.trim()), () =>
+                      showSuccessAlert(t("mobile.bookingCancelledSuccess")),
+                    ),
+                  t("mobile.keepBooking"),
+                );
               }}
             />
           </>
@@ -563,6 +718,7 @@ export default function BookingDetail() {
             <PrimaryButton
               title={resendWait > 0 ? t("otp.cooldown", { seconds: resendWait }) : t("otp.resend")}
               variant="outline"
+              loading={busyAction === "resend-complete"}
               disabled={busy || resendWait > 0}
               onPress={() => void resendOtp("complete")}
             />
@@ -573,7 +729,16 @@ export default function BookingDetail() {
           <>
             <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
             <Field label={t("mobile.comment")} value={comment} onChangeText={setComment} />
-            <PrimaryButton title={t("mobile.rateCustomer")} disabled={busy} onPress={() => void run(() => apiClient.rateBooking(b.id, { stars: Number(stars), comment }))} />
+            <PrimaryButton
+              title={t("mobile.rateCustomer")}
+              loading={busyAction === "rate"}
+              disabled={busy}
+              onPress={() =>
+                void run("rate", () => apiClient.rateBooking(b.id, { stars: Number(stars), comment }), () =>
+                  showSuccessAlert(t("mobile.ratingSubmitted")),
+                )
+              }
+            />
           </>
         ) : null}
 

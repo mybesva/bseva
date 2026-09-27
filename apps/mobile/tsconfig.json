@@ -5,6 +5,21 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@bseva/config": [
+        "../../packages/config/src/index.ts"
+      ],
+      "@bseva/config/*": [
+        "../../packages/config/src/*"
+      ],
+      "@bseva/locales": [
+        "../../packages/locales/src/index.ts"
+      ],
+      "@bseva/locales/*": [
+        "../../packages/locales/src/*"
+      ],
+      "@bseva/types": [
+        "../../packages/types/src/index.ts"
       ]
     }
   },

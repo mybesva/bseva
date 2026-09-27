@@ -6,6 +6,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
+import { showSuccessAlert } from "@/utils/actionFeedback";
 
 export default function BankScreen() {
   const { t } = useI18n();
@@ -18,6 +19,7 @@ export default function BankScreen() {
   const [accountConfirm, setAccountConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!q.data) return;
     const acct = String(q.data.bank_account_number || "");
@@ -48,7 +50,9 @@ export default function BankScreen() {
           error={fieldErrors.accountConfirm}
         />
         <PrimaryButton
-          title={t("mobile.save")}
+          title={busy ? t("mobile.saving") : t("mobile.save")}
+          loading={busy}
+          disabled={busy}
           onPress={async () => {
             setError(null);
             setFieldErrors({});
@@ -65,11 +69,15 @@ export default function BankScreen() {
               setError(t("web.validation.settlement"));
               return;
             }
+            setBusy(true);
             try {
               await apiClient.patchPujariProfile(settlementPayload(draft));
               await q.refetch();
+              showSuccessAlert(t("mobile.savedSuccessfully"));
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.failed"));
+            } finally {
+              setBusy(false);
             }
           }}
         />

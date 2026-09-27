@@ -342,3 +342,16 @@ export type NavBadges = {
   tooltips?: Record<string, string>;
   [key: string]: unknown;
 };
+
+export type PanchangData = {
+  date: string;
+  calendarType?: string;
+  tithi: string;
+  paksha?: string;
+  nakshatra: string;
+  lunarMonth: string;
+  lunarDay?: number;
+  rahukaalam: string;
+  isPeakDay?: boolean;
+  notes?: string | null;
+};

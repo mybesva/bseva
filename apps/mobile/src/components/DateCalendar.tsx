@@ -23,14 +23,21 @@ export function DateCalendar({
   leadHours = 48,
   minDate,
   showSelectedFooter = true,
+  allowAnyDate = false,
+  blockedDates,
 }: {
   value: string;
   onChange: (iso: string) => void;
   leadHours?: number;
   minDate?: Date;
   showSelectedFooter?: boolean;
+  /** When true, all calendar days are selectable (e.g. Panchangam lookup). */
+  allowAnyDate?: boolean;
+  /** ISO dates (YYYY-MM-DD) shown as blocked on the calendar. */
+  blockedDates?: string[];
 }) {
   const { colors } = useAppTheme();
+  const blockedSet = useMemo(() => new Set(blockedDates || []), [blockedDates]);
   const selected = value ? parseIso(value) : new Date();
   const [cursor, setCursor] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
 
@@ -45,11 +52,11 @@ export function DateCalendar({
       out.push({
         iso: toIsoDate(d),
         day,
-        disabled: isCalendarDayDisabled(d, leadHours, minDate || new Date()),
+        disabled: allowAnyDate ? false : isCalendarDayDisabled(d, leadHours, minDate || new Date()),
       });
     }
     return out;
-  }, [cursor, leadHours, minDate]);
+  }, [allowAnyDate, cursor, leadHours, minDate]);
 
   const label = cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
 
@@ -103,22 +110,35 @@ export function DateCalendar({
         {cells.map((cell, i) => (
           <View key={i} style={{ width: "14.285%", aspectRatio: 1, padding: 2 }}>
             {cell ? (
-              <Pressable
-                disabled={cell.disabled}
-                onPress={() => onChange(cell.iso)}
-                accessibilityRole="button"
-                accessibilityLabel={formatDisplayDate(cell.iso)}
-                style={{
-                  flex: 1,
-                  borderRadius: 8,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: value === cell.iso ? colors.primary : "transparent",
-                  opacity: cell.disabled ? 0.35 : 1,
-                }}
-              >
-                <AppText color={value === cell.iso ? colors.primaryForeground : colors.foreground}>{String(cell.day)}</AppText>
-              </Pressable>
+              (() => {
+                const isBlocked = blockedSet.has(cell.iso);
+                const isSelected = value === cell.iso;
+                return (
+                  <Pressable
+                    disabled={cell.disabled}
+                    onPress={() => onChange(cell.iso)}
+                    accessibilityRole="button"
+                    accessibilityLabel={formatDisplayDate(cell.iso)}
+                    style={{
+                      flex: 1,
+                      borderRadius: 8,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: isBlocked ? "#F4E4C1" : isSelected ? colors.primary : "transparent",
+                      borderWidth: isSelected && isBlocked ? 1 : 0,
+                      borderColor: isSelected && isBlocked ? colors.primary : "transparent",
+                      opacity: cell.disabled ? 0.35 : 1,
+                    }}
+                  >
+                    <AppText
+                      color={isBlocked ? colors.foreground : isSelected ? colors.primaryForeground : colors.foreground}
+                      style={isBlocked ? { textDecorationLine: "line-through", opacity: 0.65 } : undefined}
+                    >
+                      {String(cell.day)}
+                    </AppText>
+                  </Pressable>
+                );
+              })()
             ) : null}
           </View>
         ))}

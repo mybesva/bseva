@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, View } from "react-native";
-import { WebView } from "react-native-webview";
+import { DocumentViewer } from "@/components/DocumentViewer";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { ErrorBanner, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -31,16 +31,7 @@ export default function AdminInvoiceHtml() {
       </View>
       {q.isLoading ? <LoadingBlock /> : null}
       {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : "Failed"} /> : null}
-      {q.data ? (
-        <WebView
-          originWhitelist={["*"]}
-          source={{ html: q.data }}
-          style={{ flex: 1 }}
-          scalesPageToFit
-          setBuiltInZoomControls
-          setDisplayZoomControls
-        />
-      ) : null}
+      {q.data ? <DocumentViewer html={q.data} /> : null}
     </Screen>
   );
 }

@@ -21,6 +21,7 @@ import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryBu
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
+import { showSuccessAlert } from "@/utils/actionFeedback";
 
 type Profile = Record<string, unknown>;
 
@@ -72,6 +73,7 @@ export default function PujariOnboarding() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [payingFee, setPayingFee] = useState(false);
   const [consent, setConsent] = useState(false);
   const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
   const docs = useQuery({ queryKey: ["pujari-docs"], queryFn: () => apiClient.pujariDocuments() });
@@ -144,7 +146,24 @@ export default function PujariOnboarding() {
         <AppText variant="small">{t("mobile.percentComplete", { percent: Number(profile.profile_completion_percentage || 0) })}</AppText>
         <ProfileGaps profile={profile} />
         {String(profile.joining_fee_status) === "pending" ? (
-          <PrimaryButton title={t("mobile.payJoiningFee")} onPress={() => void apiClient.payJoiningFee().then(load).catch((e) => setError(e.message))} />
+          <PrimaryButton
+            title={payingFee ? t("mobile.processing") : t("mobile.payJoiningFee")}
+            loading={payingFee}
+            disabled={payingFee}
+            onPress={async () => {
+              setPayingFee(true);
+              setError(null);
+              try {
+                await apiClient.payJoiningFee();
+                await load();
+                showSuccessAlert(t("mobile.joiningFeePaid"));
+              } catch (e: unknown) {
+                setError(e instanceof Error ? e.message : t("mobile.failed"));
+              } finally {
+                setPayingFee(false);
+              }
+            }}
+          />
         ) : null}
 
         {step === 1 ? (

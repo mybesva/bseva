@@ -5,6 +5,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
+import { apiErrorMessage, userMessage } from "@/utils/userMessage";
 
 export default function ChangePasswordScreen() {
   const { t } = useI18n();
@@ -33,7 +34,7 @@ export default function ChangePasswordScreen() {
               confirm,
             });
             if (!parsed.success) {
-              setError(t("mobile.checkPasswords"));
+              setError(userMessage(t, parsed.error.issues[0]?.message, t("mobile.checkPasswords")) || t("mobile.checkPasswords"));
               setOk(false);
               return;
             }
@@ -46,7 +47,7 @@ export default function ChangePasswordScreen() {
               setNext("");
               setConfirm("");
             } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : t("mobile.failed"));
+              setError(apiErrorMessage(t, e, "mobile.failed"));
             } finally {
               setBusy(false);
             }

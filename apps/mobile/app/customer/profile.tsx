@@ -1,18 +1,44 @@
-import { LANGS } from "@bseva/config";
+import { LANGS, toE164 } from "@bseva/config";
 import { LANG_LABELS, type Lang } from "@bseva/locales";
 import type { AuthUser } from "@bseva/types";
 import { ApiError } from "@bseva/api-client";
+import {
+  parsePhoneParts,
+  splitDisplayName,
+  validatePersonNameParts,
+  validatePhoneNational,
+} from "@bseva/validation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, ScrollView, View, type ImageSourcePropType } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { PhoneWithCountryCode } from "@/components/PhoneWithCountryCode";
 import { MediaPicker, type PickedMedia } from "@/components/MediaPicker";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
-import { fetchCustomerProfilePhotoSource } from "@/services/customerPhoto";
+import { clearCustomerProfilePhotoCache, fetchCustomerProfilePhotoSource } from "@/services/customerPhoto";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { showSuccessAlert } from "@/utils/actionFeedback";
+import { apiErrorMessage, userMessage } from "@/utils/userMessage";
+
+function namePartsFromUser(
+  account: (AuthUser & { first_name?: string | null; middle_name?: string | null; last_name?: string | null }) | null,
+) {
+  if (!account) return { first_name: "", middle_name: "", last_name: "" };
+  const hasStructured =
+    account.first_name != null || account.middle_name != null || account.last_name != null;
+  if (hasStructured) {
+    return {
+      first_name: String(account.first_name ?? ""),
+      middle_name: String(account.middle_name ?? ""),
+      last_name: String(account.last_name ?? ""),
+    };
+  }
+  return splitDisplayName(account.name);
+}
 
 export default function CustomerProfile() {
   const { user, refresh } = useAuth();
@@ -24,18 +50,23 @@ export default function CustomerProfile() {
     queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, unknown>>,
     retry: false,
   });
-  const [fullName, setFullName] = useState(user?.name || "");
   const [pendingPhoto, setPendingPhoto] = useState<PickedMedia | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState(user?.phone || "");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNational, setPhoneNational] = useState("");
   const [lang, setLangState] = useState<Lang>((user?.preferred_language as Lang) || "en");
   const [photo, setPhoto] = useState<ImageSourcePropType | null>(null);
   const [photoOk, setPhotoOk] = useState(true);
+  const [firstNameErrorKey, setFirstNameErrorKey] = useState<string | null>(null);
+  const [lastNameErrorKey, setLastNameErrorKey] = useState<string | null>(null);
+  const [phoneErrorKey, setPhoneErrorKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const nameFormDirty = useRef(false);
+  const syncedUserId = useRef<string | null>(null);
 
   async function loadPhoto() {
     try {
@@ -46,34 +77,36 @@ export default function CustomerProfile() {
       setPhoto(null);
       setPhotoOk(false);
       if (e instanceof ApiError && e.status === 404) return;
-      setError(e instanceof Error ? e.message : t("mobile.uploadFailed"));
+      setError(apiErrorMessage(t, e, "mobile.uploadFailed"));
     }
   }
 
   useEffect(() => {
-    const account = user as (AuthUser & {
-      first_name?: string | null;
-      middle_name?: string | null;
-      last_name?: string | null;
-    }) | null;
-    if (account?.name) setFullName(account.name);
-    if (account?.phone) setPhone(account.phone);
-    if (account?.first_name || account?.last_name || account?.middle_name) {
-      setFirstName(String(account.first_name || ""));
-      setMiddleName(String(account.middle_name || ""));
-      setLastName(String(account.last_name || ""));
-    } else if (account?.name) {
-      const parts = account.name.trim().split(/\s+/).filter(Boolean);
-      setFirstName(parts[0] || "");
-      setMiddleName(parts.length > 2 ? parts.slice(1, -1).join(" ") : "");
-      setLastName(parts.length > 1 ? parts[parts.length - 1] : "");
-    }
-    if (account?.preferred_language) setLangState(account.preferred_language as Lang);
-  }, [user]);
+    if (!user?.id) return;
+    if (nameFormDirty.current && syncedUserId.current === user.id) return;
+    const parts = namePartsFromUser(user);
+    setFirstName(parts.first_name);
+    setMiddleName(parts.middle_name);
+    setLastName(parts.last_name);
+    syncedUserId.current = user.id;
+    nameFormDirty.current = false;
+  }, [user?.id, user?.name, user?.first_name, user?.middle_name, user?.last_name]);
 
   useEffect(() => {
-    void loadPhoto();
-  }, []);
+    const parsed = parsePhoneParts(user?.phone || "");
+    setCountryCode(parsed.countryCode);
+    setPhoneNational(parsed.national);
+  }, [user?.phone]);
+
+  useEffect(() => {
+    if (user?.preferred_language) setLangState(user.preferred_language as Lang);
+  }, [user?.preferred_language]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadPhoto();
+    }, []),
+  );
 
   const profileErr =
     profileQ.error instanceof ApiError && profileQ.error.status !== 404
@@ -81,6 +114,9 @@ export default function CustomerProfile() {
       : null;
 
   const initial = (firstName || user?.name || "?").slice(0, 1).toUpperCase();
+  const firstNameError = userMessage(t, firstNameErrorKey);
+  const lastNameError = userMessage(t, lastNameErrorKey);
+  const phoneError = userMessage(t, phoneErrorKey);
 
   return (
     <Screen>
@@ -133,13 +169,12 @@ export default function CustomerProfile() {
                     if (!updated?.profile_photo_path?.trim()) {
                       throw new Error(t("mobile.uploadFailed"));
                     }
-                    setPhoto(await apiClient.customerPhotoUri());
-                    setPhotoOk(true);
+                    await clearCustomerProfilePhotoCache();
+                    await loadPhoto();
                     void qc.invalidateQueries({ queryKey: ["customer-photo"] });
                     void qc.invalidateQueries({ queryKey: ["customer-profile"] });
-                    await loadPhoto();
                   } catch (e: unknown) {
-                    setError(e instanceof Error ? e.message : t("mobile.uploadFailed"));
+                    setError(apiErrorMessage(t, e, "mobile.uploadFailed"));
                   } finally {
                     setPhotoBusy(false);
                   }
@@ -159,10 +194,12 @@ export default function CustomerProfile() {
                   setError(null);
                   try {
                     await apiClient.deleteCustomerPhoto();
+                    await clearCustomerProfilePhotoCache();
                     setPhoto(null);
+                    setPhotoOk(false);
                     void qc.invalidateQueries({ queryKey: ["customer-photo"] });
                   } catch (e: unknown) {
-                    setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
+                    setError(apiErrorMessage(t, e, "mobile.saveFailed"));
                   }
                 }}
               />
@@ -170,11 +207,55 @@ export default function CustomerProfile() {
           ) : null}
         </Card>
         <Card>
-          <Field label={t("mobile.name")} value={fullName} onChangeText={setFullName} />
-          <Field label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
-          <Field label={t("auth.middleName")} value={middleName} onChangeText={setMiddleName} />
-          <Field label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
-          <Field label={t("auth.phone")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <Field
+            label={t("auth.firstName")}
+            required
+            value={firstName}
+            onChangeText={(v) => {
+              nameFormDirty.current = true;
+              setFirstName(v);
+              setFirstNameErrorKey(null);
+            }}
+            error={firstNameError}
+            autoComplete="given-name"
+          />
+          <Field
+            label={t("auth.middleName")}
+            value={middleName}
+            onChangeText={(v) => {
+              nameFormDirty.current = true;
+              setMiddleName(v);
+            }}
+            autoComplete="off"
+          />
+          <Field
+            label={t("auth.lastName")}
+            required
+            value={lastName}
+            onChangeText={(v) => {
+              nameFormDirty.current = true;
+              setLastName(v);
+              setLastNameErrorKey(null);
+            }}
+            error={lastNameError}
+            autoComplete="family-name"
+          />
+          <PhoneWithCountryCode
+            label={t("auth.phone")}
+            required
+            countryCode={countryCode}
+            national={phoneNational}
+            onCountryCodeChange={(code) => {
+              setCountryCode(code);
+              setPhoneNational((prev) => prev.slice(0, code === "+91" ? 10 : 12));
+              setPhoneErrorKey(null);
+            }}
+            onNationalChange={(digits) => {
+              setPhoneNational(digits);
+              setPhoneErrorKey(null);
+            }}
+            error={phoneError}
+          />
           <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
             {user?.email || "—"}
           </AppText>
@@ -193,22 +274,27 @@ export default function CustomerProfile() {
             onPress={async () => {
               setBusy(true);
               setError(null);
+              const nameParts = {
+                first_name: firstName,
+                middle_name: middleName,
+                last_name: lastName,
+              };
+              const nErrs = validatePersonNameParts(nameParts);
+              const phoneErrKey = validatePhoneNational(countryCode, phoneNational);
+              setFirstNameErrorKey(nErrs.first_name ?? null);
+              setLastNameErrorKey(nErrs.last_name ?? null);
+              setPhoneErrorKey(phoneErrKey);
+              if (Object.keys(nErrs).length || phoneErrKey) {
+                setBusy(false);
+                return;
+              }
               try {
-                const composed = [firstName.trim(), middleName.trim(), lastName.trim()].filter(Boolean).join(" ");
-                let saveFirst = firstName.trim();
-                let saveMiddle = middleName.trim();
-                let saveLast = lastName.trim();
-                if (fullName.trim() && fullName.trim() !== composed) {
-                  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-                  saveFirst = parts[0] || "";
-                  saveLast = parts.length > 1 ? parts[parts.length - 1] : saveLast;
-                  saveMiddle = parts.length > 2 ? parts.slice(1, -1).join(" ") : "";
-                }
+                const phone = toE164(countryCode, phoneNational);
                 await apiClient.patchMe({
-                  first_name: saveFirst,
-                  middle_name: saveMiddle,
-                  last_name: saveLast,
-                  phone: phone.trim() || undefined,
+                  first_name: firstName.trim(),
+                  middle_name: middleName.trim(),
+                  last_name: lastName.trim(),
+                  phone,
                   preferred_language: lang,
                 });
                 try {
@@ -216,11 +302,13 @@ export default function CustomerProfile() {
                 } catch {
                   /* profile row may not exist yet */
                 }
+                nameFormDirty.current = false;
                 setLang(lang);
                 await refresh();
                 void qc.invalidateQueries({ queryKey: ["customer-profile"] });
+                showSuccessAlert(t("mobile.profileUpdated"));
               } catch (e: unknown) {
-                setError(e instanceof Error ? e.message : t("mobile.saveFailed"));
+                setError(apiErrorMessage(t, e, "mobile.saveFailed"));
               } finally {
                 setBusy(false);
               }

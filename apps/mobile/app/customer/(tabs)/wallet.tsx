@@ -8,6 +8,8 @@ import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen 
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
+import { showSuccessAlert } from "@/utils/actionFeedback";
+import { userMessage } from "@/utils/userMessage";
 
 function publicWalletDescription(raw?: string | null, fallback = "Wallet transaction"): string {
   const s = String(raw || "").trim();
@@ -46,14 +48,18 @@ export default function WalletScreen() {
   const load = useMutation({
     mutationFn: async () => {
       const parsed = walletLoadSchema.safeParse({ amountRupees: Number(rupee) });
-      if (!parsed.success) throw new Error(parsed.error.issues[0]?.message);
+      if (!parsed.success) {
+        const key = parsed.error.issues[0]?.message;
+        throw new Error(userMessage(tr, key, tr("validation.amount")) || tr("validation.amount"));
+      }
       return apiClient.loadWallet(Math.round(parsed.data.amountRupees * 100));
     },
     onSuccess: () => {
       setError(null);
       void qc.invalidateQueries({ queryKey: ["wallet"] });
+      showSuccessAlert(tr("mobile.walletLoadSuccess"));
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(e.message || tr("mobile.failed")),
   });
   const balance = q.data?.wallet?.balance_paise ?? q.data?.balance_paise ?? 0;
   const txns = q.data?.transactions || [];

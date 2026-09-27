@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -10,8 +10,6 @@ import { fetchCustomerProfilePhotoSource } from "@/services/customerPhoto";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { isAdminRole, isPujariRole } from "@bseva/config";
-
-const defaultMark = require("../../assets/logo-mark.png");
 
 function roleLabel(role: string | undefined, t: (k: string) => string) {
   if (role === "super_admin") return "Super Admin";
@@ -35,22 +33,31 @@ export function MenuProfileHeader({
   const { t } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
+  const qc = useQueryClient();
   const [photoOk, setPhotoOk] = useState(true);
   const photoQ = useQuery({
     queryKey: ["customer-photo", photoKind, user?.id],
     enabled: Boolean(user?.id && photoKind !== "none"),
     queryFn: async () => {
-      try {
-        if (photoKind === "customer") return await fetchCustomerProfilePhotoSource();
-        if (photoKind === "pujari") return await apiClient.pujariMediaUri("photo");
-      } catch {
-        return null;
-      }
+      if (photoKind === "customer") return await fetchCustomerProfilePhotoSource();
+      if (photoKind === "pujari") return await apiClient.pujariMediaUri("photo");
       return null;
     },
     retry: false,
+    staleTime: 0,
   });
   const photo = photoQ.data ?? null;
+  const initial = (user?.name || "?").slice(0, 1).toUpperCase();
+  const photoUri =
+    photo && typeof photo === "object" && "uri" in photo && typeof photo.uri === "string" ? photo.uri : null;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id && photoKind !== "none") {
+        void qc.invalidateQueries({ queryKey: ["customer-photo", photoKind, user.id] });
+      }
+    }, [user?.id, photoKind, qc]),
+  );
 
   useEffect(() => {
     if (photo) setPhotoOk(true);
@@ -73,6 +80,7 @@ export function MenuProfileHeader({
     >
       {photo && photoOk ? (
         <Image
+          key={photoUri || "photo"}
           source={photo}
           onError={() => setPhotoOk(false)}
           style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.secondary }}
@@ -86,10 +94,11 @@ export function MenuProfileHeader({
             backgroundColor: colors.secondary,
             alignItems: "center",
             justifyContent: "center",
-            overflow: "hidden",
           }}
         >
-          <Image source={defaultMark} resizeMode="contain" style={{ width: 36, height: 36 }} />
+          <AppText variant="h2" color={colors.primary}>
+            {initial}
+          </AppText>
         </View>
       )}
       <View style={{ flex: 1, justifyContent: "center" }}>

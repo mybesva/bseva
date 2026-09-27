@@ -4,7 +4,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { api, downloadInvoicePdf, rupees } from "@/lib/api";
+import { api, downloadBookingReceiptPdf, downloadInvoicePdf, openBookingReceiptHtml, rupees } from "@/lib/api";
 import { formatDisplayDate, formatDisplaySlot } from "@/lib/formatDate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -15,7 +15,6 @@ import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { useI18n } from "@/i18n/I18nProvider";
 import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
 import { shareSafely } from "@/lib/browserActions";
-import { downloadBSevaDocument, fieldsToDocumentBody } from "@/lib/bsevaDocument";
 import { formatPujaDuration, formatPujaTitleText } from "@bseva/locales";
 import { PujaTitle } from "@/components/PujaTitle";
 
@@ -140,18 +139,20 @@ export default function BookingReceipt() {
     }
   }
 
-  function downloadReceipt() {
-    downloadBSevaDocument(`BSeva-${booking.booking_number || "booking"}.html`, {
-      documentTitle: t("web.booking.receipt"),
-      reference: booking.booking_number,
-      bodyHtml: fieldsToDocumentBody([
-        [t("web.booking.receipt"), booking.booking_number || ""],
-        [t("booking.service"), formatPujaTitleText(booking.service_name) || booking.service_name || ""],
-        [t("web.booking.slot"), slot],
-        [t("web.booking.pujaDuration"), booking.duration_minutes ? formatPujaDuration(lang, booking.duration_minutes) : ""],
-        [t("common.total"), rupees(booking.total_paise)],
-      ]),
-    });
+  async function openReceiptDocument() {
+    try {
+      await openBookingReceiptHtml(String(booking.id));
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : t("web.booking.loadFailed"));
+    }
+  }
+
+  async function downloadReceipt() {
+    try {
+      await downloadBookingReceiptPdf(String(booking.id));
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : t("web.booking.loadFailed"));
+    }
   }
 
   return (
@@ -162,10 +163,10 @@ export default function BookingReceipt() {
           <Button variant="outline" size="sm" onClick={() => setLocation("/customer/bookings")}>
             <ArrowLeft className="w-4 h-4 mr-1" /> {t("nav.bookings")}
           </Button>
-          <Button size="sm" onClick={() => window.print()}>
+          <Button size="sm" onClick={() => void openReceiptDocument()}>
             <Printer className="w-4 h-4 mr-1" /> {t("web.booking.printReceipt")}
           </Button>
-          <Button size="sm" variant="outline" onClick={downloadReceipt}>
+          <Button size="sm" variant="outline" onClick={() => void downloadReceipt()}>
             <Download className="w-4 h-4 mr-1" /> {t("common.download")}
           </Button>
           <Button size="sm" variant="outline" onClick={() => void shareReceipt()}>
@@ -349,8 +350,11 @@ export default function BookingReceipt() {
             ) : null}
 
             <div className="print:hidden flex flex-wrap gap-2 pt-2">
-              <Button onClick={() => window.print()}>
+              <Button onClick={() => void openReceiptDocument()}>
                 <Printer className="w-4 h-4 mr-1" /> {t("common.print")}
+              </Button>
+              <Button variant="outline" onClick={() => void downloadReceipt()}>
+                <Download className="w-4 h-4 mr-1" /> {t("invoice.downloadPdf")}
               </Button>
               <Button variant="outline" onClick={() => setLocation("/customer/bookings")}>
                 {t("web.booking.backToBookings")}

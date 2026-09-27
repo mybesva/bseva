@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { addressSchema, hasSettlementMethod, settlementPayload, supportSchema, validateSettlement } from "./index";
+import {
+  addressSchema,
+  hasSettlementMethod,
+  parsePhoneParts,
+  settlementPayload,
+  supportSchema,
+  validatePersonNameParts,
+  validatePhoneNational,
+  validateSettlement,
+} from "./index";
 
 describe("validation parity with web", () => {
   it("requires 6-digit PIN and meaningful address", () => {
@@ -46,5 +55,22 @@ describe("validation parity with web", () => {
         accountConfirm: "999999999999",
       }).accountConfirm,
     ).toBe("web.validation.accountMatch");
+  });
+
+  it("matches web customer profile name rules", () => {
+    expect(validatePersonNameParts({ first_name: "ab", middle_name: "", last_name: "Kumar" })).toEqual({
+      first_name: "validation.firstNameMin",
+    });
+    expect(validatePersonNameParts({ first_name: "Ram", middle_name: "", last_name: "" })).toEqual({
+      last_name: "validation.lastNameRequired",
+    });
+    expect(validatePersonNameParts({ first_name: "Ram", middle_name: "K", last_name: "Kumar" })).toEqual({});
+  });
+
+  it("matches web phone validation", () => {
+    expect(parsePhoneParts("+919876543210")).toEqual({ countryCode: "+91", national: "9876543210" });
+    expect(validatePhoneNational("+91", "")).toBe("validation.phoneRequired");
+    expect(validatePhoneNational("+91", "5876543210")).toBe("validation.phoneIndia");
+    expect(validatePhoneNational("+91", "9876543210")).toBeNull();
   });
 });

@@ -14,6 +14,9 @@ export function DatePickerField({
   label,
   hint,
   error,
+  allowAnyDate = false,
+  formatValue,
+  placeholder,
 }: {
   value: string;
   onChange: (iso: string) => void;
@@ -21,6 +24,10 @@ export function DatePickerField({
   label?: string;
   hint?: string;
   error?: string | null;
+  /** Allow any calendar day (e.g. booking filters). */
+  allowAnyDate?: boolean;
+  formatValue?: (iso: string) => string;
+  placeholder?: string;
 }) {
   const { colors } = useAppTheme();
   const { t } = useI18n();
@@ -46,7 +53,9 @@ export function DatePickerField({
         }}
       >
         <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-        <AppText style={{ flex: 1 }}>{value ? formatDisplayDate(value) : t("booking.selectDate")}</AppText>
+        <AppText style={{ flex: 1 }}>
+          {value ? (formatValue ? formatValue(value) : formatDisplayDate(value)) : placeholder || t("booking.selectDate")}
+        </AppText>
         <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
       </Pressable>
       {error ? <AppText variant="small" color={colors.destructive || "#B42318"}>{error}</AppText> : null}
@@ -68,6 +77,7 @@ export function DatePickerField({
             <DateCalendar
               value={value}
               leadHours={leadHours}
+              allowAnyDate={allowAnyDate}
               showSelectedFooter={false}
               onChange={(iso) => {
                 onChange(iso);

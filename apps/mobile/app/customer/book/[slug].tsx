@@ -20,6 +20,8 @@ import { DatePickerField } from "@/components/DatePickerField";
 import { SelectField } from "@/components/SelectField";
 import { MuhurtaConsultation, type MuhurtaReceipt } from "@/components/MuhurtaConsultation";
 import { TimePicker } from "@/components/TimePicker";
+import { InlineLink } from "@/components/InlineLink";
+import { LegalAcceptRow } from "@/components/LegalAcceptRow";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
@@ -847,7 +849,10 @@ export default function BookService() {
                   gap: 4,
                 }}
               >
-                <AppText variant="small">{cancellationPolicy?.title || t("booking.cancellationPolicy")}</AppText>
+                <AppText variant="small">
+                  {cancellationPolicy?.title || t("booking.cancellationPolicy")}{" "}
+                  (<InlineLink label={t("mobile.readFullPolicy")} href="/legal/cancellation_policy" />)
+                </AppText>
                 {(cancellationPolicy?.points || []).map((p, i) => (
                   <AppText key={`${p.title || i}`} variant="small" color={colors.mutedForeground}>
                     {p.title ? `${p.title}: ` : ""}
@@ -1021,13 +1026,12 @@ export default function BookService() {
                 <AppText variant="h3" color={colors.primary}>{t("booking.total")} {rupees(Number(quote.totalAmount))}</AppText>
               </Card>
             ) : null}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Switch value={terms} onValueChange={setTerms} />
-              <AppText variant="small" style={{ flex: 1 }}>
-                {t("mobile.acceptTerms")}
-              </AppText>
-            </View>
-            <PrimaryButton title={t("mobile.readTerms")} variant="ghost" onPress={() => router.push("/legal/platform_terms")} />
+            <LegalAcceptRow
+              accepted={terms}
+              onAcceptedChange={setTerms}
+              termsSlug="booking_terms"
+              cancellationSlug="cancellation_policy"
+            />
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(3)} />
             <PrimaryButton title={pending ? t("mobile.booking") : t("mobile.payBook")} loading={pending} onPress={submit} />
           </>

@@ -8,6 +8,7 @@ import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
 import { useState } from "react";
+import { showSuccessAlert } from "@/utils/actionFeedback";
 
 type OfferService = {
   id: string;
@@ -42,6 +43,7 @@ export default function PujariServicesScreen() {
   const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
+  const [requestingLevel, setRequestingLevel] = useState(false);
   const rows = Array.isArray(roles.data) ? roles.data : [];
   const services = (offers.data?.services || []).filter((s) =>
     !q.trim() ? true : s.name.toLowerCase().includes(q.trim().toLowerCase())
@@ -78,6 +80,7 @@ export default function PujariServicesScreen() {
                   try {
                     await apiClient.applyPujariServiceOffer(s.id);
                     await offers.refetch();
+                    showSuccessAlert(t("mobile.serviceApplicationSubmitted"));
                   } catch (e: unknown) {
                     setError(e instanceof Error ? e.message : t("mobile.couldNotApplyService"));
                   } finally {
@@ -105,18 +108,24 @@ export default function PujariServicesScreen() {
           </Pressable>
         ))}
         <PrimaryButton
-          title={t("mobile.requestLevel")}
+          title={requestingLevel ? t("mobile.submitting") : t("mobile.requestLevel")}
+          loading={requestingLevel}
+          disabled={requestingLevel}
           onPress={async () => {
             if (!level) {
               setError(t("mobile.selectHigherLevel"));
               return;
             }
             setError(null);
+            setRequestingLevel(true);
             try {
               await apiClient.applyPujariLevel(level);
               await profile.refetch();
+              showSuccessAlert(t("mobile.levelRequestSubmitted"));
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.failed"));
+            } finally {
+              setRequestingLevel(false);
             }
           }}
         />

@@ -125,12 +125,16 @@ export function Field({
   style,
   multiline,
   error,
+  required,
   ...props
-}: TextInputProps & { label: string; error?: string | null }) {
+}: TextInputProps & { label: string; error?: string | null; required?: boolean }) {
   const { colors } = useAppTheme();
   return (
     <View style={{ gap: 6 }}>
-      <Text style={{ color: colors.mutedForeground, fontWeight: "600", fontSize: 13 }}>{label}</Text>
+      <Text style={{ color: colors.mutedForeground, fontWeight: "600", fontSize: 13 }}>
+        {label}
+        {required ? <Text style={{ color: colors.destructive }}> *</Text> : null}
+      </Text>
       <TextInput
         placeholderTextColor={colors.mutedForeground}
         accessibilityLabel={label}

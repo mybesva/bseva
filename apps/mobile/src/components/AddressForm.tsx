@@ -4,6 +4,7 @@ import { View } from "react-native";
 import { MapPinPicker } from "./MapPinPicker";
 import { AppText, ErrorBanner, Field, PrimaryButton } from "./ui";
 import { useI18n } from "@/providers/I18nProvider";
+import { userMessage } from "@/utils/userMessage";
 import { useAppTheme } from "@/theme/ThemeContext";
 import {
   getDeviceCoordinates,
@@ -111,7 +112,7 @@ export function AddressForm({
         onPress={async () => {
           const parsed = addressSchema.safeParse({ ...value, country: value.country || "India" });
           if (!parsed.success) {
-            setError(t("mobile.checkAddress"));
+            setError(userMessage(t, parsed.error.issues[0]?.message, t("mobile.checkAddress")) || t("mobile.checkAddress"));
             return;
           }
           if (value.latitude == null || value.longitude == null) {

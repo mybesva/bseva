@@ -1,14 +1,16 @@
-import { dashboardPath, LANGS, PHONE_COUNTRY_CODES, PRIVACY_VERSION, REGISTRATION_CONSENT_LABEL, TERMS_VERSION, toE164 } from "@bseva/config";
+import { dashboardPath, LANGS, PHONE_COUNTRY_CODES, PRIVACY_VERSION, TERMS_VERSION, toE164 } from "@bseva/config";
 import { LANG_LABELS, type Lang } from "@bseva/locales";
 import { registerSchema } from "@bseva/validation";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from "react-native";
+import { InlineLink } from "@/components/InlineLink";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { BrandLockup } from "@/components/BrandLockup";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
+import { userMessage } from "@/utils/userMessage";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 
@@ -75,7 +77,7 @@ export default function RegisterScreen() {
       referral_code: referralCode.trim() || undefined,
     });
     if (!parsed.success) {
-      setError(t(parsed.error.issues[0]?.message || "auth.checkDetails"));
+      setError(userMessage(t, parsed.error.issues[0]?.message, t("auth.checkDetails")) || t("auth.checkDetails"));
       return;
     }
     setPending(true);
@@ -186,16 +188,15 @@ export default function RegisterScreen() {
               <Field label={t("auth.otp")} value={otp} onChangeText={setOtp} keyboardType="number-pad" />
               <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                 <Switch value={consent} onValueChange={setConsent} trackColor={{ true: colors.primary }} />
-                <AppText variant="small" style={{ flex: 1 }}>
-                  {REGISTRATION_CONSENT_LABEL}
+                <AppText variant="small" style={{ flex: 1, paddingTop: 2 }}>
+                  {t("mobile.registerConsentPrefix")}{" "}
+                  <InlineLink label={t("mobile.terms")} href="/legal/platform_terms" />
+                  {" "}
+                  {t("mobile.acceptTermsAnd")}{" "}
+                  <InlineLink label={t("mobile.privacy")} href="/legal/privacy" />
+                  .
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push("/legal/platform_terms")}>
-                <AppText color={colors.primary} variant="small">{t("nav.terms")}</AppText>
-              </Pressable>
-              <Pressable onPress={() => router.push("/legal/privacy")}>
-                <AppText color={colors.primary} variant="small">{t("nav.privacy")}</AppText>
-              </Pressable>
               <PrimaryButton title={pending ? t("common.loading") : t("auth.createAccount")} loading={pending} onPress={onSubmit} />
             </View>
           </Card>

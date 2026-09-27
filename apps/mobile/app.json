@@ -92,7 +92,13 @@
         }
       ],
       "expo-task-manager",
-      "expo-image-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BSeva needs photo library access to attach documents and profile photos.",
+          "cameraPermission": "BSeva uses the camera so you can take a profile photo, signature photo, or document photo."
+        }
+      ],
       "expo-document-picker",
       [
         "expo-splash-screen",

@@ -7,6 +7,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
+import { apiErrorMessage, userMessage } from "@/utils/userMessage";
 
 export default function ContactScreen() {
   const { t } = useI18n();
@@ -69,7 +70,7 @@ export default function ContactScreen() {
                 message,
               });
               if (!parsed.success) {
-                setError(t(parsed.error.issues[0]?.message || "mobile.checkForm"));
+                setError(userMessage(t, parsed.error.issues[0]?.message, t("mobile.checkForm")) || t("mobile.checkForm"));
                 return;
               }
               setBusy(true);
@@ -78,7 +79,7 @@ export default function ContactScreen() {
                 setSent(true);
                 setMessage("");
               } catch (e: unknown) {
-                setError(e instanceof Error ? e.message : t("mobile.failed"));
+                setError(apiErrorMessage(t, e, "mobile.failed"));
               } finally {
                 setBusy(false);
               }

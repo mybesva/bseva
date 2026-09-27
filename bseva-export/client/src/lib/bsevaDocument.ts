@@ -1,7 +1,6 @@
 /**
  * Official BSeva document chrome for print, HTML downloads, and popups.
  * Backend PDFs/HTML use backend/app/document_brand.py with the same visual rules.
- * Do not duplicate logo / watermark / header / footer markup in individual documents.
  */
 export const BSEVA_BRAND = "BSeva";
 export const BSEVA_MOTTO = "Book, Believe, Bless";
@@ -12,12 +11,18 @@ export const BSEVA_LOGO_SRC = "/bseva-logo-transparent.png";
 export const BSEVA_EMAIL = "support@b-seva.com";
 export const BSEVA_WEBSITE = "www.b-seva.com";
 const WATERMARK_OPACITY = 0.07;
+const DOC_PAGE_WIDTH_MM = 210;
 
 export type BSevaDocumentCompany = {
   legalName?: string;
+  brandName?: string;
+  address?: string;
+  state?: string;
+  pincode?: string;
   email?: string;
   phone?: string;
   website?: string;
+  gstin?: string;
   logoSrc?: string;
 };
 
@@ -26,6 +31,7 @@ export type BSevaDocumentOptions = {
   pageTitle?: string;
   reference?: string | null;
   bodyHtml: string;
+  toolbarHtml?: string;
   extraCss?: string;
   company?: BSevaDocumentCompany;
 };
@@ -59,9 +65,65 @@ function logoSrc(company?: BSevaDocumentCompany) {
   return resolved;
 }
 
+export function documentBodyCss() {
+  return `
+.bseva-doc-page {
+  width: ${DOC_PAGE_WIDTH_MM}mm;
+  min-width: ${DOC_PAGE_WIDTH_MM}mm;
+  max-width: ${DOC_PAGE_WIDTH_MM}mm;
+  margin: 0 auto;
+  padding: 20px 24px;
+  background: #fff;
+  box-sizing: border-box;
+}
+@media screen {
+  .bseva-doc-page { box-shadow: 0 2px 16px rgba(26, 43, 74, .08); }
+}
+.bseva-doc-header-block {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid ${BSEVA_ORANGE};
+  margin-bottom: 16px;
+}
+.bseva-doc-header-left { flex: 1 1 58%; min-width: 0; }
+.bseva-doc-header-right { flex: 0 0 auto; text-align: right; min-width: 170px; max-width: 42%; }
+.bseva-doc-brand-row { display: flex; align-items: flex-start; gap: 10px; }
+.bseva-doc-logo { display: block; height: 50px; width: auto; max-width: 150px; object-fit: contain; flex-shrink: 0; }
+.bseva-doc-brand-name { font-size: 18px; font-weight: 700; color: ${BSEVA_NAVY}; letter-spacing: .05em; line-height: 1.2; }
+.bseva-doc-motto { font-size: 9px; color: ${BSEVA_ORANGE}; letter-spacing: .08em; margin-top: 2px; text-transform: uppercase; }
+.bseva-doc-company { margin-top: 8px; font-size: 9.5px; line-height: 1.55; color: #334155; word-wrap: break-word; overflow-wrap: anywhere; }
+.bseva-doc-doc-title { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: ${BSEVA_NAVY}; }
+.bseva-doc-meta { margin-top: 8px; font-size: 9.5px; line-height: 1.65; color: #334155; }
+.bseva-doc-meta div { margin: 1px 0; }
+.bseva-doc-meta strong { color: ${BSEVA_NAVY}; font-weight: 600; }
+.bseva-doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+.bseva-doc-box { border: 1px solid #d7dde8; border-radius: 4px; padding: 10px 12px; min-width: 0; background: #f8fafc; }
+.bseva-doc-toolbar { max-width: ${DOC_PAGE_WIDTH_MM}mm; margin: 0 auto 10px; padding: 0 4px; }
+.bseva-doc-toolbar button { background: ${BSEVA_NAVY}; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.bseva-doc-box h3 { margin: 0 0 8px; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: ${BSEVA_ORANGE}; font-weight: 700; }
+.bseva-doc-box p { margin: 0; font-size: 9.5px; line-height: 1.55; color: #334155; word-wrap: break-word; overflow-wrap: anywhere; }
+.bseva-doc-fields { width: 100%; border-collapse: collapse; }
+.bseva-doc-fields th, .bseva-doc-fields td { border-bottom: 1px solid #e2e8f0; padding: 8px 0; text-align: left; vertical-align: top; font-size: 9.5px; }
+.bseva-doc-fields th { width: 34%; color: #64748b; font-weight: 600; }
+.bseva-doc-footer-block { margin-top: 20px; padding-top: 10px; border-top: 2px solid ${BSEVA_ORANGE}; font-size: 9.5px; color: #334155; line-height: 1.55; }
+.bseva-doc-footer-block strong { color: ${BSEVA_NAVY}; }
+.bseva-doc-footer-block p { margin: 3px 0; }
+pre.bseva-doc-pre { font: 14px/1.65 'Segoe UI', Helvetica, Arial, sans-serif; white-space: pre-wrap; margin: 0; }
+@media print {
+  .noprint { display: none !important; }
+  html, body { background: #fff !important; }
+  .bseva-doc-viewport { padding: 0 !important; background: #fff !important; overflow: visible !important; }
+  .bseva-doc-page { width: auto !important; min-width: 0 !important; max-width: none !important; box-shadow: none !important; margin: 0 !important; }
+}
+`.trim();
+}
+
 export function documentChromeCss() {
   return `
-@page { size: A4; margin: 0; }
+@page { size: A4; margin: 14mm; }
 @page {
   @bottom-right {
     content: "Page " counter(page) " of " counter(pages);
@@ -72,11 +134,16 @@ export function documentChromeCss() {
 html, body {
   margin: 0;
   padding: 0;
-  background: #fff;
+  background: #eef2f7;
   color: ${BSEVA_NAVY};
   font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
 }
-body { padding: 28mm 14mm 20mm 14mm; }
+.bseva-doc-viewport {
+  min-height: 100vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px;
+}
 .bseva-doc-watermark {
   position: fixed;
   inset: 0;
@@ -89,96 +156,96 @@ body { padding: 28mm 14mm 20mm 14mm; }
   print-color-adjust: exact;
 }
 .bseva-doc-watermark img { width: min(58%, 420px); opacity: ${WATERMARK_OPACITY}; }
-.bseva-doc-header {
-  position: fixed;
-  top: 8mm;
-  left: 14mm;
-  right: 14mm;
-  z-index: 2;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-  padding-bottom: 8px;
-  border-bottom: 3px solid ${BSEVA_ORANGE};
-  background: #fff;
-}
-.bseva-doc-logo { display: block; height: 58px; width: auto; max-width: 200px; object-fit: contain; }
-.bseva-doc-title { text-align: right; }
-.bseva-doc-title h1 {
-  margin: 0;
-  font-size: 16px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: ${BSEVA_NAVY};
-}
-.bseva-doc-ref {
-  margin: 6px 0 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  color: #334155;
-}
 .bseva-doc-body { position: relative; z-index: 1; }
-.bseva-doc-footer {
-  position: fixed;
-  left: 14mm;
-  right: 14mm;
-  bottom: 8mm;
-  z-index: 2;
-  padding-top: 8px;
-  border-top: 2px solid ${BSEVA_ORANGE};
-  background: #fff;
-  font-size: 10px;
-  color: ${BSEVA_NAVY};
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-.bseva-doc-footer p { margin: 2px 0 0; color: #334155; }
-.bseva-doc-fields { width: 100%; border-collapse: collapse; }
-.bseva-doc-fields th, .bseva-doc-fields td {
-  border-bottom: 1px solid #e2e8f0;
-  padding: 8px 0;
-  text-align: left;
-  vertical-align: top;
-}
-.bseva-doc-fields th { width: 34%; color: #64748b; font-weight: 600; font-size: 12px; }
-pre.bseva-doc-pre { font: 14px/1.65 'Segoe UI', Helvetica, Arial, sans-serif; white-space: pre-wrap; margin: 0; }
-@media print { .noprint { display: none !important; } }
+${documentBodyCss()}
 `.trim();
+}
+
+export function renderMetaRowsHtml(rows: Array<[string, string]>) {
+  return rows
+    .filter(([, value]) => Boolean(value))
+    .map(([label, value]) => `<div><strong>${escapeDocumentHtml(label)}:</strong> ${escapeDocumentHtml(value)}</div>`)
+    .join("");
+}
+
+export function renderDocumentHeader(
+  documentTitle: string,
+  metaRows: Array<[string, string]>,
+  company?: BSevaDocumentCompany,
+) {
+  const src = escapeDocumentHtml(logoSrc(company));
+  const brand = escapeDocumentHtml(company?.brandName || BSEVA_BRAND);
+  const legal = escapeDocumentHtml(company?.legalName || BSEVA_BRAND);
+  const address = escapeDocumentHtml(company?.address || "");
+  const location = [company?.state, company?.pincode].filter(Boolean).join(", ");
+  const email = escapeDocumentHtml(company?.email || BSEVA_EMAIL);
+  const phone = company?.phone ? escapeDocumentHtml(company.phone) : "";
+  const website = escapeDocumentHtml(company?.website || BSEVA_WEBSITE);
+  const gstin = company?.gstin ? escapeDocumentHtml(company.gstin) : "";
+  const companyLines = [
+    `<strong>${legal}</strong>`,
+    address,
+    location ? escapeDocumentHtml(location) : "",
+    `Email: ${email}`,
+    phone ? `Phone: ${phone}` : "",
+    website ? `Website: ${website}` : "",
+    gstin ? `GSTIN: ${gstin}` : "",
+  ].filter(Boolean).join("<br/>");
+
+  return `
+<div class="bseva-doc-header-block">
+  <div class="bseva-doc-header-left">
+    <div class="bseva-doc-brand-row">
+      <img class="bseva-doc-logo" src="${src}" alt="${brand}"/>
+      <div class="bseva-doc-brand-text">
+        <div class="bseva-doc-brand-name">B-SEVA</div>
+        <div class="bseva-doc-motto">${escapeDocumentHtml(BSEVA_MOTTO)}</div>
+      </div>
+    </div>
+    <div class="bseva-doc-company">${companyLines}</div>
+  </div>
+  <div class="bseva-doc-header-right">
+    <h1 class="bseva-doc-doc-title">${escapeDocumentHtml(documentTitle)}</h1>
+    <div class="bseva-doc-meta">${renderMetaRowsHtml(metaRows)}</div>
+  </div>
+</div>`.trim();
+}
+
+export function renderDocumentFooter(company?: BSevaDocumentCompany, disclaimer?: string) {
+  const legal = escapeDocumentHtml(company?.legalName || BSEVA_BRAND);
+  const address = escapeDocumentHtml(company?.address || "");
+  const email = escapeDocumentHtml(company?.email || BSEVA_EMAIL);
+  const website = escapeDocumentHtml(company?.website || BSEVA_WEBSITE);
+  const disc = escapeDocumentHtml(
+    disclaimer || "This is a computer-generated document and does not require a physical signature.",
+  );
+  return `
+<div class="bseva-doc-footer-block">
+  <strong>${escapeDocumentHtml(BSEVA_FOOTER_LOCKUP)}</strong>
+  <p>${legal}<br/>${address}<br/>${email} · ${website}</p>
+  <p><em>${disc}</em></p>
+</div>`.trim();
 }
 
 export function wrapBSevaDocumentHtml(options: BSevaDocumentOptions) {
   const company = options.company || {};
   const src = escapeDocumentHtml(logoSrc(company));
   const title = escapeDocumentHtml(options.pageTitle || options.documentTitle || BSEVA_BRAND);
-  const documentTitle = escapeDocumentHtml(options.documentTitle || BSEVA_BRAND);
-  const reference = options.reference ? escapeDocumentHtml(String(options.reference)) : "";
-  const brand = escapeDocumentHtml(company.legalName || BSEVA_BRAND);
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/>
 <title>${title}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
 ${documentChromeCss()}
 ${options.extraCss || ""}
 </style></head><body>
 <div class="bseva-doc-watermark" aria-hidden="true"><img src="${src}" alt=""/></div>
-<header class="bseva-doc-header">
-  <div>
-    <img class="bseva-doc-logo" src="${src}" alt="${brand}"/>
+<div class="bseva-doc-viewport">
+  ${options.toolbarHtml || ""}
+  <div class="bseva-doc-page">
+    <div class="bseva-doc-body">${options.bodyHtml}</div>
   </div>
-  <div class="bseva-doc-title">
-    <h1>${documentTitle}</h1>
-    ${reference ? `<p class="bseva-doc-ref">${reference}</p>` : ""}
-  </div>
-</header>
-<div class="bseva-doc-body">${options.bodyHtml}</div>
-<footer class="bseva-doc-footer">
-  <div>
-    <strong>${escapeDocumentHtml(BSEVA_FOOTER_LOCKUP)}</strong>
-    <p>${escapeDocumentHtml(contactLine(company))}</p>
-  </div>
-</footer>
+</div>
 </body></html>`;
 }
 

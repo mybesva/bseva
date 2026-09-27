@@ -1,97 +1,193 @@
 import { rupees } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { PujaTitle } from "@/components/PujaTitle";
-import { HomeBrandBar } from "@/components/ScreenHeader";
-import { AppText, Card, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo } from "react";
+import { RefreshControl, ScrollView } from "react-native";
+import { PujariDashboardSection } from "@/components/PujariDashboardSection";
+import { PujariHomeHeader } from "@/components/PujariHomeHeader";
+import { PujariQuickActions } from "@/components/PujariQuickActions";
+import { PujariStatGrid } from "@/components/PujariStatGrid";
+import { PujariTodaySchedule } from "@/components/PujariTodaySchedule";
+import { PujariVerificationAlert } from "@/components/PujariVerificationAlert";
+import { PujariWelcomeHero, pujariGreetingName } from "@/components/PujariWelcomeHero";
+import { LoadingBlock, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
-import { useAppTheme } from "@/theme/ThemeContext";
-import { formatDisplayDate } from "@/utils/formatDate";
+import { pujariTodayScheduleBookings } from "@/utils/pujariTodaySchedule";
+import {
+  filterAndSortBookings,
+  isOngoingBooking,
+  isPendingAcceptanceBooking,
+  isReadyToStartBooking,
+  PUJARI_DASHBOARD_FEATURED_LIMIT,
+  pujariBookingsHref,
+  pujariDashboardStats,
+} from "@/utils/pujariBookings";
+import { shouldShowPujariVerificationAlert } from "@/utils/pujariVerification";
+
+type FeaturedSection = {
+  title: string;
+  bookings: Booking[];
+  viewAllHref: ReturnType<typeof pujariBookingsHref>;
+  emptyText?: string;
+};
+
+function buildFeaturedSection(
+  ongoing: Booking[],
+  readyToStart: Booking[],
+  t: (key: string) => string,
+): FeaturedSection | null {
+  if (ongoing.length > 0) {
+    return {
+      title: t("priest.ongoingPuja"),
+      bookings: ongoing.slice(0, PUJARI_DASHBOARD_FEATURED_LIMIT),
+      viewAllHref: pujariBookingsHref("upcoming", "in_progress"),
+      emptyText: t("mobile.noOngoingPuja"),
+    };
+  }
+  if (readyToStart.length > 0) {
+    return {
+      title: t("pujari.dashboard.upcomingPuja"),
+      bookings: readyToStart.slice(0, PUJARI_DASHBOARD_FEATURED_LIMIT),
+      viewAllHref: pujariBookingsHref("upcoming", "confirmed"),
+    };
+  }
+  return null;
+}
 
 export default function PujariHome() {
   const { user } = useAuth();
-  const { t } = useI18n();
-  const { colors } = useAppTheme();
+  const { t, lang } = useI18n();
   const router = useRouter();
   const profile = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
-  const wallet = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number } }> });
-  const incoming = (bookings.data || []).filter((b) => b.status === "pending_acceptance");
-  const ready = (bookings.data || []).filter((b) => b.status === "confirmed");
-  const ongoing = (bookings.data || []).filter((b) => b.status === "in_progress");
+
+  useFocusEffect(
+    useCallback(() => {
+      void bookings.refetch();
+    }, [bookings.refetch]),
+  );
+
+  const now = useMemo(() => new Date(), [bookings.dataUpdatedAt]);
+  const allBookings = bookings.data || [];
   const p = profile.data || {};
-  const earned = (bookings.data || [])
-    .filter((b) => b.status === "completed")
-    .reduce((s, b) => s + Number(b.pujari_payable_paise || 0), 0);
+  const showVerificationAlert = shouldShowPujariVerificationAlert(p);
+
+  const stats = useMemo(() => pujariDashboardStats(allBookings, now), [allBookings, now]);
+
+  const monthLabel = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat(lang === "en" ? "en-IN" : lang, { month: "long", year: "numeric" }).format(now);
+    } catch {
+      return now.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    }
+  }, [lang, now]);
+
+  const ongoing = useMemo(
+    () => filterAndSortBookings(allBookings, (b) => isOngoingBooking(b, now), now),
+    [allBookings, now],
+  );
+
+  const ongoingIds = useMemo(() => new Set(ongoing.map((b) => b.id)), [ongoing]);
+
+  const readyToStart = useMemo(
+    () =>
+      filterAndSortBookings(
+        allBookings,
+        (b) => isReadyToStartBooking(b, now) && !ongoingIds.has(b.id),
+        now,
+      ),
+    [allBookings, now, ongoingIds],
+  );
+
+  const pendingAcceptance = useMemo(
+    () => filterAndSortBookings(allBookings, (b) => isPendingAcceptanceBooking(b, now), now),
+    [allBookings, now],
+  );
+
+  const pendingPreview = useMemo(
+    () => pendingAcceptance.slice(0, PUJARI_DASHBOARD_FEATURED_LIMIT),
+    [pendingAcceptance],
+  );
+
+  const featuredSection = useMemo(
+    () => buildFeaturedSection(ongoing, readyToStart, t),
+    [ongoing, readyToStart, t],
+  );
+
+  const todaySchedule = useMemo(
+    () => pujariTodayScheduleBookings(allBookings, now, 3),
+    [allBookings, now],
+  );
+
+  const pujariName = pujariGreetingName(
+    String(p.full_name || user?.name || ""),
+    t("auth.pujari"),
+  );
+
   return (
     <Screen>
-      <HomeBrandBar notificationsHref="/pujari/notifications" subtitle={user?.name} />
+      <PujariHomeHeader notificationsHref="/pujari/notifications" />
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={bookings.isRefetching} onRefresh={() => void bookings.refetch()} />}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, gap: 16, paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={bookings.isRefetching || profile.isRefetching}
+            onRefresh={() => {
+              void bookings.refetch();
+              void profile.refetch();
+            }}
+          />
+        }
       >
         {profile.isLoading ? <LoadingBlock /> : null}
-        <Card>
-          <AppText variant="small">{t("mobile.verification")}</AppText>
-          <AppText variant="h3">{String(p.verification_status || "pending")}</AppText>
-          <AppText variant="small">
-            {t("mobile.verificationProgress", {
-              status: String(p.verification_status || "pending"),
-              percent: String(p.profile_completion_percentage ?? p.profile_completeness_percent ?? p.completeness_percent ?? "—"),
-            })}
-          </AppText>
-          {!p.profile_submitted_at ? (
-            <View style={{ marginTop: 10 }}>
-              <PrimaryButton title={t("mobile.continueOnboarding")} onPress={() => router.push("/pujari/onboarding")} />
-            </View>
-          ) : null}
-          {String(p.joining_fee_status) === "pending" ? (
-            <View style={{ marginTop: 10 }}>
-              <PrimaryButton title={t("mobile.payJoiningFeeShort")} variant="outline" onPress={() => void apiClient.payJoiningFee().then(() => profile.refetch())} />
-            </View>
-          ) : null}
-        </Card>
-        <Card>
-          <AppText variant="small">{t("mobile.completedEarnings")}</AppText>
-          <AppText variant="h2" color={colors.primary}>{rupees(earned)}</AppText>
-          <AppText variant="small">{t("mobile.wallet")}: {rupees(Number(wallet.data?.wallet?.balance_paise || 0))}</AppText>
-        </Card>
-        <AppText variant="h2">{t("mobile.awaitingAcceptance")}</AppText>
-        {incoming.map((b: Booking) => (
-          <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
-            <Card>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
-                <StatusBadge status={b.status} />
-              </View>
-              <AppText variant="small">
-                {formatDisplayDate(b.booking_date)} · {rupees(b.pujari_payable_paise || b.total_paise)}
-              </AppText>
-            </Card>
-          </Pressable>
-        ))}
-        {ready.length > 0 ? <AppText variant="h2">{t("mobile.readyToStart")}</AppText> : null}
-        {ready.map((b: Booking) => (
-          <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
-            <Card>
-              <PujaTitle name={b.service_name} variant="h3" />
-              <StatusBadge status={b.status} />
-            </Card>
-          </Pressable>
-        ))}
-        {ongoing.length > 0 ? <AppText variant="h2">{t("priest.ongoingPuja")}</AppText> : null}
-        {ongoing.map((b: Booking) => (
-          <Pressable key={b.id} onPress={() => router.push(`/pujari/booking/${b.id}`)}>
-            <Card>
-              <PujaTitle name={b.service_name} variant="h3" />
-              <StatusBadge status={b.status} />
-            </Card>
-          </Pressable>
-        ))}
+
+        <PujariWelcomeHero pujariName={pujariName} />
+
+        {showVerificationAlert ? <PujariVerificationAlert profile={p} /> : null}
+
+        <PujariStatGrid
+          totalDakshina={rupees(stats.totalEarnings)}
+          monthDakshina={rupees(stats.monthEarnings)}
+          monthLabel={monthLabel}
+          upcomingCount={stats.upcomingCount}
+          pendingCount={stats.pendingCount}
+          completedCount={stats.completedCount}
+          completedEarnings={rupees(stats.completedEarnings)}
+        />
+
+        {featuredSection ? (
+          <PujariDashboardSection
+            title={featuredSection.title}
+            bookings={featuredSection.bookings}
+            viewAllHref={featuredSection.viewAllHref}
+            emptyText={featuredSection.emptyText}
+            featured
+          />
+        ) : (
+          <PujariDashboardSection
+            title={t("pujari.dashboard.upcomingPuja")}
+            bookings={[]}
+            viewAllHref={pujariBookingsHref("upcoming", "all")}
+            emptyText={t("mobile.noBookingsList")}
+            featured
+          />
+        )}
+
+        {pendingPreview.length > 0 ? (
+          <PujariDashboardSection
+            title={t("pujari.dashboard.newPujaRequests")}
+            bookings={pendingPreview}
+            viewAllHref={pujariBookingsHref("upcoming", "pending")}
+            cardVariant="request"
+          />
+        ) : null}
+
+        <PujariQuickActions />
+
+        <PujariTodaySchedule bookings={todaySchedule} onViewCalendar={() => router.push("/pujari/schedule")} />
       </ScrollView>
     </Screen>
   );

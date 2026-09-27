@@ -21,12 +21,11 @@ import { useStartBooking } from "@/hooks/useStartBooking";
 import { Calendar, MapPin, Clock, Sparkles, CreditCard, ArrowRight, PlayCircle, Video } from "lucide-react";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import { formatDisplayDate } from "@/lib/formatDate";
-import { format } from "date-fns";
 import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
-import WalletPanel from "@/components/WalletPanel";
+import PanchangCard from "@/components/PanchangCard";
 import { useI18n } from "@/i18n/I18nProvider";
 function CustomerDashboardContent() {
   const { t } = useI18n();
@@ -37,13 +36,7 @@ function CustomerDashboardContent() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujas, setPujas] = useState<any[]>([]);
-  const [panchang, setPanchang] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
-
-  useEffect(() => {
-    const qs = new URLSearchParams({ date: format(new Date(), "yyyy-MM-dd"), calendar: "lunar" });
-    api(`/panchang?${qs}`).then(setPanchang).catch(() => setPanchang(null));
-  }, []);
 
   useEffect(() => {
     if (!user || user.role !== "customer") return;
@@ -278,41 +271,7 @@ function CustomerDashboardContent() {
             </div>
           </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-          <Card className="xl:col-span-2 border-2 border-primary/50 bg-gradient-to-br from-orange-50 via-background to-orange-50/40 shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-2xl md:text-3xl text-primary flex items-center gap-2">
-                <Calendar size={28} />
-                {t("calendar.panchangam")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {panchang ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-primary/25 bg-white/80 px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("calendar.tithi")}</p>
-                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.tithi} ({panchang.paksha})</p>
-                  </div>
-                  <div className="rounded-xl border border-primary/25 bg-white/80 px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("calendar.nakshatra")}</p>
-                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.nakshatra}</p>
-                  </div>
-                  <div className="rounded-xl border border-primary/25 bg-white/80 px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("calendar.lunarMonth")}</p>
-                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.lunarMonth} · {t("calendar.lunarDay", { day: panchang.lunarDay })}</p>
-                  </div>
-                  <div className="rounded-xl border-2 border-primary bg-primary/10 px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t("calendar.rahuKalam")}</p>
-                    <p className="mt-1 text-xl font-bold text-foreground">{panchang.rahukaalam}</p>
-                  </div>
-                </div>
-              ) : (
-                <Skeleton className="h-40 w-full" />
-              )}
-            </CardContent>
-          </Card>
-          <WalletPanel variant="customer" compact />
-        </div>
+        <PanchangCard />
 
         {recommendations.length > 0 && (
           <div>

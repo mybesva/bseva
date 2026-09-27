@@ -23,7 +23,7 @@ export default function CustomerMore() {
     { href: "/customer/profile", label: t("mobile.profile"), icon: "person-outline" as const },
     { href: "/customer/address", label: t("mobile.address"), icon: "location-outline" as const },
     { href: "/customer/invoices", label: t("mobile.invoices"), icon: "document-text-outline" as const },
-    { href: "/customer/rewards", label: t("mobile.rewards"), icon: "gift-outline" as const },
+    { href: "/customer/referral", label: t("nav.referral"), icon: "share-social-outline" as const },
     { href: "/customer/history", label: t("mobile.history"), icon: "time-outline" as const },
     { href: "/customer/astrology", label: t("nav.astrology"), icon: "planet-outline" as const },
     { href: "/customer/support", label: t("mobile.support"), icon: "help-circle-outline" as const },

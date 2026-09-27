@@ -6,6 +6,7 @@ import { AddressForm, type AddressFormValue } from "@/components/AddressForm";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { showSuccessAlert } from "@/utils/actionFeedback";
 import { useI18n } from "@/providers/I18nProvider";
 
 export default function PujariAddress() {
@@ -68,6 +69,7 @@ export default function PujariAddress() {
                 present_address: [parsed.address_line1, parsed.city, parsed.state, parsed.pincode].filter(Boolean).join(", "),
               });
               await q.refetch();
+              showSuccessAlert(t("mobile.addressSaved"));
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.failed"));
             } finally {

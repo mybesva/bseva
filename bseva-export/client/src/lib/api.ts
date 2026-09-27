@@ -268,14 +268,14 @@ export function dashboardPath(role: string) {
 
 export const rupees = (paise: number) => `₹${(Number(paise || 0) / 100).toLocaleString("en-IN")}`;
 
-export async function downloadInvoicePdf(invoiceId: string) {
+async function downloadAuthorizedPdf(path: string, fallbackName: string) {
   const token = getToken();
-  const res = await fetch(`${apiBase()}/api/v1/invoices/${encodeURIComponent(invoiceId)}/pdf`, {
+  const res = await fetch(`${apiBase()}/api/v1${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail || "Could not download invoice");
+    throw new Error((data as { detail?: string }).detail || "Could not download PDF");
   }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -283,9 +283,30 @@ export async function downloadInvoicePdf(invoiceId: string) {
   const match = cd.match(/filename="([^"]+)"/);
   const a = document.createElement("a");
   a.href = url;
-  a.download = match?.[1] || "BSeva_Invoice.pdf";
+  a.download = match?.[1] || fallbackName;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function downloadInvoicePdf(invoiceId: string) {
+  await downloadAuthorizedPdf(`/invoices/${encodeURIComponent(invoiceId)}/pdf`, "BSeva_Invoice.pdf");
+}
+
+export async function openBookingReceiptHtml(bookingId: string) {
+  const token = getToken();
+  const res = await fetch(`${apiBase()}/api/v1/bookings/${encodeURIComponent(bookingId)}/receipt/html`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const html = await res.text();
+  const w = window.open("", "_blank");
+  if (!w) throw new Error("Please allow pop-ups to view this receipt.");
+  w.document.write(html);
+  w.document.close();
+}
+
+export async function downloadBookingReceiptPdf(bookingId: string) {
+  await downloadAuthorizedPdf(`/bookings/${encodeURIComponent(bookingId)}/receipt/pdf`, "BSeva_Receipt.pdf");
 }

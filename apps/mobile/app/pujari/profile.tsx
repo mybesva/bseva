@@ -1,13 +1,14 @@
 import { PUJARI_QUALS, SAMPRADAYA_OPTS } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Image, ScrollView, Switch, View, type ImageSourcePropType } from "react-native";
+import { Alert, Image, ScrollView, Switch, View, type ImageSourcePropType } from "react-native";
 import { MediaPicker } from "@/components/MediaPicker";
 import { SignaturePad } from "@/components/SignaturePad";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
+import { showSuccessAlert } from "@/utils/actionFeedback";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
 
@@ -22,6 +23,8 @@ export default function PujariProfile() {
   const [photoOk, setPhotoOk] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signBusy, setSignBusy] = useState(false);
+  const [signatureDrawing, setSignatureDrawing] = useState(false);
   const [sameWa, setSameWa] = useState(false);
 
   async function loadMedia() {
@@ -74,7 +77,12 @@ export default function PujariProfile() {
   return (
     <Screen>
       <ScreenHeader title={t("mobile.pujariProfile")} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        scrollEnabled={!signatureDrawing}
+        nestedScrollEnabled
+        contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 48 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <ErrorBanner message={error || (q.isError ? (q.error instanceof Error ? q.error.message : t("mobile.couldNotLoadProfile")) : null)} />
         {q.isError ? (
           <PrimaryButton title={t("mobile.retry")} onPress={() => void q.refetch()} />
@@ -114,26 +122,6 @@ export default function PujariProfile() {
             }}
           />
         </Card>
-        <Card>
-          <AppText variant="h3">{t("mobile.signature")}</AppText>
-          {sign ? (
-            <Image source={sign} style={{ width: "100%", height: 80, resizeMode: "contain", backgroundColor: colors.secondary }} />
-          ) : null}
-          <SignaturePad
-            onSave={async (file) => {
-              await apiClient.uploadPujariAsset("signature", file);
-              setSign(await apiClient.pujariMediaUri("signature"));
-            }}
-          />
-          <AppText variant="small">{t("mobile.signatureHelp")}</AppText>
-          <MediaPicker
-            cameraLabel={t("mobile.photographSignature")}
-            onPicked={async (file) => {
-              await apiClient.uploadPujariAsset("signature", file);
-              setSign(await apiClient.pujariMediaUri("signature"));
-            }}
-          />
-        </Card>
         <Field label={t("mobile.fullName")} value={String(p.full_name || "")} onChangeText={(v) => set("full_name", v)} />
         <Field label={t("mobile.fatherName")} value={String(p.father_name || "")} onChangeText={(v) => set("father_name", v)} />
         <Field label={t("mobile.dateOfBirth")} value={String(p.date_of_birth || "").slice(0, 10)} onChangeText={(v) => set("date_of_birth", v)} />
@@ -163,6 +151,26 @@ export default function PujariProfile() {
           <AppText style={{ flex: 1 }}>{t("mobile.allowWebsite")}</AppText>
           <Switch value={!!p.website_publication_consent} onValueChange={(v) => set("website_publication_consent", v)} />
         </View>
+        <Card>
+          <AppText variant="h3">{t("mobile.signature")}</AppText>
+          <SignaturePad
+            existingUri={sign}
+            busy={signBusy}
+            onDrawingChange={setSignatureDrawing}
+            onSave={async (file) => {
+              setSignBusy(true);
+              try {
+                await apiClient.uploadPujariAsset("signature", file);
+                setSign(await apiClient.pujariMediaUri("signature"));
+              } catch (e: unknown) {
+                Alert.alert(t("mobile.failed"), e instanceof Error ? e.message : t("mobile.saveFailed"));
+                throw e;
+              } finally {
+                setSignBusy(false);
+              }
+            }}
+          />
+        </Card>
         <PrimaryButton
           title={busy ? t("mobile.saving") : t("mobile.save")}
           loading={busy}
@@ -187,6 +195,7 @@ export default function PujariProfile() {
                 website_publication_consent: !!p.website_publication_consent,
               });
               await q.refetch();
+              showSuccessAlert(t("mobile.profileUpdated"));
             } catch (e: unknown) {
               setError(e instanceof Error ? e.message : t("mobile.failed"));
             } finally {

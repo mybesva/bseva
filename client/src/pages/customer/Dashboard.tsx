@@ -3,7 +3,6 @@ import RolePortalGate from "@/components/RolePortalGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -22,22 +21,14 @@ import { format } from "date-fns";
 import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { useMemo, useState } from "react";
-import WalletPanel from "@/components/WalletPanel";
+import { useMemo } from "react";
+import PanchangCard from "@/components/PanchangCard";
 import { useI18n } from "@/i18n/I18nProvider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 function CustomerDashboardContent() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [calPref, setCalPref] = useState<"lunar" | "solar">("solar");
   const { data: bookings, isLoading } = trpc.bookings.getMyBookings.useQuery(undefined, {
     enabled: !!user && user.role === "customer",
   });
@@ -48,12 +39,6 @@ function CustomerDashboardContent() {
     { enabled: !!firstCategoryId }
   );
   const { data: priestRows = [] } = trpc.priests.getAll.useQuery({});
-  const { data: panchang } = trpc.calendar.panchangam.useQuery({
-    date: new Date(),
-    calendarType: calPref,
-  });
-  const setPref = trpc.calendar.setPreference.useMutation();
-
   const pujariCards = useMemo(() => {
     return priestRows.map(({ user: u, profile }, index) => ({
       id: u.id,
@@ -114,44 +99,7 @@ function CustomerDashboardContent() {
       </section>
 
       <div className="container py-10 space-y-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <WalletPanel variant="customer" />
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-heading">{t("calendar.panchangam")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-sm">{t("calendar.preference")}</Label>
-                <Select
-                  value={calPref}
-                  onValueChange={(v) => {
-                    const pref = v as "lunar" | "solar";
-                    setCalPref(pref);
-                    setPref.mutate({ pref });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="lunar">{t("calendar.lunar")}</SelectItem>
-                    <SelectItem value="solar">{t("calendar.solar")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {panchang && (
-                <div className="text-sm space-y-1 bg-orange-50 border border-orange-100 rounded-lg p-3">
-                  <p><strong>Tithi:</strong> {panchang.tithi} ({panchang.paksha})</p>
-                  <p><strong>Nakshatra:</strong> {panchang.nakshatra}</p>
-                  <p><strong>Month:</strong> {panchang.lunarMonth} · Day {panchang.lunarDay}</p>
-                  <p><strong>Rahu Kalam:</strong> {panchang.rahukaalam}</p>
-                  <p className="text-xs text-muted-foreground">{panchang.notes}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <PanchangCard />
 
         {/* Booking cards — services */}
         <div>
