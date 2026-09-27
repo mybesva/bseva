@@ -30,8 +30,7 @@ export default function CustomerMore() {
     { href: "/customer/contact", label: t("mobile.contact"), icon: "call-outline" as const },
     { href: "/customer/about", label: t("mobile.about"), icon: "information-circle-outline" as const },
     { href: "/customer/password", label: t("mobile.password"), icon: "lock-closed-outline" as const },
-    { href: "/legal/platform_terms", label: t("mobile.terms"), icon: "book-outline" as const },
-    { href: "/legal/privacy", label: t("mobile.privacy"), icon: "shield-checkmark-outline" as const },
+    { href: "/legal/terms", label: t("mobile.terms"), icon: "book-outline" as const },
   ];
   return (
     <Screen>
