@@ -16,9 +16,9 @@ import { useAppTheme } from "@/theme/ThemeContext";
 type ActionIcon = ComponentProps<typeof Ionicons>["name"];
 
 function dashboardTitle(role: string | undefined) {
-  if (role === "super_admin") return "BSeva Super Admin";
-  if (isAdminRole(role)) return "BSeva Admin";
-  return "BSeva Admin";
+  if (role === "super_admin") return "B-Seva Super Admin";
+  if (isAdminRole(role)) return "B-Seva Admin";
+  return "B-Seva Admin";
 }
 
 function KpiTile({

@@ -40,6 +40,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-on-dark: var(--text-on-dark);
+  --color-text-on-dark-secondary: var(--text-on-dark-secondary);
+  --color-text-on-image: var(--text-on-image);
+  --color-brand-orange: var(--brand-orange);
   
   --font-sans: "Plus Jakarta Sans", "Noto Sans Devanagari", "Noto Sans Telugu", "Noto Sans Kannada", "Noto Sans Tamil", system-ui, sans-serif;
   --font-brand: "Cinzel Decorative", serif;
@@ -66,21 +73,32 @@
   --chart-5: #2E4A6F;
   
   --radius: 0.5rem;
+
+  /* Semantic typography — light mode (full opacity) */
+  --brand-orange: #FF9933;
+  --text-primary-light: #1A2B4A;
+  --text-primary-dark: #FFFFFF;
+  --text-on-image: #FFFFFF;
+  --text-primary: #1A2B4A;
+  --text-secondary: #1A2B4A;
+  --text-muted: #1A2B4A;
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-secondary: #FFFFFF;
   
   --background: #FFF8E7;
-  --foreground: #1A2B4A;
+  --foreground: var(--text-primary);
   
   --card: #FFFFFF;
-  --card-foreground: #1A2B4A;
+  --card-foreground: var(--text-primary);
   
   --popover: #FFFFFF;
-  --popover-foreground: #1A2B4A;
+  --popover-foreground: var(--text-primary);
   
   --secondary: #F4E4C1;
-  --secondary-foreground: #1A2B4A;
+  --secondary-foreground: var(--text-primary);
   
   --muted: #F4E4C1;
-  --muted-foreground: #2E4A6F;
+  --muted-foreground: var(--text-muted);
   
   --accent: #D4AF37;
   --accent-foreground: #1A2B4A;
@@ -108,20 +126,31 @@
   --sidebar-primary: #FF7A00;
   --sidebar-primary-foreground: #FFFFFF;
 
+  /* Semantic typography — dark mode (full opacity) */
+  --brand-orange: #FF7A00;
+  --text-primary-light: #1A2B4A;
+  --text-primary-dark: #FFFFFF;
+  --text-on-image: #FFFFFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E8ECF0;
+  --text-muted: #E8ECF0;
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-secondary: #FFFFFF;
+
   --background: #0B1424;
-  --foreground: #F7F1E4;
+  --foreground: var(--text-primary);
 
   --card: #152238;
-  --card-foreground: #F7F1E4;
+  --card-foreground: var(--text-primary);
 
   --popover: #152238;
-  --popover-foreground: #F7F1E4;
+  --popover-foreground: var(--text-primary);
 
   --secondary: #1E2F4A;
-  --secondary-foreground: #F7F1E4;
+  --secondary-foreground: var(--text-primary);
 
   --muted: #1E2F4A;
-  --muted-foreground: #C9BFA8;
+  --muted-foreground: var(--text-muted);
 
   --accent: #FF7A00;
   --accent-foreground: #FFFFFF;
@@ -151,9 +180,28 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
   body {
-    @apply bg-background text-foreground font-sans text-base font-normal antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background text-foreground font-sans text-base font-medium antialiased;
     line-height: 1.55;
+  }
+  p,
+  li,
+  dd,
+  td,
+  th {
+    @apply font-medium;
+  }
+  [data-slot="card-description"],
+  [data-slot="tooltip-content"],
+  [data-slot="input"],
+  [data-slot="textarea"] {
+    @apply font-medium;
   }
   /* Slightly more vertical room for Indian scripts */
   html:lang(hi) body,
@@ -161,7 +209,8 @@
     line-height: 1.65;
   }
   h1, h2 {
-    @apply font-sans text-primary;
+    @apply font-sans;
+    color: var(--brand-orange);
     line-height: 1.25;
   }
   h3, h4, h5, h6 {
@@ -210,19 +259,19 @@
 @layer components {
   /* Semantic typography roles — prefer these over inventing sizes */
   .text-display {
-    @apply text-4xl md:text-5xl font-bold tracking-tight text-primary;
+    @apply text-4xl md:text-5xl font-bold tracking-tight;
     line-height: 1.1;
-    color: #FF9933;
+    color: var(--brand-orange);
   }
   .text-h1 {
     @apply text-2xl md:text-3xl font-bold tracking-tight;
     line-height: 1.2;
-    color: #FF9933; /* theme orange */
+    color: var(--brand-orange);
   }
   .text-h2 {
     @apply text-xl md:text-2xl font-bold tracking-tight;
     line-height: 1.25;
-    color: #FF9933; /* theme orange */
+    color: var(--brand-orange);
   }
   .text-h3 {
     @apply text-lg md:text-xl font-bold tracking-tight;
@@ -234,42 +283,47 @@
     line-height: 1.35;
     color: #0A0A0A; /* full black */
   }
-  .dark .text-display,
-  .dark .text-h1,
-  .dark .text-h2 {
-    color: #FF7A00;
-  }
   .dark .text-h3 {
-    color: #FF7A00;
+    color: var(--brand-orange);
   }
   .dark .text-h4 {
-    color: #F7F1E4;
+    color: #FFFFFF;
+  }
+  .text-on-dark,
+  .text-on-image {
+    color: #FFFFFF;
+    font-weight: 500;
+  }
+  .text-on-dark-secondary {
+    color: #FFFFFF;
+    font-weight: 500;
   }
   .text-body-lg {
-    @apply text-base md:text-lg font-normal;
+    @apply text-base md:text-lg font-medium;
     line-height: 1.6;
   }
   .text-body {
-    @apply text-base font-normal;
+    @apply text-base font-medium;
     line-height: 1.55;
   }
   .text-body-sm {
-    @apply text-sm font-normal;
+    @apply text-sm font-medium;
     line-height: 1.5;
   }
   /* Landing page document sections — hierarchy only, not global font family */
   .landing-doc-heading {
-    @apply text-balance font-semibold text-primary;
+    @apply text-balance font-semibold;
+    color: var(--brand-orange);
     font-size: clamp(1.625rem, 1.5vw + 1.125rem, 2.625rem);
     line-height: 1.2;
   }
   .landing-doc-copy {
-    @apply font-normal;
+    @apply font-medium text-foreground;
     font-size: clamp(0.9375rem, 0.25vw + 0.9rem, 1.125rem);
     line-height: 1.65;
   }
   .landing-doc-body {
-    @apply font-normal text-muted-foreground;
+    @apply font-medium text-foreground;
     font-size: clamp(0.9375rem, 0.25vw + 0.9rem, 1.125rem);
     line-height: 1.65;
   }
@@ -295,16 +349,16 @@
     line-height: 1.3;
   }
   .landing-doc-card-body {
-    @apply font-normal text-muted-foreground;
+    @apply font-medium text-foreground;
     font-size: clamp(0.8125rem, 0.15vw + 0.78rem, 0.9375rem);
     line-height: 1.6;
   }
   .text-label {
-    @apply text-sm font-medium;
+    @apply text-sm font-semibold;
     line-height: 1.2;
   }
   .text-caption {
-    @apply text-xs font-medium;
+    @apply text-xs font-semibold;
     line-height: 1.35;
   }
   .text-button {
@@ -312,7 +366,7 @@
     line-height: 1;
   }
   .text-nav {
-    @apply text-sm font-medium;
+    @apply text-sm font-semibold;
     line-height: 1.25;
   }
   .text-price {
@@ -322,6 +376,12 @@
   .text-eyebrow {
     @apply text-xs font-semibold uppercase tracking-widest;
     line-height: 1.35;
+  }
+
+  /* Intentional B-Seva orange text — always full-strength brand orange */
+  .text-brand-orange,
+  .text-primary {
+    color: var(--brand-orange);
   }
 
   .container {

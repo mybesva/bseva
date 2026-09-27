@@ -135,7 +135,7 @@ export function LegalModal({
 export function LegalInlineLink({
   kind,
   children,
-  className ="text-primary underline hover:text-primary/80",
+  className ="text-primary underline hover:text-primary",
   onOpenChange,
 }: {
   kind: LegalKind;

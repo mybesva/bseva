@@ -219,7 +219,7 @@ export default function PujariAvailabilityPage() {
       <div className="max-w-6xl mx-auto space-y-6 md:space-y-8">
         <section className="bg-sidebar text-sidebar-foreground rounded-xl px-5 py-7 md:px-8 md:py-9 border border-[#D4AF37]/20 shadow-sm">
           <h1 className="text-h1">{t("pujari.availabilityTitle")}</h1>
-          <p className="mt-2 text-sm md:text-base text-sidebar-foreground/75 max-w-2xl">
+          <p className="mt-2 text-sm md:text-base text-sidebar-foreground max-w-2xl">
             {t("web.pujariAvailability.description")}
           </p>
         </section>
@@ -346,7 +346,7 @@ export default function PujariAvailabilityPage() {
                     button_next:
                       "h-8 w-8 rounded-md text-foreground hover:bg-primary/10 hover:text-primary border border-transparent hover:border-[#D4AF37]/30",
                     weekdays: "border-b border-border/60 pb-2 mb-1",
-                    weekday: "text-foreground/65 text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide flex-1",
+                    weekday: "text-muted-foreground text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide flex-1",
                     week: "mt-1",
                     day: "p-0.5",
                     outside: "text-muted-foreground/35",
@@ -399,7 +399,7 @@ export default function PujariAvailabilityPage() {
                           <p
                             className={cn(
                               "text-xs mt-0.5 line-clamp-2",
-                              b.reason ? "text-muted-foreground" : "text-muted-foreground/70 italic"
+                              b.reason ? "text-muted-foreground" : "text-muted-foreground italic"
                             )}
                           >
                             {b.reason || t("web.pujariAvailability.noReason")}

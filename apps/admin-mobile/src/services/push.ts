@@ -17,7 +17,7 @@ export async function registerPushToken(): Promise<string | null> {
     if (status !== "granted") return null;
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("ops", {
-        name: "BSeva Admin",
+        name: "B-Seva Admin",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: "#FF9933",

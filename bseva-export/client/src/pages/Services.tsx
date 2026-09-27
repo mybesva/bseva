@@ -110,7 +110,7 @@ export default function Services() {
             {t("services.badge")}
           </span>
           <h1 className="text-h1 md:text-display text-primary mb-3">{t("services.title")}</h1>
-          <p className="text-base text-white/80 max-w-2xl mx-auto mb-6">{t("services.subtitle")}</p>
+          <p className="text-base text-on-dark max-w-2xl mx-auto mb-6">{t("services.subtitle")}</p>
           <div className="max-w-xl mx-auto relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
             <Input

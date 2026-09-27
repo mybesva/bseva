@@ -173,8 +173,8 @@ export default function RolePortalGate({
             <span className="text-sm font-medium uppercase tracking-wide">B-Seva</span>
           </div>
           <h1 className="font-heading font-bold text-4xl md:text-5xl mb-4">{t(copy.titleKey)}</h1>
-          <p className="text-lg text-white/80 mb-2">{t(copy.subtitleKey)}</p>
-          <p className="text-sm text-white/60">{t(copy.accentKey)}</p>
+          <p className="text-lg text-on-dark mb-2">{t(copy.subtitleKey)}</p>
+          <p className="text-sm text-on-dark-secondary">{t(copy.accentKey)}</p>
         </div>
       </section>
 

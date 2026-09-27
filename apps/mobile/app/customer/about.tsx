@@ -12,6 +12,8 @@ export default function AboutScreen() {
     { title: t("about.v2"), desc: t("about.v2d") },
     { title: t("about.v3"), desc: t("about.v3d") },
     { title: t("about.v4"), desc: t("about.v4d") },
+    { title: t("about.v5"), desc: t("about.v5d") },
+    { title: t("about.v6"), desc: t("about.v6d") },
   ];
   return (
     <Screen>
@@ -20,13 +22,13 @@ export default function AboutScreen() {
         <AppText variant="eyebrow" color={colors.primary}>{t("about.badge")}</AppText>
         <AppText variant="h2">{t("about.title")}</AppText>
         <AppText color={colors.mutedForeground}>{t("about.heroDesc")}</AppText>
+        <AppText color={colors.mutedForeground}>{t("about.heroIntro")}</AppText>
         <Card style={{ gap: 8 }}>
           <AppText variant="h3">{t("about.mission")}</AppText>
           <AppText color={colors.mutedForeground}>{t("about.missionP1")}</AppText>
           <AppText color={colors.mutedForeground}>{t("about.missionP2")}</AppText>
-          {[t("about.point1"), t("about.point2"), t("about.point3"), t("about.point4")].map((item) => (
-            <AppText key={item}>• {item}</AppText>
-          ))}
+          <AppText color={colors.mutedForeground}>{t("about.missionP3")}</AppText>
+          <AppText color={colors.mutedForeground}>{t("about.missionP4")}</AppText>
         </Card>
         {values.map((v) => (
           <Card key={v.title} style={{ gap: 6 }}>

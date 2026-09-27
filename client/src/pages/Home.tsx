@@ -30,7 +30,7 @@ export default function Home() {
               {t("home.heroTitle1")} <br />
               {t("home.heroTitle2")}
             </h1>
-            <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+            <p className="text-lg md:text-xl text-on-dark max-w-2xl mx-auto mb-10 leading-relaxed">
               {t("home.heroDesc")}
             </p>
 

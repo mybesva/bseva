@@ -123,7 +123,7 @@ function DescriptionWithReadMore({
       {excerpt || truncated ? " " : ""}
       <button
         type="button"
-        className="inline m-0 p-0 border-0 bg-transparent font-semibold text-primary whitespace-nowrap hover:underline underline-offset-2 decoration-primary [@media(hover:hover)_and_(pointer:fine)]:hover:text-primary/80 transition-colors cursor-pointer"
+        className="inline m-0 p-0 border-0 bg-transparent font-semibold text-primary whitespace-nowrap hover:underline underline-offset-2 decoration-primary [@media(hover:hover)_and_(pointer:fine)]:hover:text-primary transition-colors cursor-pointer"
         onClick={(e) => {
           stopCardClick(e);
           onReadMore?.();
@@ -195,7 +195,7 @@ export default function ServiceCard({
 
       <CardContent className="px-4 pt-0 pb-2 min-w-0 overflow-hidden space-y-1 flex-1">
         {occasion ? (
-          <p className="text-xs font-semibold text-primary/90 leading-snug line-clamp-1">
+          <p className="text-xs font-semibold text-primary leading-snug line-clamp-1">
             {t("home.forLabel")}: {occasion}
           </p>
         ) : null}

@@ -469,7 +469,7 @@ function PujariDashboardContent() {
             ) : pendingAcceptance.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-6 py-12 text-center">
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <Inbox className="h-7 w-7 text-primary/70" />
+                  <Inbox className="h-7 w-7 text-primary" />
                 </div>
                 <p className="text-base font-semibold text-foreground">No bookings available</p>
                 <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto leading-relaxed">

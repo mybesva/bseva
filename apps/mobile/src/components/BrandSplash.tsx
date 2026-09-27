@@ -35,7 +35,7 @@ export function BrandSplash({ children }: { children: ReactNode }) {
             source={logo}
             resizeMode="contain"
             onLoad={revealFullLogo}
-            accessibilityLabel="BSeva"
+            accessibilityLabel="B-Seva"
             style={{ width: side, height: side }}
           />
         </View>

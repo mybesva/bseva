@@ -30,13 +30,13 @@ export default function GrihaPraveshPuja() {
           <span className="inline-block py-1 px-3 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/40 text-primary-foreground text-xs font-bold tracking-[0.2em] uppercase mb-6">
             New Beginnings
           </span>
-          <h1 className="text-display mb-6 drop-shadow-lg">
+          <h1 className="text-display mb-6">
             <PujaTitle name="Griha Pravesh Puja" onDark />
           </h1>
-          <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
+          <p className="text-lg md:text-xl text-on-dark max-w-2xl mx-auto mb-8 leading-relaxed">
             Sanctify your new home with divine blessings. Perform the traditional house warming ceremony to invite positive energy and prosperity.
           </p>
-          <div className="flex flex-wrap justify-center gap-6 text-white/80 text-sm font-medium">
+          <div className="flex flex-wrap justify-center gap-6 text-[#FFFFFF] text-sm font-medium">
             <span className="flex items-center gap-2"><Clock size={18} className="text-primary" /> 3 - 4 Hours</span>
             <span className="flex items-center gap-2"><Users size={18} className="text-primary" /> 2 Priests</span>
             <span className="flex items-center gap-2"><Star size={18} className="text-primary" /> 5.0/5 (85+ Reviews)</span>
@@ -67,7 +67,7 @@ export default function GrihaPraveshPuja() {
                 { title: "Sapoorva", desc: "Entry into an existing home after traveling abroad or migration." },
                 { title: "Dwandwah", desc: "Entry into a home after reconstruction or renovation due to damage." }
               ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-foreground/80">
+                <li key={i} className="flex items-start gap-3 text-foreground">
                   <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
                   <div>
                     <span className="font-bold text-foreground">{item.title}:</span> {item.desc}
@@ -153,7 +153,7 @@ export default function GrihaPraveshPuja() {
                     "Basic Vastu Puja",
                     "No Havan"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
@@ -194,7 +194,7 @@ export default function GrihaPraveshPuja() {
                     "Satyanarayan Puja (Short)",
                     "Flower Decoration (Entrance)"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80 font-medium">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground font-medium">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
@@ -232,7 +232,7 @@ export default function GrihaPraveshPuja() {
                     "Live Nadaswaram/Shehnai",
                     "Gau Puja with Live Cow (if permitted)"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>

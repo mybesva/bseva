@@ -30,7 +30,7 @@ export function StarRatingInput({ value, onChange, disabled, id }: StarRatingInp
               onClick={() => onChange(n)}
               className={cn(
                 "rounded-md p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50",
-                filled ? "text-primary" : "text-muted-foreground/45 hover:text-primary/70",
+                filled ? "text-primary" : "text-muted-foreground hover:text-primary",
               )}
             >
               <Star className={cn("size-8", filled && "fill-current")} strokeWidth={1.5} />

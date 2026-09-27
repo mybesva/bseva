@@ -77,7 +77,7 @@ export async function syncPujariTracking(active: ActiveTrack | null): Promise<st
         pausesUpdatesAutomatically: false,
         showsBackgroundLocationIndicator: true,
         foregroundService: {
-          notificationTitle: "BSeva travel tracking",
+          notificationTitle: "B-Seva travel tracking",
           notificationBody: "Sharing your location with the customer until you arrive or the puja starts.",
         },
       });

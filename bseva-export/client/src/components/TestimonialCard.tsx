@@ -37,7 +37,7 @@ export default function TestimonialCard({ name, location, text, rating = 5, imag
           )}
           <div>
             <h4 className="text-h4 text-sidebar">{name}</h4>
-            <p className="text-caption text-sidebar/70 uppercase tracking-wider">{location}</p>
+            <p className="text-caption text-muted-foreground uppercase tracking-wider">{location}</p>
           </div>
         </div>
       </CardContent>

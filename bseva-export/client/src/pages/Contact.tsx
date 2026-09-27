@@ -138,7 +138,7 @@ export default function Contact() {
         </div>
         <div className="container relative z-10 text-center">
           <h1 className="text-h1 md:text-display text-primary mb-3">{t("contact.title")}</h1>
-          <p className="text-base text-white/80 max-w-2xl mx-auto">{t("contact.subtitle")}</p>
+          <p className="text-base text-on-dark max-w-2xl mx-auto">{t("contact.subtitle")}</p>
         </div>
       </section>
 

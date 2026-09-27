@@ -16,7 +16,7 @@ export function BrandLockup({
 }) {
   const h = height ?? Math.round(markSize * 2.2);
   return (
-    <View accessible accessibilityRole="image" accessibilityLabel="BSeva">
+    <View accessible accessibilityRole="image" accessibilityLabel="B-Seva">
       <Image
         source={logo}
         resizeMode="contain"

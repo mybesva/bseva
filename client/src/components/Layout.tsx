@@ -119,7 +119,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link key={item.path} href={item.path}>
                 <a
                   className={`text-sm font-medium transition-colors hover:text-primary ${
-                    location === item.path ? "text-primary font-bold" : "text-foreground/80"
+                    location === item.path ? "text-primary font-bold" : "text-foreground"
                   }`}
                 >
                   {item.label}
@@ -165,7 +165,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <Link key={item.path} href={item.path}>
                       <a
                         className={`text-lg font-medium transition-colors hover:text-primary ${
-                          location === item.path ? "text-primary" : "text-foreground/80"
+                          location === item.path ? "text-primary" : "text-foreground"
                         }`}
                         onClick={() => setIsMobileMenuOpen(false)}
                       >

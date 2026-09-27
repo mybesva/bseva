@@ -87,7 +87,7 @@ export default function CustomerWelcomeHero({
             <p className="text-[13px] italic leading-snug text-[#1A2B4A] dark:text-[#F7F1E4]">
               {t("customer.hero.quote")}
             </p>
-            <footer className="mt-0.5 text-right text-[11px] font-medium text-[#C45C2D] lg:mt-0 lg:whitespace-nowrap dark:text-[#FF9933]">
+            <footer className="mt-0.5 text-right text-[11px] font-medium text-[#C45C2D] lg:mt-0 lg:whitespace-nowrap dark:text-brand-orange">
               — {t("customer.hero.quoteBy")}
             </footer>
           </div>

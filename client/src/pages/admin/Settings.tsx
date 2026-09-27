@@ -140,7 +140,7 @@ export default function Settings() {
 
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div>
-                    <Label>Virtual Puja Availability</Label>
+                    <Label>virtual and online Puja Availability</Label>
                     <p className="text-xs text-muted-foreground">Allow customers to book virtual mode</p>
                   </div>
                   <Switch checked={virtualPujaEnabled} onCheckedChange={setVirtualPujaEnabled} />

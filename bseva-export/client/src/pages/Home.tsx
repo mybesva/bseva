@@ -158,15 +158,15 @@ export default function Home() {
 
         <div className="container relative z-10 w-full py-10 sm:py-12 md:py-14 lg:py-16">
           <div className="mx-auto flex w-full flex-col items-center text-center animate-in fade-in duration-700 motion-reduce:animate-none">
-            <span className="inline-flex w-fit max-w-[calc(100%-0.5rem)] items-center justify-center rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[0.625rem] font-semibold uppercase leading-snug tracking-[0.12em] text-white backdrop-blur-sm sm:max-w-full sm:px-4 sm:text-[0.6875rem] sm:tracking-[0.14em] md:text-xs md:tracking-widest">
+            <span className="inline-flex w-fit max-w-[calc(100%-0.5rem)] items-center justify-center rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[0.625rem] font-bold uppercase leading-snug tracking-[0.12em] text-[#FFFFFF] backdrop-blur-sm sm:max-w-full sm:px-4 sm:text-[0.6875rem] sm:tracking-[0.14em] md:text-xs md:tracking-widest">
               {t("home.badge")}
             </span>
 
-            <h1 className="mt-4 w-full max-w-[62.5rem] text-balance text-[clamp(1.75rem,3.8vw+0.75rem,3.125rem)] font-bold leading-[1.12] tracking-tight text-primary drop-shadow-lg sm:mt-5 md:mt-6">
+            <h1 className="mt-4 w-full max-w-[62.5rem] text-balance text-[clamp(1.75rem,3.8vw+0.75rem,3.125rem)] font-bold leading-[1.12] tracking-tight text-brand-orange sm:mt-5 md:mt-6">
               {t("home.heroTitle1")}
             </h1>
 
-            <p className="mt-4 w-full max-w-[52.5rem] text-base leading-relaxed text-white/95 drop-shadow sm:mt-5 sm:text-lg md:mt-6 md:leading-[1.65]">
+            <p className="mt-4 w-full max-w-[52.5rem] text-base font-medium leading-relaxed text-[#FFFFFF] sm:mt-5 sm:text-lg md:mt-6 md:leading-[1.65]">
               {t("home.heroDesc")}
             </p>
 
@@ -181,7 +181,7 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="outline"
-                className="h-12 w-full min-h-12 border-white/50 bg-white/10 px-8 font-semibold text-white hover:bg-white/20 hover:text-white sm:w-auto sm:min-w-[11rem]"
+                className="h-12 w-full min-h-12 border-white/50 bg-white/10 px-8 font-semibold text-[#FFFFFF] hover:bg-white/20 hover:text-[#FFFFFF] sm:w-auto sm:min-w-[11rem]"
                 onClick={() => setLocation(PUJARI_REGISTER)}
               >
                 {t("home.joinAsPujari")}
@@ -222,7 +222,7 @@ export default function Home() {
                     onKeyDown={(e) => e.key === "Enter" && goSearch()}
                     placeholder={t("services.searchPujas")}
                     aria-label={t("home.whatPlanning")}
-                    className="h-12 w-full pl-10 border-none bg-secondary/30 focus-visible:ring-0 font-bold text-foreground placeholder:font-semibold placeholder:text-foreground/55"
+                    className="h-12 w-full pl-10 border-none bg-secondary/30 focus-visible:ring-0 font-bold text-foreground placeholder:font-semibold placeholder:text-muted-foreground"
                   />
                 </div>
                 <Button className="h-12 w-full shrink-0 bg-primary px-8 font-bold text-white md:w-auto md:min-w-[7.5rem]" onClick={goSearch}>
@@ -231,7 +231,7 @@ export default function Home() {
               </div>
             </div>
 
-            <p className="mt-3 max-w-[32rem] text-xs leading-relaxed text-white/75 sm:mt-4 sm:text-sm md:max-w-[36rem]">
+            <p className="mt-3 max-w-[32rem] text-xs font-semibold leading-relaxed text-[#FFFFFF] sm:mt-4 sm:text-sm md:max-w-[36rem]">
               {t("home.searchHint")}
             </p>
           </div>
@@ -467,7 +467,7 @@ export default function Home() {
 
             <div className="relative z-10 mx-auto w-full max-w-[58rem] px-1">
               <h2 className="landing-doc-heading text-foreground mb-5 md:mb-6">{t("home.ctaTitle")}</h2>
-              <p className="landing-doc-copy mb-6 text-foreground/80 md:mb-8">{t("home.ctaDesc")}</p>
+              <p className="landing-doc-copy mb-6 text-foreground md:mb-8">{t("home.ctaDesc")}</p>
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
                 <Button
                   size="lg"

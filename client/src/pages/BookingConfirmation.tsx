@@ -59,7 +59,7 @@ export default function BookingConfirmation() {
 
               {meetLink && (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-8 text-left">
-                  <h2 className="text-lg font-semibold text-[#1E3A5F] mb-2">Virtual Puja Meeting</h2>
+                  <h2 className="text-lg font-semibold text-[#1E3A5F] mb-2">virtual and online Puja Meeting</h2>
                   <p className="text-sm text-muted-foreground mb-2">Demo Meeting Link (no real video call)</p>
                   <code className="text-sm break-all text-[#F7931E]">{meetLink}</code>
                 </div>

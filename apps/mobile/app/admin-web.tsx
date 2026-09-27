@@ -12,9 +12,9 @@ export default function AdminUseAdminApp() {
       <ScreenHeader title="Admin" />
       <View style={{ padding: 20 }}>
         <Card>
-          <AppText variant="h2">Use the BSeva Admin app</AppText>
+          <AppText variant="h2">Use the B-Seva Admin app</AppText>
           <AppText style={{ marginVertical: 12 }}>
-            Admin and Super Admin operations run in the separate BSeva Admin mobile app (com.bseva.admin) or the web admin console. This Customer + Pujari app will not expose admin tools.
+            Admin and Super Admin operations run in the separate B-Seva Admin mobile app (com.bseva.admin) or the web admin console. This Customer + Pujari app will not expose admin tools.
           </AppText>
           <PrimaryButton
             title="Sign out"

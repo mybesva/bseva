@@ -224,7 +224,7 @@ export default function SMSTemplates() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-600">Manage automated SMS templates for notifications</p>
+          <p className="text-muted-foreground">Manage automated SMS templates for notifications</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
           <Plus className="w-4 h-4 mr-2" />
@@ -298,7 +298,7 @@ export default function SMSTemplates() {
                   <TableRow key={template.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-gray-400" />
+                        <MessageSquare className="w-4 h-4 text-muted-foreground" />
                         {template.name}
                       </div>
                     </TableCell>
@@ -307,7 +307,7 @@ export default function SMSTemplates() {
                         {templateTypes.find(t => t.value === template.type)?.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[250px] truncate text-sm text-gray-600">
+                    <TableCell className="max-w-[250px] truncate text-sm text-muted-foreground">
                       {template.content}
                     </TableCell>
                     <TableCell>
@@ -324,7 +324,7 @@ export default function SMSTemplates() {
                           checked={template.isActive}
                           onCheckedChange={() => handleToggleActive(template.id)}
                         />
-                        <span className={template.isActive ? "text-green-600" : "text-gray-400"}>
+                        <span className={template.isActive ? "text-green-600" : "text-muted-foreground"}>
                           {template.isActive ? "Active" : "Inactive"}
                         </span>
                       </div>
@@ -413,7 +413,7 @@ export default function SMSTemplates() {
                 placeholder="B-Seva: Your OTP is {{otp}}. Valid for 10 mins."
                 rows={4}
               />
-              <p className="text-xs text-gray-500">Use variables like {"{{customer_name}}"} for dynamic content</p>
+              <p className="text-xs text-muted-foreground">Use variables like {"{{customer_name}}"} for dynamic content</p>
             </div>
 
             <div className="flex items-center gap-2">

@@ -54,8 +54,8 @@ export default function SectionHeader({
       
       {description && (
         <p className={cn(
-          "max-w-2xl text-base md:text-lg leading-relaxed",
-          light ? "text-white/80" : "text-muted-foreground"
+          "max-w-2xl text-base md:text-lg leading-relaxed font-medium",
+          light ? "text-[#FFFFFF]" : "text-foreground"
         )}>
           {description}
         </p>

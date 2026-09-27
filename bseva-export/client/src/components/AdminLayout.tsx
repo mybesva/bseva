@@ -236,7 +236,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                   <p className="truncate text-sm font-bold leading-snug text-sidebar-foreground" title={user?.name || undefined}>
                     {user?.name || "Admin User"}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-sidebar-foreground/70">{adminRoleLabel}</p>
+                  <p className="mt-0.5 truncate text-xs text-sidebar-foreground">{adminRoleLabel}</p>
                 </div>
               </a>
             </Link>

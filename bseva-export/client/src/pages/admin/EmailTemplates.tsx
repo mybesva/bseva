@@ -231,7 +231,7 @@ export default function EmailTemplates() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-600">Manage automated email templates for notifications</p>
+          <p className="text-muted-foreground">Manage automated email templates for notifications</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
           <Plus className="w-4 h-4 mr-2" />
@@ -289,7 +289,7 @@ export default function EmailTemplates() {
                 <TableRow key={template.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-400" />
+                      <Mail className="w-4 h-4 text-muted-foreground" />
                       {template.name}
                     </div>
                   </TableCell>
@@ -298,7 +298,7 @@ export default function EmailTemplates() {
                       {templateTypes.find(t => t.value === template.type)?.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-gray-600">
+                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                     {template.subject}
                   </TableCell>
                   <TableCell>
@@ -307,12 +307,12 @@ export default function EmailTemplates() {
                         checked={template.isActive}
                         onCheckedChange={() => handleToggleActive(template.id)}
                       />
-                      <span className={template.isActive ? "text-green-600" : "text-gray-400"}>
+                      <span className={template.isActive ? "text-green-600" : "text-muted-foreground"}>
                         {template.isActive ? "Active" : "Inactive"}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground">
                     {template.updatedAt}
                   </TableCell>
                   <TableCell className="text-right">
@@ -402,7 +402,7 @@ export default function EmailTemplates() {
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                 placeholder="e.g., 🙏 Booking Confirmed - {{puja_name}} | B-Seva"
               />
-              <p className="text-xs text-gray-500">Use variables like {"{{customer_name}}"} for dynamic content</p>
+              <p className="text-xs text-muted-foreground">Use variables like {"{{customer_name}}"} for dynamic content</p>
             </div>
 
             <div className="space-y-2">
@@ -426,7 +426,7 @@ export default function EmailTemplates() {
                 placeholder="Hello {{customer_name}}..."
                 rows={4}
               />
-              <p className="text-xs text-gray-500">Fallback for email clients that don't support HTML</p>
+              <p className="text-xs text-muted-foreground">Fallback for email clients that don't support HTML</p>
             </div>
 
             <div className="flex items-center gap-2">

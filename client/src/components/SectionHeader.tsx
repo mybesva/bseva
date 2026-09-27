@@ -27,7 +27,7 @@ export default function SectionHeader({
       {subtitle && (
         <span className={cn(
           "text-sm font-bold tracking-[0.2em] uppercase",
-          light ? "text-primary/90" : "text-primary"
+          light ? "text-primary" : "text-primary"
         )}>
           {subtitle}
         </span>
@@ -47,7 +47,7 @@ export default function SectionHeader({
       {description && (
         <p className={cn(
           "max-w-2xl text-lg leading-relaxed",
-          light ? "text-white/80" : "text-muted-foreground"
+          light ? "text-on-dark" : "text-muted-foreground"
         )}>
           {description}
         </p>

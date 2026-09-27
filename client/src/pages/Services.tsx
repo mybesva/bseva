@@ -23,7 +23,7 @@ export default function Services() {
         </div>
         <div className="container relative z-10 text-center">
           <h1 className="font-heading font-bold text-4xl md:text-6xl mb-6 text-primary">{t("services.title")}</h1>
-          <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">{t("services.subtitle")}</p>
+          <p className="text-lg text-on-dark max-w-2xl mx-auto mb-8">{t("services.subtitle")}</p>
         </div>
       </section>
 

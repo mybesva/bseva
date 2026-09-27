@@ -40,6 +40,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-on-dark: var(--text-on-dark);
+  --color-text-on-dark-secondary: var(--text-on-dark-secondary);
   
   --font-heading: "Cinzel Decorative", serif;
   --font-sans: "Lato", sans-serif;
@@ -66,21 +71,31 @@
   --chart-5: #2E4A6F;
   
   --radius: 0.5rem;
+
+  --text-primary: #1A2B4A;
+  --text-secondary: #1A2B4A;
+  --brand-orange: #FF9933;
+  --text-on-image: #FFFFFF;
+  --text-primary-light: #1A2B4A;
+  --text-primary-dark: #FFFFFF;
+  --text-muted: #1A2B4A;
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-secondary: #FFFFFF;
   
   --background: #FFF8E7;
-  --foreground: #1A2B4A;
+  --foreground: var(--text-primary);
   
   --card: #FFFFFF;
-  --card-foreground: #1A2B4A;
+  --card-foreground: var(--text-primary);
   
   --popover: #FFFFFF;
-  --popover-foreground: #1A2B4A;
+  --popover-foreground: var(--text-primary);
   
   --secondary: #F4E4C1;
-  --secondary-foreground: #1A2B4A;
+  --secondary-foreground: var(--text-primary);
   
   --muted: #F4E4C1;
-  --muted-foreground: #2E4A6F;
+  --muted-foreground: var(--text-muted);
   
   --accent: #D4AF37;
   --accent-foreground: #1A2B4A;
@@ -108,20 +123,30 @@
   --sidebar-primary: #FF9933;
   --sidebar-primary-foreground: #1A2B4A;
   
+  --text-primary: #FFFFFF;
+  --text-secondary: #D8DEE8;
+  --brand-orange: #FF7A00;
+  --text-on-image: #FFFFFF;
+  --text-primary-light: #1A2B4A;
+  --text-primary-dark: #FFFFFF;
+  --text-muted: #E8ECF0;
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-secondary: #FFFFFF;
+
   --background: #1A2B4A;
-  --foreground: #FFF8E7;
+  --foreground: var(--text-primary);
   
   --card: #2E4A6F;
-  --card-foreground: #FFF8E7;
+  --card-foreground: var(--text-primary);
   
   --popover: #2E4A6F;
-  --popover-foreground: #FFF8E7;
+  --popover-foreground: var(--text-primary);
   
   --secondary: #2E4A6F;
-  --secondary-foreground: #FFF8E7;
+  --secondary-foreground: var(--text-primary);
   
   --muted: #2E4A6F;
-  --muted-foreground: #D4AF37;
+  --muted-foreground: var(--text-muted);
   
   --accent: #D4AF37;
   --accent-foreground: #1A2B4A;
@@ -151,8 +176,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
   body {
-    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background text-foreground font-sans font-medium antialiased;
+  }
+  p,
+  li {
+    @apply font-medium;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-bold;
@@ -211,5 +246,19 @@
   /* Text gradients */
   .text-gradient-gold {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-[#D4AF37] to-[#FF9933];
+  }
+
+  .text-on-dark {
+    color: var(--text-on-dark);
+    font-weight: 500;
+  }
+  .text-on-dark-secondary {
+    color: var(--text-on-dark-secondary);
+    font-weight: 500;
+  }
+
+  .text-brand-orange,
+  .text-primary {
+    color: var(--brand-orange);
   }
 }

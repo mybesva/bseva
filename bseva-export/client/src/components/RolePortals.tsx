@@ -162,9 +162,9 @@ function PortalShell({
               {user?.name}
             </p>
             {user?.public_id ? (
-              <p className="text-xs text-sidebar-foreground/60 font-mono mt-0.5 truncate">{user.public_id}</p>
+              <p className="text-xs text-sidebar-foreground/85 font-mono mt-0.5 truncate">{user.public_id}</p>
             ) : null}
-            <p className="text-xs text-sidebar-foreground/70">
+            <p className="text-xs text-sidebar-foreground">
               {role === "pujari" ? t("auth.pujari") : t("auth.customer")}
             </p>
             {headerBelow}

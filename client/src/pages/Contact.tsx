@@ -18,7 +18,7 @@ export default function Contact() {
         </div>
         <div className="container relative z-10 text-center">
           <h1 className="font-heading font-bold text-4xl md:text-6xl mb-6 text-primary">{t("contact.title")}</h1>
-          <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">{t("contact.subtitle")}</p>
+          <p className="text-lg text-on-dark max-w-2xl mx-auto mb-8">{t("contact.subtitle")}</p>
         </div>
       </section>
 
@@ -139,7 +139,7 @@ export default function Contact() {
         <div className="text-center">
           <MapPin size={48} className="text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground font-medium">{t("contact.mapPlaceholder")}</p>
-          <p className="text-sm text-muted-foreground/70">123 Spiritual Avenue, Bangalore</p>
+          <p className="text-sm text-muted-foreground">123 Spiritual Avenue, Bangalore</p>
         </div>
       </section>
     </Layout>

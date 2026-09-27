@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "BSeva Admin",
+    "name": "B-Seva Admin",
     "slug": "bseva-admin",
     "scheme": "bsevaadmin",
     "version": "1.0.0",
@@ -17,8 +17,8 @@
       "bundleIdentifier": "com.bseva.admin",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "BSeva Admin uses the camera to capture documents for pujari verification.",
-        "NSPhotoLibraryUsageDescription": "BSeva Admin needs photo library access to attach verification documents and promo images.",
+        "NSCameraUsageDescription": "B-Seva Admin uses the camera to capture documents for pujari verification.",
+        "NSPhotoLibraryUsageDescription": "B-Seva Admin needs photo library access to attach verification documents and promo images.",
         "UIBackgroundModes": ["remote-notification"]
       }
     },

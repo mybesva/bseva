@@ -40,7 +40,7 @@ export default function AstrologyPage() {
       <section className="bg-sidebar text-sidebar-foreground py-12">
         <div className="container">
           <h1 className="text-h1 text-primary">{t("nav.astrology")}</h1>
-          <p className="text-sidebar-foreground/80 mt-2 max-w-2xl">
+          <p className="text-sidebar-foreground mt-2 max-w-2xl">
             Jyotisha guidance from verified pujaris — horoscope readings, Muhurtham selection and remedial pujas.
           </p>
         </div>

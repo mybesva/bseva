@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useWindowDimensions, View } from "react-native";
 import { WebView } from "react-native-webview";
+import { resolveApiBase } from "@/services/api";
 
 export function prepareDocumentHtml(html: string, screenWidth: number) {
   const mobile = screenWidth < 768;
@@ -40,7 +41,7 @@ export function DocumentViewer({ html }: { html: string }) {
     <View style={{ flex: 1, minHeight: viewerHeight }}>
       <WebView
         originWhitelist={["*"]}
-        source={{ html: prepared }}
+        source={{ html: prepared, baseUrl: `${resolveApiBase()}/` }}
         scalesPageToFit={false}
         scrollEnabled
         nestedScrollEnabled

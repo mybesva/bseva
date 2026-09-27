@@ -28,10 +28,10 @@ export default function GrihaPraveshPuja() {
           <h1 className="font-heading font-bold text-4xl md:text-6xl text-primary mb-6 drop-shadow-lg">
             Griha Pravesh Puja
           </h1>
-          <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
+          <p className="text-lg md:text-xl text-on-dark max-w-2xl mx-auto mb-8 leading-relaxed">
             Sanctify your new home with divine blessings. Perform the traditional house warming ceremony to invite positive energy and prosperity.
           </p>
-          <div className="flex flex-wrap justify-center gap-6 text-white/80 text-sm font-medium">
+          <div className="flex flex-wrap justify-center gap-6 text-on-dark-secondary text-sm font-medium">
             <span className="flex items-center gap-2"><Clock size={18} className="text-primary" /> 3 - 4 Hours</span>
             <span className="flex items-center gap-2"><Users size={18} className="text-primary" /> 2 Priests</span>
             <span className="flex items-center gap-2"><Star size={18} className="text-primary" /> 5.0/5 (85+ Reviews)</span>

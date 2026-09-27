@@ -78,7 +78,7 @@ function HeaderContact({
       className={cn(
         compact
           ? "flex flex-col gap-3 text-sm font-semibold"
-          : "hidden 2xl:flex flex-col justify-center gap-0.5 text-[11px] font-semibold leading-tight text-foreground/80",
+          : "hidden 2xl:flex flex-col justify-center gap-0.5 text-[11px] font-semibold leading-tight text-foreground",
       )}
     >
       <a
@@ -360,21 +360,21 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           <div>
             <BSevaLogo variant="full" size="md" className="mb-4" />
-            <p className="text-sidebar-foreground/70 text-sm leading-relaxed mb-4">
+            <p className="text-sidebar-foreground text-sm leading-relaxed mb-4">
               {t("footer.tagline")}
             </p>
             <div className="space-y-2 text-sm">
               <Link href="/services">
-                <a className="text-sidebar-foreground/80 hover:text-primary block">{t("footer.dualCtaClient")}</a>
+                <a className="text-sidebar-foreground hover:text-primary block">{t("footer.dualCtaClient")}</a>
               </Link>
               <Link href="/register?role=pujari">
-                <a className="text-sidebar-foreground/80 hover:text-primary block">{t("footer.dualCtaPujari")}</a>
+                <a className="text-sidebar-foreground hover:text-primary block">{t("footer.dualCtaPujari")}</a>
               </Link>
             </div>
           </div>
           <div>
             <h4 className="text-h4 mb-4 text-primary">{t("footer.quickLinks")}</h4>
-            <ul className="space-y-2 text-sm text-sidebar-foreground/80">
+            <ul className="space-y-2 text-sm text-sidebar-foreground">
               <li><Link href="/services"><a className="hover:text-primary">{t("nav.services")}</a></Link></li>
               <li><Link href="/#how-it-works"><a className="hover:text-primary">{t("nav.howItWorks")}</a></Link></li>
               <li><Link href="/astrology"><a className="hover:text-primary">{t("nav.astrology")}</a></Link></li>
@@ -387,7 +387,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
           <div>
             <h4 className="text-h4 mb-4 text-primary">{t("footer.contact")}</h4>
-            <ul className="space-y-3 text-sm text-sidebar-foreground/80">
+            <ul className="space-y-3 text-sm text-sidebar-foreground">
               <li className="flex items-center gap-2">
                 <Phone size={14} className="shrink-0" />
                 <a href={telHref(config.bseva_whatsapp_number)} className="hover:text-primary transition-colors">
@@ -404,13 +404,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
           <div>
             <h4 className="text-h4 mb-4 text-primary">{t("footer.legal")}</h4>
-            <ul className="space-y-2 text-sm text-sidebar-foreground/80">
+            <ul className="space-y-2 text-sm text-sidebar-foreground">
               <li><Link href="/terms"><a className="hover:text-primary">{t("nav.terms")}</a></Link></li>
               <li><Link href="/privacy"><a className="hover:text-primary">{t("nav.privacy")}</a></Link></li>
             </ul>
           </div>
         </div>
-        <div className="container border-t border-sidebar-border pt-6 text-center text-xs text-sidebar-foreground/50">
+        <div className="container border-t border-sidebar-border pt-6 text-center text-xs font-medium text-sidebar-foreground">
           {t("footer.rights")}
         </div>
       </footer>

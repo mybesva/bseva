@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "BSeva",
+    "name": "B-Seva",
     "slug": "bseva",
     "scheme": "bseva",
     "version": "1.0.0",
@@ -18,11 +18,11 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "BSeva uses the camera so you can take a profile photo, signature photo, or document photo instead of only picking from the library.",
-        "NSPhotoLibraryUsageDescription": "BSeva needs photo library access to attach documents and profile photos.",
-        "NSLocationWhenInUseUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival, and to find nearby pujaris or save your address.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
-        "NSLocationAlwaysUsageDescription": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival.",
+        "NSCameraUsageDescription": "B-Seva uses the camera so you can take a profile photo, signature photo, or document photo instead of only picking from the library.",
+        "NSPhotoLibraryUsageDescription": "B-Seva needs photo library access to attach documents and profile photos.",
+        "NSLocationWhenInUseUsageDescription": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival, and to find nearby pujaris or save your address.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival.",
+        "NSLocationAlwaysUsageDescription": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival.",
         "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it.",
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
@@ -88,15 +88,15 @@
         {
           "isAndroidBackgroundLocationEnabled": true,
           "isIosBackgroundLocationEnabled": true,
-          "locationAlwaysAndWhenInUsePermission": "BSeva uses your location during the pre-Puja travel period so the customer can track your arrival."
+          "locationAlwaysAndWhenInUsePermission": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival."
         }
       ],
       "expo-task-manager",
       [
         "expo-image-picker",
         {
-          "photosPermission": "BSeva needs photo library access to attach documents and profile photos.",
-          "cameraPermission": "BSeva uses the camera so you can take a profile photo, signature photo, or document photo."
+          "photosPermission": "B-Seva needs photo library access to attach documents and profile photos.",
+          "cameraPermission": "B-Seva uses the camera so you can take a profile photo, signature photo, or document photo."
         }
       ],
       "expo-document-picker",

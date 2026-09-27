@@ -29,8 +29,8 @@ export default function About() {
               {t("about.badge")}
             </span>
             <h1 className="text-h1 md:text-display text-primary mb-3">{t("about.title")}</h1>
-            <p className="text-base text-white/80 leading-relaxed mb-4">{t("about.heroDesc")}</p>
-            <p className="text-base text-white/80 leading-relaxed">{t("about.heroIntro")}</p>
+            <p className="text-base text-on-dark leading-relaxed mb-4">{t("about.heroDesc")}</p>
+            <p className="text-base text-on-dark leading-relaxed">{t("about.heroIntro")}</p>
           </div>
         </div>
       </section>
@@ -107,19 +107,19 @@ export default function About() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-price text-primary mb-2">500+</div>
-              <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statPriests")}</div>
+              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statPriests")}</div>
             </div>
             <div>
               <div className="text-price text-primary mb-2">10k+</div>
-              <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statPujas")}</div>
+              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statPujas")}</div>
             </div>
             <div>
               <div className="text-price text-primary mb-2">15+</div>
-              <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statCities")}</div>
+              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statCities")}</div>
             </div>
             <div>
               <div className="text-price text-primary mb-2">4.9</div>
-              <div className="text-sm text-white/70 uppercase tracking-wider">{t("about.statRating")}</div>
+              <div className="text-sm text-[#FFFFFF] uppercase tracking-wider font-medium">{t("about.statRating")}</div>
             </div>
           </div>
         </div>

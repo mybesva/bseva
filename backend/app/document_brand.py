@@ -45,11 +45,14 @@ def resolve_logo_file(configured: str | None = None) -> Path | None:
     value = str(configured or "").strip()
     if value.startswith(("http://", "https://")):
         return None
-    repo_root = Path(__file__).resolve().parents[2]
+    app_dir = Path(__file__).resolve().parent
+    repo_root = app_dir.parents[1]
     name = Path(value).name if value else "bseva-logo-transparent.png"
     if name in {"bseva-mark.png"}:
         name = "bseva-logo-transparent.png"
     candidates = [
+        app_dir / "static" / name,
+        app_dir / "static" / "bseva-logo-transparent.png",
         Path(value).expanduser() if value else Path(),
         repo_root / "bseva-export" / "client" / "public" / name,
         repo_root / "client" / "public" / name,

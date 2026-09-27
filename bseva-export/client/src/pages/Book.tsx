@@ -96,7 +96,7 @@ export default function Book() {
         <section className="bg-sidebar text-sidebar-foreground py-10 -mx-4 lg:-mx-8 mb-6 px-4 lg:px-8">
           <div className="container px-0">
             <h1 className="text-h1 text-primary">{pujaType.name}</h1>
-            <p className="text-sidebar-foreground/80 mt-1">
+            <p className="text-sidebar-foreground mt-1">
               {publicConfig?.virtual_puja_enabled
                 ? t("web.book.subtitleVirtual")
                 : t("web.book.subtitleInPerson")}

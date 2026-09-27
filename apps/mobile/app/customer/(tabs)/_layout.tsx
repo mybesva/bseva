@@ -11,9 +11,9 @@ export default function CustomerTabs() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarInactiveTintColor: colors.textOnDark,
         tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.gold },
-        tabBarLabelStyle: { fontWeight: "600", fontSize: 11 },
+        tabBarLabelStyle: { fontWeight: "600", fontSize: 10 },
       }}
     >
       <Tabs.Screen
@@ -22,7 +22,7 @@ export default function CustomerTabs() {
       />
       <Tabs.Screen
         name="services"
-        options={{ title: t("nav.services"), tabBarIcon: ({ color, size }) => <Ionicons name="sparkles" color={color} size={size} /> }}
+        options={{ title: t("mobile.services"), tabBarIcon: ({ color, size }) => <Ionicons name="sparkles" color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="bookings"

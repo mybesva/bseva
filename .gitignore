@@ -75,6 +75,7 @@ tmp/
 .vercel/
 
 # Local QA / testing artifacts (keep tracked docs/*.md)
+.runtime-qa/
 docs/B-Seva_findings.docx
 docs/Testing_Points.docx
 docs/Testing_Points_extracted.txt

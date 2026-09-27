@@ -30,14 +30,14 @@ export default function SatyanarayanPuja() {
           <span className="inline-block py-1 px-3 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/40 text-primary-foreground text-xs font-bold tracking-[0.2em] uppercase mb-6">
             Most Popular Service
           </span>
-          <h1 className="text-display mb-6 drop-shadow-lg">
+          <h1 className="text-display mb-6">
             <PujaTitle name="Satyanarayan Puja" onDark />
           </h1>
-          <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
+          <p className="text-lg md:text-xl text-on-dark max-w-2xl mx-auto mb-8 leading-relaxed">
             Invoke the blessings of Lord Vishnu for peace, prosperity, and auspicious beginnings. 
             Performed with strict adherence to Vedic traditions.
           </p>
-          <div className="flex flex-wrap justify-center gap-6 text-white/80 text-sm font-medium">
+          <div className="flex flex-wrap justify-center gap-6 text-[#FFFFFF] text-sm font-medium">
             <span className="flex items-center gap-2"><Clock size={18} className="text-primary" /> 2.5 - 3 Hours</span>
             <span className="flex items-center gap-2"><Users size={18} className="text-primary" /> 1 Main Priest + 1 Assistant</span>
             <span className="flex items-center gap-2"><Star size={18} className="text-primary" /> 4.9/5 (120+ Reviews)</span>
@@ -64,7 +64,7 @@ export default function SatyanarayanPuja() {
             <h3 className="font-bold text-xl text-foreground mb-4">Ideal Occasions</h3>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {["Griha Pravesh (House Warming)", "Before Marriage Ceremonies", "Namkaran (Naming Ceremony)", "Starting New Business", "Full Moon Days (Purnima)", "Ekadashi Tithi"].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-foreground/80">
+                <li key={i} className="flex items-center gap-3 text-foreground">
                   <div className="w-2 h-2 rounded-full bg-primary" />
                   {item}
                 </li>
@@ -147,7 +147,7 @@ export default function SatyanarayanPuja() {
                     "Aarti & Prasad",
                     "No Havan"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
@@ -188,7 +188,7 @@ export default function SatyanarayanPuja() {
                     "Flower Decoration (Basic)",
                     "Prasad Preparation Assistance"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80 font-medium">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground font-medium">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
@@ -226,7 +226,7 @@ export default function SatyanarayanPuja() {
                     "Professional Photography (Digital)",
                     "Customized Prasad Boxes (25 pcs)"
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
+                    <li key={i} className="flex items-start gap-3 text-sm text-foreground">
                       <Check size={16} className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>

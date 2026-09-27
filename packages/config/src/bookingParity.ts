@@ -16,7 +16,7 @@ export function virtualPujaCity(countryId: string): string {
 }
 
 export function virtualPujaLocationLabel(countryId: string, timezone: string): string {
-  return `Virtual Puja · ${virtualPujaCity(countryId)} · ${timezone}`;
+  return `virtual and online Puja · ${virtualPujaCity(countryId)} · ${timezone}`;
 }
 
 export function composePhysicalServiceAddress(input: {

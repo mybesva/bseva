@@ -432,9 +432,9 @@ export default function ServicesAdmin() {
 
       {!virtualFlagOn && isSuper && (
         <p className="text-sm text-muted-foreground mb-4 rounded-md border border-dashed px-3 py-2">
-          Virtual Puja is currently off. Enable it under{" "}
+          virtual and online Puja is currently off. Enable it under{" "}
           <Link href={adminPath("/settings")} className="text-primary underline-offset-2 hover:underline">
-            Settings → Virtual Puja
+            Settings → virtual and online Puja
           </Link>
           .
         </p>
@@ -1404,7 +1404,7 @@ export default function ServicesAdmin() {
                   onChange={(e) => setForm({ ...form, virtual_available: e.target.checked })}
                 />
                 Virtual available for this puja
-                {!virtualFlagOn ? " (platform Virtual Puja is currently off)" : ""}
+                {!virtualFlagOn ? " (platform virtual and online Puja is currently off)" : ""}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
@@ -1416,7 +1416,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Domestic Virtual Puja price (₹)</Label>
+                <Label>Domestic virtual and online Puja price (₹)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -1433,7 +1433,7 @@ export default function ServicesAdmin() {
                 <p className="text-xs text-muted-foreground">Used when the customer’s country is India.</p>
               </div>
               <div className="space-y-2">
-                <Label>International Virtual Puja price (₹)</Label>
+                <Label>International virtual and online Puja price (₹)</Label>
                 <Input
                   type="number"
                   min={0}
