@@ -22,6 +22,12 @@ export function isPujariVerified(profile: PujariProfile): boolean {
   return false;
 }
 
+/** Hide onboarding / "Complete Profile" once submitted or verified (matches web PujariShell nav). */
+export function shouldShowPujariOnboardingMenu(profile: PujariProfile): boolean {
+  const profileDone = Boolean(profile.profile_submitted_at) || isPujariVerified(profile);
+  return !profileDone;
+}
+
 export function shouldShowPujariVerificationAlert(profile: PujariProfile): boolean {
   if (isPujariVerified(profile)) return false;
 
