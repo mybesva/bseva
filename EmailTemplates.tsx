@@ -234,7 +234,7 @@ export default function EmailTemplates() {
           <h1 className="text-3xl font-bold text-[#1E3A5F]">Email Templates</h1>
           <p className="text-gray-600 mt-1">Manage automated email templates for notifications</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-[#F7931E] hover:bg-[#e8850d]">
+        <Button onClick={() => handleOpenDialog()} className="bg-[#FF7A00] hover:bg-[#e8850d]">
           <Plus className="w-4 h-4 mr-2" />
           Create Template
         </Button>
@@ -443,7 +443,7 @@ export default function EmailTemplates() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="bg-[#F7931E] hover:bg-[#e8850d]">
+            <Button onClick={handleSave} className="bg-[#FF7A00] hover:bg-[#e8850d]">
               {editingTemplate ? "Update Template" : "Create Template"}
             </Button>
           </DialogFooter>

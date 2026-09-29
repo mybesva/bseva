@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -242,7 +243,7 @@ export default function CustomersPage() {
         </div>
         {statusFilter !== "all" && (
           <Badge variant="secondary" className="mb-1">
-            Showing: {statusFilter}
+            Showing: {displayTokenLabel(statusFilter)}
           </Badge>
         )}
       </div>

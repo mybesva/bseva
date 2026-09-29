@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { StyleSheet, Text, View } from "react-native";
 import { radius } from "@bseva/tokens";
 import { STATUS_LABELS } from "@/lib/supportLabels";
@@ -16,7 +17,7 @@ export function SupportStatusBadge({ status }: { status: string }) {
   const { colors } = useAppTheme();
   const key = String(status || "open").toLowerCase();
   const color = STATUS_COLORS[key] || colors.mutedForeground;
-  const label = STATUS_LABELS[key] || key.replace(/_/g, " ");
+  const label = STATUS_LABELS[key] || displayTokenLabel(key, "");
 
   return (
     <View

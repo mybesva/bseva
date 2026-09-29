@@ -49,8 +49,13 @@ ALTER TABLE support_ticket_messages ADD COLUMN IF NOT EXISTS new_value TEXT;
 ALTER TABLE support_ticket_messages ADD COLUMN IF NOT EXISTS meta JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE support_ticket_messages ADD COLUMN IF NOT EXISTS actor_role TEXT;
 
-ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS ticket_id UUID REFERENCES support_tickets(id);
-ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS user_role TEXT;
+DO $$
+BEGIN
+  IF to_regclass('public.support_conversations') IS NOT NULL THEN
+    ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS ticket_id UUID REFERENCES support_tickets(id);
+    ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS user_role TEXT;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_priority ON support_tickets(priority);

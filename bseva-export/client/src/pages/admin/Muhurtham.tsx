@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { PujaTitle } from "@/components/PujaTitle";
@@ -149,7 +150,7 @@ export default function Muhurtham() {
             <SelectItem value="actionable">Action required</SelectItem>
             <SelectItem value="all">All statuses</SelectItem>
             {STATUSES.map((item) => (
-              <SelectItem key={item} value={item}>{item.replace(/_/g, " ")}</SelectItem>
+              <SelectItem key={item} value={item}>{displayTokenLabel(item)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -191,9 +192,9 @@ export default function Muhurtham() {
                 <TableCell>{preferredDates(row.preferred_dates).map((date) => formatDisplayDate(date)).join(", ") || "—"}</TableCell>
                 <TableCell>
                   <div>{rupees(row.fee_paise || 0)}</div>
-                  <div className="text-xs text-muted-foreground">{row.payment_status || "—"}</div>
+                  <div className="text-xs text-muted-foreground">{displayTokenLabel(row.payment_status)}</div>
                 </TableCell>
-                <TableCell><Badge variant={row.status === "cancelled" ? "destructive" : "secondary"}>{row.status.replace(/_/g, " ")}</Badge></TableCell>
+                <TableCell><Badge variant={row.status === "cancelled" ? "destructive" : "secondary"}>{displayTokenLabel(row.status)}</Badge></TableCell>
                 <TableCell className="whitespace-nowrap">{formatDisplayDateTime(row.created_at)}</TableCell>
                 <TableCell className="text-right">
                   <Button size="sm" variant="outline" onClick={() => openEditor(row)}>Manage</Button>
@@ -223,7 +224,7 @@ export default function Muhurtham() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {STATUSES.map((item) => (
-                    <SelectItem key={item} value={item}>{item.replace(/_/g, " ")}</SelectItem>
+                    <SelectItem key={item} value={item}>{displayTokenLabel(item)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

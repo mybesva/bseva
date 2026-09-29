@@ -1,3 +1,4 @@
+import { displayTokenLabel, translatedTokenLabel } from "@bseva/config";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { CustomerPortal } from "@/components/RolePortals";
@@ -36,8 +37,7 @@ function statusColor(status: string) {
 
 function formatStatus(status: string, t: (key: string) => string) {
   const key = `status.${status}`;
-  const translated = t(key);
-  return translated === key ? String(status || "").replace(/_/g, " ") : translated;
+  return translatedTokenLabel(t(key), key, status);
 }
 
 function BookingCard({
@@ -92,7 +92,7 @@ function BookingCard({
           ) : null}
           <span className="flex items-center gap-1">
             <MapPin size={14} />
-            {booking.location_label || booking.mode || "—"}
+            {booking.location_label || displayTokenLabel(booking.mode)}
           </span>
           <span className="flex items-center gap-1">
             <CreditCard size={14} />

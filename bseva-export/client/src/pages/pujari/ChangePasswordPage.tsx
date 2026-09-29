@@ -1,10 +1,5 @@
-import { PujariPortal } from "@/components/RolePortals";
-import ChangePasswordForm from "@/pages/ChangePassword";
+import RedirectTo from "@/components/RedirectTo";
 
 export default function PujariChangePasswordPage() {
-  return (
-    <PujariPortal>
-      <ChangePasswordForm />
-    </PujariPortal>
-  );
+  return <RedirectTo to="/pujari/profile?tab=password" />;
 }

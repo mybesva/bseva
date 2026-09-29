@@ -63,6 +63,14 @@ const PLATFORM_KEYS: PlatformKey[] = [
     hint: "When off, customers cannot create Virtual & Online Puja bookings. Admin and Super Admin can turn this on without a deployment.",
   },
   {
+    key: "seva_events_enabled",
+    label: "Seva Events (Group Puja, Chadhava, Pravachan)",
+    type: "boolean",
+    group: "features",
+  },
+  { key: "chadhava_enabled", label: "Chadhava Seva", type: "boolean", group: "features" },
+  { key: "pravachan_enabled", label: "Pravachan Seva", type: "boolean", group: "features" },
+  {
     key: "registration_captcha_enabled",
     label: "Registration CAPTCHA",
     type: "boolean",

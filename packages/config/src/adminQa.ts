@@ -143,7 +143,7 @@ export function validateAdminPujariForm(input: {
     location: input.location,
   });
   const level = Number(input.requested_level);
-  if (!Number.isFinite(level) || level < 1 || level > 4) {
+  if (!Number.isFinite(level) || level < 1 || level > 6) {
     errors.requested_level = "Select a valid level.";
   }
   return errors;

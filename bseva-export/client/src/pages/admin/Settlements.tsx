@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -338,7 +339,7 @@ export default function AdminSettlements() {
                 <TableCell>{s.customer_name || "—"}</TableCell>
                 <TableCell>
                   <Badge variant={s.status === "settled" ? "default" : s.status === "blocked" ? "destructive" : "secondary"}>
-                    {s.status}
+                    {displayTokenLabel(s.status)}
                     {s.status === "settled" && s.payment_reference === "AUTO_BIWEEKLY" ? " · auto" : ""}
                     {s.status === "settled" && s.override_flag ? " · override" : ""}
                     {s.status === "blocked" && s.blocked_reason === "pujari_no_show" ? " · no-show" : ""}

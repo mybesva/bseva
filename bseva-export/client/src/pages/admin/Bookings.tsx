@@ -1,3 +1,4 @@
+import { assignmentEligibilityLead, displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -402,7 +403,7 @@ export default function Bookings() {
                 <TableCell>{rupees(b.total_paise)}</TableCell>
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
-                    <Badge variant={statusVariant(b.status)}>{b.status.replace(/_/g, " ")}</Badge>
+                    <Badge variant={statusVariant(b.status)}>{displayTokenLabel(b.status)}</Badge>
                     {!b.pujari_id && (
                       <span className="text-xs font-medium text-red-700">Assign pujari</span>
                     )}
@@ -468,7 +469,7 @@ export default function Bookings() {
             {!loadingAvailable && available && (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Level {available.required_level} or above. Pujaris with a calendar block are hidden; those with a
+                  {assignmentEligibilityLead(available.required_level)} Pujaris with a calendar block are hidden; those with a
                   schedule conflict are shown with a warning — you can override.
                   {available.booking_has_coordinates
                     ? ` Default option: within ${available.primary_ring_km ?? 10} km. Farther available pujaris are listed below as fallback.`

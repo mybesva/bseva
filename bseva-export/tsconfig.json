@@ -21,7 +21,8 @@
       "@shared/*": ["./shared/*"],
       "@bseva/locales": ["../packages/locales/src/index.ts"],
       "@bseva/config": ["../packages/config/src/index.ts"],
-      "@bseva/types": ["../packages/types/src/index.ts"]
+      "@bseva/types": ["../packages/types/src/index.ts"],
+      "@bseva/validation": ["../packages/validation/src/index.ts"]
     }
   }
 }

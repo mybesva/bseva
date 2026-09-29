@@ -12,6 +12,7 @@ import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2, Download, Share2 
 import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
+import { translatedTokenLabel } from "@bseva/config";
 import { useI18n } from "@/i18n/I18nProvider";
 import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
 import { shareSafely } from "@/lib/browserActions";
@@ -211,7 +212,11 @@ export default function BookingReceipt() {
               </div>
               <div>
                 <p className="text-muted-foreground">{t("booking.package")}</p>
-                <p className="font-medium capitalize">{booking.package_type ||"—"}</p>
+                <p className="font-medium">
+                  {booking.package_type
+                    ? translatedTokenLabel(t(`booking.${booking.package_type}`), `booking.${booking.package_type}`, booking.package_type)
+                    : "—"}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">

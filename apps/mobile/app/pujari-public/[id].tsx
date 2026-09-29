@@ -56,7 +56,9 @@ export default function PublicPujari() {
           <Card>
             <AppText variant="h2">{String(p.name || p.full_name || t("mobile.pujariTitle"))}</AppText>
             <AppText variant="small" color={colors.mutedForeground}>
-              {t("mobile.level", { level: String(p.approved_level ?? "—") })}
+              {p.approved_level === 5 || p.approved_level === 6
+                ? t(`pujari.level.l${p.approved_level}`)
+                : t("mobile.level", { level: String(p.approved_level ?? "—") })}
             </AppText>
             <View style={{ height: 12 }} />
             <Row label={t("mobile.location")} value={loc || String(p.location_label || "")} />

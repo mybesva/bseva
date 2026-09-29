@@ -25,7 +25,7 @@ function StatCard({ item, compact }: { item: StatItem; compact: boolean }) {
         backgroundColor: colors.card,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: colors.border + "55",
+        borderColor: colors.border,
         padding: compact ? 10 : 12,
         gap: 6,
         minHeight: compact ? 88 : 96,
@@ -94,7 +94,7 @@ export function PujariStatGrid({
         value: totalDakshina,
         hint: t("mobile.totalDakshinaHint"),
         icon: "cash-outline",
-        iconColor: "#E07A2F",
+        iconColor: "#FF7A00",
         iconBg: "#FFF0E0",
       },
       {
@@ -110,7 +110,7 @@ export function PujariStatGrid({
         value: String(upcomingCount),
         hint: t("mobile.upcomingHint", { count: String(pendingCount) }),
         icon: "hourglass-outline",
-        iconColor: "#2E4A6F",
+        iconColor: "#1A2B4A",
         iconBg: "#E8EEF5",
       },
       {

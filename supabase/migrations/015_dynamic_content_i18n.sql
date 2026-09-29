@@ -11,38 +11,70 @@ CREATE TABLE IF NOT EXISTS recommendation_translations (
   PRIMARY KEY (recommendation_id, language_code)
 );
 
-CREATE TABLE IF NOT EXISTS legal_policy_translations (
-  policy_id UUID NOT NULL REFERENCES legal_policies(id) ON DELETE CASCADE,
-  language_code TEXT NOT NULL CHECK (language_code IN ('hi', 'te', 'mr', 'ta', 'kn')),
-  title TEXT NOT NULL,
-  points JSONB NOT NULL DEFAULT '[]'::jsonb,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (policy_id, language_code)
-);
+DO $$
+BEGIN
+  IF to_regclass('public.legal_policies') IS NOT NULL THEN
+    CREATE TABLE IF NOT EXISTS legal_policy_translations (
+      policy_id UUID NOT NULL REFERENCES legal_policies(id) ON DELETE CASCADE,
+      language_code TEXT NOT NULL CHECK (language_code IN ('hi', 'te', 'mr', 'ta', 'kn')),
+      title TEXT NOT NULL,
+      points JSONB NOT NULL DEFAULT '[]'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (policy_id, language_code)
+    );
+  END IF;
+END $$;
 
-CREATE INDEX IF NOT EXISTS idx_service_translations_language_name
-  ON service_translations (language_code, name);
+DO $$
+BEGIN
+  IF to_regclass('public.service_translations') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS idx_service_translations_language_name
+      ON service_translations (language_code, name);
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_recommendation_translations_language
   ON recommendation_translations (language_code);
-CREATE INDEX IF NOT EXISTS idx_legal_policy_translations_language
-  ON legal_policy_translations (language_code);
+
+DO $$
+BEGIN
+  IF to_regclass('public.legal_policy_translations') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS idx_legal_policy_translations_language
+      ON legal_policy_translations (language_code);
+  END IF;
+END $$;
 
 -- Ensure canonical rows exist for records created before translation support.
-INSERT INTO service_translations (service_id, language_code, name, short_description, full_description)
-SELECT id, 'en', name, short_description, COALESCE(full_description, description)
-FROM services
-ON CONFLICT (service_id, language_code) DO UPDATE SET
-  name = COALESCE(service_translations.name, EXCLUDED.name),
-  short_description = COALESCE(service_translations.short_description, EXCLUDED.short_description),
-  full_description = COALESCE(service_translations.full_description, EXCLUDED.full_description);
+DO $$
+BEGIN
+  IF to_regclass('public.service_translations') IS NOT NULL THEN
+    INSERT INTO service_translations (service_id, language_code, name, short_description, full_description)
+    SELECT id, 'en', name, short_description, COALESCE(full_description, description)
+    FROM services
+    ON CONFLICT (service_id, language_code) DO UPDATE SET
+      name = COALESCE(service_translations.name, EXCLUDED.name),
+      short_description = COALESCE(service_translations.short_description, EXCLUDED.short_description),
+      full_description = COALESCE(service_translations.full_description, EXCLUDED.full_description);
+  END IF;
+END $$;
 
-INSERT INTO category_translations (category_id, language_code, name)
-SELECT id, 'en', name FROM service_categories
-ON CONFLICT (category_id, language_code) DO NOTHING;
+DO $$
+BEGIN
+  IF to_regclass('public.category_translations') IS NOT NULL THEN
+    INSERT INTO category_translations (category_id, language_code, name)
+    SELECT id, 'en', name FROM service_categories
+    ON CONFLICT (category_id, language_code) DO NOTHING;
+  END IF;
+END $$;
 
-INSERT INTO samagri_item_translations (samagri_item_id, language_code, item_name)
-SELECT id, 'en', name FROM samagri_items
-ON CONFLICT (samagri_item_id, language_code) DO NOTHING;
+DO $$
+BEGIN
+  IF to_regclass('public.samagri_item_translations') IS NOT NULL THEN
+    INSERT INTO samagri_item_translations (samagri_item_id, language_code, item_name)
+    SELECT id, 'en', name FROM samagri_items
+    ON CONFLICT (samagri_item_id, language_code) DO NOTHING;
+  END IF;
+END $$;
 
 -- Backfill the two deterministic recommendations created by backend/seed.py.
 INSERT INTO recommendation_translations (
@@ -72,7 +104,13 @@ ON CONFLICT (recommendation_id, language_code) DO UPDATE SET
 
 -- Seed every existing built-in legal policy in all customer locales. These
 -- rows are keyed by the existing policy UUID selected by slug; no IDs are invented.
-INSERT INTO legal_policy_translations (policy_id, language_code, title, points)
+DO $legal_seed$
+BEGIN
+  IF to_regclass('public.legal_policy_translations') IS NULL
+     OR to_regclass('public.legal_policies') IS NULL THEN
+    RETURN;
+  END IF;
+  INSERT INTO legal_policy_translations (policy_id, language_code, title, points)
 SELECT p.id, v.language_code, v.title, v.points::jsonb
 FROM legal_policies p
 JOIN (
@@ -104,11 +142,18 @@ JOIN (
     ('pujari_booking_terms','kn','ಪೂಜಾರಿ ಬುಕಿಂಗ್ ಸ್ವೀಕಾರ ಷರತ್ತುಗಳು','[{"title":"ನೇರ ವ್ಯವಹಾರ ನಿಷೇಧ","body":"BSeva ಪರಿಚಯಿಸಿದ ಗ್ರಾಹಕರಿಗೆ ಆರು ತಿಂಗಳು BSeva ಬಿಟ್ಟು ನೇರವಾಗಿ ಸೇವೆ ನೀಡುವುದಿಲ್ಲ ಎಂದು ಪೂಜಾರಿ ಒಪ್ಪುತ್ತಾರೆ; ಇದು ಅಂತಿಮ ಕಾನೂನು ಅನುಮೋದನೆಗೆ ಒಳಪಟ್ಟಿದೆ."},{"title":"ವೇದಿಕೆ ನಿಯಮಗಳು","body":"ಬುಕಿಂಗ್ ಸ್ವೀಕರಿಸುವ ಮೂಲಕ ಸಮಯ, ಸೇವಾ ವಿವರಗಳು ಮತ್ತು BSeva ಕಾರ್ಯಾಚರಣೆ ನಿಯಮಗಳನ್ನು ಪಾಲಿಸಲು ಪೂಜಾರಿ ಒಪ್ಪುತ್ತಾರೆ."}]')
 ) AS v(slug, language_code, title, points)
   ON v.slug = p.slug
-ON CONFLICT (policy_id, language_code) DO UPDATE SET
-  title = EXCLUDED.title, points = EXCLUDED.points, updated_at = NOW();
+  ON CONFLICT (policy_id, language_code) DO UPDATE SET
+    title = EXCLUDED.title, points = EXCLUDED.points, updated_at = NOW();
+END $legal_seed$;
 
 -- Existing frozen snapshots can be safely overlaid from stored translations.
-UPDATE booking_preparation_snapshot bps
+DO $snapshot_overlay$
+BEGIN
+  IF to_regclass('public.booking_preparation_snapshot') IS NULL
+     OR to_regclass('public.service_translations') IS NULL THEN
+    RETURN;
+  END IF;
+  UPDATE booking_preparation_snapshot bps
 SET service_name = COALESCE(
       (SELECT NULLIF(spc.display_name, '') FROM service_preparation_content spc
        WHERE spc.service_id = b.service_id AND spc.language_code = bps.language_code),
@@ -141,24 +186,27 @@ SET service_name = COALESCE(
        WHERE spc.service_id = b.service_id AND spc.language_code = bps.language_code),
       bps.disclaimer
     )
-FROM bookings b
-WHERE b.id = bps.booking_id;
+  FROM bookings b
+  WHERE b.id = bps.booking_id;
 
-UPDATE booking_samagri_snapshot bss
-SET name = sit.item_name,
-    instructions = COALESCE(sit.notes, bss.instructions)
-FROM bookings b
-JOIN service_samagri ss ON ss.service_id = b.service_id
-JOIN samagri_items si
-  ON si.id = ss.samagri_item_id
-JOIN samagri_item_translations sit
-  ON sit.samagri_item_id = si.id
-WHERE b.id = bss.booking_id
-  AND si.item_key = bss.item_key
-  AND sit.language_code = bss.language_code;
+  IF to_regclass('public.samagri_item_translations') IS NOT NULL THEN
+    UPDATE booking_samagri_snapshot bss
+    SET name = sit.item_name,
+        instructions = COALESCE(sit.notes, bss.instructions)
+    FROM bookings b
+    JOIN service_samagri ss ON ss.service_id = b.service_id
+    JOIN samagri_items si
+      ON si.id = ss.samagri_item_id
+    JOIN samagri_item_translations sit
+      ON sit.samagri_item_id = si.id
+    WHERE b.id = bss.booking_id
+      AND si.item_key = bss.item_key
+      AND sit.language_code = bss.language_code;
+  END IF;
 
--- Force the read path to reconstruct old localized payloads from the newly
--- overlaid header/item rows; new bookings continue to store a complete payload.
-UPDATE booking_preparation_snapshot
-SET payload = '{}'::jsonb
-WHERE language_code <> 'en';
+  -- Force the read path to reconstruct old localized payloads from the newly
+  -- overlaid header/item rows; new bookings continue to store a complete payload.
+  UPDATE booking_preparation_snapshot
+  SET payload = '{}'::jsonb
+  WHERE language_code <> 'en';
+END $snapshot_overlay$;

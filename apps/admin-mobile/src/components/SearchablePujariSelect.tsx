@@ -183,7 +183,7 @@ export function SelectedPujariCard({
     <View
       style={{
         borderWidth: 1,
-        borderColor: colors.primary + "44",
+        borderColor: colors.primary,
         backgroundColor: colors.primary + "11",
         borderRadius: 12,
         padding: 12,

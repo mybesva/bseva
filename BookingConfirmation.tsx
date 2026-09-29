@@ -42,7 +42,7 @@ export default function BookingConfirmation() {
               </p>
 
               {/* Booking Number */}
-              <div className="bg-gradient-to-r from-[#F7931E]/10 to-[#F7931E]/5 border-2 border-[#F7931E] rounded-lg p-6 mb-8">
+              <div className="bg-gradient-to-r from-[#FF7A00]/10 to-[#FF7A00]/5 border-2 border-[#FF7A00] rounded-lg p-6 mb-8">
                 <p className="text-sm text-gray-600 mb-2">Your Booking Number</p>
                 <p className="text-3xl font-bold text-[#1E3A5F] font-mono tracking-wider">
                   {bookingNumber}
@@ -79,7 +79,7 @@ export default function BookingConfirmation() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
                   onClick={() => setLocation("/my-bookings")}
-                  className="bg-[#F7931E] hover:bg-[#e8851a] text-white"
+                  className="bg-[#FF7A00] hover:bg-[#e8851a] text-white"
                 >
                   <Calendar className="w-4 h-4 mr-2" />
                   View My Bookings

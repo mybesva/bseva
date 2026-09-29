@@ -1,4 +1,4 @@
-import { rupees } from "@bseva/config";
+import { displayTokenLabel, rupees } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -85,7 +85,7 @@ export default function AdminBookingDetail() {
           </AppText>
           <AppText>{b.location_label || b.address}</AppText>
           <AppText variant="price">{rupees(b.total_paise)}</AppText>
-          <AppText variant="small">Payment: {b.payment_status}</AppText>
+          <AppText variant="small">Payment: {displayTokenLabel(b.payment_status, "")}</AppText>
         </Card>
         {can("manage_bookings") ? (
           <>

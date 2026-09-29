@@ -310,3 +310,13 @@ export async function openBookingReceiptHtml(bookingId: string) {
 export async function downloadBookingReceiptPdf(bookingId: string) {
   await downloadAuthorizedPdf(`/bookings/${encodeURIComponent(bookingId)}/receipt/pdf`, "BSeva_Receipt.pdf");
 }
+
+/** Many admin endpoints return `T[]`; some return `{ items: T[] }`. */
+export function coerceListResponse<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (data && typeof data === "object") {
+    const items = (data as { items?: unknown }).items;
+    if (Array.isArray(items)) return items as T[];
+  }
+  return [];
+}

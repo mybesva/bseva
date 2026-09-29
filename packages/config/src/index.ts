@@ -277,6 +277,8 @@ export function formatApiError(detail: unknown, fallback = "Request failed"): st
   return parseApiError(detail, fallback).message;
 }
 
+export { displayTokenLabel, translatedTokenLabel } from "./displayLabels";
+
 export {
   BOOKING_TIME_SLOTS,
   MUHURTA_TIME_SLOTS,
@@ -288,6 +290,22 @@ export {
   isCalendarDayDisabled,
 } from "./bookingLeadTime";
 export { isDeathRelatedService } from "./serviceCategories";
+export {
+  DEFAULT_SEVA_SERVICE_TYPE,
+  SEVA_SERVICE_TYPES,
+  buildServicesApiQuery,
+  buildServicesSearch,
+  enabledSevaServiceTypes,
+  isPujaService,
+  isSevaServiceType,
+  pujaServicesOnly,
+  resolveSevaServiceType,
+  servicesOfType,
+  servicesPathForType,
+  splitAvailableUpcoming,
+  type SevaConfigFlags,
+  type SevaServiceType,
+} from "./serviceDiscovery";
 export { VIRTUAL_COUNTRIES } from "./virtualCountries";
 export {
   CUSTOMER_BOOKABLE_PACKAGES,
@@ -341,6 +359,19 @@ export {
   SUPPORT_RESOLUTIONS,
   TICKET_STATUSES,
 } from "./supportTicketForm";
+export {
+  CHAVA_SEVA_CODE,
+  CHAVA_SEVA_LEVEL,
+  MAX_PUJARI_LEVEL,
+  PRAVACHANA_SEVA_CODE,
+  PRAVACHANA_SEVA_LEVEL,
+  assignmentEligibilityLead,
+  clampServiceRequiredLevel,
+  isSpecializedPujariLevel,
+  priestCoversService,
+  pujariAlreadyHoldsRole,
+  pujariCanSelectRole,
+} from "./pujariLevels";
 export {
   adminServiceActivationError,
   buildAdminServicePayload,

@@ -48,7 +48,7 @@ export default function PujariTabs() {
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
           backgroundColor: colors.card,
-          borderTopColor: colors.border + "66",
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 56 + bottomPad,
           paddingBottom: bottomPad,

@@ -21,9 +21,14 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE service_translations ADD COLUMN IF NOT EXISTS name TEXT;
-ALTER TABLE service_translations ADD COLUMN IF NOT EXISTS customer_instructions TEXT;
-ALTER TABLE service_translations ADD COLUMN IF NOT EXISTS pujari_instructions TEXT;
+DO $$
+BEGIN
+  IF to_regclass('public.service_translations') IS NOT NULL THEN
+    ALTER TABLE service_translations ADD COLUMN IF NOT EXISTS name TEXT;
+    ALTER TABLE service_translations ADD COLUMN IF NOT EXISTS customer_instructions TEXT;
+    ALTER TABLE service_translations ADD COLUMN IF NOT EXISTS pujari_instructions TEXT;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS category_translations (
   category_id UUID NOT NULL REFERENCES service_categories(id) ON DELETE CASCADE,

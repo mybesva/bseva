@@ -8,7 +8,7 @@ import { api, apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { Wallet, TrendingUp, CheckCircle2, Clock } from "lucide-react";
-import { priestShare, pujariEarningsStats } from "@bseva/config";
+import { priestShare, pujariEarningsStats, translatedTokenLabel } from "@bseva/config";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export default function PujariEarningsPage() {
@@ -113,8 +113,10 @@ export default function PujariEarningsPage() {
                     {s.booking_number || s.booking_id?.slice?.(0, 8) || t("web.common.booking")}
                   </p>
                 </div>
-                <Badge variant="outline" className="capitalize">
-                  {s.status === "blocked" ? t("web.earnings.blocked") : t(`status.${s.status || "pending"}`)}
+                <Badge variant="outline">
+                  {s.status === "blocked"
+                    ? t("web.earnings.blocked")
+                    : translatedTokenLabel(t(`status.${s.status || "pending"}`), `status.${s.status || "pending"}`, s.status || "pending")}
                 </Badge>
               </div>
             ))}

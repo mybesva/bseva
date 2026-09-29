@@ -19,7 +19,6 @@ export default function PujariMore() {
   const showOnboarding = shouldShowPujariOnboardingMenu(profile.data || {});
 
   const items = [
-    { href: "/pujari/notifications", label: t("mobile.notifications"), icon: "notifications-outline" as const },
     ...(showOnboarding
       ? [{ href: "/pujari/onboarding", label: t("nav.onboarding"), icon: "flag-outline" as const }]
       : []),
@@ -28,13 +27,12 @@ export default function PujariMore() {
     { href: "/pujari/availability", label: t("nav.availability"), icon: "calendar-outline" as const },
     { href: "/pujari/services", label: t("mobile.serviceOffers"), icon: "layers-outline" as const },
     { href: "/pujari/experience", label: t("pujari.experience"), icon: "school-outline" as const },
+    { href: "/pujari/seva-events", label: t("seva.pujari.eventsTitle"), icon: "calendar-outline" as const },
     { href: "/pujari/address", label: t("mobile.address"), icon: "location-outline" as const },
     { href: "/pujari/bank", label: t("nav.bank"), icon: "card-outline" as const },
     { href: "/pujari/referral", label: t("nav.referral"), icon: "share-social-outline" as const },
-    { href: "/pujari/support", label: t("mobile.support"), icon: "help-circle-outline" as const },
+    { href: "/pujari/support-contact", label: t("mobile.supportAndContact"), icon: "help-circle-outline" as const },
     { href: "/legal/about", label: t("mobile.about"), icon: "information-circle-outline" as const },
-    { href: "/pujari/password", label: t("mobile.password"), icon: "lock-closed-outline" as const },
-    { href: "/legal/terms", label: t("mobile.terms"), icon: "book-outline" as const },
   ];
   return (
     <Screen>

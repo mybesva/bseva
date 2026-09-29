@@ -9,12 +9,22 @@ import {
   validatePhoneNational,
 } from "@bseva/validation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Image, ScrollView, View, type ImageSourcePropType } from "react-native";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  type ImageSourcePropType,
+} from "react-native";
+import { ChangePasswordForm } from "@/components/customer/ChangePasswordForm";
+import { ProfileTabBar, type ProfileTabId } from "@/components/customer/ProfileTabBar";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PhoneWithCountryCode } from "@/components/PhoneWithCountryCode";
 import { MediaPicker, type PickedMedia } from "@/components/MediaPicker";
+import { TermsScreenContent } from "@/components/TermsScreenContent";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -45,6 +55,16 @@ export default function CustomerProfile() {
   const { setLang, t } = useI18n();
   const { colors } = useAppTheme();
   const qc = useQueryClient();
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<ProfileTabId>("profile");
+
+  useEffect(() => {
+    if (params.tab === "password" || params.tab === "terms") {
+      setActiveTab(params.tab);
+    } else if (params.tab === "profile" || !params.tab) {
+      setActiveTab("profile");
+    }
+  }, [params.tab]);
   const profileQ = useQuery({
     queryKey: ["customer-profile"],
     queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, unknown>>,
@@ -121,201 +141,228 @@ export default function CustomerProfile() {
   return (
     <Screen>
       <ScreenHeader title={t("mobile.profile")} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
-        <ErrorBanner message={error || profileErr} />
-        <Card>
-          <AppText variant="small" color={colors.mutedForeground} style={{ marginBottom: 8 }}>
-            {t("web.customerProfile.photo")} ({t("common.optional")})
-          </AppText>
-          {photo && photoOk ? (
-            <Image
-              source={photo}
-              onError={() => setPhotoOk(false)}
-              style={{ width: 96, height: 96, borderRadius: 48, marginBottom: 12, backgroundColor: colors.secondary }}
-            />
-          ) : (
-            <View
-              style={{
-                width: 96,
-                height: 96,
-                borderRadius: 48,
-                backgroundColor: colors.secondary,
-                marginBottom: 12,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <AppText variant="h2" color={colors.primary}>
-                {initial}
-              </AppText>
-            </View>
-          )}
-          {pendingPhoto ? (
-            <View style={{ gap: 8, marginBottom: 8 }}>
-              <Image source={{ uri: pendingPhoto.uri }} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.secondary }} />
-              <AppText variant="small">{t("mobile.photoConfirmHelp")}</AppText>
-              <PrimaryButton
-                title={photoBusy ? t("mobile.saving") : t("mobile.uploadPhoto")}
-                loading={photoBusy}
-                onPress={async () => {
-                  setPhotoBusy(true);
-                  setError(null);
-                  try {
-                    const updated = (await apiClient.uploadCustomerPhoto(pendingPhoto)) as {
-                      profile_photo_path?: string | null;
-                    };
-                    setPendingPhoto(null);
+      <ProfileTabBar value={activeTab} onChange={setActiveTab} />
+      <View style={{ flex: 1 }}>
+      {activeTab === "profile" ? (
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+          <ErrorBanner message={error || profileErr} />
+          <Card>
+            <AppText variant="small" color={colors.mutedForeground} style={{ marginBottom: 8 }}>
+              {t("web.customerProfile.photo")} ({t("common.optional")})
+            </AppText>
+            {photo && photoOk ? (
+              <Image
+                source={photo}
+                onError={() => setPhotoOk(false)}
+                style={{ width: 96, height: 96, borderRadius: 48, marginBottom: 12, backgroundColor: colors.secondary }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: 48,
+                  backgroundColor: colors.secondary,
+                  marginBottom: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AppText variant="h2" color={colors.primary}>
+                  {initial}
+                </AppText>
+              </View>
+            )}
+            {pendingPhoto ? (
+              <View style={{ gap: 8, marginBottom: 8 }}>
+                <Image source={{ uri: pendingPhoto.uri }} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.secondary }} />
+                <AppText variant="small">{t("mobile.photoConfirmHelp")}</AppText>
+                <PrimaryButton
+                  title={photoBusy ? t("mobile.saving") : t("mobile.uploadPhoto")}
+                  loading={photoBusy}
+                  onPress={async () => {
+                    setPhotoBusy(true);
                     setError(null);
-                    if (!updated?.profile_photo_path?.trim()) {
-                      throw new Error(t("mobile.uploadFailed"));
+                    try {
+                      const updated = (await apiClient.uploadCustomerPhoto(pendingPhoto)) as {
+                        profile_photo_path?: string | null;
+                      };
+                      setPendingPhoto(null);
+                      setError(null);
+                      if (!updated?.profile_photo_path?.trim()) {
+                        throw new Error(t("mobile.uploadFailed"));
+                      }
+                      await clearCustomerProfilePhotoCache();
+                      await loadPhoto();
+                      void qc.invalidateQueries({ queryKey: ["customer-photo"] });
+                      void qc.invalidateQueries({ queryKey: ["customer-profile"] });
+                    } catch (e: unknown) {
+                      setError(apiErrorMessage(t, e, "mobile.uploadFailed"));
+                    } finally {
+                      setPhotoBusy(false);
                     }
-                    await clearCustomerProfilePhotoCache();
-                    await loadPhoto();
-                    void qc.invalidateQueries({ queryKey: ["customer-photo"] });
-                    void qc.invalidateQueries({ queryKey: ["customer-profile"] });
-                  } catch (e: unknown) {
-                    setError(apiErrorMessage(t, e, "mobile.uploadFailed"));
-                  } finally {
-                    setPhotoBusy(false);
-                  }
-                }}
-              />
-              <PrimaryButton title={t("common.cancel")} variant="outline" disabled={photoBusy} onPress={() => setPendingPhoto(null)} />
-            </View>
-          ) : (
-            <MediaPicker aspect={[1, 1]} onPicked={(file) => setPendingPhoto(file)} />
-          )}
-          {photo && photoOk ? (
-            <View style={{ marginTop: 8 }}>
-              <PrimaryButton
-                title={t("mobile.removePhoto")}
-                variant="outline"
-                onPress={async () => {
-                  setError(null);
-                  try {
-                    await apiClient.deleteCustomerPhoto();
-                    await clearCustomerProfilePhotoCache();
-                    setPhoto(null);
-                    setPhotoOk(false);
-                    void qc.invalidateQueries({ queryKey: ["customer-photo"] });
-                  } catch (e: unknown) {
-                    setError(apiErrorMessage(t, e, "mobile.saveFailed"));
-                  }
-                }}
-              />
-            </View>
-          ) : null}
-        </Card>
-        <Card>
-          <Field
-            label={t("auth.firstName")}
-            required
-            value={firstName}
-            onChangeText={(v) => {
-              nameFormDirty.current = true;
-              setFirstName(v);
-              setFirstNameErrorKey(null);
-            }}
-            error={firstNameError}
-            autoComplete="given-name"
-          />
-          <Field
-            label={t("auth.middleName")}
-            value={middleName}
-            onChangeText={(v) => {
-              nameFormDirty.current = true;
-              setMiddleName(v);
-            }}
-            autoComplete="off"
-          />
-          <Field
-            label={t("auth.lastName")}
-            required
-            value={lastName}
-            onChangeText={(v) => {
-              nameFormDirty.current = true;
-              setLastName(v);
-              setLastNameErrorKey(null);
-            }}
-            error={lastNameError}
-            autoComplete="family-name"
-          />
-          <PhoneWithCountryCode
-            label={t("auth.phone")}
-            required
-            countryCode={countryCode}
-            national={phoneNational}
-            onCountryCodeChange={(code) => {
-              setCountryCode(code);
-              setPhoneNational((prev) => prev.slice(0, code === "+91" ? 10 : 12));
-              setPhoneErrorKey(null);
-            }}
-            onNationalChange={(digits) => {
-              setPhoneNational(digits);
-              setPhoneErrorKey(null);
-            }}
-            error={phoneError}
-          />
-          <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
-            {user?.email || "—"}
-          </AppText>
-          <AppText variant="small" style={{ marginTop: 12, marginBottom: 8 }}>
-            {t("mobile.language")}
-          </AppText>
-          <ChoiceChips
-            options={LANGS.map((code) => ({ id: code, label: LANG_LABELS[code] }))}
-            value={lang}
-            onChange={(v) => setLangState(v as Lang)}
-          />
-          <View style={{ height: 12 }} />
-          <PrimaryButton
-            title={busy ? t("mobile.saving") : t("mobile.save")}
-            loading={busy}
-            onPress={async () => {
-              setBusy(true);
-              setError(null);
-              const nameParts = {
-                first_name: firstName,
-                middle_name: middleName,
-                last_name: lastName,
-              };
-              const nErrs = validatePersonNameParts(nameParts);
-              const phoneErrKey = validatePhoneNational(countryCode, phoneNational);
-              setFirstNameErrorKey(nErrs.first_name ?? null);
-              setLastNameErrorKey(nErrs.last_name ?? null);
-              setPhoneErrorKey(phoneErrKey);
-              if (Object.keys(nErrs).length || phoneErrKey) {
-                setBusy(false);
-                return;
-              }
-              try {
-                const phone = toE164(countryCode, phoneNational);
-                await apiClient.patchMe({
-                  first_name: firstName.trim(),
-                  middle_name: middleName.trim(),
-                  last_name: lastName.trim(),
-                  phone,
-                  preferred_language: lang,
-                });
-                try {
-                  await apiClient.patchCustomerProfile({ preferred_language: lang });
-                } catch {
-                  /* profile row may not exist yet */
+                  }}
+                />
+                <PrimaryButton title={t("common.cancel")} variant="outline" disabled={photoBusy} onPress={() => setPendingPhoto(null)} />
+              </View>
+            ) : (
+              <MediaPicker aspect={[1, 1]} onPicked={(file) => setPendingPhoto(file)} />
+            )}
+            {photo && photoOk ? (
+              <View style={{ marginTop: 8 }}>
+                <PrimaryButton
+                  title={t("mobile.removePhoto")}
+                  variant="outline"
+                  onPress={async () => {
+                    setError(null);
+                    try {
+                      await apiClient.deleteCustomerPhoto();
+                      await clearCustomerProfilePhotoCache();
+                      setPhoto(null);
+                      setPhotoOk(false);
+                      void qc.invalidateQueries({ queryKey: ["customer-photo"] });
+                    } catch (e: unknown) {
+                      setError(apiErrorMessage(t, e, "mobile.saveFailed"));
+                    }
+                  }}
+                />
+              </View>
+            ) : null}
+          </Card>
+          <Card>
+            <Field
+              label={t("auth.firstName")}
+              required
+              value={firstName}
+              onChangeText={(v) => {
+                nameFormDirty.current = true;
+                setFirstName(v);
+                setFirstNameErrorKey(null);
+              }}
+              error={firstNameError}
+              autoComplete="given-name"
+            />
+            <Field
+              label={t("auth.middleName")}
+              value={middleName}
+              onChangeText={(v) => {
+                nameFormDirty.current = true;
+                setMiddleName(v);
+              }}
+              autoComplete="off"
+            />
+            <Field
+              label={t("auth.lastName")}
+              required
+              value={lastName}
+              onChangeText={(v) => {
+                nameFormDirty.current = true;
+                setLastName(v);
+                setLastNameErrorKey(null);
+              }}
+              error={lastNameError}
+              autoComplete="family-name"
+            />
+            <PhoneWithCountryCode
+              label={t("auth.phone")}
+              required
+              countryCode={countryCode}
+              national={phoneNational}
+              onCountryCodeChange={(code) => {
+                setCountryCode(code);
+                setPhoneNational((prev) => prev.slice(0, code === "+91" ? 10 : 12));
+                setPhoneErrorKey(null);
+              }}
+              onNationalChange={(digits) => {
+                setPhoneNational(digits);
+                setPhoneErrorKey(null);
+              }}
+              error={phoneError}
+            />
+            <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
+              {user?.email || "—"}
+            </AppText>
+            <AppText variant="small" style={{ marginTop: 12, marginBottom: 8 }}>
+              {t("profile.preferredLanguage")}
+            </AppText>
+            <AppText variant="small" color={colors.mutedForeground} style={{ marginBottom: 8 }}>
+              {t("profile.preferredLanguageHint")}
+            </AppText>
+            <ChoiceChips
+              options={LANGS.map((code) => ({ id: code, label: LANG_LABELS[code] }))}
+              value={lang}
+              onChange={(v) => setLangState(v as Lang)}
+            />
+            <View style={{ height: 16 }} />
+            <PrimaryButton
+              title={busy ? t("mobile.saving") : t("mobile.save")}
+              loading={busy}
+              onPress={async () => {
+                setBusy(true);
+                setError(null);
+                const nameParts = {
+                  first_name: firstName,
+                  middle_name: middleName,
+                  last_name: lastName,
+                };
+                const nErrs = validatePersonNameParts(nameParts);
+                const phoneErrKey = validatePhoneNational(countryCode, phoneNational);
+                setFirstNameErrorKey(nErrs.first_name ?? null);
+                setLastNameErrorKey(nErrs.last_name ?? null);
+                setPhoneErrorKey(phoneErrKey);
+                if (Object.keys(nErrs).length || phoneErrKey) {
+                  setBusy(false);
+                  return;
                 }
-                nameFormDirty.current = false;
-                setLang(lang);
-                await refresh();
-                void qc.invalidateQueries({ queryKey: ["customer-profile"] });
-                showSuccessAlert(t("mobile.profileUpdated"));
-              } catch (e: unknown) {
-                setError(apiErrorMessage(t, e, "mobile.saveFailed"));
-              } finally {
-                setBusy(false);
-              }
-            }}
-          />
-        </Card>
-      </ScrollView>
+                try {
+                  const phone = toE164(countryCode, phoneNational);
+                  await apiClient.patchMe({
+                    first_name: firstName.trim(),
+                    middle_name: middleName.trim(),
+                    last_name: lastName.trim(),
+                    phone,
+                    preferred_language: lang,
+                  });
+                  try {
+                    await apiClient.patchCustomerProfile({ preferred_language: lang });
+                  } catch {
+                    /* profile row may not exist yet */
+                  }
+                  nameFormDirty.current = false;
+                  setLang(lang);
+                  await refresh();
+                  void qc.invalidateQueries({ queryKey: ["customer-profile"] });
+                  showSuccessAlert(t("mobile.profileUpdated"));
+                } catch (e: unknown) {
+                  setError(apiErrorMessage(t, e, "mobile.saveFailed"));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          </Card>
+        </ScrollView>
+      ) : null}
+      {activeTab === "password" ? (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, flexGrow: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+        >
+          <ScrollView
+            contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <ChangePasswordForm />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      ) : null}
+      {activeTab === "terms" ? (
+        <View style={{ flex: 1 }}>
+          <TermsScreenContent />
+        </View>
+      ) : null}
+      </View>
     </Screen>
   );
 }

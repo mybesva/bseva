@@ -190,7 +190,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
               <div
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium",
-                  currentStep >= step.number ? "bg-[#F7931E] text-white" : "bg-gray-200 text-gray-500"
+                  currentStep >= step.number ? "bg-[#FF7A00] text-white" : "bg-gray-200 text-gray-500"
                 )}
               >
                 {currentStep > step.number ? <Check className="w-5 h-5" /> : step.number}
@@ -198,7 +198,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
               <span className="text-xs mt-1 text-gray-600">{step.title}</span>
             </div>
             {index < steps.length - 1 && (
-              <div className={cn("w-12 sm:w-20 h-1 mx-2", currentStep > step.number ? "bg-[#F7931E]" : "bg-gray-200")} />
+              <div className={cn("w-12 sm:w-20 h-1 mx-2", currentStep > step.number ? "bg-[#FF7A00]" : "bg-gray-200")} />
             )}
           </div>
         ))}
@@ -213,14 +213,14 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                 key={key}
                 htmlFor={key}
                 className={cn(
-                  "cursor-pointer rounded-lg border-2 p-4 hover:border-[#F7931E]",
-                  tier === key ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                  "cursor-pointer rounded-lg border-2 p-4 hover:border-[#FF7A00]",
+                  tier === key ? "border-[#FF7A00] bg-orange-50" : "border-gray-200"
                 )}
               >
                 <RadioGroupItem value={key} id={key} className="sr-only" />
                 <div className="flex justify-between items-start mb-2">
                   <span className="font-semibold text-[#1E3A5F]">{tierDetails[key].name}</span>
-                  <span className="text-lg font-bold text-[#F7931E]">
+                  <span className="text-lg font-bold text-[#FF7A00]">
                     ₹{(basePrices[key] / 100).toLocaleString("en-IN")}
                   </span>
                 </div>
@@ -246,7 +246,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
               <Label
                 className={cn(
                   "cursor-pointer rounded-lg border-2 p-4",
-                  serviceMode === "physical" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                  serviceMode === "physical" ? "border-[#FF7A00] bg-orange-50" : "border-gray-200"
                 )}
               >
                 <RadioGroupItem value="physical" className="sr-only" />
@@ -257,7 +257,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                 className={cn(
                   "cursor-pointer rounded-lg border-2 p-4",
                   !virtualEnabled && "opacity-50 pointer-events-none",
-                  serviceMode === "virtual" ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                  serviceMode === "virtual" ? "border-[#FF7A00] bg-orange-50" : "border-gray-200"
                 )}
               >
                 <RadioGroupItem value="virtual" className="sr-only" disabled={!virtualEnabled} />
@@ -363,7 +363,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                     onClick={() => setRecommendedPriestId(p.priestId)}
                     className={cn(
                       "w-full text-left p-3 rounded-lg border",
-                      recommendedPriestId === p.priestId ? "border-[#F7931E] bg-orange-50" : "border-border"
+                      recommendedPriestId === p.priestId ? "border-[#FF7A00] bg-orange-50" : "border-border"
                     )}
                   >
                     <div className="flex justify-between">
@@ -446,7 +446,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
               <div className="flex justify-between">
                 <div>
                   <p className="text-lg font-semibold">{pujaName}</p>
-                  <Badge className="bg-[#F7931E] mt-1">
+                  <Badge className="bg-[#FF7A00] mt-1">
                     {tierDetails[tier].name} · {serviceMode === "virtual" ? t("booking.virtual") : t("booking.physical")}
                   </Badge>
                 </div>
@@ -487,7 +487,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                 </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>{t("booking.total")}</span>
-                  <span className="text-[#F7931E]">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
+                  <span className="text-[#FF7A00]">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
                 </div>
               </div>
             </CardContent>
@@ -502,7 +502,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
             <Card className="border-orange-200 bg-orange-50">
               <CardContent className="p-6">
                 <p className="mb-4 text-sm">Please login as a customer to pay from wallet and confirm booking.</p>
-                <Button onClick={() => setLocation(getLoginUrl())} className="bg-[#F7931E]">
+                <Button onClick={() => setLocation(getLoginUrl())} className="bg-[#FF7A00]">
                   <LogIn className="w-4 h-4 mr-2" /> Login
                 </Button>
               </CardContent>
@@ -519,7 +519,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                 </div>
                 <div className="flex justify-between font-bold text-lg">
                   <span>{t("booking.total")}</span>
-                  <span className="text-[#F7931E]">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
+                  <span className="text-[#FF7A00]">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">{t("common.demo")}: mock wallet payment — no real gateway</p>
                 {serviceMode === "virtual" && (
@@ -539,7 +539,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
         </Button>
         {currentStep < 4 ? (
           <Button
-            className="bg-[#F7931E] hover:bg-[#e8850d]"
+            className="bg-[#FF7A00] hover:bg-[#e8850d]"
             disabled={!canProceed()}
             onClick={() => setCurrentStep((s) => (s + 1) as BookingStep)}
           >
@@ -548,7 +548,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
         ) : (
           isAuthenticated && (
             <Button
-              className="bg-[#F7931E] hover:bg-[#e8850d]"
+              className="bg-[#FF7A00] hover:bg-[#e8850d]"
               disabled={createBooking.isPending}
               onClick={handleSubmit}
             >

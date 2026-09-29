@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -277,7 +278,7 @@ export default function PujariDetailPage() {
           rejection_reason: rejectionReason || null,
         }),
       });
-      toast.success(`Marked ${status.replace(/_/g, " ")}`);
+      toast.success(`Marked ${displayTokenLabel(status)}`);
       notifyBadgesChanged();
       await load();
     } catch (e: any) {
@@ -911,10 +912,10 @@ export default function PujariDetailPage() {
               {documents.map((d) => (
                 <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 border rounded-md p-3">
                   <div>
-                    <div className="font-medium text-sm">{DOC_LABELS[d.document_type] || d.document_type}</div>
+                    <div className="font-medium text-sm">{DOC_LABELS[d.document_type] || displayTokenLabel(d.document_type)}</div>
                     <div className="text-xs text-muted-foreground">
                       {d.uploaded_by_name || "—"} · {fmtDate(d.uploaded_at)}
-                      {d.status ? ` · ${d.status}` : ""}
+                      {d.status ? ` · ${displayTokenLabel(d.status)}` : ""}
                     </div>
                   </div>
                   <Button

@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
 
-export default function ChangePasswordForm() {
+export default function ChangePasswordForm({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -41,12 +41,7 @@ export default function ChangePasswordForm() {
     }
   }
 
-  return (
-    <Card className="max-w-md">
-      <CardHeader>
-        <CardTitle className="">{t("auth.changePassword")}</CardTitle>
-      </CardHeader>
-      <CardContent>
+  const form = (
         <form className="space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
             <Label htmlFor="current">{t("auth.currentPassword")}</Label>
@@ -65,7 +60,18 @@ export default function ChangePasswordForm() {
             {pending ? t("web.password.updating") : t("web.password.update")}
           </Button>
         </form>
-      </CardContent>
+  );
+
+  if (embedded) {
+    return <div className="max-w-md">{form}</div>;
+  }
+
+  return (
+    <Card className="max-w-md">
+      <CardHeader>
+        <CardTitle className="">{t("auth.changePassword")}</CardTitle>
+      </CardHeader>
+      <CardContent>{form}</CardContent>
     </Card>
   );
 }

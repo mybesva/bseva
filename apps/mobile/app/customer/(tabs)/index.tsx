@@ -1,3 +1,4 @@
+import { pujaServicesOnly } from "@bseva/config";
 import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -182,7 +183,7 @@ export default function CustomerHome() {
           </>
         ) : null}
         <AppText variant="h2">{t("customer.bookServices")}</AppText>
-        {(services.data || []).slice(0, 6).map((s: CatalogService) => (
+        {pujaServicesOnly(services.data).slice(0, 6).map((s: CatalogService) => (
           <PujaServiceCard key={s.id} service={s} onPress={() => router.push(`/service/${s.slug}`)} />
         ))}
         {(services.data || []).length === 0 && !services.isLoading ? (

@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -377,7 +378,7 @@ export default function AdminSupport() {
                     >
                       <div className="flex justify-between gap-2">
                         <span className="font-medium">{c.subject || "Chat"}</span>
-                        <Badge variant="secondary">{c.status}</Badge>
+                        <Badge variant="secondary">{displayTokenLabel(c.status)}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {c.customer_name || c.customer_id}
@@ -393,7 +394,7 @@ export default function AdminSupport() {
                       <div className="space-y-2 max-h-[160px] overflow-y-auto">
                         {messages.map((m) => (
                           <div key={m.id} className="text-sm">
-                            <span className="font-medium">{m.sender_role}: </span>
+                            <span className="font-medium">{displayTokenLabel(m.sender_role, "")}: </span>
                             {m.body}
                           </div>
                         ))}

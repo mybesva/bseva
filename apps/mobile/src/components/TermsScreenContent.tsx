@@ -1,6 +1,5 @@
 import type { LegalPolicy } from "@bseva/types";
-import { radius, spacing } from "@bseva/tokens";
-import { Ionicons } from "@expo/vector-icons";
+import { spacing } from "@bseva/tokens";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -11,71 +10,85 @@ import { useAppTheme } from "@/theme/ThemeContext";
 
 const TERMS_SLUGS = ["platform_terms", "booking_terms", "cancellation_policy"] as const;
 
-const SECTION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  platform_terms: "scale-outline",
-  booking_terms: "document-text-outline",
-  cancellation_policy: "close-circle-outline",
+const SECTION_LABEL_KEYS: Record<string, string> = {
+  platform_terms: "legal.section.platform",
+  booking_terms: "legal.section.booking",
+  cancellation_policy: "legal.section.cancellation",
 };
+
+const SECTION_BAR_HEIGHT = 40;
 
 function orderPolicies(rows: LegalPolicy[]): LegalPolicy[] {
   return TERMS_SLUGS.map((slug) => rows.find((p) => p.slug === slug)).filter(Boolean) as LegalPolicy[];
 }
 
-function TermsCategoryCard({
-  policy,
-  active,
-  onPress,
+function TermsSectionBar({
+  policies,
+  selectedSlug,
+  onSelect,
 }: {
-  policy: LegalPolicy;
-  active: boolean;
-  onPress: () => void;
+  policies: LegalPolicy[];
+  selectedSlug: string | null;
+  onSelect: (slug: string) => void;
 }) {
+  const { t } = useI18n();
   const { colors } = useAppTheme();
-  const icon = SECTION_ICONS[policy.slug] || "document-text-outline";
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      onPress={onPress}
+    <View
       style={{
-        width: "100%",
-        borderRadius: radius.lg,
-        borderWidth: active ? 2 : 1,
-        borderColor: active ? colors.primary : `${colors.border}CC`,
-        backgroundColor: active ? `${colors.primary}14` : colors.white,
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.md,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.md,
+        height: SECTION_BAR_HEIGHT,
+        flexGrow: 0,
+        flexShrink: 0,
+        marginBottom: spacing.md,
       }}
     >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: active ? colors.primary : colors.secondary,
-          flexShrink: 0,
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ height: SECTION_BAR_HEIGHT, flexGrow: 0, flexShrink: 0 }}
+        contentContainerStyle={{
+          flexDirection: "row",
+          alignItems: "stretch",
+          gap: spacing.md,
+          height: SECTION_BAR_HEIGHT,
         }}
       >
-        <Ionicons name={icon} size={20} color={active ? colors.white : colors.navy} />
-      </View>
-      <AppText
-        style={{
-          flex: 1,
-          fontSize: 14,
-          lineHeight: 20,
-          fontWeight: active ? "700" : "600",
-        }}
-        color={active ? colors.navy : colors.mutedForeground}
-      >
-        {policy.title}
-      </AppText>
-    </Pressable>
+        {policies.map((policy) => {
+          const active = selectedSlug === policy.slug;
+          const labelKey = SECTION_LABEL_KEYS[policy.slug];
+          const label = labelKey ? t(labelKey) : policy.title;
+          return (
+            <Pressable
+              key={policy.slug}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              onPress={() => onSelect(policy.slug)}
+              style={{
+                justifyContent: "center",
+                paddingHorizontal: 2,
+                paddingTop: 2,
+                borderBottomWidth: active ? 2 : 0,
+                borderBottomColor: active ? colors.primary : "transparent",
+                backgroundColor: active ? `${colors.primary}0D` : "transparent",
+              }}
+            >
+              <AppText
+                numberOfLines={1}
+                style={{
+                  fontWeight: active ? "700" : "500",
+                  fontSize: 14,
+                  lineHeight: 18,
+                }}
+                color={active ? colors.navy : colors.mutedForeground}
+              >
+                {label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -96,8 +109,7 @@ export function TermsScreenContent() {
     setSelectedSlug((prev) => prev || policies[0].slug);
   }, [policies]);
 
-  const selected =
-    policies.find((p) => p.slug === selectedSlug) || policies[0];
+  const selected = policies.find((p) => p.slug === selectedSlug) || policies[0];
 
   if (q.isLoading) return <LoadingBlock />;
 
@@ -106,21 +118,22 @@ export function TermsScreenContent() {
       {q.error ? (
         <ErrorBanner message={q.error instanceof Error ? q.error.message : t("errors.generic")} />
       ) : null}
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 40 }}>
-        <AppText variant="small" color={colors.mutedForeground}>
-          {t("web.legal.chooseSection")}
-        </AppText>
-
-        <View style={{ gap: spacing.sm }}>
-          {policies.map((policy) => (
-            <TermsCategoryCard
-              key={policy.slug}
-              policy={policy}
-              active={selectedSlug === policy.slug}
-              onPress={() => setSelectedSlug(policy.slug)}
-            />
-          ))}
-        </View>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: 40,
+          gap: spacing.md,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {policies.length ? (
+          <TermsSectionBar
+            policies={policies}
+            selectedSlug={selectedSlug}
+            onSelect={setSelectedSlug}
+          />
+        ) : null}
 
         {selected ? (
           <View style={{ gap: spacing.md }}>

@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import PanchangCard from "@/components/PanchangCard";
+import { displayTokenLabel, pujaServicesOnly, translatedTokenLabel } from "@bseva/config";
 import { useI18n } from "@/i18n/I18nProvider";
 function CustomerDashboardContent() {
   const { t } = useI18n();
@@ -164,7 +165,7 @@ function CustomerDashboardContent() {
                             <PujaTitle name={booking.service_name} />
                           </h3>
                           <Badge className={getStatusColor(customerStatus(booking))}>{customerStatusLabel(booking)}</Badge>
-                          <Badge variant="outline" className="capitalize">{booking.package_type}</Badge>
+                          <Badge variant="outline">{translatedTokenLabel(t(`booking.${booking.package_type}`), `booking.${booking.package_type}`, booking.package_type, "")}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">#{booking.booking_number}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -178,7 +179,7 @@ function CustomerDashboardContent() {
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin size={14} />
-                            {booking.location_label || booking.mode}
+                            {booking.location_label || displayTokenLabel(booking.mode, "")}
                           </span>
                         </div>
                       </div>
@@ -337,7 +338,7 @@ function CustomerDashboardContent() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(pujas || []).slice(0, 6).map((puja) => (
+            {pujaServicesOnly(pujas).slice(0, 6).map((puja) => (
               <div
                 key={puja.id}
                 onClick={() => setLocation(`/services/${puja.slug}`)}
@@ -410,7 +411,7 @@ function CustomerDashboardContent() {
                         </span>
                         <span className="flex items-center gap-1">
                           <MapPin size={14} />
-                          {booking.location_label || booking.mode}
+                          {booking.location_label || displayTokenLabel(booking.mode, "")}
                         </span>
                         <span className="flex items-center gap-1">
                           <CreditCard size={14} />
@@ -420,10 +421,10 @@ function CustomerDashboardContent() {
                     </div>
                     <Badge
                       variant="outline"
-                      className="capitalize pointer-events-none select-none"
+                      className="pointer-events-none select-none"
                       title="Package type"
                     >
-                      {booking.package_type}
+                      {translatedTokenLabel(t(`booking.${booking.package_type}`), `booking.${booking.package_type}`, booking.package_type, "")}
                     </Badge>
                   </div>
                 </CardContent>

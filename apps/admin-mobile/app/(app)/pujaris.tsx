@@ -61,6 +61,8 @@ const PAGE_SIZE = DEFAULT_ADMIN_PAGE_SIZE;
 
 function levelLabel(level?: number | null) {
   if (level == null) return "—";
+  if (level === 5) return "Level 5 — Chava Seva";
+  if (level === 6) return "Level 6 — Pravachana Seva";
   return `Level ${level}`;
 }
 
@@ -102,7 +104,14 @@ export default function AdminPujaris() {
   const levels = useMemo(() => {
     const raw = levelsQuery.data;
     if (Array.isArray(raw)) return raw;
-    return raw?.items || [{ level: 1, title: "Level 1" }, { level: 2, title: "Level 2" }, { level: 3, title: "Level 3" }, { level: 4, title: "Level 4" }];
+    return raw?.items || [
+      { level: 1, title: "Level 1" },
+      { level: 2, title: "Level 2" },
+      { level: 3, title: "Level 3" },
+      { level: 4, title: "Level 4" },
+      { level: 5, title: "Chava Seva" },
+      { level: 6, title: "Pravachana Seva" },
+    ];
   }, [levelsQuery.data]);
 
   const list = useQuery({

@@ -1,3 +1,5 @@
+import { clampServiceRequiredLevel } from "./pujariLevels";
+
 export const emptyServiceCategoryForm = {
   slug: "",
   name: "",
@@ -201,7 +203,7 @@ export function buildAdminServicePayload(form: AdminServiceForm): Record<string,
     ),
     muhurta_fee_paise: muhurtaFee,
     duration_minutes: Math.max(15, Math.round(Number(form.duration_minutes) || 90)),
-    required_level: Math.min(4, Math.max(1, Number(form.required_level) || 2)),
+    required_level: clampServiceRequiredLevel(Number(form.required_level) || 2),
     pujaris_required: Math.min(20, Math.max(1, Math.round(Number(form.pujaris_required) || 1))),
     basic_pujaris_required: null,
     standard_pujaris_required:

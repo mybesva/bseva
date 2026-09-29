@@ -29,6 +29,8 @@ export type CatalogService = {
   description?: string | null;
   short_description?: string | null;
   category?: string | null;
+  /** Seva line. Absent on legacy rows, which are Puja. */
+  service_type?: ServiceType | null;
   required_level?: number;
   standard_price_paise?: number | null;
   premium_price_paise?: number | null;
@@ -47,7 +49,7 @@ export type CatalogService = {
   alankaram_available?: boolean;
   food_available?: boolean;
   death_related?: boolean;
-  categories?: { slug?: string }[];
+  categories?: { slug?: string; name?: string }[];
   booking_lead_hours?: number | null;
   muhurta_consultation_enabled?: boolean;
   requires_muhurta?: boolean;
@@ -354,4 +356,120 @@ export type PanchangData = {
   rahukaalam: string;
   isPeakDay?: boolean;
   notes?: string | null;
+};
+
+export type ServiceType = "puja" | "chadhava" | "pravachan";
+export type ParticipationMode = "offline" | "online" | "hybrid";
+export type PujaEventKind = "group_live" | "proxy";
+export type FamilyRelationship = "self" | "spouse" | "parent" | "child" | "other";
+
+export type ServicePackage = {
+  id: string;
+  service_id?: string;
+  slug: string;
+  name: string;
+  price_paise: number;
+  max_members?: number;
+  prasad_included?: boolean;
+  inclusions?: string | null;
+  active?: boolean;
+  sort_order?: number;
+};
+
+export type FamilyMember = {
+  id?: string;
+  customer_id?: string;
+  name: string;
+  gotra?: string | null;
+  gotra_unknown?: boolean;
+  relationship: FamilyRelationship;
+  date_of_birth?: string | null;
+  notes?: string | null;
+};
+
+export type SevaEvent = {
+  id: string;
+  service_id: string;
+  service_name?: string;
+  service_slug?: string;
+  service_type?: ServiceType;
+  assigned_pujari_id?: string | null;
+  pujari_name?: string | null;
+  temple_id?: string | null;
+  temple_name?: string | null;
+  temple_city?: string | null;
+  temple_address?: string | null;
+  title?: string | null;
+  description?: string | null;
+  start_at: string;
+  end_at?: string | null;
+  booking_cutoff_at?: string | null;
+  capacity?: number | null;
+  registration_count?: number;
+  seats_remaining?: number | null;
+  sold_out?: boolean;
+  status?: string;
+  display_status?: string;
+  participation_mode?: ParticipationMode;
+  puja_event_kind?: PujaEventKind | null;
+  is_free?: boolean;
+  price_paise?: number | null;
+  online_enabled?: boolean;
+  language_code?: string | null;
+  tithi?: string | null;
+  festival_slug?: string | null;
+  registration_open?: boolean;
+  packages?: ServicePackage[];
+  [key: string]: unknown;
+};
+
+export type SevaRegistration = {
+  id: string;
+  registration_number?: string;
+  event_id: string;
+  customer_id?: string;
+  service_type?: ServiceType;
+  status?: string;
+  payment_status?: string;
+  total_amount_paise?: number;
+  package_id?: string | null;
+  package_name?: string | null;
+  participation_mode?: "offline" | "online";
+  primary_name?: string | null;
+  gotra?: string | null;
+  gotra_unknown?: boolean;
+  sankalp_text?: string | null;
+  family_members?: FamilyMember[];
+  prasad_status?: string;
+  prasad_courier?: string | null;
+  prasad_tracking?: string | null;
+  proof_image_path?: string | null;
+  proof_released?: boolean;
+  can_join_live?: boolean;
+  join_message?: string | null;
+  join_token?: string | null;
+  event_title?: string | null;
+  event_start_at?: string | null;
+  service_name?: string | null;
+  temple_name?: string | null;
+  [key: string]: unknown;
+};
+
+export type CustomerAddress = {
+  id: string;
+  user_id?: string;
+  label?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  district?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  country?: string | null;
+  location_label?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  address?: string | null;
+  created_at?: string;
+  updated_at?: string;
 };

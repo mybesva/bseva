@@ -1,3 +1,4 @@
+import { displayTokenLabel, translatedTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { CustomerPortal } from "@/components/RolePortals";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +55,9 @@ export default function CustomerHistoryPage() {
                 <h3>
                   <PujaTitle name={booking.service_name} />
                 </h3>
-                <Badge className={statusColor(booking.status)}>{t(`status.${booking.status}`)}</Badge>
+                <Badge className={statusColor(booking.status)}>
+                  {translatedTokenLabel(t(`status.${booking.status}`), `status.${booking.status}`, booking.status)}
+                </Badge>
               </div>
               <p className="text-sm text-muted-foreground">#{booking.booking_number}</p>
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -68,7 +71,7 @@ export default function CustomerHistoryPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <MapPin size={14} />
-                  {booking.location_label || booking.mode || "—"}
+                  {booking.location_label || displayTokenLabel(booking.mode)}
                 </span>
                 <span className="flex items-center gap-1">
                   <CreditCard size={14} />

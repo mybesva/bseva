@@ -98,6 +98,7 @@ export default defineConfig({
       "@bseva/locales": path.resolve(repoRoot, "packages/locales/src/index.ts"),
       "@bseva/config": path.resolve(repoRoot, "packages/config/src/index.ts"),
       "@bseva/types": path.resolve(repoRoot, "packages/types/src/index.ts"),
+      "@bseva/validation": path.resolve(repoRoot, "packages/validation/src/index.ts"),
     },
   },
   // Load from repo root `.env` (and local overrides in this package)

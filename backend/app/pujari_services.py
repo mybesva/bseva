@@ -147,7 +147,7 @@ def list_catalog_services_for_offers(db: Session) -> list[dict]:
         rows = db.execute(
             text(
                 """
-                SELECT id, name, slug, short_description, description, category,
+                SELECT id, name, slug, short_description, description, category, required_level,
                        basic_price_paise, standard_price_paise, premium_price_paise,
                        main_puja_price_paise, duration_minutes, active, pricing_status,
                        display_order, dakshina_share_percent
@@ -163,7 +163,7 @@ def list_catalog_services_for_offers(db: Session) -> list[dict]:
         rows = db.execute(
             text(
                 """
-                SELECT id, name, slug, description, category,
+                SELECT id, name, slug, description, category, required_level,
                        standard_price_paise, premium_price_paise,
                        duration_minutes, active
                 FROM services
@@ -297,10 +297,46 @@ def _service_row_payload(db: Session, s: dict, applied_ids: set[str]) -> dict:
     }
 
 
+def _approved_level(db: Session, pujari_id: str) -> int | None:
+    row = db.execute(
+        text("SELECT approved_level FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+        {"id": pujari_id},
+    ).first()
+    if not row or row[0] is None:
+        return None
+    return int(row[0])
+
+
+def _services_visible_to_pujari(db: Session, pujari_id: str, services: list[dict]) -> list[dict]:
+    """Level 1–4 keep the full catalog. Level 5 and 6 only see their own service level."""
+    from app.pujari_levels import is_specialized_level
+
+    approved = _approved_level(db, pujari_id)
+    if not is_specialized_level(approved):
+        return services
+    return [s for s in services if int(s.get("required_level") or 0) == int(approved)]
+
+
+def _reject_specialized_service_mismatch(db: Session, pujari_id: str, service_id: str) -> None:
+    """No-op for Levels 1–4. Specialized roles can apply only to their own service level."""
+    from app.pujari_levels import is_specialized_level
+
+    approved = _approved_level(db, pujari_id)
+    if not is_specialized_level(approved):
+        return
+    row = db.execute(
+        text("SELECT required_level FROM services WHERE id = CAST(:id AS uuid)"),
+        {"id": service_id},
+    ).first()
+    required = int(row[0]) if row and row[0] is not None else 0
+    if required != int(approved):
+        raise HTTPException(400, "Pujari is not eligible for this service")
+
+
 def get_offers_payload(db: Session, pujari_id: str) -> dict:
     """Pujari-facing catalog — applied flag only (no approval status)."""
     ensure_service_tables(db)
-    services = list_catalog_services_for_offers(db)
+    services = _services_visible_to_pujari(db, pujari_id, list_catalog_services_for_offers(db))
     sections = _offer_sections(db)
     applied_ids = _load_application_ids(db, pujari_id)
     out = [_service_row_payload(db, s, applied_ids) for s in services]
@@ -319,6 +355,7 @@ def get_offers_payload(db: Session, pujari_id: str) -> dict:
 
 def apply_for_service(db: Session, pujari_id: str, service_id: str, *, commit: bool = True) -> dict:
     ensure_service_tables(db)
+    _reject_specialized_service_mismatch(db, pujari_id, service_id)
     catalog = {str(s["id"]) for s in list_catalog_services_for_offers(db)}
     sid = str(service_id).strip()
     if sid not in catalog:
@@ -341,12 +378,23 @@ def apply_for_service(db: Session, pujari_id: str, service_id: str, *, commit: b
 
 def submit_service_selection(db: Session, pujari_id: str, service_ids: list[str]) -> dict:
     """Bulk apply (add-only) — used by onboarding; never removes applications."""
+    from app.pujari_levels import is_specialized_level
+
     ensure_service_tables(db)
+    approved = _approved_level(db, pujari_id)
+    specialized = is_specialized_level(approved)
     catalog = {str(s["id"]) for s in list_catalog_services_for_offers(db)}
     for raw in service_ids or []:
         sid = str(raw).strip()
         if not sid or sid not in catalog:
             continue
+        if specialized:
+            row = db.execute(
+                text("SELECT required_level FROM services WHERE id = CAST(:id AS uuid)"),
+                {"id": sid},
+            ).first()
+            if not row or int(row[0] or 0) != int(approved):
+                continue
         db.execute(
             text(
                 """

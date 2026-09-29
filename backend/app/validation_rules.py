@@ -113,6 +113,7 @@ def validate_address_fields(
     state: str | None = None,
     pincode: str | None = None,
     require_all: bool = False,
+    require_pincode: bool = True,
 ) -> dict:
     """Validate address pieces. When require_all, all core fields must be present and valid."""
     touching = any(
@@ -137,8 +138,8 @@ def validate_address_fields(
         out["district"] = _reject_junk("District", district, min_len=2, required=req)
     if state is not None or req:
         out["state"] = _reject_junk("State", state, min_len=2, required=req)
-    if pincode is not None or req:
-        out["pincode"] = validate_indian_pincode(pincode, required=req)
+    if pincode is not None or (req and require_pincode):
+        out["pincode"] = validate_indian_pincode(pincode, required=req and require_pincode)
     return out
 
 

@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import Layout from "@/components/Layout";
 import { CustomerPortal, PujariPortal } from "@/components/RolePortals";
+import { PortalSegmentedTabs } from "@/components/PortalSegmentedTabs";
+import { ContactPortalContent } from "@/components/ContactPortalContent";
+import { useLocation, useSearch } from "wouter";
+import {
+  supportContactTabFromSearch,
+  supportPathWithTab,
+  type SupportContactTabId,
+} from "@/lib/portalProfileTab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -289,23 +297,58 @@ function SupportForm({ categories }: { categories: readonly string[] }) {
   );
 }
 
-export function CustomerSupportPage() {
+function PortalSupportContactPage({
+  Portal,
+  categories,
+  supportPath,
+}: {
+  Portal: ComponentType<{ children: ReactNode }>;
+  categories: readonly string[];
+  supportPath: string;
+}) {
   const { t } = useI18n();
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const activeTab = supportContactTabFromSearch(search);
+
+  function setActiveTab(tab: SupportContactTabId) {
+    setLocation(supportPathWithTab(supportPath, tab));
+  }
+
+  const tabs = [
+    { id: "support", label: t("mobile.support") },
+    { id: "contact", label: t("mobile.contact") },
+  ];
+
   return (
-    <CustomerPortal>
-      <h1 className="text-h1 mb-6">{t("support.title")}</h1>
-      <SupportForm categories={CUSTOMER_SUPPORT_CATS} />
-    </CustomerPortal>
+    <Portal>
+      <div className="max-w-6xl space-y-5">
+        <h1 className="text-h1">{t("mobile.supportAndContact")}</h1>
+        <PortalSegmentedTabs value={activeTab} onChange={(id) => setActiveTab(id as SupportContactTabId)} tabs={tabs} />
+        {activeTab === "support" ? <SupportForm categories={categories} /> : null}
+        {activeTab === "contact" ? <ContactPortalContent /> : null}
+      </div>
+    </Portal>
+  );
+}
+
+export function CustomerSupportPage() {
+  return (
+    <PortalSupportContactPage
+      Portal={CustomerPortal}
+      categories={CUSTOMER_SUPPORT_CATS}
+      supportPath="/customer/support"
+    />
   );
 }
 
 export function PujariSupportPage() {
-  const { t } = useI18n();
   return (
-    <PujariPortal>
-      <h1 className="text-h1 mb-6">{t("support.title")}</h1>
-      <SupportForm categories={PUJARI_SUPPORT_CATS} />
-    </PujariPortal>
+    <PortalSupportContactPage
+      Portal={PujariPortal}
+      categories={PUJARI_SUPPORT_CATS}
+      supportPath="/pujari/support"
+    />
   );
 }
 

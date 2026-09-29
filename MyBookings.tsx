@@ -24,7 +24,7 @@ export default function MyBookings() {
               <p className="text-gray-600 mb-6">Please log in to view your bookings.</p>
               <Button
                 onClick={() => setLocation("/login")}
-                className="bg-[#F7931E] hover:bg-[#e8851a]"
+                className="bg-[#FF7A00] hover:bg-[#e8851a]"
               >
                 Login
               </Button>
@@ -65,7 +65,7 @@ export default function MyBookings() {
           {/* Loading State */}
           {isLoading && (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#F7931E]"></div>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF7A00]"></div>
               <p className="mt-4 text-gray-600">Loading your bookings...</p>
             </div>
           )}
@@ -79,7 +79,7 @@ export default function MyBookings() {
                 <p className="text-gray-600 mb-6">You haven't made any puja bookings yet.</p>
                 <Button
                   onClick={() => setLocation("/services")}
-                  className="bg-[#F7931E] hover:bg-[#e8851a]"
+                  className="bg-[#FF7A00] hover:bg-[#e8851a]"
                 >
                   Browse Services
                 </Button>
@@ -110,7 +110,7 @@ export default function MyBookings() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="flex items-start space-x-3">
-                        <Calendar className="w-5 h-5 text-[#F7931E] mt-0.5" />
+                        <Calendar className="w-5 h-5 text-[#FF7A00] mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-gray-700">Date & Time</p>
                           <p className="text-sm text-gray-600">
@@ -121,7 +121,7 @@ export default function MyBookings() {
                       </div>
 
                       <div className="flex items-start space-x-3">
-                        <MapPin className="w-5 h-5 text-[#F7931E] mt-0.5" />
+                        <MapPin className="w-5 h-5 text-[#FF7A00] mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-gray-700">Location</p>
                           <p className="text-sm text-gray-600">{booking.city}</p>
@@ -129,7 +129,7 @@ export default function MyBookings() {
                       </div>
 
                       <div className="flex items-start space-x-3">
-                        <User className="w-5 h-5 text-[#F7931E] mt-0.5" />
+                        <User className="w-5 h-5 text-[#FF7A00] mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-gray-700">Package</p>
                           <p className="text-sm text-gray-600 capitalize">{booking.tier}</p>
@@ -137,7 +137,7 @@ export default function MyBookings() {
                       </div>
 
                       <div className="flex items-start space-x-3">
-                        <Clock className="w-5 h-5 text-[#F7931E] mt-0.5" />
+                        <Clock className="w-5 h-5 text-[#FF7A00] mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-gray-700">Total Amount</p>
                           <p className="text-sm font-bold text-[#1E3A5F]">
@@ -174,7 +174,7 @@ export default function MyBookings() {
                       {booking.status === "completed" && (
                         <Button
                           size="sm"
-                          className="bg-[#F7931E] hover:bg-[#e8851a]"
+                          className="bg-[#FF7A00] hover:bg-[#e8851a]"
                           onClick={() => setLocation(`/review/${booking.id}`)}
                         >
                           Write Review

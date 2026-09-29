@@ -53,28 +53,28 @@ export default function CustomerWelcomeHero({
       />
 
       <div className="relative z-[1] flex flex-col gap-3 p-4 sm:p-5 lg:block lg:h-[292px] lg:overflow-hidden lg:px-8 lg:py-6 xl:h-[300px]">
-        <p className="mb-0 flex items-center gap-2 text-[11px] font-medium tracking-wide text-[#8B5A2B] lg:mb-2.5 dark:text-[#E8C990]">
-          <Flower2 size={14} className="shrink-0 text-[#C45C2D]" aria-hidden />
+        <p className="mb-0 flex items-center gap-2 text-[11px] font-medium tracking-wide text-foreground lg:mb-2.5 dark:text-white">
+          <Flower2 size={14} className="shrink-0 text-primary" aria-hidden />
           {t("customer.hero.tagline")}
-          <span className="hidden h-px w-10 bg-[#C45C2D]/70 sm:block" aria-hidden />
+          <span className="hidden h-px w-10 bg-primary sm:block" aria-hidden />
         </p>
 
         <div className="min-w-0 max-w-xl lg:max-w-[min(100%,38rem)]">
           <h1
-            className="max-w-full min-w-0 break-words hyphens-auto [overflow-wrap:anywhere] [word-break:break-word] pr-6 sm:pr-10 lg:pr-4 font-bold leading-[1.15] tracking-tight text-[#1A2B4A] dark:text-[#F7F1E4]"
+            className="max-w-full min-w-0 break-words hyphens-auto [overflow-wrap:anywhere] [word-break:break-word] pr-6 sm:pr-10 lg:pr-4 font-bold leading-[1.15] tracking-tight text-foreground dark:text-white"
             style={{ fontSize: greetingClamp(customerName) }}
           >
             {greeting.before}
             <span className="pr-[0.4em]">🙏</span>
             {greeting.after}
           </h1>
-          <p className="mt-0 break-words text-[1.25rem] font-bold leading-[1.12] text-[#1A2B4A] sm:text-[1.5rem] lg:text-[36px] lg:leading-[1.08] dark:text-[#F7F1E4]">
+          <p className="mt-0 break-words text-[1.25rem] font-bold leading-[1.12] text-foreground sm:text-[1.5rem] lg:text-[36px] lg:leading-[1.08] dark:text-white">
             {t("customer.hero.welcome")}
           </p>
-          <p className="mt-1.5 text-sm font-semibold leading-snug text-[#1A2B4A] lg:mt-2 dark:text-[#F7F1E4]/90">
+          <p className="mt-1.5 text-sm font-semibold leading-snug text-foreground lg:mt-2 dark:text-white">
             {t("customer.hero.blessing")}
           </p>
-          <p className="mt-0.5 max-w-[36rem] text-[13px] leading-snug text-[#2E4A6F] dark:text-[#C5D0E0]">
+          <p className="mt-0.5 max-w-[36rem] text-[13px] leading-snug text-muted-foreground dark:text-text-secondary">
             {t("customer.hero.support")}
           </p>
         </div>
@@ -84,10 +84,10 @@ export default function CustomerWelcomeHero({
             “
           </span>
           <div className="min-w-0 lg:flex lg:flex-1 lg:items-center lg:gap-3">
-            <p className="text-[13px] italic leading-snug text-[#1A2B4A] dark:text-[#F7F1E4]">
+            <p className="text-[13px] italic leading-snug text-foreground dark:text-white">
               {t("customer.hero.quote")}
             </p>
-            <footer className="mt-0.5 text-right text-[11px] font-medium text-[#C45C2D] lg:mt-0 lg:whitespace-nowrap dark:text-brand-orange">
+            <footer className="mt-0.5 text-right text-[11px] font-medium text-primary lg:mt-0 lg:whitespace-nowrap dark:text-brand-orange">
               — {t("customer.hero.quoteBy")}
             </footer>
           </div>
@@ -96,10 +96,10 @@ export default function CustomerWelcomeHero({
         <ul className="grid w-full grid-cols-2 gap-x-3 gap-y-3 rounded-xl border border-white/80 bg-white/85 px-3 py-3 shadow-sm backdrop-blur-md sm:gap-x-4 lg:absolute lg:bottom-6 lg:right-7 lg:mt-0 lg:w-auto lg:grid-cols-4 lg:gap-x-2.5 lg:px-3.5 lg:py-2 dark:border-white/10 dark:bg-[#152238]/80">
           {TRUST.map(({ key, Icon }) => (
             <li key={key} className="flex min-w-0 items-center gap-2 lg:w-[4.7rem] lg:flex-col lg:items-center lg:gap-1 lg:text-center">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#E07A2F] lg:h-7 lg:w-7">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center text-primary lg:h-7 lg:w-7">
                 <Icon size={17} strokeWidth={1.75} aria-hidden />
               </span>
-              <span className="min-w-0 text-[11px] font-semibold leading-tight text-[#1A2B4A] lg:text-[10px] dark:text-[#F7F1E4]">
+              <span className="min-w-0 text-[11px] font-semibold leading-tight text-foreground lg:text-[10px] dark:text-white">
                 {t(key)}
               </span>
             </li>

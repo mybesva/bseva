@@ -285,7 +285,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
                   currentStep >= step.number
-                    ? "bg-[#F7931E] text-white"
+                    ? "bg-[#FF7A00] text-white"
                     : "bg-gray-200 text-gray-500"
                 )}
               >
@@ -297,7 +297,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
               <div
                 className={cn(
                   "w-16 sm:w-24 h-1 mx-2",
-                  currentStep > step.number ? "bg-[#F7931E]" : "bg-gray-200"
+                  currentStep > step.number ? "bg-[#FF7A00]" : "bg-gray-200"
                 )}
               />
             )}
@@ -319,15 +319,15 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                 key={tier}
                 htmlFor={tier}
                 className={cn(
-                  "cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-[#F7931E]",
-                  bookingData.tier === tier ? "border-[#F7931E] bg-orange-50" : "border-gray-200"
+                  "cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-[#FF7A00]",
+                  bookingData.tier === tier ? "border-[#FF7A00] bg-orange-50" : "border-gray-200"
                 )}
               >
                 <RadioGroupItem value={tier} id={tier} className="sr-only" />
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-[#1E3A5F]">{tierDetails[tier].name}</span>
-                    <span className="text-lg font-bold text-[#F7931E]">
+                    <span className="text-lg font-bold text-[#FF7A00]">
                       ₹{(basePrices[tier] / 100).toLocaleString()}
                     </span>
                   </div>
@@ -466,10 +466,10 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-semibold text-lg">{pujaName}</h4>
-                  <Badge className="mt-1 bg-[#F7931E]">{tierDetails[bookingData.tier].name} Package</Badge>
+                  <Badge className="mt-1 bg-[#FF7A00]">{tierDetails[bookingData.tier].name} Package</Badge>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-[#F7931E]">
+                  <p className="text-2xl font-bold text-[#FF7A00]">
                     ₹{(basePrices[bookingData.tier] / 100).toLocaleString()}
                   </p>
                 </div>
@@ -571,7 +571,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                         }));
                         window.location.href = getLoginUrl();
                       }}
-                      className="bg-[#F7931E] hover:bg-[#e8850d]"
+                      className="bg-[#FF7A00] hover:bg-[#e8850d]"
                     >
                       <LogIn className="w-4 h-4 mr-2" />
                       Login to Continue
@@ -597,7 +597,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                   </div>
                   <div className="border-t pt-2 flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-[#F7931E]">₹{(calculateTotal().total / 100).toLocaleString()}</span>
+                    <span className="text-[#FF7A00]">₹{(calculateTotal().total / 100).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -630,7 +630,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
           <Button
             onClick={nextStep}
             disabled={!canProceed() || isAutoAssigning}
-            className="bg-[#F7931E] hover:bg-[#e8850d]"
+            className="bg-[#FF7A00] hover:bg-[#e8850d]"
           >
             {isAutoAssigning ? (
               <>
@@ -649,7 +649,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
             <Button
               onClick={handleSubmitBooking}
               disabled={createBooking.isPending}
-              className="bg-[#F7931E] hover:bg-[#e8850d]"
+              className="bg-[#FF7A00] hover:bg-[#e8850d]"
             >
               {createBooking.isPending ? (
                 <>
@@ -671,7 +671,7 @@ export default function BookingWizard({ pujaTypeId, pujaName, basePrices }: Book
                 }));
                 window.location.href = getLoginUrl();
               }}
-              className="bg-[#F7931E] hover:bg-[#e8850d]"
+              className="bg-[#FF7A00] hover:bg-[#e8850d]"
             >
               <LogIn className="w-4 h-4 mr-2" />
               Login to Book

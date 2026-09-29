@@ -23,9 +23,21 @@ export const PUJARI_LEVELS = [
     summary: "All Level 1–3 services plus any additional advanced services configured by Admin.",
     examples: ["All Level 1, 2 and 3 services", "Additional advanced services"],
   },
+  {
+    level: 5 as const,
+    title: "Chava Seva",
+    summary: "Specialized Chava Seva. Eligible only for Chava Seva services configured by Admin.",
+    examples: ["Chava Seva"],
+  },
+  {
+    level: 6 as const,
+    title: "Pravachana Seva",
+    summary: "Specialized Pravachana Seva. Eligible only for Pravachana Seva services configured by Admin.",
+    examples: ["Pravachana Seva"],
+  },
 ];
 
-export type PujariLevel = 1 | 2 | 3 | 4;
+export type PujariLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 export function levelLabel(level?: number | null) {
   if (!level) return "Not set";
@@ -36,6 +48,10 @@ export function levelLabel(level?: number | null) {
 export function priestCoversService(approvedLevel: number | null | undefined, requiredLevel: number) {
   const approved = Number(approvedLevel || 0);
   if (!approved) return false;
+  // Levels 5 and 6 are exact-match roles and stay outside the Level 1–4 hierarchy.
+  if (approved === 5 || approved === 6 || requiredLevel === 5 || requiredLevel === 6) {
+    return approved === Number(requiredLevel);
+  }
   if (approved >= 4) return true;
   return approved >= requiredLevel;
 }

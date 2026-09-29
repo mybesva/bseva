@@ -4,6 +4,7 @@ import { Alert, ScrollView, Share } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { translatedTokenLabel } from "@bseva/config";
 import { useI18n } from "@/providers/I18nProvider";
 
 type ReferralRow = { name?: string; status?: string };
@@ -53,8 +54,8 @@ export default function PujariReferral() {
         {!q.isLoading && referrals.length === 0 ? <AppText>{t("web.referral.empty")}</AppText> : null}
         {referrals.map((row, index) => {
           const status = String(row.status || "");
-          const statusLabel = status ? t(`status.${status}`) : "";
-          const shown = statusLabel && !statusLabel.startsWith("status.") ? statusLabel : status;
+          const statusKey = `status.${status}`;
+          const shown = status ? translatedTokenLabel(t(statusKey), statusKey, status, "") : "";
           return (
             <Card key={`${row.name || "ref"}-${index}`}>
               <AppText>{row.name || "—"}</AppText>

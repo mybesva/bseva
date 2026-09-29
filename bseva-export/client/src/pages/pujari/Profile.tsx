@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
-import { useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { PujariPortal } from "@/components/RolePortals";
+import { PortalSegmentedTabs } from "@/components/PortalSegmentedTabs";
+import { PortalTermsContent } from "@/pages/portal/TermsPage";
+import ChangePasswordForm from "@/pages/ChangePassword";
+import {
+  profilePathWithTab,
+  profileTabFromSearch,
+  type ProfilePortalTabId,
+} from "@/lib/portalProfileTab";
 import SignaturePad from "@/components/SignaturePad";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -699,21 +707,61 @@ export default function PujariProfilePage() {
   const { t } = useI18n();
   const { user } = useAuth();
   const search = useSearch();
+  const [, setLocation] = useLocation();
+  const activeTab = profileTabFromSearch(search);
+  const profileBase = "/pujari/profile";
   const fromRegister =
     (search.startsWith("?") ? search.slice(1) : search).includes("from=register");
+
+  function setActiveTab(tab: ProfilePortalTabId) {
+    let path = profilePathWithTab(profileBase, tab);
+    if (fromRegister) {
+      path += path.includes("?") ? "&from=register" : "?from=register";
+    }
+    setLocation(path);
+  }
+
+  const profileTabs = [
+    { id: "profile", label: t("profile.tab.profile") },
+    {
+      id: "password",
+      label: t("profile.tab.changePassword"),
+      multilineLabel: t("profile.tab.changePasswordLines"),
+    },
+    {
+      id: "terms",
+      label: t("profile.tab.terms"),
+      multilineLabel: t("profile.tab.termsLines"),
+    },
+  ];
+
   return (
     <PujariPortal>
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle className="">{t("pujari.profile.title")}</CardTitle>
-          {user?.public_id ? (
-            <p className="text-sm text-muted-foreground font-mono">ID: {user.public_id}</p>
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          <ProfileForm setupBanner={fromRegister} />
-        </CardContent>
-      </Card>
+      <div className="max-w-3xl space-y-5">
+        <PortalSegmentedTabs
+          value={activeTab}
+          onChange={(id) => setActiveTab(id as ProfilePortalTabId)}
+          tabs={profileTabs}
+          allowMultiline
+        />
+
+        {activeTab === "password" ? <ChangePasswordForm embedded /> : null}
+        {activeTab === "terms" ? <PortalTermsContent /> : null}
+
+        {activeTab === "profile" ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="">{t("pujari.profile.title")}</CardTitle>
+              {user?.public_id ? (
+                <p className="text-sm text-muted-foreground font-mono">ID: {user.public_id}</p>
+              ) : null}
+            </CardHeader>
+            <CardContent>
+              <ProfileForm setupBanner={fromRegister} />
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
     </PujariPortal>
   );
 }

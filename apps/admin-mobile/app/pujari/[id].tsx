@@ -1,4 +1,4 @@
-import { PUJARI_DOC_TYPES, formatIndianPhone, personLocation, pujariDisplayStatus } from "@bseva/config";
+import { PUJARI_DOC_TYPES, displayTokenLabel, formatIndianPhone, personLocation, pujariDisplayStatus } from "@bseva/config";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -186,7 +186,8 @@ export default function AdminPujariDetail() {
           {documents.map((d) => (
             <View key={d.id} style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
               <AppText variant="small" color={colors.mutedForeground}>
-                {d.document_type} · {d.status || ""}
+                {PUJARI_DOC_TYPES.find((item) => item.id === d.document_type)?.label || displayTokenLabel(d.document_type, "")}
+                {d.status ? ` · ${displayTokenLabel(d.status)}` : ""}
               </AppText>
               <PrimaryButton
                 title="View / share"

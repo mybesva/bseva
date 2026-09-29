@@ -795,7 +795,14 @@ def create_booking(
 
         if pujari_blocked_on_slot(db, str(body.pujari_id), ist_date, start, end):
             raise HTTPException(400, "This pujari is not available on the selected date")
-        if not pujari["approved_level"] or int(pujari["approved_level"]) < int(svc["required_level"]):
+        from app.pujari_levels import is_specialized_level, pujari_meets_required_level
+
+        approved_level = pujari["approved_level"]
+        required_level = int(svc["required_level"])
+        if is_specialized_level(approved_level) or is_specialized_level(required_level):
+            if not pujari_meets_required_level(approved_level, required_level):
+                raise HTTPException(400, "Pujari is not eligible for this service")
+        elif not approved_level or int(approved_level) < required_level:
             raise HTTPException(400, "Pujari is not eligible for this service")
         from app.pujari_services import pujari_has_verified_service
 

@@ -7,7 +7,6 @@ import {
   MoreAppearanceRow,
   MoreLanguageRow,
   MoreMenuRow,
-  MorePermissionsRow,
 } from "@/components/MoreMenuRow";
 import { Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -19,18 +18,15 @@ export default function CustomerMore() {
   const { t } = useI18n();
   const router = useRouter();
   const items = [
-    { href: "/customer/notifications", label: t("mobile.notifications"), icon: "notifications-outline" as const },
     { href: "/customer/profile", label: t("mobile.profile"), icon: "person-outline" as const },
     { href: "/customer/address", label: t("mobile.address"), icon: "location-outline" as const },
+    { href: "/customer/my-seva", label: t("seva.mySeva"), icon: "flower-outline" as const },
+    { href: "/customer/family-sankalp", label: t("seva.familySankalp"), icon: "people-outline" as const },
+    { href: "/customer/bookings", label: t("nav.bookings"), icon: "calendar-outline" as const },
     { href: "/customer/invoices", label: t("mobile.invoices"), icon: "document-text-outline" as const },
     { href: "/customer/referral", label: t("nav.referral"), icon: "share-social-outline" as const },
-    { href: "/customer/history", label: t("mobile.history"), icon: "time-outline" as const },
-    { href: "/customer/astrology", label: t("nav.astrology"), icon: "planet-outline" as const },
-    { href: "/customer/support", label: t("mobile.support"), icon: "help-circle-outline" as const },
-    { href: "/customer/contact", label: t("mobile.contact"), icon: "call-outline" as const },
+    { href: "/customer/support-contact", label: t("mobile.supportAndContact"), icon: "help-circle-outline" as const },
     { href: "/legal/about", label: t("mobile.about"), icon: "information-circle-outline" as const },
-    { href: "/customer/password", label: t("mobile.password"), icon: "lock-closed-outline" as const },
-    { href: "/legal/terms", label: t("mobile.terms"), icon: "book-outline" as const },
   ];
   return (
     <Screen>
@@ -48,7 +44,6 @@ export default function CustomerMore() {
         ))}
         <MoreLanguageRow />
         <MoreAppearanceRow />
-        <MorePermissionsRow />
         <MoreMenuRow
           icon="log-out-outline"
           label={t("mobile.logout")}

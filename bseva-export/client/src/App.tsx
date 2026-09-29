@@ -23,6 +23,7 @@ import AdminRecommendations from "./pages/admin/Recommendations";
 import AdminBulkImport from "./pages/admin/BulkImport";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminVirtualPuja from "./pages/admin/VirtualPuja";
+import AdminSevaEvents from "./pages/admin/SevaEventsAdmin";
 import AdminMuhurtham from "./pages/admin/Muhurtham";
 import AdminPayments from "./pages/admin/Payments";
 import AdminReviews from "./pages/admin/Reviews";
@@ -51,6 +52,7 @@ import PujariReferralPage from "./pages/pujari/ReferralPage";
 import PujariAvailabilityPage from "./pages/pujari/AvailabilityPage";
 import PujariServicesPage from "./pages/pujari/ServicesPage";
 import PujariBookingsPage from "./pages/pujari/BookingsPage";
+import PujariSevaEventsPage from "./pages/pujari/SevaEventsPage";
 import PujariBookingDetailPage from "./pages/pujari/BookingDetailPage";
 import PujariChangePasswordPage from "./pages/pujari/ChangePasswordPage";
 import PujariEarningsPage from "./pages/pujari/EarningsPage";
@@ -84,6 +86,10 @@ import SupportPage, { CustomerSupportPage, PujariSupportPage } from "./pages/Sup
 import HeadRatingsPage from "./pages/HeadRatings";
 import CustomerInvoicesPage from "./pages/customer/InvoicesPage";
 import CustomerRewardsPage from "./pages/customer/RewardsPage";
+import SevaHub from "./pages/seva/SevaHub";
+import SevaEventDetail from "./pages/seva/SevaEventDetail";
+import MySevaPage from "./pages/customer/MySeva";
+import FamilySankalpPage from "./pages/customer/FamilySankalp";
 import PublicPujariProfile from "./pages/PublicPujariProfile";
 import AdminPujariDetail from "./pages/admin/PujariDetail";
 import { adminBasePath } from "./const";
@@ -113,10 +119,13 @@ function Router() {
       <Route path="/customer/support" component={CustomerSupportPage} />
       <Route path="/customer/invoices" component={CustomerInvoicesPage} />
       <Route path="/customer/rewards" component={CustomerRewardsPage} />
+      <Route path="/customer/my-seva" component={MySevaPage} />
+      <Route path="/customer/family-sankalp" component={FamilySankalpPage} />
       <Route path="/customer/terms" component={CustomerTermsPage} />
       <Route path="/pujari-profile/:id" component={PublicPujariProfile} />
       <Route path="/pujari/bookings/:id" component={PujariBookingDetailPage} />
       <Route path="/pujari/bookings" component={PujariBookingsPage} />
+      <Route path="/pujari/seva-events" component={PujariSevaEventsPage} />
       <Route path="/pujari/notifications" component={PujariNotificationsPage} />
       <Route path="/pujari" component={PujariDashboard} />
       <Route path="/pujari/head-ratings" component={HeadRatingsPage} />
@@ -143,6 +152,9 @@ function Router() {
       <Route path="/booking-confirmation" component={BookingConfirmation} />
       <Route path="/services/:slug" component={ServiceDetail} />
       <Route path="/services" component={Services} />
+      <Route path="/seva/events/:id" component={SevaEventDetail} />
+      <Route path="/seva/:serviceType" component={SevaHub} />
+      <Route path="/seva" component={SevaHub} />
       <Route path="/astrology" component={Astrology} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
@@ -160,6 +172,7 @@ function Router() {
       <Route path={`${ops}/bulk-import`} component={AdminBulkImport} />
       <Route path={`${ops}/bookings`} component={AdminBookings} />
       <Route path={`${ops}/virtual-puja`} component={AdminVirtualPuja} />
+      <Route path={`${ops}/seva-events`} component={AdminSevaEvents} />
       <Route path={`${ops}/muhurtham`} component={AdminMuhurtham} />
       <Route path={`${ops}/settlements`} component={AdminSettlements} />
       <Route path={`${ops}/invoices`} component={AdminInvoices} />

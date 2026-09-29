@@ -95,7 +95,7 @@ export default function AdminDashboard() {
       title: "Blocked",
       value: ps.blocked ?? "—",
       icon: Ban,
-      color: "text-slate-600",
+      color: "text-foreground",
       href: adminPath("/pujaris?status=blocked"),
     },
   ];

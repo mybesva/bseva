@@ -234,15 +234,25 @@ def resolve_service_by_slug(db: Session, slug: str, *, active_only: bool = True)
     return row
 
 
+# Same visibility rule as GET /services (Explore Services): active priced services plus
+# awaiting-pricing "coming soon" services. Category counts use it so a chip's count matches
+# what the category actually lists.
+EXPLORE_VISIBLE_SQL = """(
+  (s.active = TRUE AND s.standard_price_paise IS NOT NULL
+    AND COALESCE(s.pricing_status, 'priced') <> 'awaiting_pricing')
+  OR COALESCE(s.pricing_status, 'priced') = 'awaiting_pricing'
+)"""
+
+
 def list_categories_public(db: Session, lang: str | None = None) -> list[dict]:
     code = normalize_lang(lang)
     rows = db.execute(
         text(
-            """
+            f"""
             SELECT c.*, COUNT(m.service_id) FILTER (
               WHERE EXISTS (
                 SELECT 1 FROM services s
-                WHERE s.id = m.service_id AND s.active = TRUE
+                WHERE s.id = m.service_id AND {EXPLORE_VISIBLE_SQL}
               )
             ) AS service_count
             FROM service_categories c

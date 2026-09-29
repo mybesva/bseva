@@ -25,7 +25,7 @@ export function PujariQuickActions() {
       label: t("mobile.myBookings"),
       icon: "calendar-outline",
       href: "/pujari/jobs",
-      iconColor: "#2E4A6F",
+      iconColor: colors.navy,
       iconBg: "#E8EEF5",
     },
     {
@@ -33,7 +33,7 @@ export function PujariQuickActions() {
       label: t("pujari.dashboard.setAvailability"),
       icon: "calendar-clear-outline",
       href: "/pujari/schedule",
-      iconColor: "#E07A2F",
+      iconColor: colors.primary,
       iconBg: "#FFF0E0",
     },
     {
@@ -73,7 +73,7 @@ export function PujariQuickActions() {
               backgroundColor: colors.card,
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: colors.border + "44",
+              borderColor: colors.border,
               paddingVertical: 12,
               paddingHorizontal: 4,
               minHeight: 84,

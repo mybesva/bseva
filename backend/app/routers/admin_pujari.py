@@ -386,6 +386,9 @@ def available_pujaris_for_booking(
         ),
         {"lvl": required},
     ).mappings().all()
+    from app.pujari_levels import filter_rows_for_required_level
+
+    rows = filter_rows_for_required_level(rows, required)
 
     booking_lat = b.get("latitude")
     booking_lng = b.get("longitude")
@@ -549,7 +552,14 @@ def assign_pujari_to_booking(
         raise HTTPException(400, "Pujari is not verified/available")
     if not pujari.get("profile_complete"):
         raise HTTPException(400, "Pujari profile is incomplete")
-    if int(pujari["approved_level"] or 0) < int(b["required_level"] or 1):
+    from app.pujari_levels import is_specialized_level, pujari_meets_required_level
+
+    approved_level = pujari["approved_level"]
+    required_level = int(b["required_level"] or 1)
+    if is_specialized_level(approved_level) or is_specialized_level(required_level):
+        if not pujari_meets_required_level(approved_level, required_level):
+            raise HTTPException(400, "Pujari is not eligible for this service")
+    elif int(approved_level or 0) < required_level:
         raise HTTPException(400, "Pujari level is below service requirement")
     from app.pujari_services import pujari_has_verified_service
 

@@ -10,6 +10,7 @@ from app import env_loader  # noqa: F401 — load .env into os.environ
 from app.routers import (
     admin,
     admin_pujari,
+    admin_seva,
     auth,
     bookings,
     consultations,
@@ -22,6 +23,7 @@ from app.routers import (
     promos,
     pujari,
     reports,
+    seva,
     support,
     temples,
     tickets,
@@ -74,6 +76,8 @@ app.include_router(promos.router, prefix="/api/v1")
 app.include_router(support.router, prefix="/api/v1")
 app.include_router(tickets.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
+app.include_router(seva.router, prefix="/api/v1")
+app.include_router(admin_seva.router, prefix="/api/v1")
 
 try:
     from fastapi.staticfiles import StaticFiles

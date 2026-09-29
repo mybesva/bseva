@@ -42,7 +42,7 @@ export default function WalletPanel({ variant = "customer" }: { variant?: "custo
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 rounded-lg bg-orange-50 border border-orange-100">
             <p className="text-xs text-muted-foreground">{t("customer.balance")}</p>
-            <p className="text-2xl font-bold text-[#F7931E]">₹{(balance / 100).toLocaleString("en-IN")}</p>
+            <p className="text-2xl font-bold text-[#FF7A00]">₹{(balance / 100).toLocaleString("en-IN")}</p>
           </div>
           <div className="p-3 rounded-lg bg-green-50 border border-green-100">
             <p className="text-xs text-muted-foreground">

@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { CustomerPortal } from "@/components/RolePortals";
+import { PortalSegmentedTabs } from "@/components/PortalSegmentedTabs";
+import { PortalTermsContent } from "@/pages/portal/TermsPage";
+import ChangePasswordForm from "@/pages/ChangePassword";
+import {
+  profilePathWithTab,
+  profileTabFromSearch,
+  type ProfilePortalTabId,
+} from "@/lib/portalProfileTab";
 import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +39,28 @@ const LANGS: PreferredLang[] = PREFERRED_LANGUAGES.map((l) => l.code);
 export default function CustomerProfilePage() {
   const { user, refresh } = useAuth();
   const { setLang, t } = useI18n();
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const activeTab = profileTabFromSearch(search);
+  const profileBase = "/customer/profile";
+
+  function setActiveTab(tab: ProfilePortalTabId) {
+    setLocation(profilePathWithTab(profileBase, tab));
+  }
+
+  const profileTabs = [
+    { id: "profile", label: t("profile.tab.profile") },
+    {
+      id: "password",
+      label: t("profile.tab.changePassword"),
+      multilineLabel: t("profile.tab.changePasswordLines"),
+    },
+    {
+      id: "terms",
+      label: t("profile.tab.terms"),
+      multilineLabel: t("profile.tab.termsLines"),
+    },
+  ];
   const [nameParts, setNameParts] = useState<PersonNameParts>({
     first_name: "",
     middle_name: "",
@@ -208,7 +239,19 @@ export default function CustomerProfilePage() {
 
   return (
     <CustomerPortal>
-      <Card className="max-w-lg">
+      <div className="max-w-lg space-y-5">
+        <PortalSegmentedTabs
+          value={activeTab}
+          onChange={(id) => setActiveTab(id as ProfilePortalTabId)}
+          tabs={profileTabs}
+          allowMultiline
+        />
+
+        {activeTab === "password" ? <ChangePasswordForm embedded /> : null}
+        {activeTab === "terms" ? <PortalTermsContent /> : null}
+
+        {activeTab === "profile" ? (
+      <Card>
         <CardHeader>
           <CardTitle className="">{t("web.customerProfile.title")}</CardTitle>
         </CardHeader>
@@ -280,7 +323,7 @@ export default function CustomerProfilePage() {
               }}
             />
             <div className="space-y-2">
-              <Label>{t("web.customerProfile.language")}</Label>
+              <Label>{t("profile.preferredLanguage")}</Label>
               <Select value={language} onValueChange={(v) => setLanguage(v as PreferredLang)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -294,7 +337,7 @@ export default function CustomerProfilePage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {t("web.customerProfile.languageHint")}
+                {t("profile.preferredLanguageHint")}
               </p>
             </div>
             <div className="space-y-1 text-sm text-muted-foreground">
@@ -306,6 +349,8 @@ export default function CustomerProfilePage() {
           </form>
         </CardContent>
       </Card>
+        ) : null}
+      </div>
     </CustomerPortal>
   );
 }

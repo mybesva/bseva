@@ -23,7 +23,7 @@ export function PujaTitle({
   if (!clean) return null;
   const size = typography[variant].fontSize;
   const symbolSize = Math.round(size * 0.82);
-  const nameColor = onDark || theme === "dark" ? colors.cream : "#1A2B4A";
+  const nameColor = onDark || theme === "dark" ? colors.white : colors.foreground;
   return (
     <Text
       accessibilityLabel={formatPujaTitleText(clean)}

@@ -1,103 +1,52 @@
 import { useEffect, useMemo, useState } from "react";
 import Layout from "@/components/Layout";
 import SectionHeader from "@/components/SectionHeader";
-import ServiceCard from "@/components/ServiceCard";
+import PujaDiscovery from "@/components/seva/PujaDiscovery";
+import SevaTypePane from "@/components/seva/SevaTypePane";
+import SevaTypeTabs from "@/components/seva/SevaTypeTabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Flame, Flower, Home, Sparkles, Heart, Star, Sun, Moon, Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { useLocation, useSearch } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { api } from "@/lib/api";
-import { serviceImageUrl } from "@/lib/serviceImage";
-import { formatStartingFrom } from "@/lib/servicePricing";
-import { useStartBooking } from "@/hooks/useStartBooking";
-import { toast } from "sonner";
+import {
+  enabledSevaServiceTypes,
+  resolveSevaServiceType,
+  servicesPathForType,
+  type SevaConfigFlags,
+  type SevaServiceType,
+} from "@bseva/config";
 
-const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
-
-type Cat = { id: string; slug: string; name: string; service_count?: number };
-type Svc = {
-  id: string;
-  name: string;
-  slug: string;
-  short_description?: string;
-  description?: string;
-  standard_price_paise?: number | null;
-  premium_price_paise?: number | null;
-  bookable?: boolean;
-  active?: boolean;
-  image_url?: string | null;
-  image_path?: string | null;
-  categories?: { slug: string; name: string }[];
-};
-
+/**
+ * Explore Services: one customer discovery page with three Seva lines.
+ *
+ *   /services                → Puja Seva (default; original Explore catalogue)
+ *   /services?type=chadhava  → Chadhava Seva
+ *   /services?type=pravachan → Pravachan Seva
+ *
+ * Puja keeps `?q=&category=`. Legacy `/seva*` URLs redirect here (see SevaHub).
+ */
 export default function Services() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [, setLocation] = useLocation();
   const searchStr = useSearch();
-  const { startBooking, bookingBlocked, checking } = useStartBooking();
-  const [services, setServices] = useState<Svc[]>([]);
-  const [categories, setCategories] = useState<Cat[]>([]);
-  const [loading, setLoading] = useState(true);
-  const params = useMemo(() => new URLSearchParams(searchStr), [searchStr]);
-  const [q, setQ] = useState(params.get("q") || "");
-  const [category, setCategory] = useState(params.get("category") || "all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(9);
+  const [config, setConfig] = useState<SevaConfigFlags | null>(null);
+  const [configReady, setConfigReady] = useState(false);
 
   useEffect(() => {
-    api<Cat[]>("/service-categories")
-      .then(setCategories)
-      .catch(() => setCategories([]));
-  }, [lang]);
+    api<SevaConfigFlags>("/seva/config")
+      .then(setConfig)
+      .catch(() => setConfig(null))
+      .finally(() => setConfigReady(true));
+  }, []);
 
-  useEffect(() => {
-    const qs = new URLSearchParams();
-    if (q.trim()) qs.set("q", q.trim());
-    if (category && category !== "all") qs.set("category", category);
-    setLoading(true);
-    setPage(1);
-    api<Svc[]>(`/services?${qs}`)
-      .then(setServices)
-      .catch((e) => toast.error(e.message))
-      .finally(() => setLoading(false));
-  }, [q, category, lang]);
+  const enabledTypes = useMemo(() => enabledSevaServiceTypes(config), [config]);
+  const requestedType = useMemo(() => new URLSearchParams(searchStr).get("type"), [searchStr]);
+  const activeType = resolveSevaServiceType(requestedType, enabledTypes);
 
-  function openDetails(slug: string) {
-    setLocation(`/services/${slug}`);
+  function selectType(type: SevaServiceType) {
+    setLocation(servicesPathForType(type));
   }
-
-  function selectCategory(slug: string) {
-    setCategory(slug);
-    const next = new URLSearchParams();
-    if (q.trim()) next.set("q", q.trim());
-    if (slug && slug !== "all") next.set("category", slug);
-    const s = next.toString();
-    setLocation(s ? `/services?${s}` : "/services");
-  }
-
-  const chips = useMemo(
-    () => [
-      { slug: "all", name: t("common.all") },
-      { slug: "popular", name: t("services.popular") },
-      ...categories.map((c) => ({ slug: c.slug, name: c.name })),
-    ],
-    [categories, t]
-  );
-
-  const available = useMemo(() => services.filter((s) => s.bookable), [services]);
-  const upcoming = useMemo(() => services.filter((s) => !s.bookable), [services]);
-  const combined = useMemo(() => [...available, ...upcoming], [available, upcoming]);
-  const paginate = category === "all";
-  const totalPages = Math.max(1, Math.ceil(combined.length / pageSize));
-  const pageSafe = Math.min(page, totalPages);
-  const visible = useMemo(() => {
-    if (!paginate) return combined;
-    const start = (pageSafe - 1) * pageSize;
-    return combined.slice(start, start + pageSize);
-  }, [combined, paginate, pageSafe, pageSize]);
-  const pageAvailable = visible.filter((s) => s.bookable);
-  const pageUpcoming = visible.filter((s) => !s.bookable);
 
   return (
     <Layout>
@@ -111,187 +60,73 @@ export default function Services() {
           </span>
           <h1 className="text-h1 md:text-display text-primary mb-3">{t("services.title")}</h1>
           <p className="text-base text-on-dark max-w-2xl mx-auto mb-6">{t("services.subtitle")}</p>
-          <div className="max-w-xl mx-auto relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("services.searchPujas")}
-              className="h-12 pl-11 bg-card text-foreground border-none shadow-lg selection:bg-transparent focus:ring-0 focus-visible:ring-1 focus-visible:ring-primary/30"
-            />
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              asChild
+              variant="secondary"
+              className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
+            >
+              <Link href="/customer/my-seva">{t("seva.mySeva")}</Link>
+            </Button>
+            <Button
+              asChild
+              variant="secondary"
+              className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
+            >
+              <Link href="/customer/family-sankalp">{t("seva.familySankalp")}</Link>
+            </Button>
           </div>
         </div>
       </section>
 
       <section className="py-10 md:py-14">
         <div className="container">
-          <div className="max-w-3xl mx-auto mb-10 space-y-4 text-muted-foreground leading-relaxed text-center md:text-left">
-            <p>{t("services.introP1")}</p>
-            <p>{t("services.introP2")}</p>
-            <p className="text-sm">{t("services.introP3")}</p>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-4 mb-8 -mx-1 px-1 scrollbar-thin">
-            {chips.map((c) => (
-              <button
-                key={c.slug}
-                type="button"
-                onClick={() => selectCategory(c.slug)}
-                className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
-                  category === c.slug
-                    ? "bg-primary text-white border-primary"
-                    : "bg-card text-foreground border-border hover:border-primary/40"
-                }`}
+          <SevaTypeTabs value={activeType} types={enabledTypes} onChange={selectType}>
+            {activeType === "puja" ? (
+              <PujaDiscovery />
+            ) : configReady ? (
+              <SevaTypePane key={activeType} type={activeType} />
+            ) : (
+              <div className="flex justify-center py-20">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              </div>
+            )}
+          </SevaTypeTabs>
+        </div>
+      </section>
+
+      {activeType === "puja" ? (
+        <>
+          <section className="py-16 bg-secondary/15">
+            <div className="container max-w-3xl text-center md:text-left">
+              <div className="mb-10 space-y-4 text-muted-foreground leading-relaxed">
+                <p>{t("services.introP1")}</p>
+                <p>{t("services.introP2")}</p>
+                <p className="text-sm">{t("services.introP3")}</p>
+              </div>
+              <SectionHeader title={t("services.discoveryTitle")} className="mb-6" />
+              <p className="text-muted-foreground leading-relaxed mb-4">{t("services.discoveryP1")}</p>
+              <p className="text-muted-foreground leading-relaxed">{t("services.discoveryP2")}</p>
+            </div>
+          </section>
+
+          <section className="py-16 bg-secondary/20">
+            <div className="container text-center">
+              <SectionHeader title={t("services.customTitle")} description={t("services.customDesc")} />
+              <Button
+                size="lg"
+                className="bg-primary text-white hover:bg-primary/90 px-8 h-12 text-lg font-bold shadow-lg"
+                onClick={() => {
+                  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+                  setLocation("/contact");
+                }}
               >
-                {c.name}
-              </button>
-            ))}
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                {t("services.requestCustom")}
+              </Button>
             </div>
-          ) : services.length === 0 ? (
-            <p className="text-center text-muted-foreground py-16">{t("services.noPujas")}</p>
-          ) : (
-            <div className="space-y-10">
-              {(() => {
-                const renderGrid = (list: Svc[]) => (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
-                    {list.map((s, i) => {
-                      const Icon = ICONS[i % ICONS.length];
-                      const img = serviceImageUrl(s);
-                      const starting = formatStartingFrom(s, lang);
-                      const desc =
-                        s.short_description ||
-                        s.description ||
-                        starting ||
-                        (s.bookable ? t("services.pricingSoon") : t("services.comingSoonLabel"));
-                      return (
-                        <div
-                          key={s.id}
-                          onClick={() => openDetails(s.slug)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              openDetails(s.slug);
-                            }
-                          }}
-                          role="link"
-                          tabIndex={0}
-                          className="cursor-pointer min-w-0 h-full flex"
-                        >
-                          <ServiceCard
-                            title={s.name}
-                            description={desc}
-                            startingFrom={starting}
-                            image={img}
-                            icon={<Icon size={20} />}
-                            comingSoon={!s.bookable}
-                            bookingDisabled={Boolean(s.bookable && bookingBlocked)}
-                            bookingDisabledLabel={checking ? t("services.checkingAvailability") : t("services.bookingUnavailableArea")}
-                            onReadMore={() => openDetails(s.slug)}
-                            onBookNow={() => startBooking(s.slug)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-                return (
-                  <>
-                    {pageAvailable.length > 0 && (
-                      <div>
-                        <h2 className="text-h3 text-foreground mb-4">{t("services.availablePujas")}</h2>
-                        {renderGrid(pageAvailable)}
-                      </div>
-                    )}
-                    {pageUpcoming.length > 0 && (
-                      <div>
-                        <h2 className="text-h3 text-foreground mb-2">{t("services.upcomingServices")}</h2>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {t("services.upcomingDescription")}
-                        </p>
-                        {renderGrid(pageUpcoming)}
-                      </div>
-                    )}
-                    {paginate ? (
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{t("services.show")}</span>
-                          <select
-                            value={pageSize}
-                            onChange={(e) => {
-                              setPageSize(Number(e.target.value));
-                              setPage(1);
-                            }}
-                            className="h-9 rounded-md border border-border bg-card px-2 text-foreground"
-                            aria-label={t("services.itemsPerPage")}
-                          >
-                            {[6, 9, 12, 24].map((n) => (
-                              <option key={n} value={n}>
-                                {n}
-                              </option>
-                            ))}
-                          </select>
-                          <span>{t("services.perPageTotal", { count: combined.length })}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={pageSafe <= 1}
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          >
-                            {t("services.previous")}
-                          </Button>
-                          <span className="text-sm text-muted-foreground tabular-nums px-2">
-                            {t("services.pageOf", { page: pageSafe, pages: totalPages })}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={pageSafe >= totalPages}
-                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                          >
-                            {t("common.next")}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="py-16 bg-secondary/15">
-        <div className="container max-w-3xl text-center md:text-left">
-          <SectionHeader title={t("services.discoveryTitle")} className="mb-6" />
-          <p className="text-muted-foreground leading-relaxed mb-4">{t("services.discoveryP1")}</p>
-          <p className="text-muted-foreground leading-relaxed">{t("services.discoveryP2")}</p>
-        </div>
-      </section>
-
-      <section className="py-16 bg-secondary/20">
-        <div className="container text-center">
-          <SectionHeader title={t("services.customTitle")} description={t("services.customDesc")} />
-          <Button
-            size="lg"
-            className="bg-primary text-white hover:bg-primary/90 px-8 h-12 text-lg font-bold shadow-lg"
-            onClick={() => {
-              window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-              setLocation("/contact");
-            }}
-          >
-            {t("services.requestCustom")}
-          </Button>
-        </div>
-      </section>
+          </section>
+        </>
+      ) : null}
     </Layout>
   );
 }

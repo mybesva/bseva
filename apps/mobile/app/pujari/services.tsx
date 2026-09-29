@@ -1,4 +1,4 @@
-import { rupees } from "@bseva/config";
+import { pujariAlreadyHoldsRole, pujariCanSelectRole, rupees } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { Pressable, ScrollView, View } from "react-native";
 import { PujaTitle } from "@/components/PujaTitle";
@@ -96,17 +96,21 @@ export default function PujariServicesScreen() {
         <AppText variant="h3">{t("mobile.upgradeRole")}</AppText>
         <AppText>{t("mobile.approvedLevel", { level: approved || "—" })}</AppText>
         <AppText>{t("mobile.requestedLevel", { level: String(profile.data?.requested_level || "—") })}</AppText>
-        {rows.map((r) => (
-          <Pressable key={r.level} onPress={() => r.level > approved && setLevel(r.level)}>
+        {rows.map((r) => {
+          const held = pujariAlreadyHoldsRole(approved, r.level);
+          const title = r.level === 5 || r.level === 6 ? t(`pujari.level.l${r.level}`) : t("mobile.levelTitle", { level: r.level, title: r.title });
+          return (
+          <Pressable key={r.level} onPress={() => pujariCanSelectRole(approved, r.level) && setLevel(r.level)}>
             <Card style={{ borderWidth: level === r.level ? 2 : 0.5, borderColor: level === r.level ? colors.primary : colors.border }}>
               <AppText variant="h3">
-                {t("mobile.levelTitle", { level: r.level, title: r.title })}
+                {title}
               </AppText>
               <AppText variant="small">{r.summary}</AppText>
-              {r.level <= approved ? <AppText variant="small">{t("mobile.alreadyLevel")}</AppText> : null}
+              {held ? <AppText variant="small">{t("mobile.alreadyLevel")}</AppText> : null}
             </Card>
           </Pressable>
-        ))}
+          );
+        })}
         <PrimaryButton
           title={requestingLevel ? t("mobile.submitting") : t("mobile.requestLevel")}
           loading={requestingLevel}

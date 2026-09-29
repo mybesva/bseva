@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useRef, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { PromoBannerCard } from "@/components/PromoBannerCarousel";
@@ -568,7 +569,7 @@ export default function PromosAdmin() {
                 banners.map((b) => (
                   <TableRow key={b.id}>
                     <TableCell>{b.title}</TableCell>
-                    <TableCell className="capitalize">{b.audience === "all" ? "All" : b.audience}</TableCell>
+                    <TableCell>{displayTokenLabel(b.audience)}</TableCell>
                     <TableCell>{b.display_order}</TableCell>
                     <TableCell>
                       {b.active ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
@@ -713,7 +714,7 @@ export default function PromosAdmin() {
                 popups.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>{p.title}</TableCell>
-                    <TableCell className="capitalize">{(p.audience || "customer") === "all" ? "All" : p.audience || "customer"}</TableCell>
+                    <TableCell>{displayTokenLabel(p.audience || "customer")}</TableCell>
                     <TableCell>
                       {p.active ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
                     </TableCell>

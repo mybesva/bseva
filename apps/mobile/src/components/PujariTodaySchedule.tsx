@@ -44,7 +44,7 @@ export function PujariTodaySchedule({
             backgroundColor: colors.card,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: colors.border + "44",
+            borderColor: colors.border,
             paddingVertical: 20,
             paddingHorizontal: 16,
             alignItems: "center",
@@ -61,7 +61,7 @@ export function PujariTodaySchedule({
             backgroundColor: colors.card,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: colors.border + "44",
+            borderColor: colors.border,
             overflow: "hidden",
           }}
         >
@@ -82,7 +82,7 @@ export function PujariTodaySchedule({
                   paddingVertical: 12,
                   minHeight: 64,
                   borderBottomWidth: isLast ? 0 : 1,
-                  borderBottomColor: colors.border + "33",
+                  borderBottomColor: colors.border,
                   opacity: pressed ? 0.85 : 1,
                 })}
               >

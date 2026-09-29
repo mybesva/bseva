@@ -1,8 +1,14 @@
-from datetime import date, time
+from datetime import date, datetime, time
 from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+ServiceType = Literal["puja", "chadhava", "pravachan"]
+ParticipationMode = Literal["offline", "online", "hybrid"]
+PujaEventKind = Literal["group_live", "proxy"]
+RegistrationParticipation = Literal["offline", "online"]
+FamilyRelationship = Literal["self", "spouse", "parent", "child", "other"]
 
 PreferredLang = Literal["en", "hi", "te", "mr", "ta", "kn", "ml"]
 CalendarPref = Literal["lunar", "solar"]
@@ -30,7 +36,7 @@ class RegisterIn(BaseModel):
     longitude: Optional[float] = None
     language: PreferredLang = "en"
     calendar_preference: CalendarPref = "solar"
-    requested_level: Optional[int] = Field(default=None, ge=1, le=4)
+    requested_level: Optional[int] = Field(default=None, ge=1, le=6)
     backup_phone: Optional[str] = None
     address: Optional[str] = None
     address_line1: Optional[str] = None
@@ -95,6 +101,24 @@ class CustomerProfileIn(AddressIn):
         return _coerce_calendar_pref(value)
 
 
+class CustomerAddressIn(AddressIn):
+    label: Optional[str] = Field(default=None, max_length=80)
+
+
+class CustomerAddressPatchIn(BaseModel):
+    label: Optional[str] = Field(default=None, max_length=80)
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    country: Optional[str] = None
+    location_label: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
 class LoginIn(BaseModel):
     identifier: str
     password: str
@@ -156,13 +180,13 @@ class BlockIn(BaseModel):
 
 class VerifyPujariIn(BaseModel):
     verification_status: Literal["approved", "rejected", "under_review", "correction_required", "pending"]
-    approved_level: Optional[int] = Field(default=None, ge=1, le=4)
+    approved_level: Optional[int] = Field(default=None, ge=1, le=6)
     rejection_reason: Optional[str] = None
     internal_note: Optional[str] = None
 
 
 class PujariLevelIn(BaseModel):
-    approved_level: int = Field(ge=1, le=4)
+    approved_level: int = Field(ge=1, le=6)
 
 
 class PricingIn(BaseModel):
@@ -225,8 +249,9 @@ class ServiceIn(BaseModel):
     virtual_domestic_price_paise: Optional[int] = None
     virtual_international_price_paise: Optional[int] = None
     category: Optional[str] = "puja"  # legacy coarse tag
+    service_type: Optional[ServiceType] = "puja"
     category_slugs: Optional[list[str]] = None  # multi-category assignment
-    required_level: int = Field(ge=1, le=4)
+    required_level: int = Field(ge=1, le=6)
     standard_price_paise: Optional[int] = None
     premium_price_paise: Optional[int] = None
     basic_price_paise: Optional[int] = None
@@ -366,7 +391,7 @@ class PujariProfileSubmitIn(BaseModel):
 
 
 class PujariApplyLevelIn(BaseModel):
-    requested_level: int = Field(ge=1, le=4)
+    requested_level: int = Field(ge=1, le=6)
 
 
 class PujariBlockDateIn(BaseModel):
@@ -380,7 +405,7 @@ class AdminUserIn(BaseModel):
     phone: str = Field(min_length=10, max_length=15)
     password: str = Field(min_length=8, max_length=128)
     role: Literal["customer", "pujari"]
-    requested_level: Optional[int] = Field(default=2, ge=1, le=4)
+    requested_level: Optional[int] = Field(default=2, ge=1, le=6)
     location: Optional[str] = None
     # When True, mark under_review so admin can finish profile then verify.
     # When False (default), create as pending / profile incomplete ("complete later").
@@ -441,4 +466,121 @@ class TempleIn(BaseModel):
 
 class TempleBulkIn(BaseModel):
     items: list[dict] = Field(default_factory=list, max_length=2000)
+
+
+class FamilyMemberSnapshot(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    gotra: Optional[str] = Field(default=None, max_length=80)
+    gotra_unknown: bool = False
+    relationship: FamilyRelationship = "other"
+    date_of_birth: Optional[date] = None
+
+
+class FamilyMemberIn(FamilyMemberSnapshot):
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class FamilyMemberPatchIn(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    gotra: Optional[str] = Field(default=None, max_length=80)
+    gotra_unknown: Optional[bool] = None
+    relationship: Optional[FamilyRelationship] = None
+    date_of_birth: Optional[date] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class SevaEventRegisterIn(BaseModel):
+    idempotency_key: Optional[str] = Field(default=None, max_length=128)
+    participation_mode: RegistrationParticipation = "offline"
+    package_id: Optional[UUID] = None
+    primary_name: Optional[str] = Field(default=None, max_length=120)
+    gotra: Optional[str] = Field(default=None, max_length=80)
+    gotra_unknown: bool = False
+    sankalp_text: Optional[str] = Field(default=None, max_length=2000)
+    family_members: Optional[list[FamilyMemberSnapshot]] = None
+    prasad_address_id: Optional[UUID] = None
+
+
+class SevaEventIn(BaseModel):
+    service_id: UUID
+    assigned_pujari_id: Optional[UUID] = None
+    temple_id: Optional[UUID] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=4000)
+    start_at: datetime
+    end_at: Optional[datetime] = None
+    booking_cutoff_at: Optional[datetime] = None
+    capacity: Optional[int] = Field(default=None, ge=1, le=100000)
+    status: Optional[Literal["draft", "published", "cancelled", "completed", "live"]] = "draft"
+    participation_mode: ParticipationMode = "offline"
+    puja_event_kind: Optional[PujaEventKind] = None
+    is_free: bool = False
+    price_paise: Optional[int] = Field(default=None, ge=0)
+    online_enabled: bool = False
+    language_code: Optional[str] = Field(default=None, max_length=10)
+    tithi: Optional[str] = Field(default=None, max_length=80)
+    festival_slug: Optional[str] = Field(default=None, max_length=80)
+    series_id: Optional[UUID] = None
+    session_number: Optional[int] = Field(default=None, ge=1, le=365)
+    published: bool = False
+
+
+class SevaEventPatchIn(BaseModel):
+    assigned_pujari_id: Optional[UUID] = None
+    temple_id: Optional[UUID] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=4000)
+    start_at: Optional[datetime] = None
+    end_at: Optional[datetime] = None
+    booking_cutoff_at: Optional[datetime] = None
+    capacity: Optional[int] = Field(default=None, ge=1, le=100000)
+    status: Optional[Literal["draft", "published", "cancelled", "completed", "live"]] = None
+    participation_mode: Optional[ParticipationMode] = None
+    puja_event_kind: Optional[PujaEventKind] = None
+    is_free: Optional[bool] = None
+    price_paise: Optional[int] = Field(default=None, ge=0)
+    online_enabled: Optional[bool] = None
+    language_code: Optional[str] = Field(default=None, max_length=10)
+    tithi: Optional[str] = Field(default=None, max_length=80)
+    festival_slug: Optional[str] = Field(default=None, max_length=80)
+    series_id: Optional[UUID] = None
+    session_number: Optional[int] = Field(default=None, ge=1, le=365)
+    published: Optional[bool] = None
+    proof_released: Optional[bool] = None
+    cancellation_reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class ServicePackageIn(BaseModel):
+    slug: str = Field(min_length=1, max_length=80)
+    name: str = Field(min_length=1, max_length=120)
+    price_paise: int = Field(ge=0)
+    max_members: int = Field(default=1, ge=1, le=50)
+    prasad_included: bool = False
+    inclusions: Optional[str] = Field(default=None, max_length=2000)
+    active: bool = True
+    sort_order: int = 0
+
+
+class ServicePackagePatchIn(BaseModel):
+    slug: Optional[str] = Field(default=None, min_length=1, max_length=80)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    price_paise: Optional[int] = Field(default=None, ge=0)
+    max_members: Optional[int] = Field(default=None, ge=1, le=50)
+    prasad_included: Optional[bool] = None
+    inclusions: Optional[str] = Field(default=None, max_length=2000)
+    active: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+class SevaDiscoveryLinkIn(BaseModel):
+    link_type: Literal["puja", "chadhava", "pravachan", "festival", "tithi", "deity_day"]
+    service_id: Optional[UUID] = None
+    event_id: Optional[UUID] = None
+    festival_slug: Optional[str] = Field(default=None, max_length=80)
+    tithi: Optional[str] = Field(default=None, max_length=80)
+    month_number: Optional[int] = Field(default=None, ge=1, le=12)
+    day_number: Optional[int] = Field(default=None, ge=1, le=31)
+    title: Optional[str] = Field(default=None, max_length=200)
+    sort_order: int = 0
+    active: bool = True
 

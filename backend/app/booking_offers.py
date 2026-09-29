@@ -74,7 +74,11 @@ def eligible_pujaris_for_booking(
     service_id: str | None = None,
     radius_km: float = SERVICE_RADIUS_KM,
 ) -> list[tuple[str, float]]:
-    """Return (pujari_user_id, distance_km) sorted nearest first."""
+    """Return (pujari_user_id, distance_km) sorted nearest first.
+
+    Level 1–4 uses the existing hierarchy lookup. Levels 5 and 6 are exact-match
+    only, so Chava and Pravachana offers are not sent to the other role or to Levels 1–4.
+    """
     ensure_offers_table(db)
     rows = _eligible_pujari_location_rows(db, required_level)
     out: list[tuple[str, float]] = []

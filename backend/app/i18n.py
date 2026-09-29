@@ -165,6 +165,14 @@ NOTIFY: dict[str, dict[str, dict[str, str]]] = {
         "kn": {"title": "ಬುಕಿಂಗ್ ರದ್ದು", "body": "ಬುಕಿಂಗ್ {{number}} ರದ್ದುಗೊಂಡಿದೆ."},
         "ta": {"title": "முன்பதிவு ரத்து", "body": "முன்பதிவு {{number}} ரத்து செய்யப்பட்டது."},
     },
+    "sevaRegistrationConfirmed": {
+        "en": {"title": "Registration confirmed", "body": "Your registration {{number}} is confirmed."},
+        "hi": {"title": "पंजीकरण पुष्टि", "body": "आपका पंजीकरण {{number}} पुष्टि हो गया है।"},
+        "te": {"title": "నమోదు నిర్ధారించబడింది", "body": "మీ నమోదు {{number}} నిర్ధారించబడింది."},
+        "mr": {"title": "नोंदणी निश्चित", "body": "तुमची नोंदणी {{number}} निश्चित झाली आहे."},
+        "kn": {"title": "ನೋಂದಣಿ ದೃಢ", "body": "ನಿಮ್ಮ ನೋಂದಣಿ {{number}} ದೃಢವಾಗಿದೆ."},
+        "ta": {"title": "பதிவு உறுதி", "body": "உங்கள் பதிவு {{number}} உறுதிப்படுத்தப்பட்டது."},
+    },
     "paymentOk": {
         "en": {"title": "Payment successful", "body": "Payment for booking {{number}} was successful."},
         "hi": {"title": "भुगतान सफल", "body": "बुकिंग {{number}} का भुगतान सफल रहा।"},

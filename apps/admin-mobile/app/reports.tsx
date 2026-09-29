@@ -1,4 +1,4 @@
-import { buildReportSheetTables, reportWorkbookFilename, rupees, type ReportWorkbookData } from "@bseva/config";
+import { buildReportSheetTables, displayTokenLabel, reportWorkbookFilename, rupees, type ReportWorkbookData } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Alert, ScrollView } from "react-native";
@@ -121,7 +121,7 @@ export default function AdminReports() {
         {tab === "pujaris" && data ? data.pujaris.map((r) => (
           <Card key={r.id}>
             <AppText variant="h3">{r.name}</AppText>
-            <AppText variant="small">{r.bookings} bookings · {rupees(r.earnings)} · {r.availability_status}</AppText>
+            <AppText variant="small">{r.bookings} bookings · {rupees(r.earnings)} · {displayTokenLabel(r.availability_status, "")}</AppText>
           </Card>
         )) : null}
         {tab === "customers" && data ? (

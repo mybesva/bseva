@@ -138,7 +138,7 @@ export function MoreLanguageRow() {
     <>
       <MoreMenuRow
         icon="globe-outline"
-        label={t("mobile.language")}
+        label={t("mobile.appLanguage")}
         value={LANG_LABELS[lang]}
         onPress={() => setOpen(true)}
       />
@@ -148,7 +148,7 @@ export function MoreLanguageRow() {
             onPress={() => undefined}
             style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, gap: 8, paddingBottom: 28 }}
           >
-            <AppText variant="h3">{t("mobile.language")}</AppText>
+            <AppText variant="h3">{t("mobile.appLanguage")}</AppText>
             {LANGS.map((code) => (
               <Pressable
                 key={code}

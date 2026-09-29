@@ -31,6 +31,8 @@ export function AboutScreenContent() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 48 }}>
+      <AboutEssenceCards />
+
       <View style={{ gap: spacing.sm }}>
         <AppText variant="eyebrow" color={colors.primary}>
           {t("about.badge")}
@@ -63,8 +65,6 @@ export function AboutScreenContent() {
           {t("about.missionP4")}
         </AppText>
       </Card>
-
-      <AboutEssenceCards />
 
       <SectionDivider colors={colors} />
 

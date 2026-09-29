@@ -34,7 +34,7 @@ export function ConversationThread({ events }: { events: SupportEvent[] }) {
               key={ev.id}
               style={{
                 borderWidth: 1,
-                borderColor: internal ? colors.warning + "55" : colors.border,
+                borderColor: internal ? colors.warning : colors.border,
                 backgroundColor: internal ? colors.warning + "12" : colors.background,
                 borderRadius: 10,
                 padding: 12,

@@ -1,7 +1,20 @@
-import { PUJARI_QUALS, SAMPRADAYA_OPTS } from "@bseva/config";
+import { PUJARI_QUALS, SAMPRADAYA_OPTS, translatedTokenLabel } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Image, ScrollView, Switch, View, type ImageSourcePropType } from "react-native";
+import {
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Switch,
+  View,
+  type ImageSourcePropType,
+} from "react-native";
+import { ChangePasswordForm } from "@/components/customer/ChangePasswordForm";
+import { ProfileTabBar, type ProfileTabId } from "@/components/customer/ProfileTabBar";
+import { TermsScreenContent } from "@/components/TermsScreenContent";
 import { MediaPicker } from "@/components/MediaPicker";
 import { SignaturePad } from "@/components/SignaturePad";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -26,6 +39,16 @@ export default function PujariProfile() {
   const [signBusy, setSignBusy] = useState(false);
   const [signatureDrawing, setSignatureDrawing] = useState(false);
   const [sameWa, setSameWa] = useState(false);
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<ProfileTabId>("profile");
+
+  useEffect(() => {
+    if (params.tab === "password" || params.tab === "terms") {
+      setActiveTab(params.tab);
+    } else if (params.tab === "profile" || !params.tab) {
+      setActiveTab("profile");
+    }
+  }, [params.tab]);
 
   async function loadMedia() {
     try {
@@ -62,21 +85,15 @@ export default function PujariProfile() {
     setP((prev) => ({ ...prev, [key]: value }));
   }
 
-  if (q.isLoading) {
-    return (
-      <Screen>
-        <ScreenHeader title={t("mobile.profile")} back />
-        <LoadingBlock />
-      </Screen>
-    );
-  }
-
   const quals = Array.isArray(p.qualifications) ? (p.qualifications as string[]) : [];
   const pct = Number(p.profile_completion_percentage || 0);
 
   return (
     <Screen>
-      <ScreenHeader title={t("mobile.pujariProfile")} back />
+      <ScreenHeader title={t("mobile.profile")} back />
+      <ProfileTabBar value={activeTab} onChange={setActiveTab} />
+      {activeTab === "profile" && q.isLoading ? <LoadingBlock /> : null}
+      {activeTab === "profile" && !q.isLoading ? (
       <ScrollView
         scrollEnabled={!signatureDrawing}
         nestedScrollEnabled
@@ -88,7 +105,14 @@ export default function PujariProfile() {
           <PrimaryButton title={t("mobile.retry")} onPress={() => void q.refetch()} />
         ) : null}
         <AppText variant="small">
-          {t("mobile.verificationProgress", { status: String(p.verification_status || p.profile_status || "—"), percent: pct })}
+          {t("mobile.verificationProgress", {
+            status: translatedTokenLabel(
+              t(`status.${String(p.verification_status || p.profile_status || "")}`),
+              `status.${String(p.verification_status || p.profile_status || "")}`,
+              String(p.verification_status || p.profile_status || ""),
+            ),
+            percent: pct,
+          })}
         </AppText>
         {photo && photoOk ? (
           <Image
@@ -204,6 +228,26 @@ export default function PujariProfile() {
           }}
         />
       </ScrollView>
+      ) : null}
+      {activeTab === "password" ? (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+        >
+          <ScrollView
+            contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <ChangePasswordForm />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      ) : null}
+      {activeTab === "terms" ? (
+        <View style={{ flex: 1 }}>
+          <TermsScreenContent />
+        </View>
+      ) : null}
     </Screen>
   );
 }

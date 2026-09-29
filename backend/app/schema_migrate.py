@@ -192,6 +192,76 @@ _STMTS = [
     "CREATE INDEX IF NOT EXISTS idx_recommendation_translations_language ON recommendation_translations (language_code)",
 ]
 
+_SPECIALIZED_ROLE_SCHEMA_STMTS = [
+    "ALTER TABLE pujari_roles ADD COLUMN IF NOT EXISTS code TEXT",
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_pujari_roles_code
+      ON pujari_roles (code)
+      WHERE code IS NOT NULL
+    """,
+    """
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN
+        SELECT c.conname
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        WHERE t.relname = 'pujari_profiles'
+          AND c.contype = 'c'
+          AND pg_get_constraintdef(c.oid) ~* 'requested_level'
+      LOOP
+        EXECUTE format('ALTER TABLE pujari_profiles DROP CONSTRAINT %I', r.conname);
+      END LOOP;
+      ALTER TABLE pujari_profiles
+        ADD CONSTRAINT pujari_profiles_requested_level_check
+        CHECK (requested_level BETWEEN 1 AND 6);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    """
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN
+        SELECT c.conname
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        WHERE t.relname = 'pujari_profiles'
+          AND c.contype = 'c'
+          AND pg_get_constraintdef(c.oid) ~* 'approved_level'
+      LOOP
+        EXECUTE format('ALTER TABLE pujari_profiles DROP CONSTRAINT %I', r.conname);
+      END LOOP;
+      ALTER TABLE pujari_profiles
+        ADD CONSTRAINT pujari_profiles_approved_level_check
+        CHECK (approved_level IS NULL OR approved_level BETWEEN 1 AND 6);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    """
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN
+        SELECT c.conname
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        WHERE t.relname = 'services'
+          AND c.contype = 'c'
+          AND pg_get_constraintdef(c.oid) ~* 'required_level'
+      LOOP
+        EXECUTE format('ALTER TABLE services DROP CONSTRAINT %I', r.conname);
+      END LOOP;
+      ALTER TABLE services
+        ADD CONSTRAINT services_required_level_check
+        CHECK (required_level BETWEEN 1 AND 6);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+]
+
+
 _DEFAULT_PUJARI_ROLES = [
     (1, "Vehicle / Basic Rituals", "Simple rituals such as vehicle puja and other basic rites configured by Admin.", ["Vehicle Puja", "Basic vehicle-related pujas", "Simple/basic rituals"]),
     (2, "Basic Pujas", "Regular household and devotional pujas.", ["Ganapathi Puja", "Lakshmi Puja", "Satyanarayana Puja", "Basic house pujas"]),
@@ -202,19 +272,46 @@ _DEFAULT_PUJARI_ROLES = [
 
 def _seed_pujari_roles(conn) -> None:
     count = conn.execute(text("SELECT COUNT(*) FROM pujari_roles")).scalar() or 0
-    if count:
-        return
+    if not count:
+        import json
+
+        for level, title, summary, examples in _DEFAULT_PUJARI_ROLES:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO pujari_roles (level, title, summary, examples)
+                    VALUES (:level, :title, :summary, CAST(:examples AS jsonb))
+                    """
+                ),
+                {"level": level, "title": title, "summary": summary, "examples": json.dumps(examples)},
+            )
+    _ensure_specialized_pujari_roles(conn)
+
+
+def _ensure_specialized_pujari_roles(conn) -> None:
+    """Insert Level 5 and Level 6 when missing. Does not update Level 1–4 rows."""
     import json
 
-    for level, title, summary, examples in _DEFAULT_PUJARI_ROLES:
+    from app.pujari_levels import SPECIALIZED_ROLE_SEEDS
+
+    for role in SPECIALIZED_ROLE_SEEDS:
         conn.execute(
             text(
                 """
-                INSERT INTO pujari_roles (level, title, summary, examples)
-                VALUES (:level, :title, :summary, CAST(:examples AS jsonb))
+                INSERT INTO pujari_roles (level, title, summary, examples, code)
+                SELECT :level, :title, :summary, CAST(:examples AS jsonb), :code
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM pujari_roles WHERE level = :level OR code = :code
+                )
                 """
             ),
-            {"level": level, "title": title, "summary": summary, "examples": json.dumps(examples)},
+            {
+                "level": role["level"],
+                "title": role["title"],
+                "summary": role["summary"],
+                "examples": json.dumps(role["examples"]),
+                "code": role["code"],
+            },
         )
 
 
@@ -739,6 +836,174 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'PAID'",
     "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS original_invoice_id UUID",
     "ALTER TABLE customer_profiles ADD COLUMN IF NOT EXISTS gstin TEXT",
+    """
+    CREATE TABLE IF NOT EXISTS customer_addresses (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      label TEXT,
+      address_line1 TEXT,
+      address_line2 TEXT,
+      city TEXT,
+      district TEXT,
+      state TEXT,
+      pincode TEXT,
+      country TEXT DEFAULT 'India',
+      location_label TEXT,
+      latitude DOUBLE PRECISION,
+      longitude DOUBLE PRECISION,
+      address TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_customer_addresses_user_id ON customer_addresses (user_id)",
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS service_type TEXT NOT NULL DEFAULT 'puja'",
+    """
+    DO $$ BEGIN
+      ALTER TABLE services ADD CONSTRAINT services_service_type_check
+        CHECK (service_type IN ('puja', 'chadhava', 'pravachan'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_services_service_type ON services (service_type, active)",
+    """
+    CREATE TABLE IF NOT EXISTS service_packages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      slug TEXT NOT NULL,
+      name TEXT NOT NULL,
+      price_paise INTEGER NOT NULL DEFAULT 0 CHECK (price_paise >= 0),
+      max_members INTEGER NOT NULL DEFAULT 1 CHECK (max_members >= 1),
+      prasad_included BOOLEAN NOT NULL DEFAULT FALSE,
+      inclusions TEXT,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (service_id, slug)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_service_packages_service ON service_packages (service_id, active, sort_order)",
+    """
+    CREATE TABLE IF NOT EXISTS customer_family_members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      gotra TEXT,
+      gotra_unknown BOOLEAN NOT NULL DEFAULT FALSE,
+      relationship TEXT NOT NULL DEFAULT 'self'
+        CHECK (relationship IN ('self', 'spouse', 'parent', 'child', 'other')),
+      date_of_birth DATE,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_customer_family_members_customer ON customer_family_members (customer_id)",
+    """
+    CREATE TABLE IF NOT EXISTS seva_events (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      service_id UUID NOT NULL REFERENCES services(id),
+      assigned_pujari_id UUID REFERENCES users(id),
+      temple_id UUID REFERENCES temples(id),
+      title TEXT,
+      description TEXT,
+      start_at TIMESTAMPTZ NOT NULL,
+      end_at TIMESTAMPTZ,
+      booking_cutoff_at TIMESTAMPTZ,
+      capacity INTEGER CHECK (capacity IS NULL OR capacity > 0),
+      registration_count INTEGER NOT NULL DEFAULT 0 CHECK (registration_count >= 0),
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK (status IN ('draft', 'published', 'cancelled', 'completed', 'live')),
+      participation_mode TEXT NOT NULL DEFAULT 'offline'
+        CHECK (participation_mode IN ('offline', 'online', 'hybrid')),
+      puja_event_kind TEXT
+        CHECK (puja_event_kind IS NULL OR puja_event_kind IN ('group_live', 'proxy')),
+      is_free BOOLEAN NOT NULL DEFAULT FALSE,
+      price_paise INTEGER CHECK (price_paise IS NULL OR price_paise >= 0),
+      online_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+      meeting_url TEXT,
+      google_calendar_event_id TEXT,
+      meeting_invite_token TEXT,
+      language_code TEXT,
+      tithi TEXT,
+      festival_slug TEXT,
+      series_id UUID,
+      session_number INTEGER,
+      proof_image_path TEXT,
+      proof_video_path TEXT,
+      proof_released BOOLEAN NOT NULL DEFAULT FALSE,
+      published BOOLEAN NOT NULL DEFAULT FALSE,
+      cancelled_at TIMESTAMPTZ,
+      cancellation_reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_seva_events_service ON seva_events (service_id)",
+    "CREATE INDEX IF NOT EXISTS idx_seva_events_start ON seva_events (start_at)",
+    "CREATE INDEX IF NOT EXISTS idx_seva_events_status ON seva_events (status, published)",
+    "CREATE INDEX IF NOT EXISTS idx_seva_events_pujari ON seva_events (assigned_pujari_id)",
+    "CREATE INDEX IF NOT EXISTS idx_seva_events_temple ON seva_events (temple_id)",
+    """
+    CREATE TABLE IF NOT EXISTS seva_event_registrations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      registration_number TEXT UNIQUE,
+      event_id UUID NOT NULL REFERENCES seva_events(id),
+      customer_id UUID NOT NULL REFERENCES users(id),
+      service_type TEXT NOT NULL DEFAULT 'puja'
+        CHECK (service_type IN ('puja', 'chadhava', 'pravachan')),
+      status TEXT NOT NULL DEFAULT 'confirmed'
+        CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed', 'refunded')),
+      payment_status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (payment_status IN ('pending', 'paid', 'free', 'refunded', 'failed')),
+      total_amount_paise INTEGER NOT NULL DEFAULT 0 CHECK (total_amount_paise >= 0),
+      package_id UUID REFERENCES service_packages(id),
+      package_slug TEXT,
+      package_name TEXT,
+      participation_mode TEXT NOT NULL DEFAULT 'offline'
+        CHECK (participation_mode IN ('offline', 'online')),
+      primary_name TEXT,
+      gotra TEXT,
+      gotra_unknown BOOLEAN NOT NULL DEFAULT FALSE,
+      sankalp_text TEXT,
+      family_members JSONB NOT NULL DEFAULT '[]'::jsonb,
+      prasad_address_id UUID REFERENCES customer_addresses(id),
+      join_token TEXT,
+      proof_image_path TEXT,
+      proof_released BOOLEAN NOT NULL DEFAULT FALSE,
+      prasad_status TEXT NOT NULL DEFAULT 'not_applicable'
+        CHECK (prasad_status IN ('not_applicable', 'preparing', 'ready', 'shipped', 'delivered')),
+      prasad_courier TEXT,
+      prasad_tracking TEXT,
+      idempotency_key TEXT UNIQUE,
+      cancelled_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (event_id, customer_id)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_seva_event_registrations_customer ON seva_event_registrations (customer_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_seva_event_registrations_event ON seva_event_registrations (event_id, status)",
+    """
+    CREATE TABLE IF NOT EXISTS seva_discovery_links (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      link_type TEXT NOT NULL
+        CHECK (link_type IN ('puja', 'chadhava', 'pravachan', 'festival', 'tithi', 'deity_day')),
+      service_id UUID REFERENCES services(id) ON DELETE CASCADE,
+      event_id UUID REFERENCES seva_events(id) ON DELETE CASCADE,
+      festival_slug TEXT,
+      tithi TEXT,
+      month_number INTEGER,
+      day_number INTEGER,
+      title TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_seva_discovery_active ON seva_discovery_links (active, link_type, sort_order)",
     "ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_paise INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE settlements ADD COLUMN IF NOT EXISTS blocked_reason TEXT",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS idempotency_key TEXT",
@@ -933,6 +1198,9 @@ def _seed_platform_settings(conn) -> None:
 
     defaults = {
         "virtual_puja_enabled": False,
+        "seva_events_enabled": True,
+        "chadhava_enabled": True,
+        "pravachan_enabled": True,
         "service_area_unavailable_heading": "BSeva is not available in this area yet",
         "service_area_unavailable_description": (
             "We could not find an eligible BSeva pujari near this location. "
@@ -1248,14 +1516,19 @@ def ensure_schema(*, quiet: bool = False) -> None:
                 failed.append(("catalog i18n seed", str(e).split("\n")[0][:180]))
         except Exception as e:
             log(f"  ! catalog i18n seed skipped: {e}")
+        run_batch("specialized pujari roles", list(_SPECIALIZED_ROLE_SCHEMA_STMTS))
         log("  → seeds (roles, legal, settings)")
-        _seed_pujari_roles(conn)
-        _seed_legal_policies(conn)
+        conn.execute(text("SAVEPOINT bseva_platform_seeds"))
         try:
+            _seed_pujari_roles(conn)
+            _seed_legal_policies(conn)
             _seed_platform_settings(conn)
             _seed_reward_campaigns(conn)
             _seed_pujari_booking_terms(conn)
+            conn.execute(text("RELEASE SAVEPOINT bseva_platform_seeds"))
+            ok += 1
         except Exception as e:
+            conn.execute(text("ROLLBACK TO SAVEPOINT bseva_platform_seeds"))
             failed.append(("platform seeds", str(e).split("\n")[0][:180]))
         # Mark historical payouts as legacy settlements
         for label, stmt in (

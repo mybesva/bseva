@@ -305,5 +305,65 @@ export function validatePhoneNational(countryCode: string, national: string): st
   return null;
 }
 
+export type AddressComparable = {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  district?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  country?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+export function normalizeAddressField(raw?: string | null): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+export function addressesMatch(a: AddressComparable, b: AddressComparable): boolean {
+  const fields = ["address_line1", "address_line2", "city", "district", "state", "pincode"] as const;
+  for (const field of fields) {
+    if (normalizeAddressField(a[field]) !== normalizeAddressField(b[field])) return false;
+  }
+  if (normalizeAddressField(a.country || "india") !== normalizeAddressField(b.country || "india")) {
+    return false;
+  }
+  const latA = a.latitude != null ? Number(a.latitude) : null;
+  const latB = b.latitude != null ? Number(b.latitude) : null;
+  const lngA = a.longitude != null ? Number(a.longitude) : null;
+  const lngB = b.longitude != null ? Number(b.longitude) : null;
+  if (latA != null && latB != null && lngA != null && lngB != null) {
+    if (Math.abs(latA - latB) > 0.0001 || Math.abs(lngA - lngB) > 0.0001) return false;
+  }
+  return true;
+}
+
+export function formatAddressLines(parts: {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  district?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  country?: string | null;
+}): string {
+  return [
+    parts.address_line1,
+    parts.address_line2,
+    parts.city,
+    parts.district,
+    parts.state,
+    parts.pincode,
+    parts.country || "India",
+  ]
+    .map((x) => String(x || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;

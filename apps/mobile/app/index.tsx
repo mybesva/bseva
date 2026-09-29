@@ -1,4 +1,4 @@
-import { isAdminRole, isPujariRole } from "@bseva/config";
+import { isAdminRole, isPujariRole, pujaServicesOnly } from "@bseva/config";
 import type { CatalogService } from "@bseva/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -49,7 +49,7 @@ export default function LandingScreen() {
     return <Redirect href="/customer" />;
   }
 
-  const services = (popular.data || []).slice(0, 8);
+  const services = pujaServicesOnly(popular.data).slice(0, 8);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -69,7 +69,7 @@ export default function LandingScreen() {
               </View>
 
               <View style={heroStyles.badge}>
-                <Ionicons name="flower-outline" size={13} color="#E07A2F" />
+                <Ionicons name="flower-outline" size={13} color={colors.primary} />
                 <AppText variant="eyebrow" color={colors.navy} style={heroStyles.badgeText}>
                   {t("home.badge")}
                 </AppText>
@@ -78,7 +78,7 @@ export default function LandingScreen() {
               <AppText variant="display" color={colors.navy} style={heroStyles.heroTitle}>
                 {t("home.heroTitle1")}
               </AppText>
-              <AppText color="rgba(26,43,74,0.9)" style={heroStyles.heroDesc}>
+              <AppText color={colors.foreground} style={heroStyles.heroDesc}>
                 {t("home.heroDesc")}
               </AppText>
 
@@ -231,7 +231,7 @@ const heroStyles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(255,153,51,0.55)",
+    borderColor: "#FF7A00",
     backgroundColor: "rgba(255,255,255,0.42)",
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -273,13 +273,13 @@ const heroStyles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "#1A2B4A",
+    color: "#0E1830",
     paddingVertical: 10,
     fontSize: 15,
     minHeight: 44,
   },
   searchButton: {
-    backgroundColor: "#FF9933",
+    backgroundColor: "#FF7A00",
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,

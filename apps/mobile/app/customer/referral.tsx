@@ -4,7 +4,7 @@ import { Alert, ScrollView, Share } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
-import { rupees } from "@bseva/config";
+import { displayTokenLabel, rupees, translatedTokenLabel } from "@bseva/config";
 import { useI18n } from "@/providers/I18nProvider";
 
 type ReferralRow = { name?: string; status?: string };
@@ -78,13 +78,13 @@ export default function CustomerReferral() {
         {!loading && rewards.length === 0 ? <AppText>{t("rewards.empty")}</AppText> : null}
         {rewards.map((row, index) => {
           const status = String(row.status || "");
-          const statusLabel = status ? t(`status.${status}`) : "";
-          const shown = statusLabel && !statusLabel.startsWith("status.") ? statusLabel : status;
+          const statusKey = `status.${status}`;
+          const shown = status ? translatedTokenLabel(t(statusKey), statusKey, status, "") : "";
           return (
             <Card key={row.id || String(index)}>
               <AppText variant="h3">{rupees(Number(row.amount_paise || 0))}</AppText>
               <AppText variant="small">
-                {[row.reward_type, shown].filter(Boolean).join(" · ")}
+                {[displayTokenLabel(row.reward_type, ""), shown].filter(Boolean).join(" · ")}
               </AppText>
             </Card>
           );

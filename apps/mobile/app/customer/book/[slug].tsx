@@ -9,7 +9,8 @@ import {
   VIRTUAL_COUNTRIES,
   type CustomerBookablePackage,
 } from "@bseva/config";
-import type { LegalPolicy, Quote } from "@bseva/types";
+import type { CustomerAddress, LegalPolicy, Quote } from "@bseva/types";
+import { formatAddressLines } from "@bseva/validation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -54,34 +55,16 @@ type BookingDraft = {
   doorNumber: string;
   landmark: string;
   locationSelection: string;
+  newAddressLabel: string;
 };
 
-type SavedLocation = {
-  id: string;
-  label: string;
-  city: string;
-  lat: number | null;
-  lng: number | null;
-};
-
-function buildSavedLocation(p: Record<string, string | number | null> | undefined, index = 0): SavedLocation | null {
-  if (!p) return null;
-  const parts = [p.address_line1, p.address_line2, p.city, p.district, p.state, p.pincode]
-    .map((x) => String(x || "").trim())
-    .filter(Boolean);
-  const label =
-    String(p.location_label || "").trim() ||
-    String(p.address || "").trim() ||
-    parts.join(", ");
-  const profileCity = String(p.city || "").trim();
-  if (!label && !profileCity) return null;
-  return {
-    id: `saved-${index}`,
-    label: label || profileCity,
-    city: profileCity,
-    lat: p.latitude != null ? Number(p.latitude) : null,
-    lng: p.longitude != null ? Number(p.longitude) : null,
-  };
+function savedLocationLabel(addr: CustomerAddress) {
+  return (
+    String(addr.label || "").trim() ||
+    String(addr.location_label || "").trim() ||
+    String(addr.address || "").trim() ||
+    formatAddressLines(addr)
+  );
 }
 
 function newIdempotencyKey(slug: string) {
@@ -104,6 +87,7 @@ export default function BookService() {
   };
   const serviceQ = useQuery({ queryKey: ["service", slug, lang], queryFn: () => apiClient.getService(slug), enabled: !!slug });
   const profileQ = useQuery({ queryKey: ["customer-profile"], queryFn: () => apiClient.getCustomerProfile() as Promise<Record<string, string | number | null>> });
+  const addressesQ = useQuery({ queryKey: ["customer-addresses"], queryFn: () => apiClient.listCustomerAddresses() });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const configQ = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
   const legalQ = useQuery({
@@ -144,6 +128,10 @@ export default function BookService() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [doorNumber, setDoorNumber] = useState("");
   const [landmark, setLandmark] = useState("");
+  const [newAddressLabel, setNewAddressLabel] = useState("");
+  const [bookingDistrict, setBookingDistrict] = useState("");
+  const [bookingState, setBookingState] = useState("");
+  const [bookingPincode, setBookingPincode] = useState("");
   const [locationSelection, setLocationSelection] = useState("new");
   const restoredAddressFromDraft = useRef(false);
   const [muhurtaReceipt, setMuhurtaReceipt] = useState<MuhurtaReceipt | null>(null);
@@ -202,8 +190,11 @@ export default function BookService() {
         if (d.doorNumber != null) setDoorNumber(d.doorNumber);
         if (d.landmark != null) setLandmark(d.landmark);
         if (d.locationSelection) setLocationSelection(d.locationSelection);
-        else if (d.addressMode === "saved") setLocationSelection("saved-0");
+        else if (d.addressMode === "saved" && d.locationSelection && d.locationSelection !== "new") {
+          setLocationSelection(d.locationSelection);
+        } else if (d.addressMode === "saved") setLocationSelection("saved-legacy");
         else if (d.addressMode === "new") setLocationSelection("new");
+        if (typeof d.newAddressLabel === "string") setNewAddressLabel(d.newAddressLabel);
         restoredAddressFromDraft.current = Boolean(d.address || d.city || d.doorNumber || d.landmark);
       })
       .catch(() => undefined)
@@ -215,15 +206,12 @@ export default function BookService() {
     const draft: BookingDraft = {
       idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng,
       includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone,
-      instructions, recurring, recurringCount, selectedDates, doorNumber, landmark, locationSelection,
+      instructions, recurring, recurringCount, selectedDates, doorNumber, landmark, locationSelection, newAddressLabel,
     };
     void AsyncStorage.setItem(`bseva.booking-draft.${slug}`, JSON.stringify(draft));
-  }, [slug, hydrated, idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng, includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone, instructions, recurring, recurringCount, selectedDates, doorNumber, landmark, locationSelection]);
+  }, [slug, hydrated, idempotencyKey, step, pkg, mode, calendar, date, time, address, city, lat, lng, includeSamagri, includeAlankaram, includeFood, customerCountry, customerTimezone, instructions, recurring, recurringCount, selectedDates, doorNumber, landmark, locationSelection, newAddressLabel]);
 
-  const savedLocations = useMemo((): SavedLocation[] => {
-    const one = buildSavedLocation(profileQ.data, 0);
-    return one ? [one] : [];
-  }, [profileQ.data]);
+  const savedLocations = useMemo(() => addressesQ.data || [], [addressesQ.data]);
 
   const selectedSavedLocation = useMemo(
     () => savedLocations.find((s) => s.id === locationSelection) || null,
@@ -236,20 +224,27 @@ export default function BookService() {
     const loc = savedLocations.find((s) => s.id === id);
     if (!loc) return;
     setLocationSelection(id);
-    setAddress(loc.label);
+    setAddress(savedLocationLabel(loc));
     setDoorNumber("");
     setLandmark("");
-    setCity(loc.city);
-    setLat(loc.lat);
-    setLng(loc.lng);
+    setCity(String(loc.city || ""));
+    setBookingDistrict(String(loc.district || ""));
+    setBookingState(String(loc.state || ""));
+    setBookingPincode(String(loc.pincode || ""));
+    setLat(loc.latitude != null ? Number(loc.latitude) : null);
+    setLng(loc.longitude != null ? Number(loc.longitude) : null);
   }
 
   function startNewLocation() {
     setLocationSelection("new");
+    setNewAddressLabel("");
     setAddress("");
     setDoorNumber("");
     setLandmark("");
     setCity("");
+    setBookingDistrict("");
+    setBookingState("");
+    setBookingPincode("");
     setLat(null);
     setLng(null);
   }
@@ -258,6 +253,12 @@ export default function BookService() {
     if (id === "new") startNewLocation();
     else applySavedLocation(id);
   }
+
+  useEffect(() => {
+    if (!hydrated || restoredAddressFromDraft.current || savedLocations.length === 0) return;
+    if (locationSelection !== "new") return;
+    applySavedLocation(savedLocations[0].id);
+  }, [hydrated, savedLocations.length, locationSelection]);
 
   const muhurtaNeeded = Boolean(svc?.muhurta_consultation_enabled || svc?.requires_muhurta);
   const leadHours = Number(svc?.booking_lead_hours ?? 48) || 48;
@@ -346,7 +347,7 @@ export default function BookService() {
   }, [virtualEnabled, mode]);
 
   function composedAddress() {
-    if (selectedSavedLocation) return selectedSavedLocation.label.trim();
+    if (selectedSavedLocation) return savedLocationLabel(selectedSavedLocation);
     return composePhysicalServiceAddress({ doorNumber, street: address, landmark });
   }
 
@@ -511,16 +512,18 @@ export default function BookService() {
     try {
       if (mode === "in_person" && isNewLocation) {
         const profile = (await apiClient.getCustomerProfile().catch(() => ({}))) as Record<string, unknown>;
-        const label = `${composedAddress()}${city ? `, ${city}` : ""}`;
-        await apiClient.patchCustomerProfile({
-          address_line1: doorNumber.trim() || profile.address_line1,
-          address_line2: address.trim() || profile.address_line2,
-          city: city.trim() || profile.city,
-          district: profile.district,
-          state: profile.state,
-          pincode: profile.pincode,
-          country: profile.country || "India",
-          location_label: label,
+        const locationLabel = `${composedAddress()}${city ? `, ${city}` : ""}`;
+        const resolvedCity = city.trim() || String(profile.city || "").trim();
+        await apiClient.createCustomerAddress({
+          label: newAddressLabel.trim() || null,
+          address_line1: doorNumber.trim() || address.trim(),
+          address_line2: address.trim() && doorNumber.trim() ? address.trim() : undefined,
+          city: resolvedCity,
+          district: bookingDistrict.trim() || String(profile.district || "").trim() || resolvedCity,
+          state: bookingState.trim() || String(profile.state || "").trim() || resolvedCity,
+          pincode: bookingPincode.trim() || String(profile.pincode || "").trim() || undefined,
+          country: String(profile.country || "India"),
+          location_label: locationLabel,
           latitude: lat,
           longitude: lng,
         });
@@ -655,7 +658,7 @@ export default function BookService() {
               </>
             ) : (
               <>
-                {profileQ.isLoading ? (
+                {addressesQ.isLoading ? (
                   <AppText variant="small" color={colors.mutedForeground}>{t("booking.loadingSavedAddress")}</AppText>
                 ) : (
                   <SelectField
@@ -664,18 +667,24 @@ export default function BookService() {
                     value={locationSelection}
                     options={[
                       { id: "new", label: t("booking.addNewLocation") },
-                      ...savedLocations.map((loc) => ({
-                        id: loc.id,
-                        label: loc.label.length > 80 ? `${loc.label.slice(0, 80)}…` : loc.label,
-                        subtitle: loc.city || undefined,
-                      })),
+                      ...savedLocations.map((loc) => {
+                        const text = savedLocationLabel(loc);
+                        return {
+                          id: loc.id,
+                          label: text.length > 80 ? `${text.slice(0, 80)}…` : text,
+                          subtitle: loc.city || undefined,
+                        };
+                      }),
                     ]}
                     onChange={onLocationSelectionChange}
                   />
                 )}
                 {!isNewLocation && selectedSavedLocation ? (
                   <Card style={{ gap: 4 }}>
-                    <AppText>{selectedSavedLocation.label}</AppText>
+                    {selectedSavedLocation.label ? (
+                      <AppText style={{ fontWeight: "700" }}>{selectedSavedLocation.label}</AppText>
+                    ) : null}
+                    <AppText>{savedLocationLabel(selectedSavedLocation)}</AppText>
                     {selectedSavedLocation.city ? (
                       <AppText variant="small" color={colors.mutedForeground}>
                         {t("web.booking.cityValue", { city: selectedSavedLocation.city })}
@@ -690,6 +699,12 @@ export default function BookService() {
                 ) : (
                   <>
                     <AppText variant="small" color={colors.mutedForeground}>{t("web.booking.newAddress")}</AppText>
+                    <Field
+                      label={t("address.shortName")}
+                      value={newAddressLabel}
+                      onChangeText={setNewAddressLabel}
+                      placeholder={t("address.labelPlaceholder")}
+                    />
                     <Field label={t("booking.doorNumber")} value={doorNumber} onChangeText={setDoorNumber} />
                     <Field
                       label={t("booking.streetPh")}
@@ -709,6 +724,10 @@ export default function BookService() {
                         if (parts.door && !doorNumber.trim()) setDoorNumber(parts.door);
                         if (parts.street && !address.trim()) setAddress(parts.street);
                         if (parts.city && !city.trim()) setCity(parts.city);
+                        const geo = parts as { district?: string; state?: string; pincode?: string };
+                        if (geo.district && !bookingDistrict.trim()) setBookingDistrict(geo.district);
+                        if (geo.state && !bookingState.trim()) setBookingState(geo.state);
+                        if (geo.pincode && !bookingPincode.trim()) setBookingPincode(geo.pincode);
                       }}
                     />
                   </>
@@ -845,7 +864,7 @@ export default function BookService() {
                   borderRadius: 8,
                   backgroundColor: colors.primary + "12",
                   borderWidth: 1,
-                  borderColor: colors.primary + "40",
+                  borderColor: colors.primary,
                   gap: 4,
                 }}
               >

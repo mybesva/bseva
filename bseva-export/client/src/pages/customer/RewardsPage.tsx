@@ -1,3 +1,4 @@
+import { displayTokenLabel, translatedTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { CustomerPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
@@ -112,7 +113,7 @@ export default function CustomerRewardsPage() {
             {rewards.map((r) => (
               <div key={r.id} className="flex justify-between text-sm border-b border-border py-2">
                 <span>
-                  {r.reward_type} · {r.status}
+                  {displayTokenLabel(r.reward_type, "")} · {translatedTokenLabel(t(`status.${r.status}`), `status.${r.status}`, r.status, "")}
                 </span>
                 <span>{rupees(r.amount_paise)}</span>
               </div>

@@ -65,7 +65,7 @@ function CompactAction({
 function BookingMetaBadge({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "accent" | "premium" }) {
   const { colors } = useAppTheme();
   const bg = tone === "accent" ? "#FFF0E0" : tone === "premium" ? "#F0EBF8" : colors.secondary;
-  const fg = tone === "accent" ? "#C45C2D" : tone === "premium" ? "#6B4FA0" : colors.mutedForeground;
+  const fg = tone === "accent" ? "#FF7A00" : tone === "premium" ? "#6B4FA0" : colors.mutedForeground;
   return (
     <View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
       <AppText variant="small" color={fg} style={{ fontSize: 10, fontWeight: "700" }}>
@@ -90,7 +90,7 @@ function FeaturedBookingCard({ booking }: { booking: Booking }) {
   const packageType = String(booking.package_type || "").toLowerCase();
 
   return (
-    <Card style={{ padding: 14, gap: 10, borderColor: colors.border + "55" }}>
+    <Card style={{ padding: 14, gap: 10, borderColor: colors.border }}>
       <View style={{ flexDirection: "row", gap: 12 }}>
         <PujaThumb service={serviceRef} size={72} />
         <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
@@ -157,7 +157,7 @@ function RequestBookingCard({ booking }: { booking: Booking }) {
   const extraPujaris = Number(booking.additional_pujaris_required ?? 0);
 
   return (
-    <Card style={{ padding: 12, gap: 8, borderColor: colors.border + "55" }}>
+    <Card style={{ padding: 12, gap: 8, borderColor: colors.border }}>
       <Pressable onPress={openDetail} accessibilityRole="button">
         <View style={{ flexDirection: "row", gap: 10 }}>
           <PujaThumb service={serviceRef} size={56} />

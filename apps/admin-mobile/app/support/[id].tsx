@@ -3,6 +3,7 @@ import {
   SUPPORT_PRIORITIES,
   SUPPORT_RESOLUTIONS,
   TICKET_STATUSES,
+  displayTokenLabel,
 } from "@bseva/config";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
@@ -175,7 +176,7 @@ export default function AdminSupportTicketDetails() {
             <SupportSelect
               label="Status"
               value={statusDraft || String(ticket.status || "open")}
-              options={TICKET_STATUSES.map((s) => ({ id: s, label: STATUS_LABELS[s] || s.replace(/_/g, " ") }))}
+              options={TICKET_STATUSES.map((s) => ({ id: s, label: STATUS_LABELS[s] || displayTokenLabel(s) }))}
               onChange={setStatusDraft}
               disabled={busy || updatingStatus}
             />

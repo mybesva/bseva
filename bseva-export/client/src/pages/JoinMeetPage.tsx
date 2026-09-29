@@ -10,7 +10,9 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { PujaTitle } from "@/components/PujaTitle";
 
 type InvitePayload = {
+  kind?: string;
   booking_number?: string;
+  registration_number?: string;
   service_name?: string;
   booking_date?: string;
   start_time?: string;
@@ -72,6 +74,7 @@ export default function JoinMeetPage() {
                       <PujaTitle name={data.service_name} />
                     </p>
                   ) : null}
+                  {data?.registration_number ? <p>{data.registration_number}</p> : null}
                   {data?.booking_number ? <p>{t("web.booking.numberValue", { number: data.booking_number })}</p> : null}
                   <p>
                     {formatDisplaySlot(data?.booking_date, data?.start_time)}

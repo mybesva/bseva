@@ -1380,6 +1380,8 @@ export default function ServicesAdmin() {
                     <SelectItem value="2">Level 2</SelectItem>
                     <SelectItem value="3">Level 3</SelectItem>
                     <SelectItem value="4">Level 4</SelectItem>
+                    <SelectItem value="5">Level 5 — Chava Seva</SelectItem>
+                    <SelectItem value="6">Level 6 — Pravachana Seva</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

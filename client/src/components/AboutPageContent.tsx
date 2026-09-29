@@ -19,6 +19,8 @@ export default function AboutPageContent({ embedded = false }: { embedded?: bool
 
   return (
     <>
+      <AboutEssenceCards />
+
       {!embedded ? (
         <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
           <div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -78,8 +80,6 @@ export default function AboutPageContent({ embedded = false }: { embedded?: bool
           </div>
         </div>
       </section>
-
-      <AboutEssenceCards />
 
       <section className="py-16 bg-secondary/20">
         <div className={`${embedded ? "" : "container"} max-w-4xl px-4`}>

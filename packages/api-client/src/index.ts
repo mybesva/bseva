@@ -6,7 +6,12 @@ import type {
   AppNotification,
   Booking,
   CatalogService,
+  CustomerAddress,
+  FamilyMember,
   Invoice,
+  SevaEvent,
+  SevaRegistration,
+  ServicePackage,
   LegalPolicy,
   NearbyPujari,
   NavBadges,
@@ -651,6 +656,25 @@ export function createApiClient(opts: ApiClientOptions) {
       return api("/customer/profile", { method: "PATCH", body: JSON.stringify(body) });
     },
 
+    listCustomerAddresses() {
+      return api<CustomerAddress[]>("/customer/addresses").then((d) => asArray<CustomerAddress>(d));
+    },
+
+    createCustomerAddress(body: Record<string, unknown>) {
+      return api<CustomerAddress>("/customer/addresses", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    updateCustomerAddress(id: string, body: Record<string, unknown>) {
+      return api<CustomerAddress>(`/customer/addresses/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+    },
+
+    deleteCustomerAddress(id: string) {
+      return api<{ ok: boolean }>(`/customer/addresses/${id}`, { method: "DELETE" });
+    },
+
     getPujariProfile() {
       return api<PujariProfile>("/pujari/profile");
     },
@@ -844,6 +868,109 @@ export function createApiClient(opts: ApiClientOptions) {
 
     submitHeadRating(body: Record<string, unknown>) {
       return api("/head/ratings", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    getSevaConfig() {
+      return api<{ seva_events_enabled: boolean; chadhava_enabled: boolean; pravachan_enabled: boolean }>(
+        "/seva/config"
+      );
+    },
+
+    listSevaServices(serviceType: string, q?: string) {
+      return api<CatalogService[]>(`/seva/services${toQuery({ service_type: serviceType, q })}`);
+    },
+
+    listSevaEvents(params?: Record<string, string | number | boolean | undefined>) {
+      return api<SevaEvent[]>(`/seva/events${toQuery(params || {})}`);
+    },
+
+    getSevaEvent(eventId: string) {
+      return api<SevaEvent>(`/seva/events/${encodeURIComponent(eventId)}`);
+    },
+
+    registerSevaEvent(eventId: string, body: Record<string, unknown>) {
+      return api<SevaRegistration>(`/seva/events/${encodeURIComponent(eventId)}/register`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+
+    listMySevaRegistrations(params?: Record<string, string | undefined>) {
+      return api<SevaRegistration[]>(`/seva/my-registrations${toQuery(params || {})}`);
+    },
+
+    getMySevaRegistration(id: string) {
+      return api<SevaRegistration>(`/seva/my-registrations/${encodeURIComponent(id)}`);
+    },
+
+    cancelSevaRegistration(id: string) {
+      return api<SevaRegistration>(`/seva/my-registrations/${encodeURIComponent(id)}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    },
+
+    listFamilyMembers() {
+      return api<FamilyMember[]>("/customer/family-members");
+    },
+
+    createFamilyMember(body: Record<string, unknown>) {
+      return api<FamilyMember>("/customer/family-members", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    updateFamilyMember(id: string, body: Record<string, unknown>) {
+      return api<FamilyMember>(`/customer/family-members/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+    },
+
+    deleteFamilyMember(id: string) {
+      return api<{ ok: boolean }>(`/customer/family-members/${encodeURIComponent(id)}`, { method: "DELETE" });
+    },
+
+    listSevaDiscovery() {
+      return api<Record<string, unknown>[]>("/seva/discovery");
+    },
+
+    adminListSevaEvents(params?: Record<string, string | undefined>) {
+      return api<SevaEvent[]>(`/admin/seva/events${toQuery(params || {})}`);
+    },
+
+    adminCreateSevaEvent(body: Record<string, unknown>) {
+      return api<SevaEvent>("/admin/seva/events", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    adminPatchSevaEvent(id: string, body: Record<string, unknown>) {
+      return api<SevaEvent>(`/admin/seva/events/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+    },
+
+    adminEventRegistrations(eventId: string) {
+      return api<SevaRegistration[]>(`/admin/seva/events/${encodeURIComponent(eventId)}/registrations`);
+    },
+
+    adminSankalpManifest(eventId: string) {
+      return api<{ event: SevaEvent; participants: SevaRegistration[] }>(
+        `/admin/seva/events/${encodeURIComponent(eventId)}/sankalp-manifest`
+      );
+    },
+
+    pujariSevaEvents() {
+      return api<SevaEvent[]>("/pujari/seva-events");
+    },
+
+    pujariSevaEventDetail(eventId: string) {
+      return api<SevaEvent>(`/pujari/seva-events/${encodeURIComponent(eventId)}`);
+    },
+
+    pujariCompleteSevaEvent(eventId: string) {
+      return api<SevaEvent>(`/pujari/seva-events/${encodeURIComponent(eventId)}/complete`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
     },
   };
 }

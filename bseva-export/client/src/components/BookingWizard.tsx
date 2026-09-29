@@ -28,6 +28,8 @@ import { format } from "date-fns";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import type { CustomerAddress } from "@bseva/types";
+import { formatAddressLines } from "@bseva/validation";
 import { MapLocationPicker, type AddressValue } from "@/components/AddressFields";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -70,6 +72,7 @@ import {
 } from "@/lib/pujariTeam";
 import {
   VIRTUAL_COUNTRIES,
+  composePhysicalServiceAddress,
   customerBookablePackages,
   normalizeCalendarPref,
   virtualPujaCity,
@@ -273,17 +276,16 @@ export default function BookingWizard({
   const [doorNumber, setDoorNumber] = useState("");
   const [landmark, setLandmark] = useState("");
   const [city, setCity] = useState("");
+  const [bookingDistrict, setBookingDistrict] = useState("");
+  const [bookingState, setBookingState] = useState("");
+  const [bookingPincode, setBookingPincode] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
-  const [addressMode, setAddressMode] = useState<"saved" | "new">("new");
-  const [savedAddress, setSavedAddress] = useState<{
-    label: string;
-    city: string;
-    lat: number | null;
-    lng: number | null;
-  } | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
   const [savedAddressLoading, setSavedAddressLoading] = useState(false);
+  const [newAddressLabel, setNewAddressLabel] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -328,7 +330,11 @@ export default function BookingWizard({
         if (d.currentStep >= 1 && d.currentStep <= 4) setCurrentStep(d.currentStep);
         if (["basic", "standard", "premium"].includes(d.tier)) setTier(d.tier);
         if (["physical", "virtual"].includes(d.serviceMode)) setServiceMode(d.serviceMode);
-        if (["saved", "new"].includes(d.addressMode)) setAddressMode(d.addressMode);
+        if (typeof d.selectedAddressId === "string") setSelectedAddressId(d.selectedAddressId);
+        else if (d.addressMode === "saved" && d.savedAddressId) setSelectedAddressId(String(d.savedAddressId));
+        else if (d.addressMode === "saved" && d.savedAddresses?.[0]?.id) setSelectedAddressId(String(d.savedAddresses[0].id));
+        else if (d.addressMode === "new") setSelectedAddressId("new");
+        if (typeof d.newAddressLabel === "string") setNewAddressLabel(d.newAddressLabel);
         if (d.calendarType) setCalendarType(normalizeCalendarPref(d.calendarType));
         if (d.bookingDate) setBookingDate(new Date(`${d.bookingDate}T12:00:00`));
         if (d.bookingTime) setBookingTime(d.bookingTime);
@@ -361,7 +367,7 @@ export default function BookingWizard({
     sessionStorage.setItem(
       draftKey,
       JSON.stringify({
-        currentStep, tier, serviceMode, addressMode, calendarType,
+        currentStep, tier, serviceMode, selectedAddressId, newAddressLabel, calendarType,
         bookingDate: bookingDate ? format(bookingDate, "yyyy-MM-dd") : null,
         bookingTime, locationText, doorNumber, landmark, city, lat, lng,
         specialInstructions, includeSamagri, includeAlankaram, includeFood,
@@ -371,7 +377,7 @@ export default function BookingWizard({
       }),
     );
   }, [
-    draftKey, currentStep, tier, serviceMode, addressMode, calendarType, bookingDate, bookingTime,
+    draftKey, currentStep, tier, serviceMode, selectedAddressId, newAddressLabel, calendarType, bookingDate, bookingTime,
     locationText, doorNumber, landmark, city, lat, lng, specialInstructions,
     includeSamagri, includeAlankaram, includeFood, recurring, recurringCount,
     selectedDates, customerTimezone, customerCountry, idempotencyKey, submitting,
@@ -401,71 +407,57 @@ export default function BookingWizard({
       .catch(() => setWallet(null));
   }, [isAuthenticated]);
 
+  const selectedSavedAddress = useMemo(
+    () => savedAddresses.find((a) => a.id === selectedAddressId) || null,
+    [savedAddresses, selectedAddressId],
+  );
+  const isNewAddress = selectedAddressId === "new";
+
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "customer") {
-      setSavedAddress(null);
-      setAddressMode("new");
+      setSavedAddresses([]);
+      setSelectedAddressId("new");
       return;
     }
     setSavedAddressLoading(true);
-    api<any>("/customer/profile")
-      .then((p) => {
-        const parts = [
-          p.address_line1,
-          p.address_line2,
-          p.city,
-          p.district,
-          p.state,
-          p.pincode,
-        ]
-          .map((x: unknown) => String(x || "").trim())
-          .filter(Boolean);
-        const label =
-          String(p.location_label || "").trim() ||
-          String(p.address || "").trim() ||
-          parts.join(", ");
-        const profileCity = String(p.city || "").trim();
-        if (!label && !profileCity) {
-          setSavedAddress(null);
-          setAddressMode("new");
-          return;
-        }
-        const saved = {
-          label: label || profileCity,
-          city: profileCity,
-          lat: p.latitude != null ? Number(p.latitude) : null,
-          lng: p.longitude != null ? Number(p.longitude) : null,
-        };
-        setSavedAddress(saved);
-        if (!restoredAddress.current) {
-          setAddressMode("saved");
-          setLocationText(saved.label);
-          setCity(saved.city);
-          setLat(saved.lat);
-          setLng(saved.lng);
+    api<CustomerAddress[]>("/customer/addresses")
+      .then((rows) => {
+        const list = Array.isArray(rows) ? rows : [];
+        setSavedAddresses(list);
+        if (!restoredAddress.current && list.length > 0) {
+          const first = list[0];
+          setSelectedAddressId(first.id);
+          setLocationText(String(first.location_label || first.address || formatAddressLines(first)));
+          setCity(String(first.city || ""));
+          setLat(first.latitude != null ? Number(first.latitude) : null);
+          setLng(first.longitude != null ? Number(first.longitude) : null);
+        } else if (list.length === 0) {
+          setSelectedAddressId("new");
         }
       })
       .catch(() => {
-        setSavedAddress(null);
-        setAddressMode("new");
+        setSavedAddresses([]);
+        setSelectedAddressId("new");
       })
       .finally(() => setSavedAddressLoading(false));
   }, [isAuthenticated, user?.role]);
 
-  function applySavedAddress() {
-    if (!savedAddress) return;
-    setAddressMode("saved");
-    setLocationText(savedAddress.label);
+  function applySavedAddress(id: string) {
+    const saved = savedAddresses.find((a) => a.id === id);
+    if (!saved) return;
+    setSelectedAddressId(id);
+    setLocationText(String(saved.location_label || saved.address || formatAddressLines(saved)));
     setDoorNumber("");
     setLandmark("");
-    setCity(savedAddress.city);
-    setLat(savedAddress.lat);
-    setLng(savedAddress.lng);
+    setCity(String(saved.city || ""));
+    setLat(saved.latitude != null ? Number(saved.latitude) : null);
+    setLng(saved.longitude != null ? Number(saved.longitude) : null);
     setGeoError(null);
   }
 
   function startNewAddress() {
-    setAddressMode("new");
+    setSelectedAddressId("new");
+    setNewAddressLabel("");
     setLocationText("");
     setDoorNumber("");
     setLandmark("");
@@ -476,7 +468,7 @@ export default function BookingWizard({
   }
 
   function composedServiceAddress() {
-    if (addressMode === "saved") return locationText.trim();
+    if (!isNewAddress) return locationText.trim();
     return [doorNumber.trim(), locationText.trim(), landmark.trim()].filter(Boolean).join(", ");
   }
 
@@ -892,9 +884,9 @@ export default function BookingWizard({
       if (!customerCountry.trim()) err.customerCountry = t("booking.needCountry");
     } else {
       if (!city.trim()) err.city = t("booking.needCity");
-      if (addressMode === "saved") {
+      if (!isNewAddress) {
         const addr = composedServiceAddress();
-        if (!savedAddress || !addr.trim()) err.address = t("booking.needAddress");
+        if (!selectedSavedAddress || !addr.trim()) err.address = t("booking.needAddress");
         if (lat == null || lng == null) err.mapLocation = t("booking.needMap");
       } else {
         if (!doorNumber.trim()) err.doorNumber = t("booking.needDoor");
@@ -966,20 +958,27 @@ export default function BookingWizard({
         }
       }
 
-      if (!isVirtual && addressMode === "new") {
-        const profile = await api<any>("/customer/profile").catch(() => ({}));
-        const label = `${composedServiceAddress()}${city ? `, ${city}` : ""}`;
-        await api("/customer/profile", {
-          method: "PATCH",
+      if (!isVirtual && isNewAddress) {
+        const profile = await api<Record<string, unknown>>("/customer/profile").catch(() => ({}));
+        const serviceAddress = composePhysicalServiceAddress({
+          doorNumber,
+          street: locationText,
+          landmark,
+        });
+        const locationLabel = `${serviceAddress}${city ? `, ${city}` : ""}`;
+        const resolvedCity = city.trim() || String(profile.city || "").trim();
+        await api("/customer/addresses", {
+          method: "POST",
           body: JSON.stringify({
-            address_line1: doorNumber.trim() || profile.address_line1,
-            address_line2: locationText.trim() || profile.address_line2,
-            city: city.trim() || profile.city,
-            district: profile.district,
-            state: profile.state,
-            pincode: profile.pincode,
-            country: profile.country || "India",
-            location_label: label,
+            label: newAddressLabel.trim() || null,
+            address_line1: doorNumber.trim() || locationText.trim(),
+            address_line2: locationText.trim() && doorNumber.trim() ? locationText.trim() : undefined,
+            city: resolvedCity,
+            district: bookingDistrict.trim() || String(profile.district || "").trim() || resolvedCity,
+            state: bookingState.trim() || String(profile.state || "").trim() || resolvedCity,
+            pincode: bookingPincode.trim() || String(profile.pincode || "").trim(),
+            country: String(profile.country || "India"),
+            location_label: locationLabel,
             latitude: lat,
             longitude: lng,
           }),
@@ -1353,10 +1352,10 @@ export default function BookingWizard({
               <p className="text-sm text-muted-foreground">{t("booking.loadingSavedAddress")}</p>
             ) : (
               <Select
-                value={addressMode === "saved" && savedAddress ? "saved" : "new"}
+                value={isNewAddress ? "new" : selectedAddressId}
                 onValueChange={(v) => {
-                  if (v === "saved") applySavedAddress();
-                  else startNewAddress();
+                  if (v === "new") startNewAddress();
+                  else applySavedAddress(v);
                   setStep2Errors((e) => ({ ...e, address: undefined, mapLocation: undefined }));
                 }}
               >
@@ -1367,28 +1366,35 @@ export default function BookingWizard({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">{t("booking.addNewAddress")}</SelectItem>
-                  {savedAddress ? (
-                    <SelectItem value="saved">
-                      {savedAddress.label.length > 80
-                        ? `${savedAddress.label.slice(0, 80)}…`
-                        : savedAddress.label}
-                    </SelectItem>
-                  ) : null}
+                  {savedAddresses.map((addr) => {
+                    const text =
+                      String(addr.label || addr.location_label || addr.address || formatAddressLines(addr));
+                    return (
+                      <SelectItem key={addr.id} value={addr.id}>
+                        {text.length > 80 ? `${text.slice(0, 80)}…` : text}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             )}
             {step2Errors.address && <p className="text-xs text-destructive">{step2Errors.address}</p>}
 
-            {addressMode === "saved" && savedAddress ? (
+            {!isNewAddress && selectedSavedAddress ? (
               <div
                 className={cn(
                   "rounded-md border border-border bg-muted/20 p-3 text-sm space-y-1",
                   fieldHasError(step2Errors, "mapLocation") && "border-destructive ring-1 ring-destructive/30",
                 )}
               >
-                <p className="font-medium text-foreground">{savedAddress.label}</p>
-                {savedAddress.city ? (
-                  <p className="text-muted-foreground">{t("web.booking.cityValue", { city: savedAddress.city })}</p>
+                {selectedSavedAddress.label ? (
+                  <p className="font-medium text-foreground">{selectedSavedAddress.label}</p>
+                ) : null}
+                <p className="font-medium text-foreground">
+                  {selectedSavedAddress.location_label || selectedSavedAddress.address || formatAddressLines(selectedSavedAddress)}
+                </p>
+                {selectedSavedAddress.city ? (
+                  <p className="text-muted-foreground">{t("web.booking.cityValue", { city: selectedSavedAddress.city })}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <MapPin size={12} /> {t("web.booking.assignedPujariLocation")}
@@ -1398,6 +1404,15 @@ export default function BookingWizard({
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">{t("web.booking.newAddress")}</p>
+                <div className="space-y-2">
+                  <Label htmlFor="booking-address-label">{t("address.shortName")}</Label>
+                  <Input
+                    id="booking-address-label"
+                    value={newAddressLabel}
+                    onChange={(e) => setNewAddressLabel(e.target.value)}
+                    placeholder={t("address.labelPlaceholder")}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="booking-door">
                     {t("booking.doorNumber")}
@@ -1478,6 +1493,9 @@ export default function BookingWizard({
                       (v.location_label || "").trim();
                     if (street) setLocationText(street);
                     if (v.city?.trim()) setCity(v.city.trim());
+                    if (v.district?.trim()) setBookingDistrict(v.district.trim());
+                    if (v.state?.trim()) setBookingState(v.state.trim());
+                    if (v.pincode?.trim()) setBookingPincode(v.pincode.trim());
                     setGeoError(null);
                     if (v.latitude != null && v.longitude != null) {
                       setStep2Errors((er) => ({ ...er, mapLocation: undefined }));

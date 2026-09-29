@@ -76,7 +76,7 @@ function HeaderProfileAvatar({ onPress, label }: { onPress: () => void; label: s
           borderRadius: 18,
           backgroundColor: colors.secondary,
           borderWidth: 2,
-          borderColor: colors.primary + "55",
+          borderColor: colors.primary,
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -121,15 +121,15 @@ export function ScreenHeader({
             accessibilityLabel={t("mobile.back")}
             style={{ minWidth: 44, minHeight: 44, justifyContent: "center" }}
           >
-            <Ionicons name="chevron-back" size={24} color={colors.cream} />
+            <Ionicons name="chevron-back" size={24} color={colors.white} />
           </Pressable>
         ) : null}
-        <AppText variant="h3" color={colors.cream} style={{ flex: 1 }} numberOfLines={1}>
+        <AppText variant="h3" color={colors.white} style={{ flex: 1 }} numberOfLines={1}>
           {title}
         </AppText>
         {notificationsHref ? (
           <UnreadBell
-            color={colors.cream}
+            color={colors.white}
             label={t("mobile.notifications")}
             onPress={() => nav.push(notificationsHref as never)}
           />

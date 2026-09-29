@@ -95,7 +95,7 @@ const [bookingData, setBookingData] = useState<BookingData>({
                 }));
                 window.location.href = getLoginUrl();
               }}
-              className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-[#F7931E] hover:bg-orange-50 transition-all"
+              className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-[#FF7A00] hover:bg-orange-50 transition-all"
             >
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -113,7 +113,7 @@ const [bookingData, setBookingData] = useState<BookingData>({
             {/* Option 2: Guest Checkout */}
             <div
               onClick={() => setBookingData(prev => ({ ...prev, isGuestCheckout: true }))}
-              className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-[#F7931E] hover:bg-orange-50 transition-all"
+              className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-[#FF7A00] hover:bg-orange-50 transition-all"
             >
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-green-100 rounded-lg">
@@ -195,7 +195,7 @@ const [bookingData, setBookingData] = useState<BookingData>({
             </div>
             <div className="border-t pt-2 flex justify-between font-bold text-lg">
               <span>Total</span>
-              <span className="text-[#F7931E]">₹{(calculateTotal().total / 100).toLocaleString()}</span>
+              <span className="text-[#FF7A00]">₹{(calculateTotal().total / 100).toLocaleString()}</span>
             </div>
           </div>
 
@@ -224,7 +224,7 @@ const [bookingData, setBookingData] = useState<BookingData>({
             </div>
             <div className="border-t pt-2 flex justify-between font-bold text-lg">
               <span>Total</span>
-              <span className="text-[#F7931E]">₹{(calculateTotal().total / 100).toLocaleString()}</span>
+              <span className="text-[#FF7A00]">₹{(calculateTotal().total / 100).toLocaleString()}</span>
             </div>
           </div>
 
@@ -353,7 +353,7 @@ const canProceed = () => {
           !bookingData.guestPhone ||
           !bookingData.guestName
         }
-        className="bg-[#F7931E] hover:bg-[#e8850d]"
+        className="bg-[#FF7A00] hover:bg-[#e8850d]"
       >
         {createGuestBooking.isPending ? (
           <>
@@ -368,7 +368,7 @@ const canProceed = () => {
       <Button
         onClick={handleSubmitBooking}
         disabled={createBooking.isPending}
-        className="bg-[#F7931E] hover:bg-[#e8850d]"
+        className="bg-[#FF7A00] hover:bg-[#e8850d]"
       >
         {createBooking.isPending ? (
           <>
@@ -385,7 +385,7 @@ const canProceed = () => {
   <Button
     onClick={nextStep}
     disabled={!canProceed() || isAutoAssigning}
-    className="bg-[#F7931E] hover:bg-[#e8850d]"
+    className="bg-[#FF7A00] hover:bg-[#e8850d]"
   >
     {isAutoAssigning ? (
       <>

@@ -1,4 +1,4 @@
-import { chipSelectionValue } from "@bseva/config";
+import { chipSelectionValue, displayTokenLabel } from "@bseva/config";
 import { radius, spacing, typography } from "@bseva/tokens";
 import type { ReactNode } from "react";
 import {
@@ -90,7 +90,7 @@ export function PrimaryButton({
         ? colors.navy
         : "transparent";
   const fg =
-    variant === "outline" || variant === "ghost" ? colors.primary : variant === "navy" ? colors.cream : colors.primaryForeground;
+    variant === "outline" || variant === "ghost" ? colors.primary : variant === "navy" ? colors.white : colors.primaryForeground;
   const border = variant === "outline" ? colors.primary : "transparent";
   return (
     <Pressable
@@ -231,7 +231,7 @@ export function StatusBadge({ status }: { status: string }) {
     blocked: colors.destructive,
   };
   const color = map[status] || colors.mutedForeground;
-  const label = status.replace(/_/g, " ");
+  const label = displayTokenLabel(status, "");
   return (
     <View
       style={{

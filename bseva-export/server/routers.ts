@@ -621,7 +621,7 @@ const adminRouter = router({
   setPriestLevel: protectedProcedure
     .input(z.object({
       priestId: z.number(),
-      approvedLevel: z.number().min(1).max(4).nullable(),
+      approvedLevel: z.number().min(1).max(6).nullable(),
       verificationStatus: z.enum(["approved", "rejected", "pending"]),
       rejectionReason: z.string().optional(),
     }))
@@ -638,7 +638,7 @@ const adminRouter = router({
   setServiceLevel: protectedProcedure
     .input(z.object({
       pujaTypeId: z.number(),
-      requiredLevel: z.number().min(1).max(4),
+      requiredLevel: z.number().min(1).max(6),
     }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new Error("Admin only");

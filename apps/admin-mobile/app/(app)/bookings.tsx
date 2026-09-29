@@ -3,6 +3,7 @@ import {
   ADMIN_BOOKING_STATUS_FILTERS,
   ADMIN_DATE_RANGE_FILTERS,
   adminBookingLast30Range,
+  displayTokenLabel,
   rupees,
 } from "@bseva/config";
 import type { Booking } from "@bseva/types";
@@ -168,7 +169,7 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
           const needsAttention = Boolean(b.needs_reassignment) || b.status === "rejected" || !b.pujari_id;
           return (
             <Pressable key={b.id} onPress={() => router.push(`/booking/${b.id}`)}>
-              <Card style={{ gap: 6, borderColor: needsAttention ? colors.destructive + "55" : undefined }}>
+              <Card style={{ gap: 6, borderColor: needsAttention ? colors.destructive : undefined }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
                   {b.service_name ? (
                     <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
@@ -197,7 +198,7 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
                 )}
                 <AppText variant="small">
                   {rupees(b.total_paise)}
-                  {b.payment_status ? ` · ${b.payment_status}` : ""}
+                  {b.payment_status ? ` · ${displayTokenLabel(b.payment_status)}` : ""}
                 </AppText>
                 {!b.pujari_id ? (
                   <AppText variant="small" color={colors.destructive}>Assign pujari</AppText>

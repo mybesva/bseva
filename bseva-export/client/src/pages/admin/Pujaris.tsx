@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -69,7 +70,7 @@ function verificationBadgeClass(status: string) {
 }
 
 function formatVerificationStatus(status: string) {
-  return (status || "—").replace(/_/g, " ");
+  return displayTokenLabel(status);
 }
 
 function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; title: string }[]; onChanged: () => Promise<void> }) {
@@ -200,7 +201,7 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
       <TableCell>
         <Badge
           variant="outline"
-          className={cn("capitalize font-normal whitespace-nowrap", verificationBadgeClass(u.verification_status))}
+          className={cn("font-normal whitespace-nowrap", verificationBadgeClass(u.verification_status))}
         >
           {formatVerificationStatus(u.verification_status)}
         </Badge>
@@ -430,7 +431,7 @@ export default function PujarisPage() {
         </div>
         {statusFilter !== "all" && (
           <Badge variant="secondary" className="mb-1">
-            Showing: {statusFilter.replace(/_/g, " ")}
+            Showing: {displayTokenLabel(statusFilter)}
           </Badge>
         )}
       </div>

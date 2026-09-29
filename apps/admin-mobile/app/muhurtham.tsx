@@ -1,3 +1,4 @@
+import { translatedTokenLabel } from "@bseva/config";
 import { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -91,7 +92,7 @@ export default function MuhurthamScreen() {
           options={[
             { id: "all", label: t("mobile.allStatuses") },
             { id: "actionable", label: t("mobile.actionRequired") },
-            ...statuses.map((item) => ({ id: item, label: t(`status.${item}`) })),
+            ...statuses.map((item) => ({ id: item, label: translatedTokenLabel(t(`status.${item}`), `status.${item}`, item) })),
           ]}
           value={filter}
           onChange={(value) => setFilter(String(value))}
@@ -126,7 +127,7 @@ export default function MuhurthamScreen() {
           <Card style={{ gap: 10 }}>
             <AppText variant="h3">{editing.consultation_number || t("admin.muhurtham")}</AppText>
             <ChoiceChips
-              options={statuses.map((item) => ({ id: item, label: t(`status.${item}`) }))}
+              options={statuses.map((item) => ({ id: item, label: translatedTokenLabel(t(`status.${item}`), `status.${item}`, item) }))}
               value={status}
               onChange={(value) => setStatus(String(value) as ConsultationStatus)}
             />

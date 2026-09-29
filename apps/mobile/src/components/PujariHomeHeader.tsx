@@ -96,7 +96,7 @@ function ProfileAvatar({ onPress, label }: { onPress: () => void; label: string 
           key={photoUri || "photo"}
           source={photo}
           onError={() => setPhotoOk(false)}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, borderWidth: 2, borderColor: colors.primary + "55" }}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, borderWidth: 2, borderColor: colors.primary }}
         />
       ) : (
         <View
@@ -106,7 +106,7 @@ function ProfileAvatar({ onPress, label }: { onPress: () => void; label: string 
             borderRadius: 18,
             backgroundColor: colors.secondary,
             borderWidth: 2,
-            borderColor: colors.primary + "55",
+            borderColor: colors.primary,
             alignItems: "center",
             justifyContent: "center",
           }}

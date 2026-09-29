@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { StyleSheet, Text, View } from "react-native";
 import { radius } from "@bseva/tokens";
 import { PRIORITY_LABELS } from "@/lib/supportLabels";
@@ -14,7 +15,7 @@ export function SupportPriorityBadge({ priority }: { priority: string }) {
   const { colors } = useAppTheme();
   const key = String(priority || "medium").toLowerCase();
   const color = PRIORITY_COLORS[key] || colors.mutedForeground;
-  const label = PRIORITY_LABELS[key] || key.replace(/_/g, " ");
+  const label = PRIORITY_LABELS[key] || displayTokenLabel(key, "");
 
   return (
     <View

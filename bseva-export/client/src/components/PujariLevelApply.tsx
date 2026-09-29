@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
+import { isSpecializedPujariLevel } from "@bseva/config";
 import { usePujariLevels } from "@/hooks/usePujariLevels";
 import { toast } from "sonner";
 
@@ -32,7 +33,9 @@ export default function PujariLevelApply({
   const requested = Number(requestedLevel || 0);
   const pendingUpgrade = requested > approved;
   const levels =
-    upgradeOnly && approved > 0 ? allLevels.filter((l) => l.level > approved) : allLevels;
+    upgradeOnly && approved > 0
+      ? allLevels.filter((l) => l.level > approved && !isSpecializedPujariLevel(l.level))
+      : allLevels;
   const defaultPick =
     upgradeOnly && approved > 0
       ? Math.max(requested, approved + 1, levels[0]?.level || approved + 1)

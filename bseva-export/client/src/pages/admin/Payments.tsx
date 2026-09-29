@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -304,7 +305,7 @@ export default function Payments() {
                 </TableCell>
                 <TableCell>
                   <Badge className={statusColors[pay] || "bg-muted text-foreground"}>
-                    {pay.replace(/_/g, " ")}
+                    {displayTokenLabel(pay)}
                   </Badge>
                 </TableCell>
               </TableRow>

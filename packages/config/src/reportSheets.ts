@@ -1,3 +1,5 @@
+import { displayTokenLabel } from "./displayLabels";
+
 export type ReportWorkbookData = {
   period: { from: string; to: string; label: string; range: string };
   overview: {
@@ -149,7 +151,7 @@ export function buildReportSheetTables(
           r.bookings,
           Number(r.rating || 0),
           rs(r.earnings),
-          r.availability_status || "available",
+          displayTokenLabel(r.availability_status || "available"),
         ]),
       ],
     },
@@ -180,11 +182,11 @@ export function buildReportSheetTables(
         [],
         ["By service mode"],
         ["Mode", "Bookings", "Revenue (₹)"],
-        ...report.modes.map((m) => [String(m.name || "").replace(/_/g, " "), m.bookings, rs(m.revenue)]),
+        ...report.modes.map((m) => [displayTokenLabel(String(m.name || ""), ""), m.bookings, rs(m.revenue)]),
         [],
         ["Locations"],
         ["Location", "Mode", "Bookings", "Revenue (₹)"],
-        ...report.temples.map((t) => [t.name, String(t.city || "").replace(/_/g, " "), t.bookings, rs(t.revenue)]),
+        ...report.temples.map((t) => [t.name, displayTokenLabel(String(t.city || ""), ""), t.bookings, rs(t.revenue)]),
       ],
     },
     {
@@ -205,7 +207,7 @@ export function buildReportSheetTables(
         ["Bookings that included a samagri kit", report.samagri_bookings],
         [],
         ["Item", "Unit", "Bookings used", "Times listed", "Status"],
-        ...report.samagri.map((s) => [s.name, s.unit, s.bookings, s.consumed, s.status]),
+        ...report.samagri.map((s) => [s.name, s.unit, s.bookings, s.consumed, displayTokenLabel(s.status, "")]),
       ],
     },
     {
@@ -223,7 +225,7 @@ export function buildReportSheetTables(
         [],
         ["Payment method breakdown"],
         ["Method", "Count", "Amount (₹)", "Share %"],
-        ...report.payments.by_method.map((m) => [m.method, m.count, rs(m.amount_paise), m.percentage]),
+        ...report.payments.by_method.map((m) => [displayTokenLabel(m.method, ""), m.count, rs(m.amount_paise), m.percentage]),
       ],
     },
   ];

@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useCallback, useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -338,7 +339,7 @@ export default function Reports() {
                       {ov.payment_methods.map((method) => (
                         <div key={method.method} className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="font-medium">{method.method}</span>
+                            <span className="font-medium">{displayTokenLabel(method.method, "")}</span>
                             <span className="text-muted-foreground">
                               {rupees(method.amount_paise)} ({method.percentage}%)
                             </span>
@@ -420,7 +421,7 @@ export default function Reports() {
                           <TableCell className="text-right">{rupees(Number(pujari.earnings || 0))}</TableCell>
                           <TableCell>
                             <Badge className={statusColor[pujari.availability_status] || statusColor.available}>
-                              {pujari.availability_status || "available"}
+                              {displayTokenLabel(pujari.availability_status || "available")}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -512,7 +513,7 @@ export default function Reports() {
                     <TableBody>
                       {report.modes.map((m) => (
                         <TableRow key={m.name}>
-                          <TableCell className="font-medium capitalize">{m.name.replace("_", " ")}</TableCell>
+                          <TableCell className="font-medium">{displayTokenLabel(m.name)}</TableCell>
                           <TableCell className="text-right">{m.bookings}</TableCell>
                           <TableCell className="text-right">{rupees(m.revenue)}</TableCell>
                         </TableRow>
@@ -545,9 +546,9 @@ export default function Reports() {
                         <TableRow key={temple.name}>
                           <TableCell className="font-medium">{temple.name}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1 capitalize">
+                            <div className="flex items-center gap-1">
                               <MapPin className="w-4 h-4 text-muted-foreground" />
-                              {String(temple.city || "").replace("_", " ")}
+                              {displayTokenLabel(String(temple.city || ""), "")}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">{temple.bookings}</TableCell>
@@ -630,7 +631,7 @@ export default function Reports() {
                           <TableCell className="text-right">{item.bookings}</TableCell>
                           <TableCell className="text-right">{item.consumed}</TableCell>
                           <TableCell>
-                            <Badge className={statusColor[item.status] || statusColor.OK}>{item.status}</Badge>
+                            <Badge className={statusColor[item.status] || statusColor.OK}>{displayTokenLabel(item.status)}</Badge>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -686,7 +687,7 @@ export default function Reports() {
                     {report.payments.by_method.map((method) => (
                       <div key={method.method} className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="font-medium">{method.method}</span>
+                          <span className="font-medium">{displayTokenLabel(method.method, "")}</span>
                           <span className="text-muted-foreground">
                             {rupees(method.amount_paise)} ({method.percentage}%)
                           </span>

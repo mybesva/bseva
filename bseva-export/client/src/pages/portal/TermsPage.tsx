@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CustomerPortal, PujariPortal } from "@/components/RolePortals";
+import RedirectTo from "@/components/RedirectTo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; classNa
   cancellation_policy: Ban,
 };
 
-function PortalTermsContent() {
+export function PortalTermsContent() {
   const { t } = useI18n();
   const { policies, loading } = useLegalPolicies([
     "platform_terms",
@@ -97,17 +97,9 @@ function PortalTermsContent() {
 }
 
 export function PujariTermsPage() {
-  return (
-    <PujariPortal>
-      <PortalTermsContent />
-    </PujariPortal>
-  );
+  return <RedirectTo to="/pujari/profile?tab=terms" />;
 }
 
 export function CustomerTermsPage() {
-  return (
-    <CustomerPortal>
-      <PortalTermsContent />
-    </CustomerPortal>
-  );
+  return <RedirectTo to="/customer/profile?tab=terms" />;
 }

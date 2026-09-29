@@ -58,7 +58,7 @@ function EssenceStatementCard({
       </div>
 
       <div className="flex-1 flex items-center px-5 py-4 md:px-6 md:py-[17px] min-w-0 bg-white dark:bg-card">
-        <div className="text-sm md:text-[15px] leading-[1.55] text-sidebar/85 dark:text-foreground/90 text-left w-full">
+        <div className="text-sm md:text-[15px] leading-[1.55] text-sidebar dark:text-foreground text-left w-full">
           {children}
         </div>
       </div>

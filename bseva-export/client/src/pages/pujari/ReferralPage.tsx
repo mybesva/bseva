@@ -1,3 +1,4 @@
+import { translatedTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { PujariPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
@@ -105,8 +106,8 @@ export default function PujariReferralPage() {
                   <TableBody>
                     {myReferrals.map((r, i) => {
                       const status = String(r.status || "");
-                      const statusLabel = status ? t(`status.${status}`) : "";
-                      const shown = statusLabel.startsWith("status.") ? status : statusLabel;
+                      const statusKey = `status.${status}`;
+                      const shown = status ? translatedTokenLabel(t(statusKey), statusKey, status, "") : "";
                       return (
                         <TableRow key={`${r.name}-${i}`}>
                           <TableCell>{r.name}</TableCell>

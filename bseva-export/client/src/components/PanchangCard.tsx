@@ -20,6 +20,7 @@ import {
 } from "@bseva/config";
 import type { PanchangData } from "@bseva/types";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 import { useEffect, useState } from "react";
 
 function cleanLabel(text: string): string {
@@ -107,8 +108,17 @@ export default function PanchangCard({ className }: { className?: string }) {
   const [selectedDate, setSelectedDate] = useState(() => todayIsoDate());
   const [calendarType, setCalendarType] = useState<PanchangCalendarType>(DEFAULT_PANCHANG_CALENDAR);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [discovery, setDiscovery] = useState<Array<{ id: string; title?: string; service_name?: string; link_type?: string; service_slug?: string; event_id?: string }>>([]);
   const [panchang, setPanchang] = useState<PanchangData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api<Array<{ id: string; title?: string; service_name?: string; link_type?: string; service_slug?: string; event_id?: string }>>(
+      "/seva/discovery"
+    )
+      .then((rows) => setDiscovery(rows.slice(0, 4)))
+      .catch(() => setDiscovery([]));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -263,6 +273,23 @@ export default function PanchangCard({ className }: { className?: string }) {
         ) : (
           <p className="text-sm text-muted-foreground">{t("common.retry")}</p>
         )}
+        {discovery.length > 0 ? (
+          <div className="mt-4 border-t pt-4 space-y-2">
+            <p className="text-sm font-semibold">{t("seva.discovery.title")}</p>
+            <ul className="space-y-1">
+              {discovery.map((d) => (
+                <li key={d.id}>
+                  <Link
+                    href={d.event_id ? `/seva/events/${d.event_id}` : d.service_slug ? `/services/${d.service_slug}` : "/services"}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {d.title || d.service_name || d.link_type}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

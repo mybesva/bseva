@@ -14,7 +14,7 @@ export default function Book() {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#F7931E]" />
+          <Loader2 className="w-12 h-12 animate-spin text-[#FF7A00]" />
         </div>
       </Layout>
     );

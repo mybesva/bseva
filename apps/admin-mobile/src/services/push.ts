@@ -20,7 +20,7 @@ export async function registerPushToken(): Promise<string | null> {
         name: "B-Seva Admin",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#FF9933",
+        lightColor: "#FF7A00",
       });
     }
     const device = await Notifications.getDevicePushTokenAsync();

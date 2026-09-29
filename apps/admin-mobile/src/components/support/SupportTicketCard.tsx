@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
+import { displayTokenLabel } from "@bseva/config";
 import { formatDisplayDateTime } from "@bseva/locales";
 import { AppText, Card } from "@/components/ui";
 import { CATEGORY_LABELS } from "@/lib/supportLabels";
@@ -13,13 +14,17 @@ export function SupportTicketCard({ ticket }: { ticket: SupportTicketRow }) {
   const router = useRouter();
   const { colors } = useAppTheme();
   const category =
-    String(ticket.category_label || CATEGORY_LABELS[String(ticket.category || "")] || ticket.category || "");
+    String(
+      ticket.category_label ||
+        CATEGORY_LABELS[String(ticket.category || "")] ||
+        displayTokenLabel(String(ticket.category || ""), ""),
+    );
   const reporter = String(ticket.reporter_name || ticket.guest_name || "—");
   const service = String(ticket.service_name || ticket.booking?.service_name || "");
   const lastActivity = formatDisplayDateTime(ticket.last_activity_at || ticket.updated_at || ticket.created_at);
 
   return (
-    <Card style={{ gap: 10, borderColor: colors.primary + "33" }}>
+    <Card style={{ gap: 10, borderColor: colors.primary }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <SupportStatusBadge status={String(ticket.status || "open")} />
         <SupportPriorityBadge priority={String(ticket.priority || "medium")} />

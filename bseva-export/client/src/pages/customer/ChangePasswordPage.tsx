@@ -1,10 +1,5 @@
-import { CustomerPortal } from "@/components/RolePortals";
-import ChangePasswordForm from "@/pages/ChangePassword";
+import RedirectTo from "@/components/RedirectTo";
 
 export default function CustomerChangePasswordPage() {
-  return (
-    <CustomerPortal>
-      <ChangePasswordForm />
-    </CustomerPortal>
-  );
+  return <RedirectTo to="/customer/profile?tab=password" />;
 }

@@ -1,3 +1,4 @@
+import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import AdminPageHeader from "@/components/AdminPageHeader";
@@ -142,7 +143,7 @@ export default function AdminInvoices() {
                 <TableRow key={inv.id}>
                   <TableCell className="font-mono text-xs">{inv.invoice_number}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{inv.invoice_type}</Badge>
+                    <Badge variant="secondary">{displayTokenLabel(inv.invoice_type)}</Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{inv.booking_number || String(inv.booking_id || "").slice(0, 8)}</TableCell>
                   <TableCell>
@@ -150,8 +151,8 @@ export default function AdminInvoices() {
                     <div className="text-xs text-muted-foreground">{inv.customer_email}</div>
                   </TableCell>
                   <TableCell>{rupees(inv.total_paise)}</TableCell>
-                  <TableCell>{inv.payment_status || "PAID"}</TableCell>
-                  <TableCell>{inv.email_status || "—"}</TableCell>
+                  <TableCell>{displayTokenLabel(inv.payment_status || "paid")}</TableCell>
+                  <TableCell>{displayTokenLabel(inv.email_status)}</TableCell>
                   <TableCell className="whitespace-nowrap">{formatDisplayDateTime(inv.created_at)}</TableCell>
                   <TableCell className="space-x-2 whitespace-nowrap">
                     <Button size="sm" variant="outline" onClick={() => void openHtml(inv.id)}>

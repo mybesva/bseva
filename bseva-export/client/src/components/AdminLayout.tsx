@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import RolePortalGate from "@/components/RolePortalGate";
 import { Skeleton } from "@/components/ui/skeleton";
+import { displayTokenLabel } from "@bseva/config";
 import { dictionaries } from "@bseva/locales";
 import { api } from "@/lib/api";
 import { adminBasePath, adminPath } from "@/const";
@@ -93,6 +94,7 @@ const navigation: NavItem[] = [
   { nameKey: "admin.samagri", suffix: "/samagri", icon: Flower2, permissions: ["manage_samagri"] },
   { nameKey: "admin.bookings", suffix: "/bookings", icon: Calendar, permissions: ["view_bookings", "manage_bookings"] },
   { nameKey: "admin.virtualPuja", suffix: "/virtual-puja", icon: Video, permissions: ["view_bookings", "manage_bookings"] },
+  { nameKey: "admin.sevaEvents", suffix: "/seva-events", icon: Video, permissions: ["manage_services", "manage_bookings"] },
   { nameKey: "admin.muhurtham", suffix: "/muhurtham", icon: Clock3, permissions: ["view_bookings", "manage_bookings"] },
   {
     nameKey: "admin.settlements",
@@ -120,7 +122,6 @@ const navigation: NavItem[] = [
   },
   { nameKey: "admin.permissions", suffix: "/permissions", icon: UserCog, permissions: ["manage_admins"] },
   { nameKey: "admin.reviews", suffix: "/reviews", icon: Star, permissions: ["view_bookings"] },
-  { nameKey: "admin.notifications", suffix: "/notifications", icon: Bell, permissions: ["manage_config"] },
   { nameKey: "admin.promos", suffix: "/promos", icon: Sparkles, permissions: ["manage_config"] },
   { nameKey: "admin.reports", suffix: "/reports", icon: BarChart3, permissions: ["view_reports"] },
   { nameKey: "admin.settings", suffix: "/settings", icon: Settings, permissions: ["manage_config"] },
@@ -189,7 +190,7 @@ function AdminShell({ children }: AdminLayoutProps) {
     .toUpperCase();
 
   const adminRoleLabel =
-    user?.role === "super_admin" ? "Super admin" : user?.role === "admin" ? "Admin" : user?.role || "Admin";
+    user?.role === "super_admin" ? "Super Admin" : user?.role === "admin" ? "Admin" : displayTokenLabel(user?.role, "Admin");
 
   const navActive = (suffix: string) => {
     const href = adminPath(suffix);

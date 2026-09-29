@@ -89,7 +89,7 @@ export function PrimaryButton({
         ? colors.navy
         : "transparent";
   const fg =
-    variant === "outline" || variant === "ghost" ? colors.primary : variant === "navy" ? colors.cream : colors.primaryForeground;
+    variant === "outline" || variant === "ghost" ? colors.primary : variant === "navy" ? colors.white : colors.primaryForeground;
   const border = variant === "outline" ? colors.primary : "transparent";
   return (
     <Pressable

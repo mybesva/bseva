@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.geo import haversine_km
+from app.pujari_levels import filter_rows_for_required_level
 
 
 def row_dict(row) -> dict:
@@ -159,7 +160,7 @@ SERVICE_RADIUS_KM = 10.0
 
 def _eligible_pujari_location_rows(db: Session, required_level: int):
     """Approved, available, unblocked pujaris with coordinates (no coords returned to callers)."""
-    return db.execute(
+    rows = db.execute(
         text(
             """
             SELECT u.id, u.name, p.approved_level, p.verification_status, p.available,
@@ -176,6 +177,8 @@ def _eligible_pujari_location_rows(db: Session, required_level: int):
         ),
         {"lvl": required_level},
     ).mappings().all()
+    # Level 1–4 comparison above is unchanged. Drop Levels 5–6 unless this service is that role.
+    return filter_rows_for_required_level(rows, required_level)
 
 
 def service_available_near(
@@ -191,7 +194,7 @@ def service_available_near(
     rows = db.execute(
         text(
             """
-            SELECT p.latitude, p.longitude, p.service_radius_km
+            SELECT p.approved_level, p.latitude, p.longitude, p.service_radius_km
             FROM pujari_profiles p
             JOIN users u ON u.id = p.user_id
             WHERE u.blocked = FALSE AND u.role IN ('pujari', 'head_pujari')
@@ -211,6 +214,7 @@ def service_available_near(
             "max_lng": lng + lng_pad,
         },
     ).mappings().all()
+    rows = filter_rows_for_required_level(rows, required_level)
     for r in rows:
         dist = haversine_km(lat, lng, float(r["latitude"]), float(r["longitude"]))
         effective = min(radius_km, float(r["service_radius_km"] or radius_km))

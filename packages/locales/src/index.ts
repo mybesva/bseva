@@ -16,6 +16,7 @@ import { landing } from "./resources/landing";
 import { gapTranslations } from "./resources/gapTranslations";
 import { mlCustomer } from "./resources/mlCustomer";
 import { mlCatalog } from "./resources/mlCatalog";
+import { sevaLocales } from "./resources/seva";
 
 export {
   DEFAULT_LANG,
@@ -66,6 +67,7 @@ const base: Record<string, string> = {
   ...webUiGaps,
   ...extras.en,
   ...landing.en,
+  ...sevaLocales.en,
 };
 
 function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): Record<string, string> {
@@ -83,12 +85,12 @@ function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): 
 }
 
 export const localeOverrides: Record<Exclude<Lang, "en">, Record<string, string>> = {
-  hi: localeDict("hi", hi),
-  te: localeDict("te", te),
-  mr: localeDict("mr", mr),
-  kn: localeDict("kn", kn),
-  ta: localeDict("ta", ta),
-  ml: { ...localeDict("ml", {}), ...mlCatalog, ...mlCustomer },
+  hi: { ...localeDict("hi", hi), ...sevaLocales.hi },
+  te: { ...localeDict("te", te), ...sevaLocales.te },
+  mr: { ...localeDict("mr", mr), ...sevaLocales.mr },
+  kn: { ...localeDict("kn", kn), ...sevaLocales.kn },
+  ta: { ...localeDict("ta", ta), ...sevaLocales.ta },
+  ml: { ...localeDict("ml", {}), ...mlCatalog, ...mlCustomer, ...sevaLocales.ml },
 };
 
 export const dictionaries: Record<Lang, Record<string, string>> = {

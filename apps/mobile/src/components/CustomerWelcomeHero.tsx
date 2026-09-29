@@ -56,8 +56,8 @@ export function CustomerWelcomeHero({
         <View style={[styles.overlay, { backgroundColor: isDark ? "rgba(11,20,36,0.72)" : "rgba(255,248,231,0.78)" }]} />
         <View style={styles.body}>
           <View style={styles.taglineRow}>
-            <Ionicons name="flower-outline" size={14} color="#C45C2D" />
-            <AppText color="#8B5A2B" style={styles.tagline}>
+            <Ionicons name="flower-outline" size={14} color={colors.primary} />
+            <AppText color={isDark ? colors.white : colors.foreground} style={styles.tagline}>
               {t("customer.hero.tagline")}
             </AppText>
           </View>
@@ -98,7 +98,7 @@ export function CustomerWelcomeHero({
               <AppText color={text} style={styles.quoteText}>
                 {t("customer.hero.quote")}
               </AppText>
-              <AppText color="#C45C2D" style={styles.quoteBy}>
+              <AppText color={colors.primary} style={styles.quoteBy}>
                 — {t("customer.hero.quoteBy")}
               </AppText>
             </View>
@@ -107,7 +107,7 @@ export function CustomerWelcomeHero({
           <View style={[styles.trustPanel, { backgroundColor: panelBg }]}>
             {TRUST.map((item) => (
               <View key={item.key} style={styles.trustItem}>
-                <Ionicons name={item.icon} size={18} color="#E07A2F" />
+                <Ionicons name={item.icon} size={18} color={colors.primary} />
                 <AppText color={text} style={styles.trustLabel}>
                   {t(item.key)}
                 </AppText>

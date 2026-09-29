@@ -37,7 +37,7 @@ const getBookingConfirmationTemplate = (data: BookingEmailData): string => {
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1E3A5F 0%, #2d5a8f 100%); padding: 30px; text-align: center;">
-      <h1 style="color: #F7931E; margin: 0; font-size: 28px;">B-Seva</h1>
+      <h1 style="color: #FF7A00; margin: 0; font-size: 28px;">B-Seva</h1>
       <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Traditional Indian Spiritual Services</p>
     </div>
     
@@ -52,8 +52,8 @@ const getBookingConfirmationTemplate = (data: BookingEmailData): string => {
       </p>
       
       <!-- Booking Details Card -->
-      <div style="background-color: #FFF8F0; border: 1px solid #F7931E; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <h3 style="color: #1E3A5F; margin-top: 0; border-bottom: 1px solid #F7931E; padding-bottom: 10px;">
+      <div style="background-color: #FFF8F0; border: 1px solid #FF7A00; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #1E3A5F; margin-top: 0; border-bottom: 1px solid #FF7A00; padding-bottom: 10px;">
           Booking Details
         </h3>
         
@@ -77,7 +77,7 @@ const getBookingConfirmationTemplate = (data: BookingEmailData): string => {
           ${data.tithi ? `
           <tr>
             <td style="padding: 8px 0; color: #666;">Tithi:</td>
-            <td style="padding: 8px 0; color: #F7931E; font-weight: bold;">${data.tithi}</td>
+            <td style="padding: 8px 0; color: #FF7A00; font-weight: bold;">${data.tithi}</td>
           </tr>
           ` : ''}
           ${data.nakshatra ? `
@@ -96,11 +96,11 @@ const getBookingConfirmationTemplate = (data: BookingEmailData): string => {
           </tr>
         </table>
         
-        <div style="border-top: 2px solid #F7931E; margin-top: 15px; padding-top: 15px;">
+        <div style="border-top: 2px solid #FF7A00; margin-top: 15px; padding-top: 15px;">
           <table style="width: 100%;">
             <tr>
               <td style="color: #1E3A5F; font-size: 18px; font-weight: bold;">Total Amount:</td>
-              <td style="color: #F7931E; font-size: 24px; font-weight: bold; text-align: right;">
+              <td style="color: #FF7A00; font-size: 24px; font-weight: bold; text-align: right;">
                 ₹${(data.totalAmount / 100).toLocaleString()}
               </td>
             </tr>
@@ -155,7 +155,7 @@ const getOTPEmailTemplate = (customerName: string, otp: string): string => {
 <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
     <div style="background: linear-gradient(135deg, #1E3A5F 0%, #2d5a8f 100%); padding: 30px; text-align: center;">
-      <h1 style="color: #F7931E; margin: 0; font-size: 28px;">B-Seva</h1>
+      <h1 style="color: #FF7A00; margin: 0; font-size: 28px;">B-Seva</h1>
     </div>
     
     <div style="padding: 30px; text-align: center;">
@@ -167,7 +167,7 @@ const getOTPEmailTemplate = (customerName: string, otp: string): string => {
         Please use the following OTP to confirm your booking:
       </p>
       
-      <div style="background-color: #FFF8F0; border: 2px solid #F7931E; border-radius: 8px; padding: 20px; margin: 30px auto; max-width: 200px;">
+      <div style="background-color: #FFF8F0; border: 2px solid #FF7A00; border-radius: 8px; padding: 20px; margin: 30px auto; max-width: 200px;">
         <span style="font-size: 36px; font-weight: bold; color: #1E3A5F; letter-spacing: 8px;">${otp}</span>
       </div>
       

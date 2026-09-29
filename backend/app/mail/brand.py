@@ -7,11 +7,11 @@ from typing import Any
 from app.mail.smtp_config import app_base_url, support_email, support_phone_display
 
 # Brand (matches app: saffron primary + deep blue)
-PRIMARY = "#FF9933"
+PRIMARY = "#FF7A00"
 NAVY = "#1A2B4A"
 BG = "#F5F7FA"
-TEXT = "#1A2B4A"
-MUTED = "#5A6577"
+TEXT = "#0E1830"
+MUTED = "#1A2B4A"
 BORDER = "#E2E8F0"
 WHITE = "#FFFFFF"
 

@@ -29,6 +29,12 @@ export default function AdminMore() {
       icon: "videocam-outline",
     },
     {
+      href: "/seva-events",
+      label: t("admin.sevaEvents"),
+      show: can(["manage_services", "manage_bookings"]),
+      icon: "calendar-outline",
+    },
+    {
       href: "/muhurtham",
       label: t("admin.muhurtham"),
       show: can(["view_bookings", "manage_bookings"]),
@@ -47,7 +53,6 @@ export default function AdminMore() {
     { href: "/pricing", label: t("admin.pricing"), show: can(["manage_config", "manage_services"]), icon: "pricetag-outline" },
     { href: "/permissions", label: t("admin.permissions"), show: can("manage_admins"), icon: "key-outline" },
     { href: "/reviews", label: t("admin.reviews"), show: can("view_bookings"), icon: "chatbubbles-outline" },
-    { href: "/notifications", label: t("admin.notifications"), show: can("manage_config"), icon: "notifications-outline" },
     { href: "/promos", label: t("admin.promos"), show: can("manage_config"), icon: "megaphone-outline" },
     { href: "/reports", label: t("admin.reports"), show: can("view_reports"), icon: "stats-chart-outline" },
     { href: "/bulk-import", label: "Bulk import", show: can("manage_services"), icon: "cloud-upload-outline" },

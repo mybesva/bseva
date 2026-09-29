@@ -243,7 +243,7 @@ def render_booking_receipt_pdf(booking: dict[str, Any], db: Session) -> bytes:
     booking_number = str(booking.get("booking_number") or booking.get("id") or "")
     preparation = get_booking_preparation(db, str(booking["id"]))
     styles = getSampleStyleSheet()
-    section = ParagraphStyle("section", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=8, textColor=colors.Color(1.0, 0x99 / 255, 0x33 / 255))
+    section = ParagraphStyle("section", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=8, textColor=colors.Color(1.0, 0x7A / 255, 0x00 / 255))
     small = ParagraphStyle("small", parent=styles["Normal"], fontSize=8, leading=11)
     muted = ParagraphStyle("muted", parent=styles["Normal"], fontSize=8, leading=11, textColor=colors.Color(0.35, 0.35, 0.38))
 

@@ -20,6 +20,8 @@ export default function About() {
 
   return (
     <Layout>
+      <AboutEssenceCards />
+
       <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
@@ -55,8 +57,6 @@ export default function About() {
           </div>
         </div>
       </section>
-
-      <AboutEssenceCards />
 
       <section className="py-16 bg-secondary/20">
         <div className="container max-w-4xl">

@@ -17,6 +17,7 @@ import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
+import { useAppTheme } from "@/theme/ThemeContext";
 import { apiClient } from "@/services/api";
 
 type Svc = AdminServiceForm & { id?: string; bookable?: boolean; available?: boolean; [key: string]: unknown };
@@ -138,6 +139,7 @@ function ServiceCategories({ onError, search }: { onError: (v: string | null) =>
 
 export default function AdminServices() {
   const { t } = useI18n();
+  const { colors } = useAppTheme();
   const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<AdminServiceForm | null>(null);
@@ -203,6 +205,9 @@ export default function AdminServices() {
             <Field label="Duration (min)" value={String(form.duration_minutes)} onChangeText={(v) => set("duration_minutes", Number(v) || 90)} keyboardType="number-pad" />
             <Field label="Lead hours" value={String(form.booking_lead_hours ?? 48)} onChangeText={(v) => set("booking_lead_hours", Number(v) || 48)} keyboardType="number-pad" />
             <Field label="Required level" value={String(form.required_level)} onChangeText={(v) => set("required_level", Number(v) || 1)} keyboardType="number-pad" />
+            <AppText variant="small" color={colors.mutedForeground}>
+              Levels 1–4 keep the existing hierarchy. Level 5 is Chava Seva. Level 6 is Pravachana Seva.
+            </AppText>
             <Field label="Pujaris required" value={String(form.pujaris_required)} onChangeText={(v) => set("pujaris_required", Number(v) || 1)} keyboardType="number-pad" />
             <Field label="Priests min" value={String(form.priests_min)} onChangeText={(v) => set("priests_min", Number(v) || 1)} keyboardType="number-pad" />
             <Field label="Priests max" value={String(form.priests_max)} onChangeText={(v) => set("priests_max", Number(v) || 1)} keyboardType="number-pad" />
