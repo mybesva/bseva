@@ -16,10 +16,9 @@ backend/scripts
 **/*.pyc
 .pytest_cache
 
-# Web build aliases need packages/locales, packages/config, and packages/types
-# (see bseva-export/vite.config.ts).
+# Web build aliases need packages/locales, packages/config, packages/types and
+# packages/validation (see bseva-export/vite.config.ts).
 packages/api-client
-packages/validation
 packages/tokens
 apps/admin-mobile
 

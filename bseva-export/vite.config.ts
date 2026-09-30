@@ -91,6 +91,8 @@ const plugins = [react(), tailwindcss(), firebaseMessagingSwPlugin(repoRoot, pub
 export default defineConfig({
   plugins,
   resolve: {
+    // packages/validation lives outside this package; resolve its `zod` import from here.
+    dedupe: ["zod"],
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
