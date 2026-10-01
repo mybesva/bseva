@@ -132,13 +132,26 @@ export default function Contact() {
 
   return (
     <Layout>
-      <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
+      <section className="relative pt-10 md:pt-12 pb-0 lg:pb-12 bg-sidebar text-white overflow-hidden lg:min-h-[17.5rem] lg:flex lg:items-center">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <img src="/images/mandala-pattern.png" alt="Pattern" className="w-full h-full object-cover" />
         </div>
-        <div className="container relative z-10 text-center">
-          <h1 className="text-h1 md:text-display text-primary mb-3">{t("contact.title")}</h1>
-          <p className="text-base text-on-dark max-w-2xl mx-auto">{t("contact.subtitle")}</p>
+        <div className="container relative z-10 text-center lg:text-left">
+          <div className="mx-auto lg:mx-0 max-w-2xl lg:max-w-[52%]">
+            <h1 className="text-h1 md:text-display text-primary mb-3">{t("contact.title")}</h1>
+            <p className="text-base text-on-dark">{t("contact.subtitle")}</p>
+          </div>
+        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none relative z-0 mt-6 h-44 sm:h-56 md:h-64 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:h-auto lg:w-[46%] lg:max-w-[720px] isolate bg-sidebar [mask-image:linear-gradient(to_bottom,transparent_0%,black_60%)] lg:[mask-image:linear-gradient(to_right,transparent_0%,black_55%)]"
+        >
+          <img
+            src="/images/contact-hero-ganesha.webp"
+            alt=""
+            loading="eager"
+            className="h-full w-full object-cover object-[70%_40%] mix-blend-lighten lg:object-[right_center]"
+          />
         </div>
       </section>
 

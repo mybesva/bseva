@@ -7,7 +7,7 @@ import SevaTypeTabs from "@/components/seva/SevaTypeTabs";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Link, useLocation, useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { api } from "@/lib/api";
 import {
   enabledSevaServiceTypes,
@@ -59,23 +59,7 @@ export default function Services() {
             {t("services.badge")}
           </span>
           <h1 className="text-h1 md:text-display text-primary mb-3">{t("services.title")}</h1>
-          <p className="text-base text-on-dark max-w-2xl mx-auto mb-6">{t("services.subtitle")}</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <Button
-              asChild
-              variant="secondary"
-              className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
-            >
-              <Link href="/customer/my-seva">{t("seva.mySeva")}</Link>
-            </Button>
-            <Button
-              asChild
-              variant="secondary"
-              className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
-            >
-              <Link href="/customer/family-sankalp">{t("seva.familySankalp")}</Link>
-            </Button>
-          </div>
+          <p className="text-base text-on-dark max-w-2xl mx-auto">{t("services.subtitle")}</p>
         </div>
       </section>
 

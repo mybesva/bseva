@@ -10,6 +10,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
 import ThemeToggle from "@/components/ThemeToggle";
+import ServicesNavMenu from "@/components/ServicesNavMenu";
 import BSevaLogo from "@/components/BSevaLogo";
 import { cn } from "@/lib/utils";
 
@@ -144,9 +145,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       { label: t("nav.home"), path: "/" },
       { label: t("nav.services"), path: "/services" },
       ...visiblePortals,
-      { label: t("nav.astrology"), path: "/astrology" },
       { label: t("nav.about"), path: "/about" },
-      { label: t("nav.help"), path: "/contact" },
+      { label: t("nav.contact"), path: "/contact" },
     ];
 
     if (user) {
@@ -205,7 +205,15 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                   </Link>
                   <LanguageSelect triggerClassName="w-full" />
                   <nav className="flex flex-col gap-4">
-                    {navItems.map((item) => (
+                    {navItems.map((item) =>
+                      item.path === "/services" ? (
+                        <ServicesNavMenu
+                          key={item.path}
+                          variant="mobile"
+                          active={isNavItemActive(item.path, location, search)}
+                          onNavigate={() => setIsMobileMenuOpen(false)}
+                        />
+                      ) : (
                       <Link key={item.path} href={item.path}>
                         <a
                           className={`text-lg font-bold transition-colors hover:text-primary ${
@@ -216,7 +224,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                           {item.label}
                         </a>
                       </Link>
-                    ))}
+                      ),
+                    )}
                     <Link href="/services">
                       <a
                         className="book-puja-nav-cta-wrap w-full mt-2"
@@ -281,18 +290,25 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 className="flex shrink-0 items-center gap-x-2.5 pr-4 2xl:pr-5"
                 aria-label="Primary"
               >
-                {navItems.map((item) => (
-                  <Link key={item.path} href={item.path}>
-                    <a
-                      className={cn(
-                        "shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none transition-colors hover:text-primary",
-                        isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground",
-                      )}
-                    >
-                      {item.label}
-                    </a>
-                  </Link>
-                ))}
+                {navItems.map((item) =>
+                  item.path === "/services" ? (
+                    <ServicesNavMenu
+                      key={item.path}
+                      active={isNavItemActive(item.path, location, search)}
+                    />
+                  ) : (
+                    <Link key={item.path} href={item.path}>
+                      <a
+                        className={cn(
+                          "shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none transition-colors hover:text-primary",
+                          isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground",
+                        )}
+                      >
+                        {item.label}
+                      </a>
+                    </Link>
+                  ),
+                )}
               </nav>
             </div>
 
@@ -377,11 +393,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <ul className="space-y-2 text-sm text-sidebar-foreground">
               <li><Link href="/services"><a className="hover:text-primary">{t("nav.services")}</a></Link></li>
               <li><Link href="/#how-it-works"><a className="hover:text-primary">{t("nav.howItWorks")}</a></Link></li>
-              <li><Link href="/astrology"><a className="hover:text-primary">{t("nav.astrology")}</a></Link></li>
               <li><Link href="/customer"><a className="hover:text-primary">{t("nav.customer")}</a></Link></li>
               <li><Link href="/register?role=pujari"><a className="hover:text-primary">{t("nav.joinPujari")}</a></Link></li>
               <li><Link href="/about"><a className="hover:text-primary">{t("nav.about")}</a></Link></li>
-              <li><Link href="/contact"><a className="hover:text-primary">{t("nav.help")}</a></Link></li>
+              <li><Link href="/contact"><a className="hover:text-primary">{t("nav.contact")}</a></Link></li>
               <li><Link href="/support"><a className="hover:text-primary">{t("nav.support")}</a></Link></li>
             </ul>
           </div>

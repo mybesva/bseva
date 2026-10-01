@@ -39,6 +39,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LandingHeroBackground from "@/components/LandingHeroBackground";
 
 const PUJARI_REGISTER = "/register?role=pujari";
+/** Number of cards shown in the Featured Pujas section. */
+const FEATURED_PUJAS_LIMIT = 8;
 
 const ICONS = [Sparkles, Heart, HomeIcon, Users, UserCheck, Search];
 
@@ -84,7 +86,7 @@ export default function Home() {
 
   useEffect(() => {
     api<any[]>(`/services?featured=1&lang=${encodeURIComponent(lang)}`)
-      .then((rows) => setPopular((rows || []).slice(0, 10)))
+      .then((rows) => setPopular((rows || []).slice(0, FEATURED_PUJAS_LIMIT)))
       .catch(() => setPopular([]))
       .finally(() => setLoadingPopular(false));
   }, [lang]);
@@ -234,18 +236,6 @@ export default function Home() {
             <p className="mt-3 max-w-[32rem] text-xs font-semibold leading-relaxed text-[#FFFFFF] sm:mt-4 sm:text-sm md:max-w-[36rem]">
               {t("home.searchHint")}
             </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-14 md:py-16 bg-secondary/15 scroll-mt-20">
-        <div className="container">
-          <SectionHeader variant="landingDoc" title={t("home.twoSidedTitle")} />
-          <div className="landing-doc-prose landing-doc-body">
-            <p>{t("home.twoSidedP1")}</p>
-            <p>{t("home.twoSidedP2")}</p>
-            <p>{t("home.twoSidedP3")}</p>
-            <p>{t("home.twoSidedP4")}</p>
           </div>
         </div>
       </section>
@@ -493,20 +483,6 @@ export default function Home() {
       {!user && (
         <section className="py-14 bg-secondary/10">
           <div className="container mx-auto max-w-3xl">
-            <SectionHeader title={t("home.pujariPartnerTitle")} className="mb-6 md:mb-8" />
-            <div className="mb-8 space-y-4 text-base sm:text-lg text-muted-foreground leading-relaxed md:leading-[1.7]">
-              <p>{t("home.pujariPartnerP1")}</p>
-              <p>{t("home.pujariPartnerP2")}</p>
-              <p>{t("home.pujariPartnerP3")}</p>
-            </div>
-            <ul className="space-y-3 mb-8">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <li key={n} className="flex items-start gap-3 text-foreground">
-                  <ListChecks className="text-primary shrink-0 mt-0.5" size={18} aria-hidden />
-                  <span>{t(`home.pujariPartnerBenefit${n}`)}</span>
-                </li>
-              ))}
-            </ul>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button className="h-12 w-full min-h-12 px-8 sm:w-auto" onClick={() => setLocation(PUJARI_REGISTER)}>
                 {t("home.pujariPartnerCta")}

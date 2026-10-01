@@ -76,7 +76,7 @@ export function ContactPortalContent() {
     if (code === "+91") {
       if (!TEN_DIGIT_RE.test(phone)) next.phone = t("contact.errPhoneIndia");
     } else if (phone.length < 8 || phone.length > 12) {
-      next.phone = t("contact.errPhone");
+      next.phone = t("contact.errPhoneIntl");
     }
     if (!values.subject.trim() || values.subject.trim().length < 3) {
       next.subject = t("contact.errSubject");

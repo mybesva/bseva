@@ -4,6 +4,7 @@ type Dict = Record<string, string>;
 
 const en: Dict = {
   "seva.puja": "Puja Seva",
+  "seva.pujaServices": "Puja Services",
   "seva.chadhava": "Chadhava Seva",
   "seva.pravachan": "Pravachan Seva",
   "seva.explore": "Explore Seva",
@@ -68,6 +69,7 @@ const en: Dict = {
 
 const hi: Dict = {
   "seva.puja": "पूजा सेवा",
+  "seva.pujaServices": "पूजा सेवाएँ",
   "seva.chadhava": "चढ़ावा सेवा",
   "seva.pravachan": "प्रवचन सेवा",
   "seva.explore": "सेवा देखें",
@@ -132,6 +134,7 @@ const hi: Dict = {
 
 const te: Dict = {
   "seva.puja": "పూజ సేవ",
+  "seva.pujaServices": "పూజా సేవలు",
   "seva.chadhava": "చఢవ సేవ",
   "seva.pravachan": "ప్రవచన సేవ",
   "seva.explore": "సేవలను చూడండి",
@@ -196,6 +199,7 @@ const te: Dict = {
 
 const mr: Dict = {
   "seva.puja": "पूजा सेवा",
+  "seva.pujaServices": "पूजा सेवा",
   "seva.chadhava": "चढावा सेवा",
   "seva.pravachan": "प्रवचन सेवा",
   "seva.explore": "सेवा पहा",
@@ -260,6 +264,7 @@ const mr: Dict = {
 
 const kn: Dict = {
   "seva.puja": "ಪೂಜೆ ಸೇವೆ",
+  "seva.pujaServices": "ಪೂಜಾ ಸೇವೆಗಳು",
   "seva.chadhava": "ಚಢಾವ ಸೇವೆ",
   "seva.pravachan": "ಪ್ರವಚನ ಸೇವೆ",
   "seva.explore": "ಸೇವೆಗಳನ್ನು ನೋಡಿ",
@@ -324,6 +329,7 @@ const kn: Dict = {
 
 const ta: Dict = {
   "seva.puja": "பூஜை சேவை",
+  "seva.pujaServices": "பூஜை சேவைகள்",
   "seva.chadhava": "சடாவா சேவை",
   "seva.pravachan": "பிரவசன சேவை",
   "seva.explore": "சேவைகளைப் பார்க்க",
@@ -388,6 +394,7 @@ const ta: Dict = {
 
 const ml: Dict = {
   "seva.puja": "പൂജാ സേവ",
+  "seva.pujaServices": "പൂജാ സേവനങ്ങൾ",
   "seva.chadhava": "ചഢാവാ സേവ",
   "seva.pravachan": "പ്രവചന സേവ",
   "seva.explore": "സേവകൾ കാണുക",

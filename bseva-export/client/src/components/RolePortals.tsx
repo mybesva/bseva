@@ -18,6 +18,8 @@ import {
   Gift,
   Flower2,
   Info,
+  Flower,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,6 +45,8 @@ const customerNav: NavItem[] = [
   { labelKey: "nav.dashboard", href: "/customer", icon: LayoutDashboard },
   { labelKey: "nav.ourServices", href: "/services", icon: Flower2 },
   { labelKey: "nav.bookings", href: "/customer/bookings", icon: Calendar },
+  { labelKey: "seva.mySeva", href: "/customer/my-seva", icon: Flower },
+  { labelKey: "seva.familySankalp", href: "/customer/family-sankalp", icon: Users },
   { labelKey: "customer.myProfile", href: "/customer/profile", icon: User },
   { labelKey: "customer.myAddress", href: "/customer/address", icon: MapPin },
   { labelKey: "customer.walletPayments", href: "/customer/wallet", icon: Wallet },

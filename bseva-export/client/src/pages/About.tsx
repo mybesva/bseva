@@ -20,14 +20,12 @@ export default function About() {
 
   return (
     <Layout>
-      <AboutEssenceCards />
-
-      <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
+      <section className="relative bg-sidebar text-white overflow-hidden pt-10 md:pt-12 pb-0 lg:pb-12 lg:min-h-[26rem] lg:flex lg:items-center">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl lg:max-w-[56%]">
             <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
               {t("about.badge")}
             </span>
@@ -36,9 +34,24 @@ export default function About() {
             <p className="text-base text-on-dark leading-relaxed">{t("about.heroIntro")}</p>
           </div>
         </div>
+
+        {/* Decorative image: fades out into the navy hero (no visible edge). Below the text on small screens, right side on desktop. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none relative z-0 mt-6 h-56 sm:h-72 md:h-80 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:h-auto lg:w-[48%] isolate bg-sidebar [mask-image:linear-gradient(to_bottom,transparent_0%,black_55%)] lg:[mask-image:linear-gradient(to_right,transparent_0%,black_60%)]"
+        >
+          <img
+            src="/images/about-hero-deepam.jpg"
+            alt=""
+            loading="eager"
+            className="h-full w-full object-cover object-[70%_center] mix-blend-lighten lg:object-right"
+          />
+        </div>
       </section>
 
-      <section className="py-20">
+      <AboutEssenceCards />
+
+      <section className="pt-10 pb-20">
         <div className="container grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="relative">
             <div className="absolute -top-4 -left-4 w-24 h-24 border-t-4 border-l-4 border-primary rounded-tl-3xl" />
