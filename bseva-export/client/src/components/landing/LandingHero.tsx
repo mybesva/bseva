@@ -65,10 +65,11 @@ export default function LandingHero() {
 
           <h1
             id="lp-hero-title"
-            className="mt-4 text-balance text-[clamp(2.25rem,1.2rem+3.4vw,3.75rem)] leading-[1.08] tracking-tight"
+            className="mt-4 text-balance text-[clamp(2rem,1rem+3vw,3.35rem)] leading-[1.1] tracking-tight"
           >
             <span className="block font-display font-semibold text-white">{t("lp.hero.title1")}</span>
-            <span className="mt-1 block font-bold text-brand-orange">{t("lp.hero.title2")}</span>
+            <span className="mt-1 block font-display font-semibold text-white">{t("lp.hero.title2")}</span>
+            <span className="mt-1 block font-bold text-brand-orange">{t("lp.hero.title3")}</span>
           </h1>
 
           <p className="mt-5 max-w-[31rem] text-base font-medium leading-relaxed text-white sm:text-[1.0625rem]">

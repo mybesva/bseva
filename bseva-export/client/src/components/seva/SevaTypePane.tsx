@@ -88,6 +88,7 @@ export default function SevaTypePane({ type }: SevaTypePaneProps) {
                   tabIndex={0}
                 >
                   <ServiceCard
+                    variant="explore"
                     title={svc.name}
                     description={desc}
                     image={serviceImageUrl(svc)}

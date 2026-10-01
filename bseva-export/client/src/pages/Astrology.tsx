@@ -60,7 +60,7 @@ export default function AstrologyPage() {
             </CardContent>
           </Card>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid-cards">
           {services.map((s) => (
             <Card key={s.id} className="hover:shadow-md transition-shadow border-border">
               <CardHeader className="pb-2">

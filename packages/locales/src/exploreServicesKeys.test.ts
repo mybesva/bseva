@@ -21,6 +21,12 @@ const EXPLORE_KEYS = [
   "seva.register",
   "seva.mySeva",
   "errors.generic",
+  "sv.hero.eyebrow",
+  "sv.grid.eyebrow",
+  "sv.grid.titleAll",
+  "sv.grid.desc",
+  "sv.why.eyebrow",
+  "sv.custom.title1",
 ];
 
 describe("Explore Services locale keys", () => {

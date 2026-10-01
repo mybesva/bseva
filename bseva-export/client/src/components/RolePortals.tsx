@@ -269,8 +269,8 @@ function PortalShell({
             </Button>
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-8 print:p-0" data-scroll-reset>
-          {children}
+        <main className="flex-1 min-w-0 p-4 lg:p-8 print:p-0" data-scroll-reset>
+          <div className="app-canvas">{children}</div>
         </main>
         <footer className="border-t py-4 text-center text-xs text-muted-foreground print:hidden"><FooterRights /></footer>
       </div>

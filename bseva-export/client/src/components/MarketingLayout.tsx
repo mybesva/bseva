@@ -81,7 +81,7 @@ function HeaderContact({
       className={cn(
         compact
           ? "flex flex-col gap-3 text-sm font-semibold"
-          : "hidden 2xl:flex flex-col justify-center gap-0.5 text-[11px] font-semibold leading-tight text-foreground",
+          : "hidden min-[1500px]:flex flex-col justify-center gap-0.5 text-[11px] font-semibold leading-tight text-foreground",
       )}
     >
       <a
@@ -96,12 +96,11 @@ function HeaderContact({
         href={`mailto:${email}`}
         className={cn(
           "inline-flex items-center gap-1.5 min-h-8 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm",
-          !compact && "hidden xl:inline-flex",
         )}
         aria-label={`Email ${email}`}
       >
         <Mail size={13} className="shrink-0" aria-hidden />
-        <span className={cn(!compact && "max-w-[11rem] truncate")}>{email}</span>
+        <span className={cn(!compact && "whitespace-nowrap")}>{email}</span>
       </a>
     </div>
   );
@@ -187,7 +186,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85">
-        <div className="mx-auto flex h-[4.5rem] w-full max-w-[90rem] items-center gap-3 px-4 sm:px-6 lg:px-8 xl:h-[5.25rem] xl:gap-6">
+        <div className="page-header flex h-[4.5rem] items-center gap-3 xl:h-[5.25rem] xl:gap-6">
           <Link href="/">
             <a
               className="flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
@@ -199,7 +198,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
           {/* Desktop navigation */}
           <nav
-            className="hidden min-w-0 flex-1 items-center justify-center gap-x-5 xl:flex 2xl:gap-x-8"
+            className="hidden min-w-0 flex-1 items-center justify-center gap-x-3 min-[1200px]:flex xl:gap-x-5 2xl:gap-x-7"
             aria-label={t("lp.nav.primary")}
           >
             {navItems.map((item) =>
@@ -225,6 +224,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <LanguageSelect triggerClassName="h-10 w-[7.5rem] text-[13px] font-semibold xl:w-[8.5rem]" />
             </div>
             <ThemeToggle className="h-10 w-10 shrink-0" />
+            <HeaderContact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
             {user && (
               <Button
                 variant="outline"
@@ -242,7 +242,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             {/* Tablet / mobile menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 xl:hidden" aria-label={t("lp.nav.openMenu")}>
+                <Button variant="ghost" size="icon" className="h-10 w-10 min-[1200px]:hidden" aria-label={t("lp.nav.openMenu")}>
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>

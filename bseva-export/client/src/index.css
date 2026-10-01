@@ -59,6 +59,13 @@
 }
 
 :root {
+  /* Page width. Normal desktops stay at 80rem. Larger monitors get a wider
+     centered column; 4K does not stretch edge to edge. */
+  --page-gutter: 1rem;
+  --page-max: 80rem;
+  --header-max: 90rem;
+  --admin-max: 100%;
+
   /* Traditional Spiritual Palette */
   /* Primary Saffron: #FF7A00 */
   /* Deep Navy: #1A2B4A */
@@ -122,6 +129,47 @@
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: #D4AF37;
   --sidebar-ring: #FF7A00;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-gutter: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-gutter: 2rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --page-max: 90rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --page-gutter: 2.5rem;
+    --page-max: 105rem;
+    --header-max: 105rem;
+    --admin-max: 120rem;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --page-max: 120rem;
+    --header-max: 120rem;
+    --admin-max: 130rem;
+  }
+}
+
+/* Beats Tailwind's built-in `.container`, which freezes the column at 96rem from 1536px up.
+   Sections that set their own max-w-* keep that narrower measure. */
+html body .container:not([class*="max-w-"]) {
+  max-width: var(--page-max);
 }
 
 .dark {
@@ -191,6 +239,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overflow-x: clip;
   }
   body {
     @apply bg-background text-foreground font-sans text-base font-medium antialiased;
@@ -390,12 +439,46 @@
     color: var(--brand-orange);
   }
 
-  .container {
+  .container,
+  .page-header,
+  .app-canvas {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: var(--page-gutter);
+    padding-right: var(--page-gutter);
+  }
+
+  .container,
+  .app-canvas {
+    max-width: var(--page-max);
+  }
+
+  .page-header {
+    max-width: var(--header-max);
+    padding-left: var(--page-gutter);
+    padding-right: var(--page-gutter);
+  }
+
+  /* Portal pages already sit beside a sidebar, so the canvas should not add a second gutter. */
+  .app-canvas {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .admin-canvas {
+    width: 100%;
+    max-width: var(--admin-max);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Repeating catalogues. 1 / 2 / 3 columns through laptop; a fourth only when the page is wide enough. */
+  .grid-cards {
+    display: grid;
+    align-items: stretch;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .flex {
@@ -403,18 +486,21 @@
     min-width: 0;
   }
 
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
+  @media (min-width: 768px) {
+    .grid-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
   @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-      max-width: 1280px;
+    .grid-cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .grid-cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
   

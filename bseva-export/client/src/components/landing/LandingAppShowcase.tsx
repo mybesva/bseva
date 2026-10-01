@@ -3,19 +3,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { APP_STORE_URL, CATEGORY_CARD_IMAGES, PLAY_STORE_URL } from "@/lib/landingConfig";
 import type { LandingCategory } from "./LandingServices";
 import { MandalaOutline } from "./DevotionalPatterns";
-
-/** Decorative phone frame; its contents are illustrative UI built from live labels. */
-function Phone({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <div
-      aria-hidden
-      className={`relative aspect-[9/18.5] w-[10.5rem] shrink-0 overflow-hidden rounded-[2rem] border-[7px] border-[#05080F] bg-[#FFF8E7] shadow-2xl shadow-black/50 ring-1 ring-white/15 sm:w-[11.5rem] ${className ?? ""}`}
-    >
-      <span className="absolute left-1/2 top-1.5 z-10 h-3 w-14 -translate-x-1/2 rounded-full bg-[#05080F]" />
-      {children}
-    </div>
-  );
-}
+import LandingPhoneFrame from "./LandingPhoneFrame";
 
 function HomeScreen({ categories, brand }: { categories: LandingCategory[]; brand: string }) {
   const { t } = useI18n();
@@ -143,12 +131,12 @@ export default function LandingAppShowcase({ categories }: Props) {
 
         <div className="relative flex min-h-[22rem] items-center justify-center py-2 sm:min-h-[26rem]" aria-hidden>
           <div className="relative flex items-end justify-center">
-            <Phone className="-rotate-6 translate-x-3 sm:translate-x-4">
+            <LandingPhoneFrame className="-rotate-6 translate-x-3 sm:translate-x-4 !w-[10.5rem] sm:!w-[11.5rem] !aspect-[9/18.5] !rounded-[2rem] !border-[7px]">
               <HomeScreen categories={categories} brand="B-SEVA" />
-            </Phone>
-            <Phone className="z-10 -translate-x-3 translate-y-6 rotate-6 sm:-translate-x-4">
+            </LandingPhoneFrame>
+            <LandingPhoneFrame className="z-10 -translate-x-3 translate-y-6 rotate-6 sm:-translate-x-4 !w-[10.5rem] sm:!w-[11.5rem] !aspect-[9/18.5] !rounded-[2rem] !border-[7px]">
               <BookingScreen />
-            </Phone>
+            </LandingPhoneFrame>
           </div>
         </div>
 

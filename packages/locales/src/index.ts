@@ -8,6 +8,7 @@ import kn from "./resources/kn";
 import ta from "./resources/ta";
 import { coverage } from "./resources/coverage";
 import { landingRedesign } from "./resources/landingRedesign";
+import { servicesPageRedesign } from "./resources/servicesPageRedesign";
 import { mobileCoverage } from "./resources/mobileCoverage";
 import { webCoverage } from "./resources/webCoverage";
 import { customerRequirements } from "./resources/customerRequirements";
@@ -69,6 +70,7 @@ const base: Record<string, string> = {
   ...extras.en,
   ...landing.en,
   ...landingRedesign.en,
+  ...servicesPageRedesign.en,
   ...sevaLocales.en,
 };
 
@@ -83,6 +85,7 @@ function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): 
     ...extras[lang],
     ...landing[lang],
     ...landingRedesign[lang],
+    ...servicesPageRedesign[lang],
     ...gapTranslations[lang],
   };
 }

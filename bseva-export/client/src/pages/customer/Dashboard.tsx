@@ -282,7 +282,7 @@ function CustomerDashboardContent() {
                 Recommended for you
               </h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="grid-cards">
               {recommendations.map((rec) => (
                 <Card key={rec.id} className="border-primary/30 bg-orange-50/40 h-full flex flex-col">
                   <CardHeader className="pb-2">
@@ -337,7 +337,7 @@ function CustomerDashboardContent() {
               </Button>
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid-cards">
             {pujaServicesOnly(pujas).slice(0, 6).map((puja) => (
               <div
                 key={puja.id}

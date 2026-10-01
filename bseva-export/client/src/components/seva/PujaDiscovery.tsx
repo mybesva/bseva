@@ -25,10 +25,6 @@ const URL_SYNC_DELAY_MS = 300;
 /**
  * Puja Seva pane: the complete Explore Services discovery experience (server-side search, All /
  * Popular / category chips, Available vs Upcoming, pagination, Read More, Book Now).
- *
- * Data comes from `GET /services?q=&category=` so the original Explore visibility rules apply
- * (active + priced, or awaiting pricing). That endpoint also returns Chadhava and Pravachan rows,
- * so results are restricted to Puja here.
  */
 export default function PujaDiscovery() {
   const { t, lang } = useI18n();
@@ -74,7 +70,6 @@ export default function PujaDiscovery() {
     };
   }, [q, category, lang]);
 
-  // Keep ?q= in the address bar so a reload or shared link restores the search.
   useEffect(() => {
     const next = buildServicesSearch({ q, category });
     const current = searchStr ? `?${searchStr}` : "";
@@ -97,7 +92,7 @@ export default function PujaDiscovery() {
       { slug: "popular", name: t("services.popular") },
       ...categories.map((c) => ({ slug: c.slug, name: c.name })),
     ],
-    [categories, t]
+    [categories, t],
   );
 
   const pujas = useMemo(() => pujaServicesOnly(services), [services]);
@@ -113,8 +108,18 @@ export default function PujaDiscovery() {
   const pageAvailable = visible.filter((s) => s.bookable);
   const pageUpcoming = visible.filter((s) => !s.bookable);
 
+  const sectionTitle = useMemo(() => {
+    const trimmedQ = q.trim();
+    if (trimmedQ) return t("sv.grid.titleSearch");
+    if (category === "popular") return t("sv.grid.titlePopular");
+    if (category === "all") return t("sv.grid.titleAll");
+    const chip = chips.find((c) => c.slug === category);
+    if (chip) return t("sv.grid.titleCategory", { name: chip.name });
+    return t("sv.grid.titleAll");
+  }, [q, category, chips, t]);
+
   const renderGrid = (list: CatalogService[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+    <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 md:gap-7 lg:grid-cols-3 lg:gap-8">
       {list.map((s, i) => {
         const Icon = ICONS[i % ICONS.length];
         const starting = formatStartingFrom(s, lang);
@@ -135,9 +140,10 @@ export default function PujaDiscovery() {
             }}
             role="link"
             tabIndex={0}
-            className="cursor-pointer min-w-0 h-full flex"
+            className="flex h-full min-w-0 cursor-pointer"
           >
             <ServiceCard
+              variant="explore"
               title={s.name}
               description={desc}
               startingFrom={starting}
@@ -157,12 +163,62 @@ export default function PujaDiscovery() {
     </div>
   );
 
+  const paginationBar =
+    paginate && !loading && pujas.length > 0 ? (
+      <div className="flex flex-col items-center justify-between gap-3 border-t border-primary/10 pt-5 sm:flex-row">
+        <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-foreground/80 sm:justify-start">
+          <span>{t("services.show")}</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+            className="h-9 rounded-md border border-primary/20 bg-card px-2 font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={t("services.itemsPerPage")}
+          >
+            {PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <span className="tabular-nums">{t("services.perPageTotal", { count: combined.length })}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pageSafe <= 1}
+            className="min-w-[5.5rem] border-primary/25 font-semibold disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            {t("services.previous")}
+          </Button>
+          <span className="px-2 text-sm font-medium tabular-nums text-foreground">
+            {t("services.pageOf", { page: pageSafe, pages: totalPages })}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pageSafe >= totalPages}
+            className="min-w-[5.5rem] border-primary/25 font-semibold disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            {t("common.next")}
+          </Button>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div className="space-y-6" data-testid="puja-discovery">
-      <div className="max-w-xl relative">
+      <div className="relative mx-auto w-full max-w-3xl">
         <Search
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-          size={18}
+          className="pointer-events-none absolute left-4 top-1/2 h-[1.125rem] w-[1.125rem] -translate-y-1/2 text-muted-foreground"
+          aria-hidden
         />
         <Input
           type="search"
@@ -170,21 +226,25 @@ export default function PujaDiscovery() {
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("services.searchPujas")}
           aria-label={t("services.searchPujas")}
-          className="h-12 pl-11 bg-card text-foreground"
+          className="h-12 border-primary/15 bg-card pl-11 text-base shadow-sm focus-visible:border-primary focus-visible:ring-primary/30 dark:bg-card"
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin" role="group" aria-label={t("services.title")}>
+      <div
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-thin"
+        role="group"
+        aria-label={t("services.title")}
+      >
         {chips.map((c) => (
           <button
             key={c.slug}
             type="button"
             aria-pressed={category === c.slug}
             onClick={() => selectCategory(c.slug)}
-            className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
+            className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
               category === c.slug
-                ? "bg-primary text-white border-primary"
-                : "bg-card text-foreground border-border hover:border-primary/40"
+                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                : "border-primary/35 bg-card text-[#0A1630] hover:border-primary/60 hover:bg-primary/5 dark:text-foreground"
             }`}
           >
             {c.name}
@@ -192,73 +252,40 @@ export default function PujaDiscovery() {
         ))}
       </div>
 
+      <header className="pt-2 text-center md:pt-4">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">{t("sv.grid.eyebrow")}</p>
+        <h2 className="mt-2 font-display text-2xl font-bold leading-tight text-[#0A1630] dark:text-foreground md:text-3xl">
+          {sectionTitle}
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-foreground/85">{t("sv.grid.desc")}</p>
+      </header>
+
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       ) : pujas.length === 0 ? (
-        <p className="text-center text-muted-foreground py-16">{t("services.noPujas")}</p>
+        <p className="py-12 text-center text-muted-foreground">{t("services.noPujas")}</p>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-8">
           {pageAvailable.length > 0 && (
-            <div>
-              <h2 className="text-h3 text-foreground mb-4">{t("services.availablePujas")}</h2>
+            <div className="space-y-6">
+              {pageUpcoming.length > 0 ? (
+                <h3 className="sr-only">{t("services.availablePujas")}</h3>
+              ) : null}
               {renderGrid(pageAvailable)}
             </div>
           )}
           {pageUpcoming.length > 0 && (
-            <div>
-              <h2 className="text-h3 text-foreground mb-2">{t("services.upcomingServices")}</h2>
-              <p className="text-sm text-muted-foreground mb-4">{t("services.upcomingDescription")}</p>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">{t("services.upcomingServices")}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t("services.upcomingDescription")}</p>
+              </div>
               {renderGrid(pageUpcoming)}
             </div>
           )}
-          {paginate ? (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{t("services.show")}</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="h-9 rounded-md border border-border bg-card px-2 text-foreground"
-                  aria-label={t("services.itemsPerPage")}
-                >
-                  {PAGE_SIZES.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                <span>{t("services.perPageTotal", { count: combined.length })}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pageSafe <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  {t("services.previous")}
-                </Button>
-                <span className="text-sm text-muted-foreground tabular-nums px-2">
-                  {t("services.pageOf", { page: pageSafe, pages: totalPages })}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pageSafe >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  {t("common.next")}
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          {paginationBar}
         </div>
       )}
     </div>

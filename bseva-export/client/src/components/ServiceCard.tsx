@@ -20,6 +20,8 @@ interface ServiceCardProps {
   occasion?: string;
   onReadMore?: () => void;
   onBookNow?: () => void;
+  /** `explore` — public Services catalogue styling; default keeps customer dashboard look. */
+  variant?: "default" | "explore";
 }
 
 function stopCardClick(e: MouseEvent) {
@@ -147,10 +149,18 @@ export default function ServiceCard({
   occasion,
   onReadMore,
   onBookNow,
+  variant = "default",
 }: ServiceCardProps) {
   const { t } = useI18n();
+  const explore = variant === "explore";
   return (
-    <Card className="group gap-0 py-0 border border-transparent shadow-md bg-card h-full flex flex-col relative overflow-visible min-w-0 w-full">
+    <Card
+      className={`group gap-0 py-0 h-full flex flex-col relative overflow-visible min-w-0 w-full bg-card ${
+        explore
+          ? "rounded-xl border border-primary/15 shadow-sm transition-[box-shadow,transform] duration-300 [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-lg dark:border-primary/20"
+          : "border border-transparent shadow-md"
+      }`}
+    >
       {comingSoon && (
         <div className="absolute top-0 right-0 z-30 max-w-[calc(100%-0.5rem)]">
           <div className="bg-amber-500 text-white font-extrabold text-[11px] sm:text-xs uppercase tracking-wider shadow-lg px-3 py-1.5 rounded-bl-lg">
@@ -159,7 +169,9 @@ export default function ServiceCard({
         </div>
       )}
       <div className="relative min-w-0">
-        <div className="relative h-40 sm:h-48 overflow-hidden rounded-t-xl">
+        <div
+          className={`relative overflow-hidden ${explore ? "h-44 sm:h-52 rounded-t-xl" : "h-40 sm:h-48 rounded-t-xl"}`}
+        >
           <div
             className={`absolute inset-0 transition-colors z-10 ${
               comingSoon
@@ -170,6 +182,8 @@ export default function ServiceCard({
           <img
             src={image}
             alt={title}
+            loading="lazy"
+            decoding="async"
             className={`w-full h-full object-cover transform transition-transform duration-700 ${
               comingSoon
                 ? "grayscale-[40%] opacity-90"
@@ -178,7 +192,11 @@ export default function ServiceCard({
           />
         </div>
         {icon && (
-          <div className="absolute -bottom-4 right-4 sm:right-5 z-20 w-10 h-10 bg-card rounded-full shadow-lg border border-primary/20 flex items-center justify-center text-primary [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-110 transition-transform">
+          <div
+            className={`absolute -bottom-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-primary/25 bg-card text-primary shadow-md transition-transform [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 ${
+              explore ? "left-4 sm:left-5" : "right-4 sm:right-5"
+            }`}
+          >
             {icon}
           </div>
         )}
@@ -221,8 +239,10 @@ export default function ServiceCard({
         ) : (
           <Button
             type="button"
-            size="sm"
-            className="w-full h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+            size={explore ? "default" : "sm"}
+            className={`w-full bg-primary font-bold text-primary-foreground hover:bg-primary/90 ${
+              explore ? "h-11 text-sm shadow-md" : "h-9"
+            }`}
             onClick={(e) => {
               stopCardClick(e);
               onBookNow?.();

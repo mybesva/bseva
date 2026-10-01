@@ -319,7 +319,7 @@ function AdminShell({ children }: AdminLayoutProps) {
         </div>
       </aside>
 
-      <div className="lg:pl-64 print:pl-0">
+      <div className="min-w-0 lg:pl-64 print:pl-0">
         <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur border-b border-border flex items-center px-3 sm:px-4 lg:px-6 gap-2 sm:gap-3 print:hidden">
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
@@ -343,8 +343,8 @@ function AdminShell({ children }: AdminLayoutProps) {
             Logout
           </Button>
         </header>
-        <main className="p-4 lg:p-6 print:p-0" data-scroll-reset>
-          {children}
+        <main className="min-w-0 p-4 lg:p-6 print:p-0" data-scroll-reset>
+          <div className="admin-canvas">{children}</div>
         </main>
       </div>
     </div>
