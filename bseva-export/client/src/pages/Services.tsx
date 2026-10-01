@@ -96,11 +96,6 @@ export default function Services() {
         <>
           <section className="py-16 bg-secondary/15">
             <div className="container max-w-3xl text-center md:text-left">
-              <div className="mb-10 space-y-4 text-muted-foreground leading-relaxed">
-                <p>{t("services.introP1")}</p>
-                <p>{t("services.introP2")}</p>
-                <p className="text-sm">{t("services.introP3")}</p>
-              </div>
               <SectionHeader title={t("services.discoveryTitle")} className="mb-6" />
               <p className="text-muted-foreground leading-relaxed mb-4">{t("services.discoveryP1")}</p>
               <p className="text-muted-foreground leading-relaxed">{t("services.discoveryP2")}</p>

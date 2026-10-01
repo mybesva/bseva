@@ -4,9 +4,9 @@ importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-com
 
 const firebaseConfig = {
   "apiKey": "AIzaSyDTa1GMicgNiJ8MVOTn4SBeHDE1CFmn5vM",
-  "authDomain": "",
-  "projectId": "",
-  "storageBucket": "",
+  "authDomain": "b-seva-61ab7.firebaseapp.com",
+  "projectId": "b-seva-61ab7",
+  "storageBucket": "b-seva-61ab7.firebasestorage.app",
   "messagingSenderId": "8471741307",
   "appId": "1:8471741307:web:f565f2f8cab47115e673de"
 };

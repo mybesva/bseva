@@ -28,7 +28,7 @@ const LOGO_SIZE = {
 } as const;
 
 type BSevaLogoProps = {
-  size?: keyof typeof LOGO_SIZE | "portal";
+  size?: keyof typeof LOGO_SIZE | "portal" | "nav";
   className?: string;
   alt?: string;
   /** Full artwork on public chrome and portal headers; lockup is compact mark + Seva. */
@@ -42,6 +42,8 @@ const FULL_HEIGHT = {
   lg: "h-16",
   xl: "h-20",
   header: "h-12 sm:h-14 lg:h-[calc(7.5rem*0.95)]",
+  /** Slim public header (landing redesign): stacked logo stays legible without a tall bar. */
+  nav: "h-[3.5rem] xl:h-[4.25rem]",
   portal: "h-10 sm:h-11",
 } as const;
 
@@ -63,6 +65,8 @@ export default function BSevaLogo({
             ? "max-w-[min(100%,11.5rem)] lg:max-w-[min(100%,22.25rem)]"
             : size === "portal"
               ? "max-w-[9.5rem]"
+              : size === "nav"
+                ? "max-w-[5.5rem]"
               : "max-w-[min(100%,16rem)]",
           FULL_HEIGHT[size],
           className,
@@ -72,7 +76,7 @@ export default function BSevaLogo({
     );
   }
 
-  const s = LOGO_SIZE[size === "portal" ? "sm" : size];
+  const s = LOGO_SIZE[size === "portal" || size === "nav" ? "sm" : size];
   return (
     <span
       className={cn("inline-flex items-center gap-x-2 text-foreground", className)}

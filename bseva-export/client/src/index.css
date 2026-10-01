@@ -52,7 +52,9 @@
   --color-orange-600: #FF7A00;
   --color-orange-700: #FF7A00;
   
-  --font-sans: "Plus Jakarta Sans", "Noto Sans Devanagari", "Noto Sans Telugu", "Noto Sans Kannada", "Noto Sans Tamil", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Noto Sans Devanagari", "Noto Sans Telugu", "Noto Sans Kannada", "Noto Sans Tamil", "Noto Sans Malayalam", system-ui, sans-serif;
+  /* Editorial display face for landing-page headings; Indic scripts fall through to Noto Serif. */
+  --font-display: "Playfair Display", "Noto Serif Devanagari", "Noto Serif Telugu", "Noto Serif Kannada", "Noto Serif Tamil", "Noto Serif Malayalam", Georgia, serif;
   --font-brand: "Cinzel Decorative", serif;
 }
 
@@ -828,4 +830,55 @@
 .text-black\/70,
 .text-black\/80 {
   color: #0e1830;
+}
+
+/* ── Public landing page (components/landing/*) ───────────────────────── */
+@layer components {
+  /* Small orange text on cream/ivory needs a deeper orange to stay readable (AA). */
+  .lp-orange-ink {
+    color: #b85300;
+  }
+  .dark .lp-orange-ink {
+    color: #ff8a1f;
+  }
+
+  /* Hide scrollbars on swipe rows while keeping them scrollable by touch / keyboard. */
+  .lp-swipe {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .lp-swipe::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Dotted connector used between "How it works" steps. */
+  .lp-dots-h {
+    background-image: radial-gradient(circle, rgb(255 122 0 / 0.85) 1.5px, transparent 1.6px);
+    background-size: 10px 4px;
+    background-repeat: repeat-x;
+    background-position: left center;
+  }
+  .lp-dots-v {
+    background-image: radial-gradient(circle, rgb(255 122 0 / 0.85) 1.5px, transparent 1.6px);
+    background-size: 4px 10px;
+    background-repeat: repeat-y;
+    background-position: center top;
+  }
+
+  /* Arrow nudge used on primary CTAs. */
+  .lp-arrow {
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .group:hover .lp-arrow,
+  .group:focus-visible .lp-arrow {
+    transform: translateX(4px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lp-arrow,
+    .group:hover .lp-arrow {
+      transition: none;
+      transform: none;
+    }
+  }
 }

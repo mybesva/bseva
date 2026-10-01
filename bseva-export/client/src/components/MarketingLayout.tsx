@@ -2,8 +2,7 @@ import { Link, useLocation, useSearch } from "wouter";
 import FooterRights from "@/components/FooterRights";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin } from "lucide-react";
+import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin, Download } from "lucide-react";
 import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -14,6 +13,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import ServicesNavMenu from "@/components/ServicesNavMenu";
 import BSevaLogo from "@/components/BSevaLogo";
 import { cn } from "@/lib/utils";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/landingConfig";
+import { MandalaOutline } from "@/components/landing/DevotionalPatterns";
 
 /** Official brand colors — not a shared theme tint */
 const SOCIAL_BRAND = {
@@ -158,12 +159,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
   const socialLinks = useMemo(
     () => [
-      { icon: Facebook, href: "https://facebook.com/bseva", label: "Facebook", color: SOCIAL_BRAND.facebook, gradient: undefined as string | undefined },
+      { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp", color: SOCIAL_BRAND.whatsapp, gradient: undefined as string | undefined },
       { icon: InstagramIcon, href: "https://instagram.com/bseva", label: "Instagram", color: null as string | null, gradient: INSTAGRAM_GRADIENT },
-      { icon: Twitter, href: "https://twitter.com/bseva", label: "X", color: SOCIAL_BRAND.twitter, gradient: undefined },
       { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube", color: SOCIAL_BRAND.youtube, gradient: undefined },
+      { icon: Facebook, href: "https://facebook.com/bseva", label: "Facebook", color: SOCIAL_BRAND.facebook, gradient: undefined },
+      { icon: Twitter, href: "https://twitter.com/bseva", label: "X", color: SOCIAL_BRAND.twitter, gradient: undefined },
       { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn", color: SOCIAL_BRAND.linkedin, gradient: undefined },
-      { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp", color: SOCIAL_BRAND.whatsapp, gradient: undefined },
     ],
     [config.bseva_whatsapp_number],
   );
@@ -174,38 +175,86 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
   const phoneHref = telHref(config.bseva_whatsapp_number);
 
+  const navLinkClass = (path: string) =>
+    cn(
+      "shrink-0 whitespace-nowrap rounded-sm text-[15px] font-semibold leading-none transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4",
+      isNavItemActive(path, location, search) ? "text-primary" : "text-foreground",
+    );
+
+  const footerLink =
+    "inline-block rounded-sm py-1 text-sm font-medium text-white transition-colors hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange";
+
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center gap-2 sm:gap-3 min-[1400px]:hidden">
-            <Link href="/">
-              <a className="flex min-w-0 flex-1 items-center max-w-[58%] sm:max-w-[50%]">
-                <BSevaLogo variant="full" size="header" />
+      <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85">
+        <div className="mx-auto flex h-[4.5rem] w-full max-w-[90rem] items-center gap-3 px-4 sm:px-6 lg:px-8 xl:h-[5.25rem] xl:gap-6">
+          <Link href="/">
+            <a
+              className="flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              aria-label="B-Seva"
+            >
+              <BSevaLogo variant="full" size="nav" className="dark:rounded-md dark:bg-white dark:px-1" />
+            </a>
+          </Link>
+
+          {/* Desktop navigation */}
+          <nav
+            className="hidden min-w-0 flex-1 items-center justify-center gap-x-5 xl:flex 2xl:gap-x-8"
+            aria-label={t("lp.nav.primary")}
+          >
+            {navItems.map((item) =>
+              item.path === "/services" ? (
+                <ServicesNavMenu key={item.path} active={isNavItemActive(item.path, location, search)} />
+              ) : (
+                <Link key={item.path} href={item.path}>
+                  <a className={navLinkClass(item.path)}>{item.label}</a>
+                </Link>
+              ),
+            )}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 xl:ml-0">
+            <Link href="/services">
+              <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
+                <span className="book-puja-nav-cta book-puja-nav-cta-compact xl:h-11 xl:px-5 xl:text-[0.9375rem]">
+                  {t("nav.bookPuja")}
+                </span>
               </a>
             </Link>
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <Link href="/services">
-                <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
-                  <span className="book-puja-nav-cta book-puja-nav-cta-compact">{t("nav.bookPuja")}</span>
-                </a>
-              </Link>
-              <ThemeToggle className="h-8 w-8 shrink-0" />
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <div className="hidden md:block">
+              <LanguageSelect triggerClassName="h-10 w-[7.5rem] text-[13px] font-semibold xl:w-[8.5rem]" />
+            </div>
+            <ThemeToggle className="h-10 w-10 shrink-0" />
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden shrink-0 sm:inline-flex"
+                onClick={async () => {
+                  await logout();
+                  setLocation("/");
+                }}
+              >
+                {t("nav.logout")}
+              </Button>
+            )}
+
+            {/* Tablet / mobile menu */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Button variant="ghost" size="icon" className="h-10 w-10 xl:hidden" aria-label={t("lp.nav.openMenu")}>
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="bg-background border-l-border">
-                <div className="flex flex-col gap-8 mt-8">
+              <SheetContent side="right" className="w-[min(22rem,92vw)] overflow-y-auto bg-background border-l-border">
+                <div className="flex flex-col gap-7 mt-8">
                   <Link href="/">
                     <a className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
                       <BSevaLogo variant="full" size="lg" />
                     </a>
                   </Link>
-                  <LanguageSelect triggerClassName="w-full" />
-                  <nav className="flex flex-col gap-4">
+                  <LanguageSelect triggerClassName="h-11 w-full" />
+                  <nav className="flex flex-col gap-4" aria-label={t("lp.nav.primary")}>
                     {navItems.map((item) =>
                       item.path === "/services" ? (
                         <ServicesNavMenu
@@ -215,16 +264,16 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                           onNavigate={() => setIsMobileMenuOpen(false)}
                         />
                       ) : (
-                      <Link key={item.path} href={item.path}>
-                        <a
-                          className={`text-lg font-bold transition-colors hover:text-primary ${
-                            isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground"
-                          }`}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          {item.label}
-                        </a>
-                      </Link>
+                        <Link key={item.path} href={item.path}>
+                          <a
+                            className={`flex min-h-11 items-center text-lg font-bold transition-colors hover:text-primary ${
+                              isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground"
+                            }`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            {item.label}
+                          </a>
+                        </Link>
                       ),
                     )}
                     <Link href="/services">
@@ -251,183 +300,118 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                     )}
                   </nav>
                   <div className="pt-4 border-t border-border">
-                    <HeaderContact
-                      compact
-                      phoneHref={phoneHref}
-                      phoneDisplay={phoneDisplay}
-                      email={supportEmail}
-                    />
+                    <HeaderContact compact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
                   </div>
                 </div>
               </SheetContent>
             </Sheet>
-              {user && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={async () => {
-                    await logout();
-                    setLocation("/");
-                  }}
-                >
-                  {t("nav.logout")}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="hidden min-[1400px]:flex min-[1400px]:h-[7.5rem] min-[1400px]:w-full min-[1400px]:items-center">
-            <Link href="/">
-              <a className="flex h-full shrink-0 items-center">
-                <BSevaLogo variant="full" size="header" />
-              </a>
-            </Link>
-
-            <div className="w-8 shrink-0 2xl:w-10" aria-hidden />
-
-            <div className="flex min-w-0 flex-1 items-center justify-end">
-              <nav
-                className="flex shrink-0 items-center gap-x-2.5 pr-4 2xl:pr-5"
-                aria-label="Primary"
-              >
-                {navItems.map((item) =>
-                  item.path === "/services" ? (
-                    <ServicesNavMenu
-                      key={item.path}
-                      active={isNavItemActive(item.path, location, search)}
-                    />
-                  ) : (
-                    <Link key={item.path} href={item.path}>
-                      <a
-                        className={cn(
-                          "shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none transition-colors hover:text-primary",
-                          isNavItemActive(item.path, location, search) ? "text-primary" : "text-foreground",
-                        )}
-                      >
-                        {item.label}
-                      </a>
-                    </Link>
-                  ),
-                )}
-              </nav>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2 border-l border-border/60 pl-3 2xl:gap-3 2xl:pl-4">
-              <Link href="/services">
-                <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
-                  <span className="book-puja-nav-cta">{t("nav.bookPuja")}</span>
-                </a>
-              </Link>
-              <LanguageSelect triggerClassName="w-[7.25rem] 2xl:w-[9.25rem]" />
-              <ThemeToggle className="h-8 w-8 shrink-0" />
-              {user && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={async () => {
-                    await logout();
-                    setLocation("/");
-                  }}
-                >
-                  {t("nav.logout")}
-                </Button>
-              )}
-              <HeaderContact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
-            </div>
           </div>
         </div>
       </header>
 
-      <aside
-        className={cn(
-          "fixed z-40 print:hidden hidden lg:flex flex-col gap-2",
-          "right-[max(0.5rem,env(safe-area-inset-right))] lg:right-3",
-          "top-1/2 -translate-y-1/2",
-          isMobileMenuOpen && "invisible pointer-events-none",
-        )}
-        aria-label="Social media"
-      >
-        {socialLinks.map((social) => (
-          <Tooltip key={social.label}>
-            <TooltipTrigger asChild>
-              <a
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={social.label}
-                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-white shadow-md transition-transform hover:scale-110 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                style={{
-                  backgroundColor: social.color ?? undefined,
-                  backgroundImage: social.gradient,
-                }}
-              >
-                <social.icon size={16} />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent side="left">{social.label}</TooltipContent>
-          </Tooltip>
-        ))}
-      </aside>
-
       <main className="flex-1">{children}</main>
 
-      <footer className="bg-sidebar text-sidebar-foreground pt-16 pb-8">
-        <div className="container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-          <div>
-            <BSevaLogo variant="full" size="md" className="mb-4" />
-            <p className="text-sidebar-foreground text-sm leading-relaxed mb-4">
-              {t("footer.tagline")}
-            </p>
-            <div className="space-y-2 text-sm">
-              <Link href="/services">
-                <a className="text-sidebar-foreground hover:text-primary block">{t("footer.dualCtaClient")}</a>
-              </Link>
-              <Link href="/register?role=pujari">
-                <a className="text-sidebar-foreground hover:text-primary block">{t("footer.dualCtaPujari")}</a>
-              </Link>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-h4 mb-4 text-primary">{t("footer.quickLinks")}</h4>
-            <ul className="space-y-2 text-sm text-sidebar-foreground">
-              <li><Link href="/services"><a className="hover:text-primary">{t("nav.services")}</a></Link></li>
-              <li><Link href="/#how-it-works"><a className="hover:text-primary">{t("nav.howItWorks")}</a></Link></li>
-              <li><Link href="/customer"><a className="hover:text-primary">{t("nav.customer")}</a></Link></li>
-              <li><Link href="/register?role=pujari"><a className="hover:text-primary">{t("nav.joinPujari")}</a></Link></li>
-              <li><Link href="/about"><a className="hover:text-primary">{t("nav.about")}</a></Link></li>
-              <li><Link href="/contact"><a className="hover:text-primary">{t("nav.contact")}</a></Link></li>
-              <li><Link href="/support"><a className="hover:text-primary">{t("nav.support")}</a></Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-h4 mb-4 text-primary">{t("footer.contact")}</h4>
-            <ul className="space-y-3 text-sm text-sidebar-foreground">
+      <footer className="relative overflow-hidden bg-sidebar text-white">
+        <MandalaOutline className="absolute -bottom-48 -right-40 h-[30rem] w-[30rem] text-white opacity-[0.05]" />
+        <div className="container relative z-10 grid grid-cols-2 gap-x-6 gap-y-10 py-14 md:grid-cols-3 lg:grid-cols-12 lg:gap-x-8">
+          <div className="col-span-2 md:col-span-3 lg:col-span-4">
+            <Link href="/">
+              <a className="inline-block rounded-md bg-white px-2 py-1.5" aria-label="B-Seva">
+                <BSevaLogo variant="full" size="md" />
+              </a>
+            </Link>
+            <p className="mt-4 max-w-sm text-sm font-medium leading-relaxed text-white">{t("footer.tagline")}</p>
+            <ul className="mt-4 space-y-1 text-sm font-medium text-white">
               <li className="flex items-center gap-2">
-                <Phone size={14} className="shrink-0" />
-                <a href={telHref(config.bseva_whatsapp_number)} className="hover:text-primary transition-colors">
+                <Phone size={14} className="shrink-0 text-brand-orange" aria-hidden />
+                <a href={phoneHref} className="rounded-sm hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
                   {phoneDisplay}
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={14} className="shrink-0" />
-                <a href={`mailto:${supportEmail}`} className="hover:text-primary transition-colors">
+                <Mail size={14} className="shrink-0 text-brand-orange" aria-hidden />
+                <a href={`mailto:${supportEmail}`} className="break-all rounded-sm hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
                   {supportEmail}
                 </a>
               </li>
             </ul>
           </div>
-          <div>
-            <h4 className="text-h4 mb-4 text-primary">{t("footer.legal")}</h4>
-            <ul className="space-y-2 text-sm text-sidebar-foreground">
-              <li><Link href="/terms"><a className="hover:text-primary">{t("nav.terms")}</a></Link></li>
-              <li><Link href="/privacy"><a className="hover:text-primary">{t("nav.privacy")}</a></Link></li>
+
+          <nav aria-label={t("footer.quickLinks")} className="lg:col-span-2">
+            <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-brand-orange">{t("footer.quickLinks")}</h4>
+            <ul className="mt-3 space-y-1">
+              <li><Link href="/"><a className={footerLink}>{t("nav.home")}</a></Link></li>
+              <li><Link href="/services"><a className={footerLink}>{t("nav.services")}</a></Link></li>
+              <li><Link href="/#how-it-works"><a className={footerLink}>{t("nav.howItWorks")}</a></Link></li>
+              <li><Link href="/customer"><a className={footerLink}>{t("nav.customer")}</a></Link></li>
+              <li><Link href="/pujari"><a className={footerLink}>{t("nav.pujaris").replace(/\bPujaris\b/, "Pujari")}</a></Link></li>
             </ul>
-          </div>
+          </nav>
+
+          <nav aria-label={t("lp.footer.support")} className="lg:col-span-2">
+            <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-brand-orange">{t("lp.footer.support")}</h4>
+            <ul className="mt-3 space-y-1">
+              <li><Link href="/about"><a className={footerLink}>{t("nav.about")}</a></Link></li>
+              <li><Link href="/contact"><a className={footerLink}>{t("nav.contact")}</a></Link></li>
+              <li><Link href="/support"><a className={footerLink}>{t("nav.support")}</a></Link></li>
+              <li><Link href="/terms"><a className={footerLink}>{t("nav.terms")}</a></Link></li>
+              <li><Link href="/privacy"><a className={footerLink}>{t("nav.privacy")}</a></Link></li>
+            </ul>
+          </nav>
+
+          <nav aria-label={t("lp.footer.followUs")} className="print:hidden lg:col-span-2">
+            <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-brand-orange">{t("lp.footer.followUs")}</h4>
+            <ul className="mt-3 flex flex-wrap gap-2.5">
+              {socialLinks.map((social) => (
+                <li key={social.label}>
+                  <a
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.label}
+                    title={social.label}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 text-white transition-colors hover:border-brand-orange hover:bg-brand-orange hover:text-[#0E1830] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+                  >
+                    <social.icon size={17} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {APP_STORE_URL || PLAY_STORE_URL ? (
+            <div className="lg:col-span-2">
+              <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-brand-orange">{t("lp.footer.downloadApp")}</h4>
+              <ul className="mt-3 space-y-2">
+                {APP_STORE_URL ? (
+                  <li>
+                    <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/40 bg-black px-3 text-sm font-semibold text-white hover:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
+                      <Download size={16} aria-hidden /> {t("lp.app.appStore")}
+                    </a>
+                  </li>
+                ) : null}
+                {PLAY_STORE_URL ? (
+                  <li>
+                    <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/40 bg-black px-3 text-sm font-semibold text-white hover:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
+                      <Download size={16} aria-hidden /> {t("lp.app.googlePlay")}
+                    </a>
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          ) : null}
         </div>
-        <div className="container border-t border-sidebar-border pt-6 text-center text-xs font-medium text-sidebar-foreground">
-          <FooterRights />
+
+        <div className="relative z-10 border-t border-white/20">
+          <div className="container flex flex-col items-center justify-between gap-4 py-5 text-center text-xs font-medium text-white sm:flex-row sm:text-left">
+            <p>
+              <FooterRights />
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold">{t("lp.footer.language")}</span>
+              <LanguageSelect triggerClassName="h-9 w-[9rem] border-white/40 bg-transparent text-white [&_svg]:text-white" />
+            </div>
+          </div>
         </div>
       </footer>
     </div>

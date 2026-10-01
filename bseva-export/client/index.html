@@ -14,7 +14,7 @@
       (function () {
         try {
           var lang = localStorage.getItem("bseva-lang");
-          if (lang && /^(en|hi|te|mr|ta|kn)$/.test(lang)) document.documentElement.lang = lang;
+          if (lang && /^(en|hi|te|mr|ta|kn|ml)$/.test(lang)) document.documentElement.lang = lang;
           var t = localStorage.getItem("bseva-theme") || localStorage.getItem("theme");
           if (t !== "light" && t !== "dark") {
             t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -30,9 +30,9 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Plus Jakarta Sans (UI) + Noto Indic fallbacks + Cinzel Decorative (B-SEVA wordmark only) -->
+    <!-- Plus Jakarta Sans (UI) + Noto Indic fallbacks + Playfair/Noto Serif (landing display headings) + Cinzel Decorative (B-SEVA wordmark only) -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@600;700&family=Noto+Serif+Telugu:wght@600;700&family=Noto+Serif+Kannada:wght@600;700&family=Noto+Serif+Tamil:wght@600;700&family=Noto+Serif+Malayalam:wght@600;700&family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet" />
   </head>
 
