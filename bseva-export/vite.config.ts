@@ -88,8 +88,15 @@ const repoRoot = path.resolve(import.meta.dirname, "..");
 const publicDir = path.resolve(import.meta.dirname, "client", "public");
 const plugins = [react(), tailwindcss(), firebaseMessagingSwPlugin(repoRoot, publicDir)];
 
+const appVersion: string = JSON.parse(
+  fs.readFileSync(path.resolve(import.meta.dirname, "package.json"), "utf-8"),
+).version;
+
 export default defineConfig({
   plugins,
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   resolve: {
     // packages/validation lives outside this package; resolve its `zod` import from here.
     dedupe: ["zod"],

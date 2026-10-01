@@ -30,6 +30,7 @@ import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 import RolePortalGate from "@/components/RolePortalGate";
 import PujariProfileGate from "@/components/PujariProfileGate";
 import ThemeToggle from "@/components/ThemeToggle";
+import FooterRights from "@/components/FooterRights";
 import SeasonalPopup from "@/components/SeasonalPopup";
 import BSevaLogo from "@/components/BSevaLogo";
 import NotificationBell, { CountBadge } from "@/components/NotificationBell";
@@ -271,7 +272,7 @@ function PortalShell({
         <main className="flex-1 p-4 lg:p-8 print:p-0" data-scroll-reset>
           {children}
         </main>
-        <footer className="border-t py-4 text-center text-xs text-muted-foreground print:hidden">{t("footer.rights")}</footer>
+        <footer className="border-t py-4 text-center text-xs text-muted-foreground print:hidden"><FooterRights /></footer>
       </div>
     </div>
   );

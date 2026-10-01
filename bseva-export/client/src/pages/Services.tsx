@@ -50,16 +50,29 @@ export default function Services() {
 
   return (
     <Layout>
-      <section className="relative py-10 md:py-12 bg-sidebar text-white overflow-hidden">
+      <section className="relative pt-10 md:pt-12 pb-0 lg:py-12 bg-sidebar text-white overflow-hidden lg:min-h-[19rem] lg:flex lg:items-center">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
         </div>
-        <div className="container relative z-10 text-center">
-          <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
-            {t("services.badge")}
-          </span>
-          <h1 className="text-h1 md:text-display text-primary mb-3">{t("services.title")}</h1>
-          <p className="text-base text-on-dark max-w-2xl mx-auto">{t("services.subtitle")}</p>
+        <div className="container relative z-10 text-center lg:text-left">
+          <div className="mx-auto lg:mx-0 max-w-2xl lg:max-w-[54%]">
+            <span className="inline-block py-1 px-3 rounded-full bg-primary/10 backdrop-blur-sm border border-primary/60 text-primary text-xs font-bold tracking-[0.2em] uppercase mb-3">
+              {t("services.badge")}
+            </span>
+            <h1 className="text-h1 md:text-display text-primary mb-3">{t("services.title")}</h1>
+            <p className="text-base text-on-dark">{t("services.subtitle")}</p>
+          </div>
+        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none relative z-0 mt-6 h-44 sm:h-56 md:h-64 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:h-auto lg:w-[46%] lg:max-w-[760px] isolate bg-sidebar [mask-image:linear-gradient(to_bottom,transparent_0%,black_60%)] lg:[mask-image:linear-gradient(to_right,transparent_0%,black_55%)]"
+        >
+          <img
+            src="/images/services-hero-puja.webp"
+            alt=""
+            loading="eager"
+            className="h-full w-full object-cover object-[50%_55%] mix-blend-lighten lg:object-[right_55%]"
+          />
         </div>
       </section>
 

@@ -374,6 +374,7 @@ export const mlCatalog: Record<string, string> = {
   "contact.send": "സന്ദേശം അയയ്ക്കുക",
   "contact.sendMessage": "ഞങ്ങൾക്ക് ഒരു സന്ദേശം അയയ്ക്കുക",
   "contact.sent": "സന്ദേശം അയച്ചു. ഉടൻ മറുപടി നൽകും.",
+  "about.version": "പതിപ്പ് {{version}}",
   "contact.subject": "വിഷയം",
   "contact.subjectPh": "എങ്ങനെ സഹായിക്കാം?",
   "contact.subtitle": "സേവനങ്ങളെക്കുറിച്ച് ചോദ്യങ്ങളുണ്ടോ, അല്ലെങ്കിൽ ബുക്കിംഗിന് സഹായം വേണോ? ഞങ്ങളുടെ സഹായ സംഘം സഹായിക്കാൻ തയ്യാറാണ്.",

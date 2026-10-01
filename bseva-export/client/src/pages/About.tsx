@@ -4,7 +4,7 @@ import SectionHeader from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/i18n/I18nProvider";
-import { BookOpen, Globe, Heart, Layers, Shield, Sparkles, Users } from "lucide-react";
+import { BookOpen, Globe, Heart, Shield, Sparkles, Users } from "lucide-react";
 
 export default function About() {
   const { t } = useI18n();
@@ -71,22 +71,6 @@ export default function About() {
         </div>
       </section>
 
-      <section className="py-16 bg-secondary/20">
-        <div className="container max-w-4xl">
-          <SectionHeader title={t("about.pujariCommitTitle")} className="mb-8" />
-          <div className="space-y-5 text-lg text-muted-foreground leading-relaxed mb-8">
-            <p>{t("about.pujariCommitP1")}</p>
-            <p>{t("about.pujariCommitP2")}</p>
-            <p>{t("about.pujariCommitP3")}</p>
-            <p>{t("about.pujariCommitP4")}</p>
-          </div>
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8 text-center">
-            <Layers className="mx-auto text-primary mb-3" size={28} aria-hidden />
-            <p className="text-foreground font-medium leading-relaxed">{t("about.pujariCommitHighlight")}</p>
-          </div>
-        </div>
-      </section>
-
       <section className="py-20">
         <div className="container">
           <SectionHeader title={t("about.valuesTitle")} description={t("about.valuesDesc") || undefined} />
@@ -103,17 +87,6 @@ export default function About() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-16 bg-secondary/20">
-        <div className="container max-w-3xl">
-          <SectionHeader title={t("about.onboardingTitle")} className="mb-8" />
-          <div className="space-y-5 text-lg text-muted-foreground leading-relaxed">
-            <p>{t("about.onboardingP1")}</p>
-            <p>{t("about.onboardingP2")}</p>
-            <p>{t("about.onboardingP3")}</p>
           </div>
         </div>
       </section>

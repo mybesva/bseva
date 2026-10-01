@@ -245,6 +245,9 @@ export default function Home() {
           <img src="/images/mandala-pattern.png" alt="" className="w-full h-full object-cover" />
         </div>
         <div className="container relative z-10">
+          <h2 className="landing-doc-heading mx-auto mb-8 max-w-[58rem] text-center md:mb-10">
+            {t("home.twoSidedTitle")}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {valuePillars.map((pillar) => (
               <div

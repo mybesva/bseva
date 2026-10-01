@@ -1,4 +1,5 @@
 import { Link, useLocation, useSearch } from "wouter";
+import FooterRights from "@/components/FooterRights";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -426,7 +427,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <div className="container border-t border-sidebar-border pt-6 text-center text-xs font-medium text-sidebar-foreground">
-          {t("footer.rights")}
+          <FooterRights />
         </div>
       </footer>
     </div>
