@@ -36,7 +36,7 @@ const ROWS: readonly Row[] = [
   ],
   [
     "sv.hero.desc",
-    "From traditional pujas to homams, havans and life's special ceremonies — find the right ritual for your devotion, guided by experienced and verified Pujaris.",
+    "From traditional pujas to homams, havans and life’s special ceremonies — find the right ritual for your devotion, guided by experienced and verified Pujaris.",
     "पारंपरिक पूजा से होम, हवन और जीवन के विशेष समारोह तक — अनुभवी और सत्यापित पुजारियों के मार्गदर्शन में अपनी श्रद्धा के लिए सही अनुष्ठान खोजें।",
     "సంప్రదాయ పూజల నుండి హోమాలు, హవనాలు, జీవిత విశేష సమారంభాల వరకు — అనుభవజ్ఞులైన, ధృవీకరించబడిన పూజారుల మార్గదర్శకత్వంలో మీ భక్తికి తగిన ఆచారాన్ని కనుగొనండి.",
     "पारंपरिक पूजा, होम, हवन आणि जीवनातील विशेष समारंभ — अनुभवी, सत्यापित पुजाऱ्यांच्या मार्गदर्शनाखाली तुमच्या भक्तीसाठी योग्य विधी शोधा.",
