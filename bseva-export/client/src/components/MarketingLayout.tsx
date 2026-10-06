@@ -186,7 +186,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans">
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85">
-        <div className="page-header flex h-[4.5rem] items-center gap-3 xl:h-[5.25rem] xl:gap-6">
+        <div className={cn(
+          "page-header flex h-[4.5rem] items-center gap-3 xl:gap-6",
+          location === "/" ? "xl:h-[5.5rem]" : "xl:h-[5.25rem]",
+        )}>
           <Link href="/">
             <a
               className="flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"

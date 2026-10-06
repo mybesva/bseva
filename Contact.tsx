@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+import { Phone, Mail, Send } from "lucide-react";
 
 export default function Contact() {
   return (
@@ -39,21 +39,6 @@ export default function Contact() {
                 <Card className="border-none shadow-sm bg-secondary/20">
                   <CardContent className="flex items-start gap-4 p-6">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      <MapPin size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sidebar mb-1">Our Office</h4>
-                      <p className="text-sm text-muted-foreground">
-                        123 Spiritual Avenue, Temple Road,<br />
-                        Bangalore, Karnataka 560001
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm bg-secondary/20">
-                  <CardContent className="flex items-start gap-4 p-6">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                       <Phone size={20} />
                     </div>
                     <div>
@@ -76,21 +61,6 @@ export default function Contact() {
                       <p className="text-sm text-muted-foreground">
                         support@bseva.com<br />
                         bookings@bseva.com
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm bg-secondary/20">
-                  <CardContent className="flex items-start gap-4 p-6">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      <Clock size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sidebar mb-1">Working Hours</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Mon - Sat: 9:00 AM - 8:00 PM<br />
-                        Sun: 10:00 AM - 2:00 PM
                       </p>
                     </div>
                   </CardContent>
@@ -140,15 +110,6 @@ export default function Contact() {
               </Card>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Map Section (Placeholder) */}
-      <section className="h-[400px] bg-secondary/10 relative flex items-center justify-center">
-        <div className="text-center">
-          <MapPin size={48} className="text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground font-medium">Map Integration Placeholder</p>
-          <p className="text-sm text-muted-foreground/70">123 Spiritual Avenue, Bangalore</p>
         </div>
       </section>
     </Layout>

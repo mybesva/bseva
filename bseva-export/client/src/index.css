@@ -59,9 +59,10 @@
 }
 
 :root {
-  /* Page width. Through 1536px the public column stays capped so a normal
-     desktop matches the designed layout. From 1920px that cap is lifted and
-     gutters keep the content off the screen edges. Admin uses --admin-max. */
+  /* Page width. Below 1280px the 80rem cap does not bind. From 1280px the
+     public header and section shells follow the viewport; --page-gutter keeps
+     content off the edges. --page-max still caps .app-canvas until 1920px.
+     Admin uses --admin-max. */
   --page-gutter: 1rem;
   --page-max: 80rem;
   --header-max: 90rem;
@@ -169,13 +170,19 @@ html body .container:not([class*="max-w-"]) {
   max-width: var(--page-max);
 }
 
-/* Public column tracks the viewport from 1920px up. Same specificity as the
-   container rule above, and later, so it wins there. Unlayered, so it also
-   beats the layered .page-header / .app-canvas caps. max-w-* containers,
-   readable text measures, and .admin-canvas are untouched. */
-@media (min-width: 1920px) {
+/* Desktop public shells use the viewport. Same specificity as the rule above,
+   and later, so it wins. Unlayered, so .page-header also beats its layered
+   90rem cap. max-w-* containers, .app-canvas, and .admin-canvas stay capped. */
+@media (min-width: 1280px) {
   html body .container:not([class*="max-w-"]),
-  .page-header,
+  .page-header {
+    max-width: none;
+  }
+}
+
+/* Portal canvas joins the public shells once the window is wide enough that
+   the sidebar no longer accounts for the old column. */
+@media (min-width: 1920px) {
   .app-canvas {
     max-width: none;
   }
@@ -980,4 +987,15 @@ html body .container:not([class*="max-w-"]) {
       transform: none;
     }
   }
+}
+
+/* These scenes already carry a framed photograph. Keep the site mark from sitting on top of it. */
+body:has(.soften-brand-mark) img[src="/bseva-mark.png"] {
+  opacity: 0.035;
+}
+
+/* The About and Contact hero references have no central mark. */
+body:has(.about-hero-banner) img[src="/bseva-mark.png"],
+body:has(.contact-hero-banner) img[src="/bseva-mark.png"] {
+  opacity: 0;
 }

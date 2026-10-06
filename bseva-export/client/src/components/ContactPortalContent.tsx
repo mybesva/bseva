@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, Clock, Send, CheckCircle2, Loader2 } from "lucide-react";
+import { Phone, Mail, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
 import { useState, type FormEvent } from "react";
@@ -168,17 +168,6 @@ export function ContactPortalContent() {
                       {contactEmail}
                     </a>
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-sm bg-secondary/20">
-              <CardContent className="flex items-start gap-4 p-5">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <Clock size={20} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-foreground mb-1">{t("contact.hours")}</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{t("contact.hoursValue")}</p>
                 </div>
               </CardContent>
             </Card>

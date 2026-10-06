@@ -6,8 +6,6 @@ import { PublishedStatsStrip } from "@/components/PublishedStatsStrip";
 import { MandalaOutline } from "@/components/landing/DevotionalPatterns";
 import { useI18n } from "@/i18n/I18nProvider";
 
-const NAVY = "#0E1830";
-
 export default function About() {
   const { t } = useI18n();
 
@@ -24,41 +22,45 @@ export default function About() {
     <Layout>
       <section
         aria-labelledby="about-hero-title"
-        className="relative isolate overflow-hidden text-white"
-        style={{ backgroundColor: NAVY }}
+        className="about-hero-banner relative isolate overflow-hidden text-white"
+        style={{ backgroundColor: "#041B39" }}
       >
-        <div className="absolute inset-0">
-          <img
-            src="/images/about-hero-temple.jpg"
-            alt={t("ab.heroAlt")}
-            width={816}
-            height={464}
-            fetchPriority="high"
-            decoding="async"
-            className="h-full w-full object-cover object-[78%_center]"
-          />
-          <div
-            className="absolute inset-0 lg:hidden"
-            style={{ backgroundImage: `linear-gradient(to top, ${NAVY} 8%, ${NAVY}E6 42%, ${NAVY}66 100%)` }}
-          />
-          <div
-            className="absolute inset-0 hidden lg:block"
-            style={{
-              backgroundImage: `linear-gradient(to right, ${NAVY} 0%, ${NAVY} 30%, ${NAVY}D9 46%, ${NAVY}59 64%, ${NAVY}00 82%)`,
-            }}
-          />
-        </div>
+        <img
+          src="/images/about-hero-temple.jpg"
+          alt={t("ab.heroAlt")}
+          width={816}
+          height={464}
+          fetchPriority="high"
+          decoding="async"
+          className="pointer-events-none absolute inset-y-0 right-0 h-full w-[86%] max-w-none object-cover object-[62%_40%] sm:w-[72%] lg:w-[56%] lg:object-[42%_34%]"
+        />
+        <div
+          className="absolute inset-0 lg:hidden"
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg, rgba(4,27,57,0.97) 0%, rgba(4,27,57,0.92) 42%, rgba(4,27,57,0.72) 68%, rgba(4,27,57,0.28) 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-0 hidden lg:block"
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg, rgba(4,27,57,0.98) 0%, rgba(4,27,57,0.95) 30%, rgba(4,27,57,0.75) 47%, rgba(4,27,57,0.30) 61%, rgba(4,27,57,0.05) 75%)",
+          }}
+        />
 
-        <div className="container relative z-10 flex min-h-[22rem] items-end py-10 sm:min-h-[24rem] sm:items-center sm:py-12 lg:min-h-[26rem]">
-          <div className="max-w-xl">
-            <p className="inline-flex rounded-full border border-[#FF7A00] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#FF7A00]">
+        <div className="relative z-10 mx-auto flex h-[440px] w-full max-w-[1740px] items-center px-5 sm:h-[460px] sm:px-8 lg:h-[370px] lg:px-[7vw] xl:h-[390px]">
+          <div className="w-full max-w-[40rem] lg:max-w-[760px]">
+            <p className="inline-flex rounded-full border border-white/30 bg-[#041B39]/35 px-3.5 py-1 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#FF7A00] lg:text-[14px] lg:tracking-[0.12em]">
               {t("ab.eyebrow")}
             </p>
-            <h1 id="about-hero-title" className="mt-4 text-[clamp(1.9rem,1.1rem+2.2vw,3rem)] font-bold leading-[1.12] tracking-tight">
+            <h1 id="about-hero-title" className="mt-6 font-sans text-[clamp(2rem,4vw,2.5rem)] font-extrabold leading-[1.1] tracking-tight lg:mt-7 lg:text-[clamp(42px,4vw,64px)] lg:leading-[1.08]">
               <span className="block text-white">{t("ab.hero1")}</span>
               <span className="block text-[#FF7A00]">{t("ab.hero2")}</span>
             </h1>
-            <p className="mt-4 max-w-lg text-[15px] font-medium leading-relaxed text-white sm:text-base">{t("ab.heroDesc")}</p>
+            <p className="mt-6 max-w-[34rem] text-[17px] font-medium leading-[1.5] text-white/90 lg:mt-7 lg:max-w-[38rem] lg:text-[18px]">
+              {t("ab.heroDesc")}
+            </p>
           </div>
         </div>
       </section>

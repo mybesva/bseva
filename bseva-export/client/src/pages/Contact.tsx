@@ -12,10 +12,8 @@ import {
   ChevronDown,
   ChevronRight,
   CircleHelp,
-  Clock,
   Lock,
   Mail,
-  MapPin,
   MessageCircle,
   MessageSquare,
   Phone,
@@ -25,9 +23,6 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
-
-const NAVY = "#0E1830";
-const COMPANY = "B-Seva Private Limited";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TEN_DIGIT_RE = /^\d{10}$/;
@@ -128,7 +123,7 @@ function InfoCard({
 }
 
 export default function Contact() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { config } = usePublicConfig();
   const phoneDigits = String(config.bseva_whatsapp_number || "919014654994").replace(/\D/g, "");
   const phoneDisplay =
@@ -137,9 +132,6 @@ export default function Contact() {
       : `+${phoneDigits}`;
   const supportEmail = config.email_from_support || "support@b-seva.com";
   const contactEmail = config.email_from_contact || "contact@b-seva.com";
-  const mapQuery = "Bengaluru, Karnataka, India";
-  const mapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=12&output=embed`;
-  const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${COMPANY}, ${mapQuery}`)}`;
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -204,39 +196,46 @@ export default function Contact() {
 
   return (
     <Layout>
-      <section aria-labelledby="contact-hero-title" className="relative isolate overflow-hidden text-white" style={{ backgroundColor: NAVY }}>
-        <div className="absolute inset-0 lg:left-auto lg:w-[62%]">
-          <img
-            src="/images/contact-hero-ganesha.webp"
-            alt={t("ct.heroAlt")}
-            width={696}
-            height={558}
-            fetchPriority="high"
-            decoding="async"
-            className="h-full w-full object-cover object-[64%_68%] lg:object-[58%_62%]"
-          />
-          <div
-            className="absolute inset-0 lg:hidden"
-            style={{ backgroundImage: `linear-gradient(to top, ${NAVY} 8%, ${NAVY}E6 48%, ${NAVY}66 100%)` }}
-          />
-          <div
-            className="absolute inset-0 hidden lg:block"
-            style={{
-              backgroundImage: `linear-gradient(to right, ${NAVY} 0%, ${NAVY}CC 18%, ${NAVY}55 42%, ${NAVY}00 68%)`,
-            }}
-          />
-        </div>
-        <MandalaOutline className="absolute -left-16 top-6 hidden h-56 w-56 text-white opacity-[0.08] lg:block" />
-        <div className="container relative z-10 flex min-h-[18.5rem] items-end py-9 sm:min-h-[20rem] sm:items-center sm:py-10 lg:min-h-[22rem]">
-          <div className="max-w-xl">
-            <p className="inline-flex rounded-full border border-[#FF7A00] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#FF7A00]">
+      <section
+        aria-labelledby="contact-hero-title"
+        className="contact-hero-banner relative isolate overflow-hidden text-white"
+        style={{ backgroundColor: "#051E3D" }}
+      >
+        {/* Faint mandala texture on the navy side, as in the reference */}
+        <MandalaOutline className="pointer-events-none absolute -left-24 -top-28 h-[26rem] w-[26rem] text-white opacity-[0.05]" />
+        <MandalaOutline className="pointer-events-none absolute -bottom-40 left-[30%] h-[24rem] w-[24rem] text-white opacity-[0.04]" />
+        {/* Photo fades into the navy instead of starting on a hard edge */}
+        <img
+          src="/images/contact-hero-ganesha.webp"
+          alt={t("ct.heroAlt")}
+          width={696}
+          height={558}
+          fetchPriority="high"
+          decoding="async"
+          className="pointer-events-none absolute inset-y-0 right-0 h-full w-[84%] max-w-none object-cover object-[70%_48%] [mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.55)_22%,#000_42%)] sm:w-[72%] lg:w-[58%] lg:object-[60%_44%] lg:[mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.6)_14%,#000_30%)]"
+        />
+        <div
+          className="absolute inset-0 lg:hidden"
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg, rgba(5,30,61,0.96) 0%, rgba(5,30,61,0.86) 50%, rgba(5,30,61,0.35) 100%)",
+          }}
+        />
+        <div className="relative z-10 mx-auto flex h-[430px] w-full max-w-[1600px] items-center px-[6.5%] sm:h-[450px] lg:h-[390px] xl:h-[400px]">
+          <div className="max-w-[40rem] lg:max-w-[50%]">
+            <p className="inline-flex rounded-full border-[1.5px] border-[#FF7A00] px-5 py-1.5 text-[13px] font-bold uppercase tracking-[0.16em] text-[#FF7A00] lg:px-6 lg:py-2 lg:text-[15px]">
               {t("ct.eyebrow")}
             </p>
-            <h1 id="contact-hero-title" className="mt-4 text-[clamp(1.9rem,1.1rem+2.1vw,2.85rem)] font-bold leading-[1.12] tracking-tight">
-              <span className="block text-white sm:inline">{t("ct.hero1")} </span>
+            <h1
+              id="contact-hero-title"
+              className={`mt-5 font-sans text-[clamp(2rem,6vw,2.6rem)] font-extrabold leading-[1.08] tracking-[-0.02em] lg:mt-6 lg:text-[clamp(50px,4.1vw,64px)] ${lang === "en" ? "lg:whitespace-nowrap" : ""}`}
+            >
+              <span className="text-white">{t("ct.hero1")} </span>
               <span className="text-[#FF7A00]">{t("ct.hero2")}</span>
             </h1>
-            <p className="mt-3 max-w-lg text-[15px] font-medium leading-relaxed text-white sm:text-base">{t("ct.heroDesc")}</p>
+            <p className="mt-4 max-w-[34rem] text-[17px] font-medium leading-[1.55] text-white/90 lg:mt-6 lg:max-w-[37rem] lg:text-[20px]">
+              {t("ct.heroDesc")}
+            </p>
           </div>
         </div>
       </section>
@@ -276,18 +275,6 @@ export default function Contact() {
                 </a>
                 <br />
                 <span className="text-[13px]">{t("ct.emailHint")}</span>
-              </InfoCard>
-              <InfoCard icon={<Clock size={18} strokeWidth={1.75} aria-hidden />} title={t("contact.hours")}>
-                <span className="whitespace-pre-line">{t("contact.hoursValue")}</span>
-              </InfoCard>
-              <InfoCard
-                icon={<MapPin size={18} strokeWidth={1.75} aria-hidden />}
-                title={t("ct.location")}
-                action={<ArrowLink href="#find-us" label={t("ct.findUs")} />}
-              >
-                {COMPANY},
-                <br />
-                {t("ct.city")}
               </InfoCard>
             </div>
           </div>
@@ -495,35 +482,7 @@ export default function Contact() {
           </div>
         </div>
 
-        <div className="container relative grid gap-5 pb-12 md:pb-14 lg:grid-cols-2 lg:gap-6">
-          <article id="find-us" className="scroll-mt-24 rounded-2xl border border-[#F0E2D2] bg-white p-5 shadow-[0_10px_24px_-18px_rgba(120,70,20,0.45)] sm:p-6 dark:border-white/10 dark:bg-[#152238]">
-            <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-                <MapPin size={18} strokeWidth={1.75} aria-hidden />
-              </span>
-              <div>
-                <h2 className="text-xl font-bold text-[#0E1830] dark:text-white">{t("ct.findUs")}</h2>
-                <p className="text-sm font-medium text-[#1A2B4A] dark:text-[#C9D2DE]">{t("ct.findUsDesc")}</p>
-              </div>
-            </div>
-            <div className="relative mt-4 overflow-hidden rounded-xl">
-              <iframe
-                title={t("ct.mapTitle")}
-                src={mapSrc}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="h-64 w-full border-0 sm:h-72"
-              />
-              <div className="pointer-events-none absolute left-3 top-3 max-w-[14rem] rounded-md bg-white px-3 py-2 text-xs shadow-md">
-                <p className="font-bold text-[#0E1830]">{COMPANY}</p>
-                <p className="text-[#1A2B4A]">{t("ct.city")}</p>
-                <a href={mapHref} target="_blank" rel="noopener noreferrer" className="pointer-events-auto font-semibold text-[#1a73e8] hover:underline">
-                  {t("ct.largerMap")}
-                </a>
-              </div>
-            </div>
-          </article>
-
+        <div className="container relative pb-12 md:pb-14">
           <article className="rounded-2xl border border-[#F0E2D2] bg-white p-5 shadow-[0_10px_24px_-18px_rgba(120,70,20,0.45)] sm:p-6 dark:border-white/10 dark:bg-[#152238]">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">

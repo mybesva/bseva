@@ -1,53 +1,38 @@
 import { useI18n } from "@/i18n/I18nProvider";
-import { MandalaOutline } from "@/components/landing/DevotionalPatterns";
+import DevotionalImageFrame from "@/components/DevotionalImageFrame";
+import { HangingDiya, MandalaOutline } from "@/components/landing/DevotionalPatterns";
 
-/** Educational trust section below the service catalogue (Puja tab only). */
+/** Compact trust block under the puja catalogue. */
 export default function ServicesWhyChoose() {
   const { t } = useI18n();
 
   return (
-    <section
-      aria-labelledby="services-why-title"
-      className="relative overflow-hidden border-t border-primary/10 bg-background py-12 md:py-16 lg:py-20"
-    >
-      <MandalaOutline className="pointer-events-none absolute -right-24 top-8 h-72 w-72 text-primary opacity-[0.06] dark:opacity-[0.08]" />
+    <section aria-labelledby="services-why-title" className="soften-brand-mark relative overflow-hidden bg-[#FFF8EE] pt-14 pb-2 dark:bg-background md:pt-16">
+      <MandalaOutline className="pointer-events-none absolute -left-16 top-6 h-48 w-48 text-[#E8A04A] opacity-[0.09] dark:text-primary dark:opacity-[0.06]" />
+      <HangingDiya className="pointer-events-none absolute left-[7%] top-0 hidden h-24 w-8 text-[#E0A04A]/70 lg:block" />
+      <HangingDiya className="pointer-events-none absolute left-[14%] top-0 hidden h-16 w-6 text-[#E8B15A]/60 lg:block" />
 
-      <div className="container">
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
-          <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-            <div
-              aria-hidden
-              className="absolute -inset-3 rounded-[2.5rem] border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/10"
-              style={{ borderTopLeftRadius: "3rem", borderTopRightRadius: "3rem" }}
+      <div className="container relative z-10 max-w-6xl">
+        <div className="grid items-center gap-8 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.4fr)] lg:gap-16 xl:gap-20">
+          <div className="relative mx-auto w-[220px] sm:w-[240px] lg:w-[min(100%,300px)]">
+            <MandalaOutline className="pointer-events-none absolute -inset-6 text-[#E8A04A] opacity-[0.1] dark:text-primary dark:opacity-[0.07]" />
+            <DevotionalImageFrame
+              src="/images/services-hero-puja.webp"
+              alt={t("sv.why.imgAlt")}
+              width={832}
+              height={768}
+              objectPosition="center 56%"
+              className="aspect-[4/5] w-full"
             />
-            <div
-              className="relative overflow-hidden shadow-xl ring-1 ring-primary/15"
-              style={{
-                borderTopLeftRadius: "2.75rem",
-                borderTopRightRadius: "2.75rem",
-                borderBottomLeftRadius: "0.75rem",
-                borderBottomRightRadius: "0.75rem",
-              }}
-            >
-              <img
-                src="/images/services-hero-puja.webp"
-                alt={t("sv.why.imgAlt")}
-                width={640}
-                height={800}
-                loading="lazy"
-                decoding="async"
-                className="aspect-[4/5] w-full object-cover object-center"
-              />
-            </div>
           </div>
 
-          <div className="text-center lg:text-left">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">{t("sv.why.eyebrow")}</p>
-            <h2 id="services-why-title" className="mt-3 font-display text-2xl font-semibold leading-snug text-foreground md:text-3xl lg:text-[2rem]">
-              {t("sv.why.title1")}{" "}
-              <span className="block font-bold text-brand-orange">{t("sv.why.title2")}</span>
+          <div className="max-w-[40rem] text-left">
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.22em] text-[#FF7A00]">{t("sv.why.eyebrow")}</p>
+            <h2 id="services-why-title" className="mt-2 font-display text-[1.7rem] font-semibold leading-[1.15] text-[#0E1830] dark:text-foreground md:text-[1.85rem] lg:text-[clamp(2rem,2.4vw,2.375rem)]">
+              <span className="block">{t("sv.why.title1")}</span>
+              <span className="block text-[#FF7A00]">{t("sv.why.title2")}</span>
             </h2>
-            <div className="mt-5 space-y-4 text-base leading-relaxed text-foreground/90 dark:text-foreground/85">
+            <div className="mt-3 space-y-3 text-[1.02rem] leading-[1.55] text-[#1A2B4A] dark:text-foreground/90 md:text-[1.0625rem]">
               <p>{t("sv.why.p1")}</p>
               <p>{t("sv.why.p2")}</p>
             </div>

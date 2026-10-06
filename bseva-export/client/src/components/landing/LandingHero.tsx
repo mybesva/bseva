@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { LotusMark, MandalaOutline } from "./DevotionalPatterns";
 
 const NAVY = "#071A33";
-const HERO = "/images/landing/hero-approved.jpg?v=4";
+const HERO = "/images/landing/hero-approved.jpg?v=9";
 
 /**
  * Full-bleed cinematic hero. The photograph already contains the family,
@@ -37,41 +37,41 @@ export default function LandingHero() {
           height={1152}
           fetchPriority="high"
           decoding="async"
-          className="h-full w-full object-cover object-[62%_46%] xl:object-[50%_50%] 2xl:object-[50%_64%]"
+          className="h-full w-full object-cover object-center xl:object-[50%_54%] 2xl:object-[50%_62%]"
         />
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: `linear-gradient(90deg, ${NAVY} 0%, ${NAVY} 46%, ${NAVY}59 56%, ${NAVY}00 68%)`,
+            backgroundImage: `linear-gradient(90deg, ${NAVY} 0%, ${NAVY} 22%, ${NAVY}73 32%, ${NAVY}00 42%)`,
           }}
         />
         <MandalaOutline className="absolute -bottom-48 -left-40 h-[36rem] w-[36rem] text-white opacity-[0.055]" />
       </div>
 
-      <div className="relative z-10 flex lg:min-h-[calc(100svh-4.5rem)] lg:items-center xl:min-h-[calc(100svh-5.25rem)]">
-        <div className="w-full py-10 sm:py-12 lg:py-10 pl-[clamp(1.25rem,5.5vw,7.5rem)] pr-[clamp(1.25rem,4vw,4rem)]">
-          <div className="max-w-[40rem]">
-            <p className="flex items-center gap-3 text-[0.7rem] font-semibold uppercase leading-snug tracking-[0.16em] text-white sm:text-xs">
-              <span aria-hidden className="h-[2px] w-8 shrink-0 bg-[#FF7A00]" />
+      <div className="relative z-10 flex lg:min-h-[calc(100svh-4.5rem)] lg:items-center xl:min-h-[calc(100svh-5.5rem)]">
+        <div className="w-full py-10 sm:py-12 lg:-translate-y-2 lg:py-8 pl-[clamp(1.25rem,5.2vw,6.5rem)] pr-[clamp(1.25rem,4vw,4rem)]">
+          <div className="max-w-[37.5rem]">
+            <p className="flex items-center gap-3 text-[0.7rem] font-semibold uppercase leading-snug tracking-[0.18em] text-white sm:text-xs">
+              <span aria-hidden className="h-[2px] w-7 shrink-0 bg-[#FF7A00]" />
               <span>{t("lp.hero.eyebrow")}</span>
             </p>
 
             <h1
               id="lp-hero-title"
-              className="mt-4 font-display text-[clamp(2.15rem,4.15vw,3.9rem)] font-semibold leading-[1.04] tracking-tight"
+              className="mt-3.5 font-display text-[clamp(2rem,4vw,62px)] font-semibold leading-[1.02] tracking-tight lg:text-[clamp(48px,4vw,62px)]"
             >
               <span className={cn("block text-white", lockLines && "lg:whitespace-nowrap")}>{t("lp.hero.title1")}</span>
               <span className={cn("block text-[#FF7A00]", lockLines && "lg:whitespace-nowrap")}>{t("lp.hero.title2")}</span>
               <span className={cn("block text-white", lockLines && "lg:whitespace-nowrap")}>{t("lp.hero.title3")}</span>
             </h1>
 
-            <p className="mt-5 max-w-[32rem] text-[0.98rem] font-medium leading-relaxed text-white sm:text-[1.0625rem]">
+            <p className="mt-4 max-w-[33rem] text-base font-medium leading-normal text-white sm:text-[1.125rem] sm:leading-[1.5]">
               {t("lp.hero.desc")}
             </p>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/services">
-                <a className="inline-flex h-12 min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[#FF7A00] px-6 text-base font-bold text-[#0E1830] shadow-[0_8px_22px_-8px_rgba(255,122,0,0.75)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-8px_rgba(255,122,0,0.85)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
+                <a className="inline-flex h-12 min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[#FF7A00] px-6 text-base font-bold text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
                   {t("lp.cta.book")}
                   <ArrowRight size={18} aria-hidden className="lp-arrow" />
                 </a>
@@ -83,7 +83,7 @@ export default function LandingHero() {
               </Link>
             </div>
 
-            <TrustRow items={trust} className="mt-8 hidden lg:flex" />
+            <TrustRow items={trust} className="mt-7 hidden lg:flex" />
           </div>
         </div>
       </div>

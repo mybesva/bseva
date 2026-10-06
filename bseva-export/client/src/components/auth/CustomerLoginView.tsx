@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/PasswordInput";
+import DevotionalImageFrame from "@/components/DevotionalImageFrame";
 import { HangingDiya, LotusMark, MandalaOutline } from "@/components/landing/DevotionalPatterns";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
@@ -95,7 +96,7 @@ export default function CustomerLoginView({
   return (
     <section
       aria-labelledby={titleId}
-      className="relative flex flex-1 flex-col overflow-hidden bg-[#FDF6EC] text-[#0E1830] dark:bg-[#0B1424] dark:text-white"
+      className="soften-brand-mark relative flex flex-1 flex-col overflow-hidden bg-[#FDF6EC] text-[#0E1830] dark:bg-[#0B1424] dark:text-white"
     >
       <MandalaOutline className="absolute -left-36 -top-40 h-[28rem] w-[28rem] text-[#E8B15A] opacity-0 dark:opacity-[0.16]" />
       <MandalaOutline className="absolute -right-24 top-8 hidden h-80 w-80 text-[#E8B15A] opacity-[0.12] lg:block dark:opacity-[0.08]" />
@@ -103,33 +104,39 @@ export default function CustomerLoginView({
       <HangingDiya className={cn("absolute right-6 top-0 z-20 hidden h-28 w-10 text-[#D4922A] dark:text-[#FF7A00]/85", pujari ? "xl:block" : "lg:block")} />
       <HangingDiya className={cn("absolute right-20 top-0 z-20 hidden h-36 w-11 text-[#E0A04A] dark:text-[#FF7A00]/75", pujari ? "xl:block" : "lg:block")} />
 
-      <div className={cn("pointer-events-none absolute inset-y-0 left-0 hidden overflow-hidden", pujari ? "w-[24vw] max-w-[24rem] xl:block" : "w-[21vw] max-w-[22rem] lg:block")}>
-        <img
-          src={scene}
-          alt={t(pujari ? "pl.imgAlt" : "cl.imgAlt")}
-          width={pujari ? 750 : 618}
-          height={pujari ? 1284 : 1278}
-          fetchPriority="high"
-          decoding="async"
-          className="h-full w-full object-cover object-left dark:[mask-image:linear-gradient(to_bottom,transparent_0%,#000_22%)]"
-        />
-      </div>
-
-      <div className={cn("relative overflow-hidden", pujari ? "h-[8.5rem] sm:h-44 lg:h-56 xl:hidden" : "h-[8.5rem] sm:h-40 lg:hidden")}>
-        <img
-          src={scene}
-          alt={t(pujari ? "pl.imgAlt" : "cl.imgAlt")}
-          className={cn("h-full w-full object-cover", pujari ? "object-[18%_36%]" : "object-[22%_78%]")}
-        />
-        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-b from-transparent to-[#FDF6EC] dark:to-[#0B1424]" />
-      </div>
+      <div className="relative z-10 mx-auto my-auto flex w-full max-w-[100rem] flex-col px-5 py-6 sm:px-6 xl:px-14">
+        <div className="mb-6 flex justify-center xl:hidden">
+          <DevotionalImageFrame
+            src={scene}
+            alt={t(pujari ? "pl.imgAlt" : "cl.imgAlt")}
+            width={pujari ? 750 : 618}
+            height={pujari ? 1284 : 1278}
+            objectPosition={pujari ? "36% 55%" : "25% 90%"}
+            zoom={pujari ? 1.32 : 1.28}
+            priority
+            className="aspect-[2/3] w-[220px] sm:w-[250px]"
+          />
+        </div>
 
       <div className={cn(
-        "relative z-10 mx-auto my-auto flex w-full max-w-[100rem] flex-col gap-8 px-4 py-6 sm:px-6",
+        "flex w-full flex-col gap-8",
         pujari
-          ? "xl:flex-row xl:items-center xl:gap-8 xl:py-6 xl:pl-[clamp(20rem,25.4vw,26.5rem)] xl:pr-16"
-          : "lg:flex-row lg:items-center lg:gap-8 lg:py-6 lg:pl-[clamp(18rem,26vw,27rem)] lg:pr-24 xl:gap-12 xl:pr-28",
+          ? "xl:flex-row xl:items-center xl:gap-8"
+          : "lg:flex-row lg:items-center lg:gap-8 xl:gap-10",
       )}>
+        <div className="relative hidden shrink-0 self-center xl:block">
+          <MandalaOutline className="pointer-events-none absolute -inset-10 text-[#E8B15A] opacity-[0.14] dark:opacity-[0.08]" />
+          <DevotionalImageFrame
+            src={scene}
+            alt={t(pujari ? "pl.imgAlt" : "cl.imgAlt")}
+            width={pujari ? 750 : 618}
+            height={pujari ? 1284 : 1278}
+            objectPosition={pujari ? "36% 55%" : "25% 90%"}
+            zoom={pujari ? 1.32 : 1.28}
+            priority
+            className="aspect-[2/3] w-[300px] 2xl:w-[330px]"
+          />
+        </div>
         <div className="min-w-0 flex-1 lg:max-w-[34rem]">
           <p className="flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs">
             <span aria-hidden className="text-[#FF7A00]/80">—</span>
@@ -255,6 +262,7 @@ export default function CustomerLoginView({
           items={benefits}
           className={pujari ? "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-8 xl:hidden" : "hidden sm:grid sm:grid-cols-2 sm:gap-x-8 sm:gap-y-4 lg:hidden"}
         />
+      </div>
       </div>
     </section>
   );

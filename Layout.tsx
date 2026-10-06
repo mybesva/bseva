@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Phone, Mail, MapPin, Facebook, Instagram, Twitter, Youtube, Linkedin, MessageCircle } from "lucide-react";
+import { Menu, Phone, Mail, Facebook, Instagram, Twitter, Youtube, Linkedin, MessageCircle } from "lucide-react";
 import { useState } from "react";
 
 // Custom Pinterest icon since lucide doesn't have one
@@ -217,10 +217,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h3 className="font-heading font-bold text-lg mb-6 text-primary">Contact Info</h3>
             <ul className="space-y-4 text-sm text-sidebar-foreground/80">
-              <li className="flex items-start gap-3">
-                <MapPin className="mt-1 text-primary shrink-0" size={16} />
-                <span>123 Spiritual Avenue, Temple Road,<br />Bangalore, Karnataka 560001</span>
-              </li>
               <li className="flex items-center gap-3">
                 <Phone className="text-primary shrink-0" size={16} />
                 <span>+91 90146 54994</span>

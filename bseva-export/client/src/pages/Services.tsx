@@ -51,7 +51,7 @@ export default function Services() {
     <Layout>
       <ServicesHero />
 
-      <section className="relative bg-[#FFF8EE] pb-10 pt-6 dark:bg-background md:pb-14 md:pt-8">
+      <section className="relative bg-[#FFF8EE] pb-2 pt-6 dark:bg-background md:pt-8">
         <div className="container relative z-10">
           <SevaTypeTabs value={activeType} types={enabledTypes} onChange={selectType}>
             {activeType === "puja" ? (
