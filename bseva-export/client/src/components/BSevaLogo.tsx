@@ -43,7 +43,7 @@ const FULL_HEIGHT = {
   xl: "h-20",
   header: "h-12 sm:h-14 lg:h-[calc(7.5rem*0.95)]",
   /** Slim public header (landing redesign): stacked logo stays legible without a tall bar. */
-  nav: "h-[3.5rem] xl:h-[4.25rem]",
+  nav: "h-[4.55rem] xl:h-[5.5rem]",
   portal: "h-10 sm:h-11",
 } as const;
 
@@ -66,7 +66,7 @@ export default function BSevaLogo({
             : size === "portal"
               ? "max-w-[9.5rem]"
               : size === "nav"
-                ? "max-w-[5.5rem]"
+                ? "max-w-[6.5rem]"
               : "max-w-[min(100%,16rem)]",
           FULL_HEIGHT[size],
           className,

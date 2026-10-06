@@ -44,7 +44,7 @@ export default function LandingHero() {
         <MandalaOutline className="absolute -bottom-48 -left-40 h-[36rem] w-[36rem] text-white opacity-[0.055]" />
       </div>
 
-      <div className="relative z-10 flex lg:min-h-[calc(100svh-4.5rem)] lg:items-center xl:min-h-[calc(100svh-5.5rem)]">
+      <div className="relative z-10 flex lg:min-h-[calc(100svh-5rem)] lg:items-center xl:min-h-[calc(100svh-6.25rem)]">
         <div className="w-full py-10 sm:py-12 lg:-translate-y-[4.5svh] lg:py-8 pl-[clamp(1.25rem,5.55vw,12rem)] pr-[clamp(1.25rem,4vw,4rem)]">
           <div className="max-w-[37.5rem] lg:max-w-none">
             <p className="flex items-center gap-3 text-[0.7rem] font-semibold uppercase leading-snug tracking-[0.18em] text-white sm:text-xs lg:text-[clamp(12px,0.84vw,19px)]">
