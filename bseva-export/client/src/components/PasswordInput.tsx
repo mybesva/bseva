@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 
 type Props = React.ComponentProps<typeof Input> & {
   label?: string;
+  showLabel?: string;
+  hideLabel?: string;
 };
 
-export default function PasswordInput({ className, label, id, ...props }: Props) {
+export default function PasswordInput({ className, label, id, showLabel, hideLabel, ...props }: Props) {
   const [show, setShow] = useState(false);
   const inputId = id || "password";
   return (
@@ -25,7 +27,7 @@ export default function PasswordInput({ className, label, id, ...props }: Props)
         size="icon"
         className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
         onClick={() => setShow((s) => !s)}
-        aria-label={show ? "Hide password" : "Show password"}
+        aria-label={show ? hideLabel || "Hide password" : showLabel || "Show password"}
         tabIndex={-1}
       >
         {show ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}

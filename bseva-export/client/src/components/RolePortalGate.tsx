@@ -11,6 +11,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Sparkles } from "lucide-react";
+import CustomerLoginView from "@/components/auth/CustomerLoginView";
 import { useI18n } from "@/i18n/I18nProvider";
 import { errorKeyForCode } from "@bseva/locales";
 
@@ -137,6 +138,24 @@ export default function RolePortalGate({
         : null;
 
   const Icon = copy.Icon;
+
+  if ((role === "customer" || role === "priest") && registerHref) {
+    return (
+      <MarketingLayout>
+        <CustomerLoginView
+          variant={role === "priest" ? "pujari" : "customer"}
+          identifier={email}
+          password={password}
+          pending={pending}
+          onIdentifier={setEmail}
+          onPassword={setPassword}
+          onSubmit={onLogin}
+          registerHref={registerHref}
+          onSharedLogin={() => setLocation(`/login?role=${expected}`)}
+        />
+      </MarketingLayout>
+    );
+  }
 
   return (
     <MarketingLayout>

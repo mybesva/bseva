@@ -91,6 +91,36 @@ export function TempleOutline({ className }: SvgProps) {
   );
 }
 
+/** Hanging brass diya, gold line-art. Chain starts at y=0 so it can hang from the top edge. */
+export function HangingDiya({ className }: SvgProps) {
+  return (
+    <svg
+      viewBox="0 0 80 200"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable="false"
+      className={cn("pointer-events-none select-none", className)}
+    >
+      <path d="M40 0 V28" />
+      <circle cx="40" cy="33" r="3" />
+      <path d="M40 36 V52" />
+      <circle cx="40" cy="57" r="2.2" />
+      <path d="M40 59 V74" />
+      <path d="M40 74 C28 74 22 86 24 96" />
+      <path d="M40 74 C52 74 58 86 56 96" />
+      <path d="M18 100 H62" />
+      <path d="M20 100 C18 118 26 132 40 136 C54 132 62 118 60 100" />
+      <path d="M28 100 C30 112 50 112 52 100" />
+      <path d="M40 96 C34 86 37 76 40 70 C43 76 46 86 40 96 Z" fill="currentColor" stroke="none" />
+      <path d="M40 90 C38.2 84 40 78 40 78 C40 78 41.8 84 40 90 Z" fill="#FFF8E7" stroke="none" />
+    </svg>
+  );
+}
+
 /** Small lotus mark used as a section ornament. */
 export function LotusMark({ className }: SvgProps) {
   return (

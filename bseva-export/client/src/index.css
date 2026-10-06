@@ -59,8 +59,9 @@
 }
 
 :root {
-  /* Page width. Normal desktops stay at 80rem. Larger monitors get a wider
-     centered column; 4K does not stretch edge to edge. */
+  /* Page width. Through 1536px the public column stays capped so a normal
+     desktop matches the designed layout. From 1920px that cap is lifted and
+     gutters keep the content off the screen edges. Admin uses --admin-max. */
   --page-gutter: 1rem;
   --page-max: 80rem;
   --header-max: 90rem;
@@ -152,16 +153,12 @@
 @media (min-width: 1920px) {
   :root {
     --page-gutter: 2.5rem;
-    --page-max: 105rem;
-    --header-max: 105rem;
     --admin-max: 120rem;
   }
 }
 
 @media (min-width: 2560px) {
   :root {
-    --page-max: 120rem;
-    --header-max: 120rem;
     --admin-max: 130rem;
   }
 }
@@ -170,6 +167,18 @@
    Sections that set their own max-w-* keep that narrower measure. */
 html body .container:not([class*="max-w-"]) {
   max-width: var(--page-max);
+}
+
+/* Public column tracks the viewport from 1920px up. Same specificity as the
+   container rule above, and later, so it wins there. Unlayered, so it also
+   beats the layered .page-header / .app-canvas caps. max-w-* containers,
+   readable text measures, and .admin-canvas are untouched. */
+@media (min-width: 1920px) {
+  html body .container:not([class*="max-w-"]),
+  .page-header,
+  .app-canvas {
+    max-width: none;
+  }
 }
 
 .dark {
@@ -740,6 +749,10 @@ html body .container:not([class*="max-w-"]) {
     border-radius: inherit;
     background-color: var(--primary);
     color: var(--primary-foreground);
+  }
+
+  .book-puja-nav-cta-ink {
+    color: #0E1830;
   }
 
   .book-puja-nav-cta-compact {

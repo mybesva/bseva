@@ -215,7 +215,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 xl:ml-0">
             <Link href="/services">
               <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
-                <span className="book-puja-nav-cta book-puja-nav-cta-compact xl:h-11 xl:px-5 xl:text-[0.9375rem]">
+                <span className={cn(
+                  "book-puja-nav-cta book-puja-nav-cta-compact xl:h-11 xl:px-5 xl:text-[0.9375rem]",
+                  location === "/" && "book-puja-nav-cta-ink",
+                )}>
                   {t("nav.bookPuja")}
                 </span>
               </a>
@@ -309,7 +312,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className="flex flex-1 flex-col">{children}</main>
 
       <footer className="relative overflow-hidden bg-sidebar text-white">
         <MandalaOutline className="absolute -bottom-48 -right-40 h-[30rem] w-[30rem] text-white opacity-[0.05]" />
