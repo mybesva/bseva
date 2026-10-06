@@ -62,36 +62,41 @@ export default function About() {
       <AboutEssenceCards />
 
       <section className="relative overflow-hidden bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-story-title">
-        <MandalaOutline className="absolute -right-24 top-10 hidden h-80 w-80 text-[#E8B15A] opacity-[0.14] lg:block dark:opacity-[0.08]" />
-        <div className="container relative grid items-center gap-10 py-12 md:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-16">
+        {/* Faint mandala behind the photo's upper-right corner, cropped by the section edge */}
+        <MandalaOutline className="pointer-events-none absolute -right-[6vw] top-[2%] hidden h-[clamp(18rem,24vw,30rem)] w-[clamp(18rem,24vw,30rem)] text-[#E8B15A] opacity-[0.16] lg:block dark:opacity-[0.08]" />
+        <div className="relative mx-auto grid w-full max-w-[1920px] items-center gap-10 px-5 py-12 sm:px-8 md:py-14 lg:grid-cols-[minmax(0,515fr)_minmax(0,886fr)] lg:gap-[2.35vw] lg:pl-[3.7vw] lg:pr-[2.75vw] lg:py-[clamp(4rem,10.8vw,11rem)]">
           <div>
-            <p className="flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs">
-              <span aria-hidden>—</span>
+            <p className="flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.2em] text-[#FF7A00] lg:text-[clamp(12px,1.04vw,18px)]">
+              <span aria-hidden className="h-[2px] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
               {t("ab.storyEyebrow")}
-              <span aria-hidden>—</span>
+              <span aria-hidden className="h-[2px] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
             </p>
-            <h2 id="about-story-title" className="mt-3 text-[clamp(1.5rem,1rem+1vw,1.875rem)] font-bold leading-[1.2] tracking-tight">
-              <span className="block text-[#0E1830] dark:text-white">{t("ab.story1")}</span>
-              <span className="block text-[#FF7A00]">{t("ab.story2")}</span>
+            <h2
+              id="about-story-title"
+              className="mt-4 text-[clamp(1.9rem,7vw,2.6rem)] font-extrabold leading-[1.1] tracking-[-0.03em] lg:mt-[1.9vw] lg:text-[clamp(34px,3.26vw,62px)] lg:leading-[1.1]"
+            >
+              <span className="block text-[#071A33] dark:text-white">{t("ab.story1")}</span>
+              <span className="block text-[#FF7A00] lg:whitespace-pre-line">{t("ab.story2")}</span>
             </h2>
-            <div className="mt-5 max-w-xl space-y-4 text-[15px] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0] sm:text-base">
-              <p>{t("ab.storyP1")}</p>
-              <p>{t("ab.storyP2")}</p>
-              <p>{t("ab.storyP3")}</p>
+            <div className="mt-5 space-y-[1.15em] text-base font-medium leading-[1.5] text-[#071A33] dark:text-[#E8ECF0] lg:mt-[2.4vw] lg:max-w-[27em] lg:text-[clamp(15px,1.24vw,23px)] lg:leading-[1.45]">
+              <p>{renderEmphasis(t("ab.storyP1"))}</p>
+              <p>{renderEmphasis(t("ab.storyP2"))}</p>
+              <p>{renderEmphasis(t("ab.storyP3"))}</p>
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-xl lg:mx-0">
-            <span aria-hidden className="absolute -left-2.5 -top-2.5 h-14 w-14 rounded-tl-2xl border-l-[3px] border-t-[3px] border-[#FF7A00]" />
-            <span aria-hidden className="absolute -bottom-2.5 -right-2.5 h-14 w-14 rounded-br-2xl border-b-[3px] border-r-[3px] border-[#FF7A00]" />
+          <div className="relative mx-auto w-full max-w-2xl lg:max-w-none">
+            {/* Orange L-brackets sitting just outside the photo's top-left and bottom-right corners */}
+            <span aria-hidden className="pointer-events-none absolute -left-3 -top-3 h-16 w-16 rounded-tl-[18px] border-l-[3px] border-t-[3px] border-[#FF7A00] lg:-left-[1.25vw] lg:-top-[1.1vw] lg:h-[clamp(4rem,5.6vw,7rem)] lg:w-[clamp(4rem,5.8vw,7.25rem)] lg:rounded-tl-[22px] lg:border-l-4 lg:border-t-4" />
+            <span aria-hidden className="pointer-events-none absolute -bottom-3 -right-3 h-16 w-16 rounded-br-[18px] border-b-[3px] border-r-[3px] border-[#FF7A00] lg:-bottom-[1.3vw] lg:-right-[1.05vw] lg:h-[clamp(4rem,5.6vw,7rem)] lg:w-[clamp(4rem,6.2vw,7.75rem)] lg:rounded-br-[22px] lg:border-b-4 lg:border-r-4" />
             <img
-              src="/images/about-story-aarti.jpg"
+              src="/images/about-story-guidance.webp"
               alt={t("ab.storyAlt")}
-              width={2400}
-              height={1339}
+              width={1796}
+              height={1412}
               loading="lazy"
               decoding="async"
-              className="aspect-[4/3] w-full rounded-2xl object-cover object-[40%_center]"
+              className="relative aspect-[898/706] w-full rounded-[18px] object-cover object-[58%_center] lg:rounded-[22px]"
             />
           </div>
         </div>
@@ -161,5 +166,18 @@ export default function About() {
         </div>
       </section>
     </Layout>
+  );
+}
+
+/** Renders **bold** markers from translation strings (used for key phrases in the story copy). */
+function renderEmphasis(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={i} className="font-extrabold">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      part
+    ),
   );
 }

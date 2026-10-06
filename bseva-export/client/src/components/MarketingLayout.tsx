@@ -369,7 +369,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                     rel="noopener noreferrer"
                     aria-label={social.label}
                     title={social.label}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 text-white transition-colors hover:border-brand-orange hover:bg-brand-orange hover:text-[#0E1830] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-[transform,filter] hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+                    style={social.gradient ? { backgroundImage: social.gradient } : { backgroundColor: social.color ?? undefined }}
                   >
                     <social.icon size={17} />
                   </a>

@@ -199,7 +199,7 @@ export default function Contact() {
       <section
         aria-labelledby="contact-hero-title"
         className="contact-hero-banner relative isolate overflow-hidden text-white"
-        style={{ backgroundColor: "#172946" }}
+        style={{ backgroundColor: "#051831" }}
       >
         {/* Soft lighter vignette + mandala texture on the navy side, as in the reference */}
         <div
@@ -207,12 +207,12 @@ export default function Contact() {
           className="absolute inset-0"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 45% 85% at 0% 30%, rgba(80,100,130,0.35) 0%, rgba(23,41,70,0) 70%), radial-gradient(ellipse 40% 70% at 35% 100%, rgba(10,25,50,0.55) 0%, rgba(23,41,70,0) 70%)",
+              "radial-gradient(ellipse 45% 85% at 0% 30%, rgba(60,80,110,0.12) 0%, rgba(5,24,49,0) 70%)",
           }}
         />
-        <MandalaOutline className="pointer-events-none absolute -left-40 -top-32 h-[30rem] w-[30rem] text-white opacity-[0.09]" />
-        <MandalaOutline className="pointer-events-none absolute -bottom-48 left-[22%] h-[26rem] w-[26rem] text-white opacity-[0.06]" />
-        <MandalaOutline className="pointer-events-none absolute -top-40 left-[38%] hidden h-[22rem] w-[22rem] text-white opacity-[0.05] lg:block" />
+        <MandalaOutline className="pointer-events-none absolute -left-40 -top-32 h-[30rem] w-[30rem] text-white opacity-[0.045]" />
+        <MandalaOutline className="pointer-events-none absolute -bottom-48 left-[22%] h-[26rem] w-[26rem] text-white opacity-[0.035]" />
+        <MandalaOutline className="pointer-events-none absolute -top-40 left-[38%] hidden h-[22rem] w-[22rem] text-white opacity-[0.03] lg:block" />
         {/* Photo fades into the navy instead of starting on a hard edge */}
         <img
           src="/images/contact-hero-temple.webp"
@@ -227,7 +227,7 @@ export default function Contact() {
           className="absolute inset-0 lg:hidden"
           style={{
             backgroundImage:
-              "linear-gradient(90deg, rgba(23,41,70,0.96) 0%, rgba(23,41,70,0.85) 50%, rgba(23,41,70,0.35) 100%)",
+              "linear-gradient(90deg, rgba(5,24,49,0.97) 0%, rgba(5,24,49,0.88) 50%, rgba(5,24,49,0.35) 100%)",
           }}
         />
         <div className="relative z-10 mx-auto flex h-[430px] w-full max-w-[1920px] items-center px-[7%] sm:h-[450px] lg:h-[clamp(330px,22.5vw,440px)]">

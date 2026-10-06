@@ -9,8 +9,8 @@ import { HangingDiya, LotusMark, MandalaOutline } from "@/components/landing/Dev
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
-const CUSTOMER_SCENE = "/images/customer-login-scene.png";
-const PUJARI_SCENE = "/images/pujari-login-scene.png";
+const CUSTOMER_SCENE = "/images/customer-login-scene-clean.webp";
+const PUJARI_SCENE = "/images/pujari-login-scene-clean.webp";
 
 const fieldClass =
   "h-11 rounded-lg border-[#E4D5C3] bg-white pl-10 text-[15px] font-medium text-[#0E1830] shadow-none placeholder:text-[#5C6578] focus-visible:border-[#FF7A00] focus-visible:ring-[#FF7A00]/35 dark:border-[#2F4568] dark:bg-[#0E1A2E] dark:text-white dark:placeholder:text-[#C5D0DE]";
@@ -111,10 +111,9 @@ export default function CustomerLoginView({
             alt={t(pujari ? "pl.imgAlt" : "cl.imgAlt")}
             width={pujari ? 750 : 618}
             height={pujari ? 1284 : 1278}
-            objectPosition={pujari ? "36% 55%" : "25% 90%"}
-            zoom={pujari ? 1.32 : 1.28}
+            objectPosition={pujari ? "30% 0%" : "50% 72%"}
             priority
-            className="aspect-[2/3] w-[220px] sm:w-[250px]"
+            className="aspect-[25/36] w-[220px] sm:w-[250px]"
           />
         </div>
 
@@ -131,10 +130,9 @@ export default function CustomerLoginView({
             alt={t(pujari ? "pl.imgAlt" : "cl.imgAlt")}
             width={pujari ? 750 : 618}
             height={pujari ? 1284 : 1278}
-            objectPosition={pujari ? "36% 55%" : "25% 90%"}
-            zoom={pujari ? 1.32 : 1.28}
+            objectPosition={pujari ? "30% 0%" : "50% 72%"}
             priority
-            className="aspect-[2/3] w-[300px] 2xl:w-[330px]"
+            className="aspect-[25/36] w-[300px] 2xl:w-[330px]"
           />
         </div>
         <div className="min-w-0 flex-1 lg:max-w-[34rem]">

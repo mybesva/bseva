@@ -21,8 +21,9 @@ export default function ServicesWhyChoose() {
               alt={t("sv.why.imgAlt")}
               width={832}
               height={768}
-              objectPosition="center 56%"
-              className="aspect-[4/5] w-full"
+              objectPosition="50% 0%"
+              headroom={0.16}
+              className="aspect-[25/34] w-full"
             />
           </div>
 
