@@ -242,7 +242,7 @@ export default function Contact() {
               <span className="text-white">{t("ct.hero1")} </span>
               <span className="text-[#FF7A00]">{t("ct.hero2")}</span>
             </h1>
-            <p className="mt-4 max-w-[34rem] text-[17px] font-medium leading-[1.55] text-white/90 antialiased lg:mt-[1.6vw] lg:max-w-[30.6em] lg:text-[clamp(18px,1.17vw,22px)] lg:leading-[1.6]">
+            <p className="mt-4 max-w-[34rem] text-[17px] font-medium leading-[1.55] text-white/90 antialiased lg:mt-[1.6vw] lg:max-w-none lg:whitespace-pre-line lg:text-[clamp(18px,1.17vw,22px)] lg:leading-[1.6]">
               {t("ct.heroDesc")}
             </p>
           </div>

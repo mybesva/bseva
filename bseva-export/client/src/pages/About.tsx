@@ -23,42 +23,36 @@ export default function About() {
       <section
         aria-labelledby="about-hero-title"
         className="about-hero-banner relative isolate overflow-hidden text-white"
-        style={{ backgroundColor: "#041B39" }}
+        style={{ backgroundColor: "#051831" }}
       >
+        {/* Photo fades into the navy instead of starting on a hard edge */}
         <img
-          src="/images/about-hero-temple.jpg"
+          src="/images/about-hero-temple.webp"
           alt={t("ab.heroAlt")}
-          width={816}
-          height={464}
+          width={1292}
+          height={740}
           fetchPriority="high"
           decoding="async"
-          className="pointer-events-none absolute inset-y-0 right-0 h-full w-[86%] max-w-none object-cover object-[62%_40%] sm:w-[72%] lg:w-[56%] lg:object-[42%_34%]"
+          className="pointer-events-none absolute inset-y-0 right-0 h-full w-[88%] max-w-none object-cover object-[62%_40%] [mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.55)_25%,#000_45%)] sm:w-[72%] lg:w-[50%] lg:object-[100%_50%] lg:[mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.55)_9%,#000_22%)]"
         />
         <div
           className="absolute inset-0 lg:hidden"
           style={{
             backgroundImage:
-              "linear-gradient(90deg, rgba(4,27,57,0.97) 0%, rgba(4,27,57,0.92) 42%, rgba(4,27,57,0.72) 68%, rgba(4,27,57,0.28) 100%)",
-          }}
-        />
-        <div
-          className="absolute inset-0 hidden lg:block"
-          style={{
-            backgroundImage:
-              "linear-gradient(90deg, rgba(4,27,57,0.98) 0%, rgba(4,27,57,0.95) 30%, rgba(4,27,57,0.75) 47%, rgba(4,27,57,0.30) 61%, rgba(4,27,57,0.05) 75%)",
+              "linear-gradient(90deg, rgba(5,24,49,0.97) 0%, rgba(5,24,49,0.9) 45%, rgba(5,24,49,0.6) 70%, rgba(5,24,49,0.25) 100%)",
           }}
         />
 
-        <div className="relative z-10 mx-auto flex h-[440px] w-full max-w-[1740px] items-center px-5 sm:h-[460px] sm:px-8 lg:h-[370px] lg:px-[7vw] xl:h-[390px]">
-          <div className="w-full max-w-[40rem] lg:max-w-[760px]">
-            <p className="inline-flex rounded-full border border-white/30 bg-[#041B39]/35 px-3.5 py-1 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#FF7A00] lg:text-[14px] lg:tracking-[0.12em]">
+        <div className="relative z-10 mx-auto flex h-[440px] w-full max-w-[1920px] items-center px-5 sm:h-[460px] sm:px-8 lg:h-[clamp(350px,26.6vw,500px)] lg:px-[7.2%]">
+          <div className="w-full max-w-[40rem] lg:max-w-[58%]">
+            <p className="inline-flex rounded-full border border-white/25 bg-white/[0.06] px-3.5 py-1 text-[12px] font-bold uppercase tracking-[0.14em] text-[#FF7A00] lg:px-[1em] lg:py-[0.3em] lg:text-[clamp(13px,0.95vw,16px)]">
               {t("ab.eyebrow")}
             </p>
-            <h1 id="about-hero-title" className="mt-6 font-sans text-[clamp(2rem,4vw,2.5rem)] font-extrabold leading-[1.1] tracking-tight lg:mt-7 lg:text-[clamp(42px,4vw,64px)] lg:leading-[1.08]">
-              <span className="block text-white">{t("ab.hero1")}</span>
-              <span className="block text-[#FF7A00]">{t("ab.hero2")}</span>
+            <h1 id="about-hero-title" className="mt-5 font-sans text-[clamp(2rem,6vw,2.5rem)] font-extrabold leading-[1.1] tracking-[-0.02em] lg:mt-[1.15vw] lg:text-[clamp(44px,4vw,72px)] lg:leading-[1.08]">
+              <span className="block text-white lg:whitespace-nowrap">{t("ab.hero1")}</span>
+              <span className="block text-[#FF7A00] lg:whitespace-nowrap">{t("ab.hero2")}</span>
             </h1>
-            <p className="mt-6 max-w-[34rem] text-[17px] font-medium leading-[1.5] text-white/90 lg:mt-7 lg:max-w-[38rem] lg:text-[18px]">
+            <p className="mt-5 max-w-[34rem] text-[17px] font-medium leading-[1.6] text-white/90 antialiased lg:mt-[1.35vw] lg:max-w-none lg:whitespace-pre-line lg:text-[clamp(16px,1.3vw,22px)] lg:leading-[1.65]">
               {t("ab.heroDesc")}
             </p>
           </div>

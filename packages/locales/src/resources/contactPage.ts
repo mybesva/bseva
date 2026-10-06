@@ -13,7 +13,7 @@ const ROWS: readonly Row[] = [
   ["ct.hero2", "Help You", "आपकी मदद के लिए", "మీకు సహాయం చేయడానికి", "तुमची मदत करण्यासाठी", "உங்களுக்கு உதவ", "ನಿಮಗೆ ಸಹಾಯ ಮಾಡಲು", "നിങ്ങളെ സഹായിക്കാൻ"],
   [
     "ct.heroDesc",
-    "Have questions about our services, need help with a booking, or want to partner with us? Our support team is always ready to assist you.",
+    "Have questions about our services, need help with a booking, or\nwant to partner with us? Our support team is always ready\nto assist you.",
     "सेवाओं के बारे में सवाल हैं, बुकिंग में मदद चाहिए, या हमारे साथ जुड़ना चाहते हैं? हमारी सहायता टीम हमेशा तैयार है।",
     "మా సేవల గురించి ప్రశ్నలా, బుకింగ్‌లో సహాయమా, లేదా భాగస్వామ్యమా? మా మద్దతు బృందం సిద్ధంగా ఉంది.",
     "सेवांबद्दल प्रश्न आहेत, बुकिंगसाठी मदत हवी आहे, किंवा आमच्यासोबत जोडायचे आहे? आमची मदत टीम तयार आहे.",

@@ -13,7 +13,7 @@ const ROWS: readonly Row[] = [
   ["ab.hero2", "Tradition and Modern Life", "परंपरा और आधुनिक जीवन", "సంప్రదాయం మరియు ఆధునిక జీవితం", "परंपरा आणि आधुनिक जीवन", "பாரம்பரியம் மற்றும் நவீன வாழ்க்கை", "ಸಂಪ್ರದಾಯ ಮತ್ತು ಆಧುನಿಕ ಜೀವನ", "പാരമ്പര്യവും ആധുനിക ജീവിതവും"],
   [
     "ab.heroDesc",
-    "B-Seva was created with a simple belief: tradition remains alive when people understand it, trust the people who carry it, and can participate in it meaningfully.",
+    "B-Seva was created with a simple belief: tradition remains alive\nwhen people understand it, trust the people who carry it,\nand can participate in it meaningfully.",
     "B-Seva एक सरल विश्वास से बना: परंपरा तब जीवित रहती है जब लोग उसे समझें, उसे आगे बढ़ाने वालों पर भरोसा करें, और उसमें सार्थक रूप से भाग ले सकें।",
     "B-Seva ఒక సరళమైన నమ్మకంతో పుట్టింది: సంప్రదాయం అర్థమైనప్పుడు, దాన్ని మోసే వారిని నమ్మినప్పుడు, అర్థవంతంగా పాల్గొనగలిగినప్పుడు అది సజీవంగా ఉంటుంది.",
     "B-Seva एका साध्या श्रद्धेतून जन्मला: परंपरा तेव्हा जिवंत राहते जेव्हा लोक तिला समजतात, तिला पुढे नेणाऱ्यांवर विश्वास ठेवतात आणि तिच्यात अर्थपूर्ण सहभाग घेऊ शकतात.",
