@@ -199,41 +199,50 @@ export default function Contact() {
       <section
         aria-labelledby="contact-hero-title"
         className="contact-hero-banner relative isolate overflow-hidden text-white"
-        style={{ backgroundColor: "#051E3D" }}
+        style={{ backgroundColor: "#172946" }}
       >
-        {/* Faint mandala texture on the navy side, as in the reference */}
-        <MandalaOutline className="pointer-events-none absolute -left-24 -top-28 h-[26rem] w-[26rem] text-white opacity-[0.05]" />
-        <MandalaOutline className="pointer-events-none absolute -bottom-40 left-[30%] h-[24rem] w-[24rem] text-white opacity-[0.04]" />
+        {/* Soft lighter vignette + mandala texture on the navy side, as in the reference */}
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 45% 85% at 0% 30%, rgba(80,100,130,0.35) 0%, rgba(23,41,70,0) 70%), radial-gradient(ellipse 40% 70% at 35% 100%, rgba(10,25,50,0.55) 0%, rgba(23,41,70,0) 70%)",
+          }}
+        />
+        <MandalaOutline className="pointer-events-none absolute -left-40 -top-32 h-[30rem] w-[30rem] text-white opacity-[0.09]" />
+        <MandalaOutline className="pointer-events-none absolute -bottom-48 left-[22%] h-[26rem] w-[26rem] text-white opacity-[0.06]" />
+        <MandalaOutline className="pointer-events-none absolute -top-40 left-[38%] hidden h-[22rem] w-[22rem] text-white opacity-[0.05] lg:block" />
         {/* Photo fades into the navy instead of starting on a hard edge */}
         <img
-          src="/images/contact-hero-ganesha.webp"
+          src="/images/contact-hero-temple.webp"
           alt={t("ct.heroAlt")}
-          width={696}
-          height={558}
+          width={1674}
+          height={768}
           fetchPriority="high"
           decoding="async"
-          className="pointer-events-none absolute inset-y-0 right-0 h-full w-[84%] max-w-none object-cover object-[70%_48%] [mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.55)_22%,#000_42%)] sm:w-[72%] lg:w-[58%] lg:object-[60%_44%] lg:[mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.6)_14%,#000_30%)]"
+          className="pointer-events-none absolute inset-y-0 right-0 h-full w-[90%] max-w-none object-cover object-[78%_50%] [mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.55)_25%,#000_45%)] sm:w-[75%] lg:w-[52%] lg:object-center lg:[mask-image:linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.65)_9%,#000_20%)]"
         />
         <div
           className="absolute inset-0 lg:hidden"
           style={{
             backgroundImage:
-              "linear-gradient(90deg, rgba(5,30,61,0.96) 0%, rgba(5,30,61,0.86) 50%, rgba(5,30,61,0.35) 100%)",
+              "linear-gradient(90deg, rgba(23,41,70,0.96) 0%, rgba(23,41,70,0.85) 50%, rgba(23,41,70,0.35) 100%)",
           }}
         />
-        <div className="relative z-10 mx-auto flex h-[430px] w-full max-w-[1600px] items-center px-[6.5%] sm:h-[450px] lg:h-[390px] xl:h-[400px]">
-          <div className="max-w-[40rem] lg:max-w-[50%]">
-            <p className="inline-flex rounded-full border-[1.5px] border-[#FF7A00] px-5 py-1.5 text-[13px] font-bold uppercase tracking-[0.16em] text-[#FF7A00] lg:px-6 lg:py-2 lg:text-[15px]">
+        <div className="relative z-10 mx-auto flex h-[430px] w-full max-w-[1920px] items-center px-[7%] sm:h-[450px] lg:h-[clamp(330px,22.5vw,440px)]">
+          <div className="max-w-[40rem] lg:max-w-[46%]">
+            <p className="inline-flex rounded-full border-[1.5px] border-[#FF7A00] px-5 py-1.5 text-[13px] font-bold uppercase tracking-[0.16em] text-[#FF7A00] lg:px-[1.6em] lg:py-[0.45em] lg:text-[clamp(14px,0.95vw,17px)]">
               {t("ct.eyebrow")}
             </p>
             <h1
               id="contact-hero-title"
-              className={`mt-5 font-sans text-[clamp(2rem,6vw,2.6rem)] font-extrabold leading-[1.08] tracking-[-0.02em] lg:mt-6 lg:text-[clamp(50px,4.1vw,64px)] ${lang === "en" ? "lg:whitespace-nowrap" : ""}`}
+              className={`mt-5 font-sans text-[clamp(2rem,6vw,2.6rem)] font-extrabold leading-[1.08] tracking-[-0.025em] lg:mt-[1.1vw] lg:text-[clamp(48px,3.85vw,72px)] ${lang === "en" ? "lg:whitespace-nowrap" : ""}`}
             >
               <span className="text-white">{t("ct.hero1")} </span>
               <span className="text-[#FF7A00]">{t("ct.hero2")}</span>
             </h1>
-            <p className="mt-4 max-w-[34rem] text-[17px] font-medium leading-[1.55] text-white/90 lg:mt-6 lg:max-w-[37rem] lg:text-[20px]">
+            <p className="mt-4 max-w-[34rem] text-[17px] font-medium leading-[1.55] text-white/90 antialiased lg:mt-[1.6vw] lg:max-w-[30.6em] lg:text-[clamp(18px,1.17vw,22px)] lg:leading-[1.6]">
               {t("ct.heroDesc")}
             </p>
           </div>
