@@ -65,25 +65,19 @@ function isNavItemActive(path: string, location: string, search: string): boolea
   return false;
 }
 
+/** Phone + email block for the mobile menu sheet. The desktop header intentionally
+ *  omits it so the header looks the same on every screen size (footer keeps both). */
 function HeaderContact({
   phoneHref,
   phoneDisplay,
   email,
-  compact = false,
 }: {
   phoneHref: string;
   phoneDisplay: string;
   email: string;
-  compact?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        compact
-          ? "flex flex-col gap-3 text-sm font-semibold"
-          : "hidden min-[1500px]:flex flex-col justify-center gap-0.5 text-[11px] font-semibold leading-tight text-foreground",
-      )}
-    >
+    <div className="flex flex-col gap-3 text-sm font-semibold">
       <a
         href={phoneHref}
         className="inline-flex items-center gap-1.5 min-h-8 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
@@ -94,13 +88,11 @@ function HeaderContact({
       </a>
       <a
         href={`mailto:${email}`}
-        className={cn(
-          "inline-flex items-center gap-1.5 min-h-8 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm",
-        )}
+        className="inline-flex items-center gap-1.5 min-h-8 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
         aria-label={`Email ${email}`}
       >
         <Mail size={13} className="shrink-0" aria-hidden />
-        <span className={cn(!compact && "whitespace-nowrap")}>{email}</span>
+        <span>{email}</span>
       </a>
     </div>
   );
@@ -230,7 +222,6 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <LanguageSelect triggerClassName="h-10 w-[7.5rem] text-[13px] font-semibold xl:w-[8.5rem]" />
             </div>
             <ThemeToggle className="h-10 w-10 shrink-0" />
-            <HeaderContact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
             {user && (
               <Button
                 variant="outline"
@@ -252,8 +243,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[min(22rem,92vw)] overflow-y-auto bg-background border-l-border">
-                <div className="flex flex-col gap-7 mt-8">
+              <SheetContent side="right" className="w-[min(22rem,92vw)] overflow-y-auto bg-background border-l-border px-6 pb-8">
+                {/* shrink-0: the sheet is a fixed-height flex column; without it a tall menu (large
+                    phone text) gets squeezed and the Services sub-list collapses over the next links. */}
+                <div className="mt-8 flex shrink-0 flex-col gap-7">
                   <Link href="/">
                     <a className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
                       <BSevaLogo variant="full" size="lg" />
@@ -306,7 +299,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                     )}
                   </nav>
                   <div className="pt-4 border-t border-border">
-                    <HeaderContact compact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
+                    <HeaderContact phoneHref={phoneHref} phoneDisplay={phoneDisplay} email={supportEmail} />
                   </div>
                 </div>
               </SheetContent>

@@ -1,15 +1,19 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, ShieldCheck, Users } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { LotusMark, MandalaOutline } from "./DevotionalPatterns";
+import LandingHeroAppPreview from "./LandingHeroAppPreview";
 
 const NAVY = "#071A33";
 const HERO = "/images/landing/hero-approved.jpg?v=9";
 
 /**
  * Full-bleed cinematic hero. The photograph already contains the family,
- * Pujari, havan, and the grounded B-SEVA phone — do not overlay another device.
+ * Pujari, havan, and the grounded B-SEVA phone. On desktop that phone is redrawn
+ * in vector exactly over itself (see LandingHeroAppPreview) so its border and UI stay
+ * crisp — never add a second device elsewhere.
  * A navy wash covers the left of that artwork so the real (translated) copy
  * sits on top without doubling the type baked into the picture.
  */
@@ -30,15 +34,7 @@ export default function LandingHero() {
       style={{ backgroundColor: NAVY }}
     >
       <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden>
-        <img
-          src={HERO}
-          alt=""
-          width={2048}
-          height={1152}
-          fetchPriority="high"
-          decoding="async"
-          className="h-full w-full object-cover object-center xl:object-[50%_54%] 2xl:object-[50%_62%]"
-        />
+        <HeroPhotoStage />
         <div
           className="absolute inset-0"
           style={{
@@ -49,41 +45,41 @@ export default function LandingHero() {
       </div>
 
       <div className="relative z-10 flex lg:min-h-[calc(100svh-4.5rem)] lg:items-center xl:min-h-[calc(100svh-5.5rem)]">
-        <div className="w-full py-10 sm:py-12 lg:-translate-y-2 lg:py-8 pl-[clamp(1.25rem,5.2vw,6.5rem)] pr-[clamp(1.25rem,4vw,4rem)]">
-          <div className="max-w-[37.5rem]">
-            <p className="flex items-center gap-3 text-[0.7rem] font-semibold uppercase leading-snug tracking-[0.18em] text-white sm:text-xs">
-              <span aria-hidden className="h-[2px] w-7 shrink-0 bg-[#FF7A00]" />
+        <div className="w-full py-10 sm:py-12 lg:-translate-y-[4.5svh] lg:py-8 pl-[clamp(1.25rem,5.55vw,12rem)] pr-[clamp(1.25rem,4vw,4rem)]">
+          <div className="max-w-[37.5rem] lg:max-w-none">
+            <p className="flex items-center gap-3 text-[0.7rem] font-semibold uppercase leading-snug tracking-[0.18em] text-white sm:text-xs lg:text-[clamp(12px,0.84vw,19px)]">
+              <span aria-hidden className="h-[2px] w-7 shrink-0 bg-[#FF7A00] lg:w-[clamp(28px,1.95vw,44px)]" />
               <span>{t("lp.hero.eyebrow")}</span>
             </p>
 
             <h1
               id="lp-hero-title"
-              className="mt-3.5 font-display text-[clamp(2rem,4vw,62px)] font-semibold leading-[1.02] tracking-tight lg:text-[clamp(48px,4vw,62px)]"
+              className="mt-3.5 font-display text-[clamp(2rem,4vw,62px)] font-semibold leading-[1.02] tracking-tight lg:mt-[clamp(20px,1.39vw,32px)] lg:text-[clamp(46px,3.92vw,112px)] lg:leading-[1.14]"
             >
               <span className={cn("block text-white", lockLines && "lg:whitespace-nowrap")}>{t("lp.hero.title1")}</span>
               <span className={cn("block text-[#FF7A00]", lockLines && "lg:whitespace-nowrap")}>{t("lp.hero.title2")}</span>
               <span className={cn("block text-white", lockLines && "lg:whitespace-nowrap")}>{t("lp.hero.title3")}</span>
             </h1>
 
-            <p className="mt-4 max-w-[33rem] text-base font-medium leading-normal text-white sm:text-[1.125rem] sm:leading-[1.5]">
+            <p className="mt-4 max-w-[33rem] text-base font-medium leading-normal text-white sm:text-[1.125rem] sm:leading-[1.5] lg:mt-3 lg:max-w-[29.5em] lg:text-[clamp(16px,1.18vw,30px)] lg:leading-[1.7]">
               {t("lp.hero.desc")}
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center lg:mt-[clamp(26px,1.8vw,44px)] lg:gap-[clamp(14px,0.97vw,24px)]">
               <Link href="/services">
-                <a className="inline-flex h-12 min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[#FF7A00] px-6 text-base font-bold text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
+                <a className="inline-flex h-12 min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[#FF7A00] px-6 text-base font-bold lg:h-[clamp(53px,3.68vw,84px)] lg:px-[clamp(40px,2.78vw,64px)] lg:text-[clamp(17px,1.18vw,27px)] text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
                   {t("lp.cta.book")}
-                  <ArrowRight size={18} aria-hidden className="lp-arrow" />
+                  <ArrowRight size={18} aria-hidden className="lp-arrow lg:h-[1.06em] lg:w-[1.06em]" />
                 </a>
               </Link>
               <Link href="/services">
-                <a className="inline-flex h-12 min-h-11 items-center justify-center rounded-[10px] border-2 border-white bg-transparent px-6 text-base font-bold text-white transition-colors hover:bg-white hover:text-[#071A33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
+                <a className="inline-flex h-12 min-h-11 items-center justify-center rounded-[10px] border-2 border-white bg-transparent px-6 text-base font-bold lg:h-[clamp(53px,3.68vw,84px)] lg:px-[clamp(32px,2.22vw,52px)] lg:text-[clamp(17px,1.18vw,27px)] text-white transition-colors hover:bg-white hover:text-[#071A33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
                   {t("lp.cta.explore")}
                 </a>
               </Link>
             </div>
 
-            <TrustRow items={trust} className="mt-7 hidden lg:flex" />
+            <TrustRow items={trust} large className="mt-7 hidden lg:mt-[clamp(41px,2.85vw,66px)] lg:flex lg:gap-x-[clamp(36px,2.5vw,58px)]" />
           </div>
         </div>
       </div>
@@ -111,21 +107,29 @@ export default function LandingHero() {
 function TrustRow({
   items,
   className,
+  large,
 }: {
   items: { icon: "shield" | "lotus" | "people"; label: string }[];
   className?: string;
+  /** Desktop hero sizing from the approved reference (56px rings). */
+  large?: boolean;
 }) {
   return (
     <ul className={cn("flex-wrap gap-x-8 gap-y-4", className)}>
       {items.map((item) => (
-        <li key={item.label} className="flex items-center gap-3 text-sm font-semibold text-white">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#FF7A00] text-[#FF7A00]">
+        <li key={item.label} className={cn("flex items-center gap-3 text-sm font-semibold text-white", large && "text-[clamp(15px,1.04vw,24px)] gap-[0.8em]")}>
+          <span
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#FF7A00] text-[#FF7A00]",
+              large && "h-[clamp(56px,3.9vw,90px)] w-[clamp(56px,3.9vw,90px)]",
+            )}
+          >
             {item.icon === "shield" ? (
-              <ShieldCheck size={18} aria-hidden strokeWidth={1.75} />
+              <ShieldCheck size={18} aria-hidden strokeWidth={1.75} className={cn(large && "h-[43%] w-[43%]")} />
             ) : item.icon === "lotus" ? (
-              <LotusMark className="h-[18px] w-[18px]" />
+              <LotusMark className={large ? "h-[43%] w-[43%]" : "h-[18px] w-[18px]"} />
             ) : (
-              <Users size={18} aria-hidden strokeWidth={1.75} />
+              <Users size={18} aria-hidden strokeWidth={1.75} className={cn(large && "h-[43%] w-[43%]")} />
             )}
           </span>
           <TrustLabel text={item.label} />
@@ -143,5 +147,65 @@ function TrustLabel({ text }: { text: string }) {
       <span className="block">{text.slice(0, split)}</span>
       <span className="block">{text.slice(split + 1)}</span>
     </span>
+  );
+}
+
+const PHOTO_W = 2048;
+const PHOTO_H = 1150;
+/** Vertical focus: keep the grounded phone and its stand fully in frame on wide screens. */
+const FOCUS_Y = 0.78;
+
+/**
+ * Behaves like `object-cover` for the hero photo, but exposes the photo's own pixel
+ * space so the vector phone can be pinned to the photographed device at any size.
+ */
+function HeroPhotoStage() {
+  const ref = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [box, setBox] = useState<{ s: number; x: number; y: number } | null>(null);
+  // Reveal photo + phone together so the vector phone never floats on bare navy while loading.
+  const [loaded, setLoaded] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fit = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (!width || !height) return;
+      const s = Math.max(width / PHOTO_W, height / PHOTO_H);
+      setBox({ s, x: (width - PHOTO_W * s) / 2, y: (height - PHOTO_H * s) * FOCUS_Y });
+    };
+    fit();
+    if (imgRef.current?.complete) setLoaded(true);
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="absolute inset-0 overflow-hidden">
+      <div
+        className="absolute left-0 top-0 origin-top-left"
+        style={{
+          width: PHOTO_W,
+          height: PHOTO_H,
+          transform: box ? `translate(${box.x}px, ${box.y}px) scale(${box.s})` : undefined,
+          visibility: box && loaded ? "visible" : "hidden",
+        }}
+      >
+        <img
+          ref={imgRef}
+          src={HERO}
+          alt=""
+          width={PHOTO_W}
+          height={PHOTO_H}
+          fetchPriority="high"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          className="block h-full w-full"
+        />
+        <LandingHeroAppPreview />
+      </div>
+    </div>
   );
 }

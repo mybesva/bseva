@@ -57,7 +57,7 @@ export default function ServicesNavMenu({ active, variant = "desktop", onNavigat
 
   if (variant === "mobile") {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex shrink-0 flex-col gap-3">
         <span className={cn("text-lg font-bold", active ? "text-primary" : "text-foreground")}>
           {t("nav.services")}
         </span>
