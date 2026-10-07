@@ -12,6 +12,7 @@ import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { PujaTitle } from "@/components/PujaTitle";
 
 const CANCELLED = new Set(["cancelled", "refunded"]);
@@ -117,6 +118,7 @@ function BookingCard({
 export default function CustomerBookingsPage() {
   const [, setLocation] = useLocation();
   const { t } = useI18n();
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("upcoming");
@@ -125,7 +127,11 @@ export default function CustomerBookingsPage() {
     setLoading(true);
     try {
       const res = await apiBookings(1, 100);
-      setBookings(res.items || []);
+      const uid = user?.id ? String(user.id) : "";
+      const mine = (res.items || []).filter(
+        (b: any) => !uid || String(b.customer_id || "") === uid,
+      );
+      setBookings(mine);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -134,8 +140,15 @@ export default function CustomerBookingsPage() {
   }
 
   useEffect(() => {
+    if (!user?.id) {
+      setBookings([]);
+      setLoading(false);
+      return;
+    }
     void load();
-  }, []);
+    // Reload whenever the signed-in customer changes (e.g. after register).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const upcoming = useMemo(
     () =>

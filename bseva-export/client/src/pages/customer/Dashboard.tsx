@@ -40,14 +40,21 @@ function CustomerDashboardContent() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!user || user.role !== "customer") return;
+    if (!user || user.role !== "customer") {
+      setBookings([]);
+      return;
+    }
+    const uid = String(user.id);
     setIsLoading(true);
+    setBookings([]);
     Promise.all([
       apiBookings(1, 50),
       api<any[]>("/services"),
     ])
       .then(([b, s]) => {
-        setBookings(b.items);
+        setBookings(
+          (b.items || []).filter((row: any) => String(row.customer_id || "") === uid),
+        );
         setPujas(s);
       })
       .catch((e) => toast.error(e.message))
@@ -55,7 +62,7 @@ function CustomerDashboardContent() {
     api<{ items: any[] }>("/recommendations")
       .then((r) => setRecommendations(r.items || []))
       .catch(() => setRecommendations([]));
-  }, [user]);
+  }, [user?.id, user?.role]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -15,6 +15,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { useAuth } from "@/_core/hooks/useAuth";
 import BSevaLogo from "@/components/BSevaLogo";
 
 import PhoneWithCountryCode from "@/components/PhoneWithCountryCode";
@@ -33,6 +34,7 @@ function formatMmSs(totalSec: number) {
 
 export default function Register() {
   const { t, lang, setLang } = useI18n();
+  const { refresh } = useAuth();
   const { config: publicConfig } = usePublicConfig();
   const captchaEnabled = Boolean(publicConfig.registration_captcha_enabled);
   const captchaSiteKey = String(publicConfig.recaptcha_site_key || "");
@@ -248,6 +250,9 @@ export default function Register() {
         referral_code: referralCode.trim() || undefined,
         captcha_token,
       });
+      // Must refresh AuthContext — otherwise a previous session's user stays mounted
+      // and the portal keeps showing that account's bookings/name.
+      await refresh();
       setLang(uiLangFromPreferred(language));
       toast.success(
         accountType === "pujari"

@@ -9,6 +9,7 @@ import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { PujaTitle } from "@/components/PujaTitle";
 
 function statusColor(status: string) {
@@ -25,16 +26,26 @@ function statusColor(status: string) {
 
 export default function CustomerHistoryPage() {
   const { t } = useI18n();
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user?.id) {
+      setBookings([]);
+      setLoading(false);
+      return;
+    }
+    const uid = String(user.id);
     setLoading(true);
+    setBookings([]);
     apiBookings(1, 100, { bucket: "history" })
-      .then((r) => setBookings(r.items))
+      .then((r) =>
+        setBookings((r.items || []).filter((b: any) => String(b.customer_id || "") === uid)),
+      )
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user?.id]);
 
   const history = bookings || [];
 

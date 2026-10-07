@@ -1595,7 +1595,7 @@ def list_bookings(
                 db, str(item["service_id"]), user_lang, str(item.get("service_name") or "Puja")
             )
             item["schedule_display"] = display_pair(item.get("start_at_utc"), item.get("customer_timezone"))
-    else:
+    elif user["role"] == "customer":
         history_sql = ""
         history_order = "b.created_at DESC"
         if (bucket or "").strip().lower() == "history":
@@ -1609,17 +1609,18 @@ def list_bookings(
                   )
             """
             history_order = "b.booking_date DESC NULLS LAST, b.start_time DESC NULLS LAST, b.created_at DESC"
+        customer_id = str(user["id"])
         total = int(
             db.execute(
                 text(
                     f"""
                     SELECT COUNT(*) FROM bookings b
-                    WHERE b.customer_id = :id
+                    WHERE b.customer_id = CAST(:id AS uuid)
                       AND COALESCE(b.booking_kind, 'puja') = 'puja'
                       {history_sql}
                     """
                 ),
-                {"id": user["id"]},
+                {"id": customer_id},
             ).scalar()
             or 0
         )
@@ -1630,25 +1631,31 @@ def list_bookings(
                 FROM bookings b
                 LEFT JOIN users pu ON pu.id = b.pujari_id
                 JOIN services s ON s.id = b.service_id
-                WHERE b.customer_id = :id
+                WHERE b.customer_id = CAST(:id AS uuid)
                   AND COALESCE(b.booking_kind, 'puja') = 'puja'
                   {history_sql}
                 ORDER BY {history_order}
                 LIMIT :lim OFFSET :off
                 """
             ),
-            {"id": user["id"], "lim": limit, "off": offset},
+            {"id": customer_id, "lim": limit, "off": offset},
         ).mappings().all()
-        items = [booking_for_role(db, dict(r), user) for r in rows]
+        items = [
+            booking_for_role(db, dict(r), user)
+            for r in rows
+            if str(r.get("customer_id") or "") == customer_id
+        ]
         from app.catalog import localized_service_name
         from app.i18n import user_preferred_lang
 
-        user_lang = user_preferred_lang(db, str(user["id"]))
+        user_lang = user_preferred_lang(db, customer_id)
         for item in items:
             item["service_name"] = localized_service_name(
                 db, str(item["service_id"]), user_lang, str(item.get("service_name") or "Puja")
             )
             item["schedule_display"] = display_pair(item.get("start_at_utc"), item.get("customer_timezone"))
+    else:
+        raise HTTPException(403, "Not allowed")
 
     out = {
         "items": items,
