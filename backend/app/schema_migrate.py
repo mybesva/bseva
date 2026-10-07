@@ -651,6 +651,46 @@ _FOUNDATION_STMTS = [
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$
     """,
+    # App uses lunar/solar; legacy DB allowed north/south/lunar — drop check before remapping
+    """
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'users'::regclass AND contype = 'c'
+          AND pg_get_constraintdef(oid) ILIKE '%calendar_preference%'
+      LOOP
+        EXECUTE format('ALTER TABLE users DROP CONSTRAINT IF EXISTS %I', r.conname);
+      END LOOP;
+    END $$
+    """,
+    """
+    UPDATE users
+    SET calendar_preference = CASE
+      WHEN lower(calendar_preference) = 'lunar' THEN 'lunar'
+      ELSE 'solar'
+    END
+    WHERE calendar_preference IS NULL
+       OR lower(calendar_preference) NOT IN ('lunar', 'solar')
+    """,
+    """
+    UPDATE customer_profiles
+    SET calendar_preference = CASE
+      WHEN lower(calendar_preference) = 'lunar' THEN 'lunar'
+      ELSE 'solar'
+    END
+    WHERE calendar_preference IS NOT NULL
+      AND lower(calendar_preference) NOT IN ('lunar', 'solar')
+    """,
+    """
+    DO $$ BEGIN
+      ALTER TABLE users ADD CONSTRAINT users_calendar_preference_check
+        CHECK (calendar_preference IN ('lunar', 'solar'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    "ALTER TABLE users ALTER COLUMN calendar_preference SET DEFAULT 'solar'",
     """
     ALTER TABLE pujari_profiles DROP CONSTRAINT IF EXISTS pujari_profiles_verification_status_check
     """,
@@ -1646,6 +1686,78 @@ def ensure_schema(*, quiet: bool = False) -> None:
         log("Note: IF NOT EXISTS failures are rare; lock/timeout or permission errors are more common.")
     else:
         log("All statements succeeded (or were already applied).")
+
+
+_CALENDAR_PREF_STMTS = [
+    """
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'users'::regclass AND contype = 'c'
+          AND pg_get_constraintdef(oid) ILIKE '%calendar_preference%'
+      LOOP
+        EXECUTE format('ALTER TABLE users DROP CONSTRAINT IF EXISTS %I', r.conname);
+      END LOOP;
+    END $$
+    """,
+    """
+    UPDATE users
+    SET calendar_preference = CASE
+      WHEN lower(calendar_preference) = 'lunar' THEN 'lunar'
+      ELSE 'solar'
+    END
+    WHERE calendar_preference IS NULL
+       OR lower(calendar_preference) NOT IN ('lunar', 'solar')
+    """,
+    """
+    UPDATE customer_profiles
+    SET calendar_preference = CASE
+      WHEN lower(calendar_preference) = 'lunar' THEN 'lunar'
+      ELSE 'solar'
+    END
+    WHERE calendar_preference IS NOT NULL
+      AND lower(calendar_preference) NOT IN ('lunar', 'solar')
+    """,
+    """
+    DO $$ BEGIN
+      ALTER TABLE users ADD CONSTRAINT users_calendar_preference_check
+        CHECK (calendar_preference IN ('lunar', 'solar'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    "ALTER TABLE users ALTER COLUMN calendar_preference SET DEFAULT 'solar'",
+]
+
+
+_calendar_pref_ensured = False
+
+
+def ensure_calendar_preference_schema() -> None:
+    """Idempotent heal for Vercel (schema_migrate is not run on cold start)."""
+    global _calendar_pref_ensured
+    if _calendar_pref_ensured:
+        return
+    with engine.connect() as conn:
+        defn = conn.execute(
+            text(
+                """
+                SELECT pg_get_constraintdef(oid)
+                FROM pg_constraint
+                WHERE conrelid = 'users'::regclass AND contype = 'c'
+                  AND conname = 'users_calendar_preference_check'
+                LIMIT 1
+                """
+            )
+        ).scalar()
+        if defn and "'solar'" in defn and "'lunar'" in defn and "'north'" not in defn:
+            _calendar_pref_ensured = True
+            return
+    with engine.begin() as conn:
+        for stmt in _CALENDAR_PREF_STMTS:
+            conn.execute(text(stmt))
+    _calendar_pref_ensured = True
 
 
 def ensure_pujari_profile_schema() -> None:

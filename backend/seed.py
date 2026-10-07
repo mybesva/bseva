@@ -22,7 +22,7 @@ USERS = [
         "phone": "9000000000",
         "role": "super_admin",
         "lang": "en",
-        "cal": "north",
+        "cal": "solar",
     },
     # Normal Admin (existing)
     {
@@ -31,7 +31,7 @@ USERS = [
         "phone": "9000000001",
         "role": "admin",
         "lang": "en",
-        "cal": "north",
+        "cal": "solar",
     },
     # Customers (existing)
     {
@@ -40,7 +40,7 @@ USERS = [
         "phone": "9000000002",
         "role": "customer",
         "lang": "en",
-        "cal": "north",
+        "cal": "solar",
     },
     {
         "name": "Rohan Customer",
@@ -48,7 +48,7 @@ USERS = [
         "phone": "9000000003",
         "role": "customer",
         "lang": "hi",
-        "cal": "north",
+        "cal": "solar",
     },
     {
         "name": "Meera Customer",
@@ -56,7 +56,7 @@ USERS = [
         "phone": "9000000004",
         "role": "customer",
         "lang": "te",
-        "cal": "south",
+        "cal": "solar",
     },
     # Pujaris (existing) — Sharma is also Head Pujari
     {
@@ -65,7 +65,7 @@ USERS = [
         "phone": "9000000005",
         "role": "head_pujari",
         "lang": "hi",
-        "cal": "north",
+        "cal": "solar",
     },
     {
         "name": "Pandit",
@@ -73,7 +73,7 @@ USERS = [
         "phone": "9000000006",
         "role": "pujari",
         "lang": "te",
-        "cal": "south",
+        "cal": "solar",
     },
 ]
 

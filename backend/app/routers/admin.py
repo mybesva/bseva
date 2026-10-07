@@ -255,7 +255,7 @@ def create_user(body: AdminUserIn, admin=Depends(require_any_permission("create_
         text(
             """
             INSERT INTO users (id, name, email, phone, password_hash, role, preferred_language, calendar_preference, phone_verified)
-            VALUES (CAST(:id AS uuid), :name, :email, :phone, :pw, :role, 'en', 'north', TRUE)
+            VALUES (CAST(:id AS uuid), :name, :email, :phone, :pw, :role, 'en', 'solar', TRUE)
             """
         ),
         {

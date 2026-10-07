@@ -12,6 +12,7 @@ from app.db import get_db
 from app.deps import ACCOUNT_BLOCKED, current_user
 from app.domain import row_dict
 from app.platform_config import get_setting
+from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
 from app.schemas import ChangePasswordIn, LoginIn, MePatchIn, OtpRequestIn, OtpVerifyIn, RegisterIn, TokenOut
 from app.security import create_access_token, hash_password, verify_password
 from app.i18n import coded_http
@@ -201,8 +202,7 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
     if body.account_type not in ("customer", "pujari"):
         raise HTTPException(400, "Invalid account type")
     _verify_registration_captcha(db, body.captcha_token)
-    _verify_registration_otp(db, body)
-    referrer_ok = None
+    # Validate referral / uniqueness before consuming OTP so a bad code does not burn it.
     if body.referral_code:
         from app.referrals import find_referrer_by_code
 
@@ -240,6 +240,12 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
             min_last_length=3,
         )
         display_name = compose_display_name(reg_first, reg_middle, reg_last)
+
+    # Production schema_migrate is not run on Vercel cold start — heal calendar check if needed.
+    from app.schema_migrate import ensure_calendar_preference_schema
+
+    ensure_calendar_preference_schema()
+    _verify_registration_otp(db, body)
 
     user_id = str(uuid4())
     db.execute(

@@ -22,7 +22,7 @@ CREATE TABLE users (
   blocked_by UUID REFERENCES users(id),
   block_reason TEXT,
   preferred_language TEXT NOT NULL DEFAULT 'en' CHECK (preferred_language IN ('en', 'hi', 'te')),
-  calendar_preference TEXT NOT NULL DEFAULT 'north' CHECK (calendar_preference IN ('north', 'south', 'lunar')),
+  calendar_preference TEXT NOT NULL DEFAULT 'solar' CHECK (calendar_preference IN ('lunar', 'solar')),
   email_verified BOOLEAN NOT NULL DEFAULT FALSE,
   phone_verified BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -42,7 +42,7 @@ CREATE TABLE customer_profiles (
   latitude DOUBLE PRECISION,
   longitude DOUBLE PRECISION,
   preferred_language TEXT DEFAULT 'en',
-  calendar_preference TEXT DEFAULT 'north',
+  calendar_preference TEXT DEFAULT 'solar',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

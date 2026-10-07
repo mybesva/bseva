@@ -154,7 +154,7 @@ async def upload_photo(file: UploadFile = File(...), user=Depends(require_roles(
                 "id": user["id"],
                 "p": rel,
                 "lang": user.get("preferred_language") or "en",
-                "cal": user.get("calendar_preference") or "north",
+                "cal": user.get("calendar_preference") or "solar",
             },
         )
     db.commit()
