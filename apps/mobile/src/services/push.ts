@@ -17,9 +17,11 @@ export async function registerPushToken(): Promise<string | null> {
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("default", {
         name: "B-Seva",
+        description: "Booking updates and reminders from B-Seva",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: "#FF7A00",
+        showBadge: true,
       });
     }
     const device = await Notifications.getDevicePushTokenAsync();

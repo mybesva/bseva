@@ -83,6 +83,11 @@ def test_pdf_chrome_repeats_motto_and_page_numbers():
     assert "Page 2 of 2" in raw
 
 
+class _NoDb:
+    def execute(self, *_args, **_kwargs):
+        raise RuntimeError("not available in unit test")
+
+
 def test_render_invoice_pdf_from_snapshot_keeps_content_and_branding():
     pdf = render_invoice_pdf(
         {
@@ -137,12 +142,26 @@ def test_render_invoice_pdf_from_snapshot_keeps_content_and_branding():
                 "total_paise": 499900,
                 "amount_in_words": "Rupees Four Thousand Nine Hundred Ninety-Nine Only",
             },
-        }
+        },
+        db=_NoDb(),
     )
-    raw = pdf.decode("latin-1", "replace")
     assert pdf.startswith(b"%PDF")
-    assert len(pdf) > 1000
-    assert "Book, Believe, Bless" in raw
-    assert "TAX INVOICE" in raw
+    assert len(pdf) > 8000
+    # Chromium print embeds compressed text streams; title metadata is always present.
+    raw = pdf.decode("latin-1", "replace")
     assert "BSEVA/2026-27/000001" in raw
-    assert "Page 1 of 1" in raw
+    try:
+        from io import BytesIO
+
+        from pypdf import PdfReader
+
+        reader = PdfReader(BytesIO(pdf))
+        assert len(reader.pages) == 1
+        body = "".join((page.extract_text() or "") for page in reader.pages)
+        assert "B-SEVA" in body
+        assert "BOOK, BELIEVE, BLESS" in body
+        assert "BILL TO" in body
+        assert "BOOKING DETAILS" in body
+        assert "₹" in body
+    except ImportError:
+        assert b"/Image" in pdf

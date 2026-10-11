@@ -49,7 +49,6 @@ const customerNav: NavItem[] = [
   { labelKey: "seva.mySeva", href: "/customer/my-seva", icon: Flower },
   { labelKey: "seva.familySankalp", href: "/customer/family-sankalp", icon: Users },
   { labelKey: "customer.myProfile", href: "/customer/profile", icon: User },
-  { labelKey: "customer.myAddress", href: "/customer/address", icon: MapPin },
   { labelKey: "customer.walletPayments", href: "/customer/wallet", icon: Wallet },
   { labelKey: "nav.invoices", href: "/customer/invoices", icon: FileText },
   { labelKey: "nav.rewards", href: "/customer/rewards", icon: Sparkles },
@@ -180,40 +179,36 @@ function PortalShell({
               location === item.href ||
               (item.href !== "/customer" && item.href !== "/pujari" && location.startsWith(item.href));
             return (
-              <Link key={item.href} href={item.href}>
-                <a
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                    routeActive ? "bg-sidebar-accent text-primary font-medium" : "hover:bg-sidebar-accent/60"
-                  )}
-                  onClick={() => {
-                    if (navRef.current) sidebarScrollY[scrollKey] = navRef.current.scrollTop;
-                    setOpen(false);
-                  }}
-                >
-                  <item.icon size={18} />
-                  {t(item.labelKey)}
-                  <CountBadge
-                    count={
-                      item.href.endsWith("/bookings")
-                        ? badges.bookings
-                        : item.href.endsWith("/notifications")
-                          ? badges.notifications
-                          : item.href.endsWith("/support")
-                            ? badges.support
-                            : 0
-                    }
-                    tooltip={
-                      item.href.endsWith("/bookings")
-                        ? t("notifications.unreadBookings", { count: badges.bookings || 0 })
-                        : item.href.endsWith("/notifications")
-                          ? t("notifications.unreadCount", { count: badges.notifications || 0 })
-                          : item.href.endsWith("/support")
-                            ? t("notifications.unreadSupport", { count: badges.support || 0 })
-                            : undefined
-                    }
-                  />
-                </a>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  routeActive ? "bg-sidebar-accent text-primary font-medium" : "hover:bg-sidebar-accent/60",
+                )}
+                onClick={() => {
+                  if (navRef.current) sidebarScrollY[scrollKey] = navRef.current.scrollTop;
+                  setOpen(false);
+                }}
+              >
+                <item.icon size={18} />
+                {t(item.labelKey)}
+                <CountBadge
+                  count={
+                    item.href.endsWith("/notifications")
+                      ? badges.notifications
+                      : item.href.endsWith("/support")
+                        ? badges.support
+                        : 0
+                  }
+                  tooltip={
+                    item.href.endsWith("/notifications")
+                      ? t("notifications.unreadCount", { count: badges.notifications || 0 })
+                      : item.href.endsWith("/support")
+                        ? t("notifications.unreadSupport", { count: badges.support || 0 })
+                        : undefined
+                  }
+                />
               </Link>
             );
           })}
@@ -235,10 +230,8 @@ function PortalShell({
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setOpen(true)} aria-label={t("nav.openMenu")}>
             <Menu size={22} />
           </Button>
-          <Link href={role === "pujari" ? "/pujari" : "/customer"}>
-            <a className="flex items-center shrink-0">
-              <BSevaLogo variant="full" size="portal" />
-            </a>
+          <Link href={role === "pujari" ? "/pujari" : "/customer"} className="flex shrink-0 items-center">
+            <BSevaLogo variant="full" size="portal" />
           </Link>
           {role === "pujari" && user?.name ? (
             <p className="hidden sm:block min-w-0 flex-1 truncate text-sm font-medium text-foreground">
@@ -247,12 +240,10 @@ function PortalShell({
           ) : null}
           <div className="ml-auto flex items-center gap-1 sm:gap-2 min-w-0">
             {role === "customer" ? (
-              <Link href="/services">
-                <a className="book-puja-cta-wrap">
-                  <span className="book-puja-cta inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground">
-                    {t("nav.bookPuja")}
-                  </span>
-                </a>
+              <Link href="/services" className="book-puja-cta-wrap">
+                <span className="book-puja-cta inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground">
+                  {t("nav.bookPuja")}
+                </span>
               </Link>
             ) : null}
             <LanguageSelector />

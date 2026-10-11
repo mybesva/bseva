@@ -48,6 +48,11 @@ def test_allocate_gst_across_lines():
     assert lines[0]["amount_paise"] == lines[0]["taxable_paise"] + lines[0]["gst_paise"]
 
 
+class _NoDb:
+    def execute(self, *_args, **_kwargs):
+        raise RuntimeError("not available in unit test")
+
+
 def test_render_invoice_pdf_from_snapshot():
     from app.invoice_pdf import render_invoice_pdf
 
@@ -104,7 +109,8 @@ def test_render_invoice_pdf_from_snapshot():
                 "total_paise": 499900,
                 "amount_in_words": "Rupees Four Thousand Nine Hundred Ninety-Nine Only",
             },
-        }
+        },
+        db=_NoDb(),
     )
     assert pdf.startswith(b"%PDF")
     assert len(pdf) > 1000

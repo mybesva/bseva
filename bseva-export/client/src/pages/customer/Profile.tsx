@@ -33,6 +33,7 @@ import {
   validatePersonNameParts,
   type PersonNameParts,
 } from "@/lib/personName";
+import { CustomerAddressPanel } from "@/components/customer/CustomerAddressPanel";
 
 const LANGS: PreferredLang[] = PREFERRED_LANGUAGES.map((l) => l.code);
 
@@ -50,6 +51,7 @@ export default function CustomerProfilePage() {
 
   const profileTabs = [
     { id: "profile", label: t("profile.tab.profile") },
+    { id: "address", label: t("customer.myAddress") },
     {
       id: "password",
       label: t("profile.tab.changePassword"),
@@ -249,6 +251,7 @@ export default function CustomerProfilePage() {
 
         {activeTab === "password" ? <ChangePasswordForm embedded /> : null}
         {activeTab === "terms" ? <PortalTermsContent /> : null}
+        {activeTab === "address" ? <CustomerAddressPanel /> : null}
 
         {activeTab === "profile" ? (
       <Card>

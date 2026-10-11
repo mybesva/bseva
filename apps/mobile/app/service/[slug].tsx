@@ -74,6 +74,8 @@ export default function ServiceDetail() {
               else router.push(`/customer/book/${s.slug}`);
             }}
           />
+        ) : s.standard_price_paise != null ? (
+          <PrimaryButton title={t("common.comingSoon")} disabled onPress={() => undefined} />
         ) : null}
       </ScrollView>
     </Screen>

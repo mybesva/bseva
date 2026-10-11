@@ -1,9 +1,9 @@
-export type ProfilePortalTabId = "profile" | "password" | "terms";
+export type ProfilePortalTabId = "profile" | "address" | "password" | "terms";
 
 export function profileTabFromSearch(search: string): ProfilePortalTabId {
   const raw = search.startsWith("?") ? search.slice(1) : search;
   const tab = new URLSearchParams(raw).get("tab");
-  if (tab === "password" || tab === "terms") return tab;
+  if (tab === "address" || tab === "password" || tab === "terms") return tab;
   return "profile";
 }
 

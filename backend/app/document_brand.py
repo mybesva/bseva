@@ -40,13 +40,43 @@ def _pdf_safe(text: str) -> str:
     )
 
 
+def pdf_logo_flowable(
+    logo_path: Path | str,
+    *,
+    max_width_mm: float = 38,
+    max_height_mm: float = 16,
+) -> Any:
+    """ReportLab Image flowable that preserves the logo aspect ratio (no stretch)."""
+    from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+    from reportlab.platypus import Image as RLImage
+
+    path = str(logo_path)
+    iw, ih = ImageReader(path).getSize()
+    max_w = max_width_mm * mm
+    max_h = max_height_mm * mm
+    if iw <= 0 or ih <= 0:
+        return RLImage(path, height=max_h)
+    aspect = iw / ih
+    height = max_h
+    width = height * aspect
+    if width > max_w:
+        width = max_w
+        height = width / aspect
+    return RLImage(path, width=width, height=height)
+
+
+def _logo_search_roots() -> tuple[Path, Path]:
+    app_dir = Path(__file__).resolve().parent
+    return app_dir, app_dir.parents[1]
+
+
 def resolve_logo_file(configured: str | None = None) -> Path | None:
     """Resolve the official logo from disk without requiring network access."""
     value = str(configured or "").strip()
     if value.startswith(("http://", "https://")):
         return None
-    app_dir = Path(__file__).resolve().parent
-    repo_root = app_dir.parents[1]
+    app_dir, repo_root = _logo_search_roots()
     name = Path(value).name if value else "bseva-logo-transparent.png"
     if name in {"bseva-mark.png"}:
         name = "bseva-logo-transparent.png"
@@ -62,6 +92,17 @@ def resolve_logo_file(configured: str | None = None) -> Path | None:
         if path.is_file():
             return path
     return None
+
+
+def resolve_header_logo_file(configured: str | None = None) -> Path | None:
+    """Icon mark for document headers (matches HTML: symbol beside B-SEVA text)."""
+    app_dir, repo_root = _logo_search_roots()
+    for name in ("bseva-mark.png", "bseva-logo-transparent.png"):
+        for base in (app_dir / "static", repo_root / "bseva-export" / "client" / "public", repo_root / "client" / "public"):
+            path = base / name
+            if path.is_file():
+                return path
+    return resolve_logo_file(configured)
 
 
 def html_logo_src(configured: str | None = None) -> str:
@@ -83,12 +124,31 @@ def embedded_logo_data_uri(configured: str | None = None) -> str | None:
     return f"data:{mime};base64,{encoded}"
 
 
+def embedded_header_logo_data_uri(configured: str | None = None) -> str | None:
+    """Header mark (icon beside B-SEVA text), embedded for offline HTML/PDF."""
+    path = resolve_header_logo_file(configured)
+    if not path or not path.is_file():
+        return None
+    mime = mimetypes.guess_type(str(path))[0] or "image/png"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
+
+
 def resolve_document_logo_src(company: dict[str, Any] | None = None) -> str:
+    """Full lockup for watermarks."""
     company = company or {}
     embedded = embedded_logo_data_uri(company.get("logo_path"))
     if embedded:
         return embedded
     return html_logo_src(company.get("logo_path"))
+
+
+def resolve_header_document_logo_src(company: dict[str, Any] | None = None) -> str:
+    company = company or {}
+    embedded = embedded_header_logo_data_uri(company.get("logo_path"))
+    if embedded:
+        return embedded
+    return resolve_document_logo_src(company)
 
 
 def contact_line(company: dict[str, Any] | None = None) -> str:
@@ -248,13 +308,13 @@ def document_body_css() -> str:
 .bseva-doc-header-left {{ flex: 1 1 58%; min-width: 0; }}
 .bseva-doc-header-right {{ flex: 0 0 auto; text-align: right; min-width: 170px; max-width: 42%; }}
 .bseva-doc-brand-row {{ display: flex; align-items: flex-start; gap: 10px; }}
+.bseva-doc-logo-wrap {{ flex-shrink: 0; }}
 .bseva-doc-logo {{
   display: block;
   height: 50px;
   width: auto;
-  max-width: 150px;
+  max-width: 56px;
   object-fit: contain;
-  flex-shrink: 0;
 }}
 .bseva-doc-brand-text {{ min-width: 0; }}
 .bseva-doc-brand-name {{
@@ -463,7 +523,24 @@ def document_body_css() -> str:
   }}
   html, body {{ background: #fff !important; }}
   .bseva-doc-viewport {{ padding: 0 !important; background: #fff !important; overflow: visible !important; }}
-  .bseva-doc-watermark {{ position: fixed; }}
+  .bseva-doc-watermark {{
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }}
+  .bseva-doc-watermark img {{
+    width: auto;
+    height: auto;
+    max-width: 420px;
+    max-height: 420px;
+    object-fit: contain;
+    opacity: {WATERMARK_OPACITY};
+  }}
+  .bseva-doc-body {{ position: relative; z-index: 1; }}
   .bseva-doc-page {{
     width: auto !important;
     min-width: 0 !important;
@@ -519,7 +596,11 @@ html, body {{
   print-color-adjust: exact;
 }}
 .bseva-doc-watermark img {{
-  width: min(58%, 420px);
+  width: auto;
+  height: auto;
+  max-width: min(58%, 420px);
+  max-height: min(72vh, 520px);
+  object-fit: contain;
   opacity: {WATERMARK_OPACITY};
 }}
 .bseva-doc-body {{
@@ -570,7 +651,9 @@ def render_company_header_left(company: dict[str, Any] | None, logo_src: str) ->
     return f"""
 <div class="bseva-doc-header-left">
   <div class="bseva-doc-brand-row">
-    <img class="bseva-doc-logo" src="{src}" alt="{brand}"/>
+    <div class="bseva-doc-logo-wrap">
+      <img class="bseva-doc-logo" src="{src}" alt="{brand}"/>
+    </div>
     <div class="bseva-doc-brand-text">
       <div class="bseva-doc-brand-name">B-SEVA</div>
       <div class="bseva-doc-motto">{html.escape(MOTTO)}</div>
@@ -596,7 +679,7 @@ def render_document_header(
     meta_rows: list[tuple[str, str]],
     logo_src: str | None = None,
 ) -> str:
-    src = logo_src or resolve_document_logo_src(company)
+    src = logo_src or resolve_header_document_logo_src(company)
     left = render_company_header_left(company, src)
     right = render_document_meta_right(document_title, meta_rows)
     return f'<div class="bseva-doc-header-block">{left}{right}</div>'

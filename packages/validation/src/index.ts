@@ -11,6 +11,15 @@ export function isMeaningfulText(raw: string, minLen: number): boolean {
   return alnum >= Math.max(1, Math.floor(minLen / 2));
 }
 
+/** Reject numeric-only or symbol-only personal names; allow Unicode letters. */
+export function isValidPersonNamePart(raw: string): boolean {
+  const s = String(raw || "").trim();
+  if (!s) return true;
+  if (/^\d+$/.test(s)) return false;
+  if (!/\p{L}/u.test(s)) return false;
+  return true;
+}
+
 export function isValidPincode(raw: string): boolean {
   return /^\d{6}$/.test(String(raw || "").trim());
 }
@@ -256,8 +265,12 @@ export function validatePersonNameParts(
   const errors: Partial<Record<keyof PersonNameParts, string>> = {};
   const minLast = opts?.minLastLength ?? 1;
   const first = parts.first_name.trim();
+  const middle = parts.middle_name.trim();
   const last = parts.last_name.trim();
   if (first.length < 3) errors.first_name = "validation.firstNameMin";
+  else if (!isValidPersonNamePart(first)) errors.first_name = "validation.nameLetters";
+  if (middle && !isValidPersonNamePart(middle)) errors.middle_name = "validation.nameLetters";
+  if (last && !isValidPersonNamePart(last)) errors.last_name = "validation.nameLetters";
   if (last.length < minLast) {
     errors.last_name = last.length === 0 ? "validation.lastNameRequired" : "validation.lastNameMin";
   }

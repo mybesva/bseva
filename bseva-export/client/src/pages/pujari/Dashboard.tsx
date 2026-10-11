@@ -712,17 +712,20 @@ function PujariDashboardContent() {
           }
         }}
       >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">
-              {detailIntent === "reject" ? (
-                "Reject booking"
-              ) : selectedBooking ? (
-                <PujaTitle name={selectedBooking.pujaType.name} as="span" />
-              ) : null}
-            </DialogTitle>
-            <DialogDescription>#{selectedBooking?.booking.bookingNumber}</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="flex max-h-[min(90vh,900px)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <div className="shrink-0 space-y-1.5 border-b px-6 py-4">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-foreground">
+                {detailIntent === "reject" ? (
+                  "Reject booking"
+                ) : selectedBooking ? (
+                  <PujaTitle name={selectedBooking.pujaType.name} as="span" />
+                ) : null}
+              </DialogTitle>
+              <DialogDescription>#{selectedBooking?.booking.bookingNumber}</DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
           {selectedBooking && (
             <BookingDetailPanel
               bookingId={selectedBooking.booking.id}
@@ -758,6 +761,7 @@ function PujariDashboardContent() {
               }}
             />
           )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

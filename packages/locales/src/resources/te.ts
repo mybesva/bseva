@@ -789,6 +789,7 @@ const te: Record<string, string> = {
   "validation.state": "రాష్ట్రం అవసరం",
   "validation.pincode": "పిన్‌కోడ్ అవసరం",
   "validation.firstNameMin": "మొదటి పేరు కనీసం 3 అక్షరాలు ఉండాలి",
+  "validation.nameLetters": "పేరులో అక్షరాలు ఉండాలి, numbers మాత్రమే కాదు",
   "validation.lastNameRequired": "చివరి పేరు అవసరం",
   "validation.lastNameMin": "చివరి పేరు కనీసం 1 అక్షరం ఉండాలి",
   "validation.phoneRequired": "మొబైల్ నంబర్ అవసరం",

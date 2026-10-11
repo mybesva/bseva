@@ -867,7 +867,7 @@ def email_customer_invoice(db: Session, *, booking_id: str, to_email: str | None
     try:
         from app.invoice_pdf import render_invoice_pdf
 
-        pdf_bytes = render_invoice_pdf(dict(inv))
+        pdf_bytes = render_invoice_pdf(dict(inv), db=db)
     except Exception:
         logger.exception("invoice_pdf_failed %s", inv.get("invoice_number"))
     data = invoice_email_data_from_snapshot(

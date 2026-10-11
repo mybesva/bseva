@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PujaTitle } from "@/components/PujaTitle";
+import { rememberBookingListReturn } from "@/lib/bookingListReturn";
 
 const CANCELLED = new Set(["cancelled", "refunded"]);
 
@@ -175,6 +176,7 @@ export default function CustomerBookingsPage() {
   );
 
   function openReceipt(booking: any) {
+    rememberBookingListReturn("/customer/bookings");
     setLocation(`/booking/${booking.id}`);
   }
 

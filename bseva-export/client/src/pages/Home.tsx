@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { enabledSevaServiceTypes, type SevaConfigFlags } from "@bseva/config";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
-import { api } from "@/lib/api";
+import { api, dashboardPath } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LANDING_TESTIMONIALS, PREVIEW_TESTIMONIALS } from "@/lib/landingConfig";
 import LandingHero from "@/components/landing/LandingHero";
 import LandingServices, { type LandingCategory } from "@/components/landing/LandingServices";
@@ -25,9 +26,16 @@ function scrollToId(id: string) {
  * (document meta, deep-link scrolling).
  */
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const { t, lang } = useI18n();
   const search = useSearch();
+
+  /** Logged-in users have a role dashboard; `/` is the public marketing landing only. */
+  useEffect(() => {
+    if (authLoading || !user) return;
+    setLocation(dashboardPath(user.role));
+  }, [authLoading, user, setLocation]);
 
   const [categories, setCategories] = useState<LandingCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -91,6 +99,14 @@ export default function Home() {
   }, [search]);
 
   const liveCategories = useMemo(() => categories.filter((c) => c.active !== false), [categories]);
+
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-8">
+        <Skeleton className="h-10 w-48" />
+      </div>
+    );
+  }
 
   return (
     <Layout>

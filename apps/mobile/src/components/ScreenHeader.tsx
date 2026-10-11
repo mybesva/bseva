@@ -139,11 +139,14 @@ function HeaderProfileAvatar({
 export function ScreenHeader({
   title,
   back,
+  onBack,
   notificationsHref,
   right,
 }: {
   title: ReactNode;
   back?: boolean;
+  /** Overrides default `router.back()` when the header back control is shown. */
+  onBack?: () => void;
   notificationsHref?: string;
   right?: ReactNode;
 }) {
@@ -165,7 +168,7 @@ export function ScreenHeader({
       >
         {back ? (
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => (onBack ? onBack() : router.back())}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={t("mobile.back")}

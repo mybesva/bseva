@@ -20,13 +20,14 @@ export function BrandLockup({
   variant?: "full" | "compact";
 }) {
   const h = height ?? (variant === "compact" ? 60 : Math.round(markSize * 2.2));
+  const w = variant === "full" ? Math.max(h, Math.round(h * 2.15)) : h;
   const source = variant === "compact" ? logoCompact : logoFull;
   return (
     <View accessible accessibilityRole="image" accessibilityLabel="B-Seva">
       <Image
         source={source}
         resizeMode="contain"
-        style={[{ width: h, height: h }, style]}
+        style={[{ width: w, height: h }, style]}
       />
     </View>
   );

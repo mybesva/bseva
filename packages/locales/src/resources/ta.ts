@@ -772,6 +772,7 @@ const ta: Record<string, string> = {
   "validation.state": "மாநிலம் தேவை",
   "validation.pincode": "அஞ்சல் குறியீடு தேவை",
   "validation.firstNameMin": "முதல் பெயர் குறைந்தது 3 எழுத்துகளாக இருக்க வேண்டும்",
+  "validation.nameLetters": "பெயரில் எழுத்துகள் இருக்க வேண்டும், எண்கள் மட்டும் அல்ல",
   "validation.lastNameRequired": "கடைசி பெயர் தேவை",
   "validation.lastNameMin": "கடைசி பெயர் குறைந்தது 1 எழுத்தாக இருக்க வேண்டும்",
   "validation.phoneRequired": "மொபைல் எண் தேவை",

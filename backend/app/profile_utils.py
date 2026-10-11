@@ -36,6 +36,23 @@ def parse_json_list(raw) -> list:
         return [p.strip() for p in str(raw).split(",") if p.strip()]
 
 
+def pujari_profile_missing_required(row: dict) -> list[str]:
+    """Human-readable missing required fields for verification submit."""
+    missing: list[str] = []
+    quals = parse_json_list(row.get("qualifications"))
+    langs = parse_json_list(row.get("languages"))
+    for key in PUJARI_REQUIRED:
+        val = quals if key == "qualifications" else row.get(key)
+        if val in (None, "", [], False):
+            missing.append(key)
+    exp = row.get("experience_years")
+    if exp in (None, ""):
+        missing.append("experience_years")
+    if not langs:
+        missing.append("languages")
+    return missing
+
+
 def pujari_completion(row: dict) -> int:
     quals = parse_json_list(row.get("qualifications"))
     filled = 0

@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { addDaysToIsoDate, isTodayIsoDate, todayIsoDate } from "./panchangDates";
+import { isoDateFromLocalDate } from "./panchangDisplay";
 
 describe("panchangDates", () => {
   it("adds and subtracts days without UTC shift", () => {
     expect(addDaysToIsoDate("2026-09-27", 1)).toBe("2026-09-28");
     expect(addDaysToIsoDate("2026-09-27", -1)).toBe("2026-09-26");
     expect(addDaysToIsoDate("2026-03-01", -1)).toBe("2026-02-28");
+  });
+
+  it("formats local calendar dates without UTC day shift", () => {
+    const localLate = new Date(2026, 9, 11, 23, 30, 0);
+    expect(isoDateFromLocalDate(localLate)).toBe("2026-10-11");
+    expect(isoDateFromLocalDate(new Date(2026, 9, 12, 0, 15, 0))).toBe("2026-10-12");
   });
 
   it("detects today", () => {

@@ -304,7 +304,7 @@ export default function ServiceDetail() {
                   onClick={book}
                 >
                   {!svc.bookable
-                      ? t("common.comingSoon")
+                    ? t("common.comingSoon")
                     : checking
                       ? t("services.checkingAvailability")
                       : isAuthenticated && user?.role === "customer" && !canBook

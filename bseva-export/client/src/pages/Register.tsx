@@ -262,7 +262,7 @@ export default function Register() {
       if (returnUrl && accountType === "customer") {
         setLocation(returnUrl);
       } else {
-        setLocation(accountType === "pujari" ? "/pujari/onboarding" : "/customer/address");
+        setLocation(accountType === "pujari" ? "/pujari/onboarding" : "/customer/profile?tab=address");
       }
     } catch (err: any) {
       toast.error(err.message || "Registration failed");

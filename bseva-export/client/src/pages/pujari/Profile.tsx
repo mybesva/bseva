@@ -697,7 +697,15 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
           setWalkthroughErrors(errs);
           setFieldErrors(errs);
         }}
-        beforeContinue={persistProfileDraft}
+        beforeContinue={async () => {
+          const errors = validateForm();
+          setFieldErrors(errors);
+          if (Object.keys(errors).length) {
+            toast.error(t("web.validation.fixFollowing"));
+            return false;
+          }
+          return persistProfileDraft();
+        }}
       />
     </form>
   );

@@ -47,7 +47,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true, virtual
               {config.service_area_unavailable_description?.trim() || t("web.availability.comingSoonBody")}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/customer/address">
+              <Link href="/customer/profile?tab=address">
                 <Button type="button" size="sm" variant="outline" className="font-semibold">
                   {t("web.availability.myAddress")}
                 </Button>
@@ -91,7 +91,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true, virtual
               <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{t("web.availability.addressBody")}</p>
             </div>
           </div>
-          <Link href="/customer/address">
+          <Link href="/customer/profile?tab=address">
             <Button type="button" className="shrink-0 bg-primary hover:bg-primary/90 font-semibold">
               {t("web.availability.myAddress")}
             </Button>

@@ -49,6 +49,15 @@ export default function NotificationBell({ inboxHref }: { inboxHref: string }) {
     };
   }, [refresh]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   async function toggle() {
     const next = !open;
     setOpen(next);
@@ -102,7 +111,11 @@ export default function NotificationBell({ inboxHref }: { inboxHref: string }) {
                 </a>
               </Link>
             </div>
-            <div className="max-h-80 overflow-y-auto">
+            <div
+              className="max-h-80 overflow-y-auto overscroll-contain"
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+            >
               {items.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-4">No unread notifications.</p>
               ) : (

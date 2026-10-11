@@ -18,6 +18,7 @@ import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
 import { shareSafely } from "@/lib/browserActions";
 import { formatPujaDuration, formatPujaTitleText } from "@bseva/locales";
 import { PujaTitle } from "@/components/PujaTitle";
+import { bookingListReturnPath } from "@/lib/bookingListReturn";
 
 function statusColor(status: string) {
   switch (status) {
@@ -91,7 +92,7 @@ export default function BookingReceipt() {
       <Layout>
         <div className="container py-16 text-center space-y-4">
           <h1 className="text-h1">{t("web.booking.notFound")}</h1>
-          <Button onClick={() => setLocation("/customer/bookings")}>{t("nav.bookings")}</Button>
+          <Button onClick={() => setLocation(bookingListReturnPath())}>{t("nav.bookings")}</Button>
         </div>
       </Layout>
     );
@@ -161,7 +162,7 @@ export default function BookingReceipt() {
       <div className="container max-w-3xl py-10 print:py-0 print:max-w-none">
         <PrintableBSevaHeader documentTitle={t("web.booking.receipt")} reference={booking.booking_number} />
         <div className="flex flex-wrap gap-2 mb-6 print:hidden">
-          <Button variant="outline" size="sm" onClick={() => setLocation("/customer/bookings")}>
+          <Button variant="outline" size="sm" onClick={() => setLocation(bookingListReturnPath())}>
             <ArrowLeft className="w-4 h-4 mr-1" /> {t("nav.bookings")}
           </Button>
           <Button size="sm" onClick={() => void openReceiptDocument()}>
@@ -361,7 +362,7 @@ export default function BookingReceipt() {
               <Button variant="outline" onClick={() => void downloadReceipt()}>
                 <Download className="w-4 h-4 mr-1" /> {t("invoice.downloadPdf")}
               </Button>
-              <Button variant="outline" onClick={() => setLocation("/customer/bookings")}>
+              <Button variant="outline" onClick={() => setLocation(bookingListReturnPath())}>
                 {t("web.booking.backToBookings")}
               </Button>
               {booking.invoice_id && booking.payment_status === "paid" ? (

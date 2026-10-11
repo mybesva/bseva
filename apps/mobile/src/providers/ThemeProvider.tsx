@@ -6,13 +6,19 @@ import { ThemeContextView } from "@/theme/ThemeContext";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
-  const [theme, setThemeState] = useState<ThemeName>(system === "dark" ? "dark" : "light");
+  const [theme, setThemeState] = useState<ThemeName>("light");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     void AsyncStorage.getItem(THEME_KEY).then((stored) => {
-      if (stored === "light" || stored === "dark") setThemeState(stored);
+      if (stored === "light" || stored === "dark") {
+        setThemeState(stored);
+      } else {
+        setThemeState(system === "dark" ? "dark" : "light");
+      }
+      setReady(true);
     });
-  }, []);
+  }, [system]);
 
   const value = useMemo(
     () => ({
@@ -32,6 +38,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }),
     [theme]
   );
+
+  if (!ready) {
+    return <ThemeContextView value={{ ...value, theme: "light", colors: colors.light }}>{children}</ThemeContextView>;
+  }
 
   return <ThemeContextView value={value}>{children}</ThemeContextView>;
 }

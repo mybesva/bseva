@@ -905,6 +905,7 @@ const en: Record<string, string> = {
   "validation.state": "State is required",
   "validation.pincode": "Pincode is required",
   "validation.firstNameMin": "First name must be at least 3 characters",
+  "validation.nameLetters": "Name must include letters, not numbers only",
   "validation.lastNameRequired": "Last name is required",
   "validation.lastNameMin": "Last name must be at least 1 character",
   "validation.phoneRequired": "Mobile number is required",

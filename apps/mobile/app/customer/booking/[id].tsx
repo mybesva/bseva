@@ -23,6 +23,7 @@ import { confirmDestructiveAction, showSuccessAlert } from "@/utils/actionFeedba
 import { formatDisplaySlot } from "@/utils/formatDate";
 import { openMapsDirections, openMapsSearch } from "@/utils/maps";
 import { useI18n } from "@/providers/I18nProvider";
+import { navigateBackToBookingList } from "@/utils/bookingNavigation";
 
 type BusyAction =
   | "accept"
@@ -200,12 +201,19 @@ function prepItemLabel(item: PreparationItem) {
 }
 
 export default function BookingDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, returnTo } = useLocalSearchParams<{ id: string; returnTo?: string }>();
   const { user } = useAuth();
   const { colors } = useAppTheme();
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const router = useRouter();
+  const pujariRole = isPujariRole(user?.role);
+  function goBackToList() {
+    navigateBackToBookingList(
+      router,
+      returnTo ?? (pujariRole ? "/pujari/(tabs)/jobs" : undefined),
+    );
+  }
   const q = useQuery({ queryKey: ["booking", id], queryFn: () => apiClient.getBooking(id), enabled: !!id });
   const prep = useQuery({ queryKey: ["prep", id], queryFn: () => apiClient.bookingPreparation(id), enabled: !!id });
   const [otp, setOtp] = useState("");
@@ -215,6 +223,7 @@ export default function BookingDetail() {
   const [rejectReason, setRejectReason] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelReasonError, setCancelReasonError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [resendWait, setResendWait] = useState(0);
@@ -270,7 +279,7 @@ export default function BookingDetail() {
         { text: t("mobile.viewBooking") },
         {
           text: t("mobile.backToList"),
-          onPress: () => router.push(pujari ? "/pujari/jobs" : "/customer/bookings"),
+          onPress: goBackToList,
         },
       ]);
     } catch (e: unknown) {
@@ -301,7 +310,7 @@ export default function BookingDetail() {
       showSuccessAlert(t("mobile.bookingRejectedSuccess"), undefined, [
         {
           text: t("mobile.backToList"),
-          onPress: () => router.push("/pujari/jobs"),
+          onPress: goBackToList,
         },
       ]);
     } catch (e: unknown) {
@@ -399,13 +408,15 @@ export default function BookingDetail() {
 
   return (
     <Screen>
-      <ScreenHeader title={b.booking_number || t("mobile.bookingTitle")} back />
+      <ScreenHeader title={b.booking_number || t("mobile.bookingTitle")} back onBack={goBackToList} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }}>
         <ErrorBanner message={error} />
-        <Card style={{ gap: 6 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-            <PujaTitle name={b.service_name} variant="h2" style={{ flex: 1 }} />
-            <StatusBadge status={displayStatus} />
+        <Card style={{ gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            <PujaTitle name={b.service_name} variant="h2" style={{ flex: 1, minWidth: 0 }} />
+            <View style={{ flexShrink: 0, maxWidth: "44%" }}>
+              <StatusBadge status={displayStatus} />
+            </View>
           </View>
           <AppText>{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
           {b.duration_minutes ? <AppText>{t("web.booking.pujaDuration")}: {formatPujaDuration(lang, b.duration_minutes)}</AppText> : null}
@@ -538,7 +549,16 @@ export default function BookingDetail() {
 
         {!pujari && ["pending", "pending_acceptance", "confirmed"].includes(b.status) ? (
           <>
-            <Field label={t("mobile.cancelReasonOptional")} value={cancelReason} onChangeText={setCancelReason} />
+            <Field
+              label={t("mobile.cancelReasonOptional")}
+              value={cancelReason}
+              onChangeText={(text) => {
+                setCancelReason(text);
+                setCancelReasonError(null);
+              }}
+              error={cancelReasonError}
+              required
+            />
             <PrimaryButton
               title={t("booking.cancel")}
               variant="outline"
@@ -547,7 +567,7 @@ export default function BookingDetail() {
               onPress={() =>
                 void (async () => {
                   if (cancelReason.trim().length < 5) {
-                    setError(t("mobile.cancelReasonOptional"));
+                    setCancelReasonError(t("mobile.cancelReasonMin"));
                     return;
                   }
                   try {
@@ -684,7 +704,16 @@ export default function BookingDetail() {
               disabled={busy || resendWait > 0}
               onPress={() => void resendOtp("start")}
             />
-            <Field label={t("mobile.cancelReasonOptional")} value={cancelReason} onChangeText={setCancelReason} />
+            <Field
+              label={t("mobile.cancelReasonOptional")}
+              value={cancelReason}
+              onChangeText={(text) => {
+                setCancelReason(text);
+                setCancelReasonError(null);
+              }}
+              error={cancelReasonError}
+              required
+            />
             <PrimaryButton
               title={t("mobile.cancelServerPolicy")}
               variant="ghost"
@@ -692,7 +721,7 @@ export default function BookingDetail() {
               disabled={busy}
               onPress={() => {
                 if (cancelReason.trim().length < 5) {
-                  setError(t("mobile.cancelReasonOptional"));
+                  setCancelReasonError(t("mobile.cancelReasonMin"));
                   return;
                 }
                 confirmDestructiveAction(
@@ -742,7 +771,7 @@ export default function BookingDetail() {
           </>
         ) : null}
 
-        <PrimaryButton title={t("mobile.backToList")} variant="ghost" onPress={() => router.back()} />
+        <PrimaryButton title={t("mobile.backToList")} variant="ghost" onPress={goBackToList} />
       </ScrollView>
     </Screen>
   );

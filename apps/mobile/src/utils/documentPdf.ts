@@ -54,3 +54,15 @@ export async function cacheAuthorizedPdf(path: string, fileName: string): Promis
 export function pdfAlert(title: string, message: string) {
   Alert.alert(title, message);
 }
+
+/** Print HTML (matches on-screen invoice view). */
+export async function printHtmlDocument(html: string) {
+  const Print = await import("expo-print");
+  await Print.printAsync({ html });
+}
+
+/** Print a cached PDF file (Save / print dialog on iOS & Android). */
+export async function printPdfFile(uri: string) {
+  const Print = await import("expo-print");
+  await Print.printAsync({ uri });
+}

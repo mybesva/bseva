@@ -21,6 +21,15 @@ def split_display_name(full: str | None) -> tuple[str, str, str]:
     return parts[0], " ".join(parts[1:-1]), parts[-1]
 
 
+def _valid_name_part(part: str) -> bool:
+    s = (part or "").strip()
+    if not s:
+        return True
+    if s.isdigit():
+        return False
+    return any(ch.isalpha() for ch in s)
+
+
 def validate_name_parts(
     *,
     first: str | None,
@@ -34,6 +43,12 @@ def validate_name_parts(
     l = (last or "").strip()
     if len(f) < 3:
         raise HTTPException(400, "First name must be at least 3 characters")
+    if not _valid_name_part(f):
+        raise HTTPException(400, "First name must include letters, not numbers only")
+    if m and not _valid_name_part(m):
+        raise HTTPException(400, "Middle name must include letters, not numbers only")
+    if l and not _valid_name_part(l):
+        raise HTTPException(400, "Last name must include letters, not numbers only")
     if require_last:
         if not l:
             raise HTTPException(400, "Last name is required")

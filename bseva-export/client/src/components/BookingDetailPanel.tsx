@@ -156,6 +156,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const [rejectReason, setRejectReason] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelReasonError, setCancelReasonError] = useState<string | null>(null);
   const [cancelPreview, setCancelPreview] = useState<any>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const samagriLabels = samagriExportLabels(t);
@@ -318,8 +319,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           reference={booking.booking_number}
         />
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge className={`${statusColor(displayStatus)} print:hidden`}>{displayStatusLabel}</Badge>
+      <div className="flex flex-wrap items-start gap-2 max-w-full">
+        <Badge className={`${statusColor(displayStatus)} print:hidden shrink-0`}>{displayStatusLabel}</Badge>
         {booking.mode && <Badge variant="outline">{t(`booking.${booking.mode === "physical" ? "physical" : booking.mode}`)}</Badge>}
         {booking.package_type && <Badge variant="secondary">{t(`booking.${booking.package_type}`)}</Badge>}
         {viewerRole === "pujari" && samagriSelected && (
@@ -830,12 +831,21 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               <Textarea
                 id="cancel-reason"
                 value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
+                onChange={(e) => {
+                  setCancelReason(e.target.value);
+                  setCancelReasonError(null);
+                }}
                 placeholder="Please explain why you are cancelling (min 5 characters)"
                 rows={2}
                 minLength={5}
                 required
+                aria-invalid={Boolean(cancelReasonError)}
               />
+              {cancelReasonError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {cancelReasonError}
+                </p>
+              ) : null}
             </div>
           )}
           <AlertDialogFooter>
@@ -851,7 +861,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               onClick={(e) => {
                 e.preventDefault();
                 if (cancelReason.trim().length < 5) {
-                  toast.error("Cancellation reason must be at least 5 characters");
+                  setCancelReasonError("Cancellation reason must be at least 5 characters");
                   return;
                 }
                 void run(
@@ -945,11 +955,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       )}
 
       {viewerRole === "customer" ? (
-        <div className="flex flex-wrap gap-2 print:hidden">
+        <div className="flex flex-wrap items-stretch gap-2 print:hidden w-full">
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="shrink-0"
             onClick={() =>
               void downloadBookingReceiptPdf(String(booking.id)).catch((e) =>
                 toast.error(e.message || t("web.booking.loadFailed")),

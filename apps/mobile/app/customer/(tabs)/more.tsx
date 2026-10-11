@@ -22,7 +22,11 @@ export default function CustomerMore() {
     { href: "/customer/address", label: t("mobile.address"), icon: "location-outline" as const },
     { href: "/customer/my-seva", label: t("seva.mySeva"), icon: "flower-outline" as const },
     { href: "/customer/family-sankalp", label: t("seva.familySankalp"), icon: "people-outline" as const },
-    { href: "/customer/bookings", label: t("nav.bookings"), icon: "calendar-outline" as const },
+    {
+      href: "/customer/(tabs)/bookings?from=more",
+      label: t("nav.bookings"),
+      icon: "calendar-outline" as const,
+    },
     { href: "/customer/invoices", label: t("mobile.invoices"), icon: "document-text-outline" as const },
     { href: "/customer/referral", label: t("nav.referral"), icon: "share-social-outline" as const },
     { href: "/customer/support-contact", label: t("mobile.supportAndContact"), icon: "help-circle-outline" as const },

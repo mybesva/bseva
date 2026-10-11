@@ -406,7 +406,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </p>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold">{t("lp.footer.language")}</span>
-              <LanguageSelect triggerClassName="h-9 w-[9rem] border-white/40 bg-transparent text-white [&_svg]:text-white" />
+              <LanguageSelect triggerClassName="h-9 w-[9rem] border-white/40 bg-transparent text-white [&_svg]:text-white [&_svg]:opacity-90" />
             </div>
           </div>
         </div>

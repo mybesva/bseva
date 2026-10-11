@@ -772,6 +772,7 @@ const kn: Record<string, string> = {
   "validation.state": "ರಾಜ್ಯ ಅಗತ್ಯ",
   "validation.pincode": "ಪಿನ್‌ಕೋಡ್ ಅಗತ್ಯ",
   "validation.firstNameMin": "ಮೊದಲ ಹೆಸರು ಕನಿಷ್ಠ 3 ಅಕ್ಷರಗಳಾಗಿರಬೇಕು",
+  "validation.nameLetters": "ಹೆಸರில் ಅಕ್ಷರಗಳಿರಬೇಕು, ಸಂಖ್ಯೆಗಳು ಮಾತ್ರ ಅಲ್ಲ",
   "validation.lastNameRequired": "ಕೊನೆಯ ಹೆಸರು ಅಗತ್ಯ",
   "validation.lastNameMin": "ಕೊನೆಯ ಹೆಸರು ಕನಿಷ್ಠ 1 ಅಕ್ಷರವಾಗಿರಬೇಕು",
   "validation.phoneRequired": "ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಅಗತ್ಯ",

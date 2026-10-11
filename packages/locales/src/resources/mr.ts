@@ -772,6 +772,7 @@ const mr: Record<string, string> = {
   "validation.state": "राज्य आवश्यक आहे",
   "validation.pincode": "पिनकोड आवश्यक आहे",
   "validation.firstNameMin": "पहिले नाव किमान 3 अक्षरे असावे",
+  "validation.nameLetters": "नावात अक्षरे असावीत, फक्त अंक नाहीत",
   "validation.lastNameRequired": "आडनाव आवश्यक आहे",
   "validation.lastNameMin": "आडनाव किमान 1 अक्षर असावे",
   "validation.phoneRequired": "मोबाइल नंबर आवश्यक आहे",

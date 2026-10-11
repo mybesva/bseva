@@ -5,6 +5,7 @@ import {
   isBookingDateTimeBeforeLead,
   isCalendarDayDisabled,
   isDeathRelatedService,
+  isoDateFromLocalDate,
   rupees,
   VIRTUAL_COUNTRIES,
   type CustomerBookablePackage,
@@ -102,7 +103,7 @@ export default function BookService() {
   const [date, setDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+    return isoDateFromLocalDate(d);
   });
   const [time, setTime] = useState("10:00");
   const [address, setAddress] = useState("");

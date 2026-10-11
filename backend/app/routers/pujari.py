@@ -539,6 +539,14 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
     profile = _load_profile(db, user)
     if not profile.get("profile_photo_path"):
         raise HTTPException(400, "Profile photo is required before submission")
+    from app.profile_utils import pujari_profile_missing_required
+
+    missing = pujari_profile_missing_required(profile)
+    if missing:
+        raise HTTPException(
+            400,
+            f"Please complete required profile fields before submission: {', '.join(missing)}",
+        )
     if profile.get("profile_completion_percentage", 0) < 100:
         raise HTTPException(400, "Please complete all required profile fields before submission")
     docs = db.execute(

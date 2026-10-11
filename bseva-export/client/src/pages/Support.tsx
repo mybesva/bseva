@@ -22,6 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { api, apiBookings, type AuthUser } from "@/lib/api";
 import { validateSupport } from "@/lib/fieldValidation";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -243,56 +249,70 @@ function SupportForm({ categories }: { categories: readonly string[] }) {
             ))
           )}
 
-          {active && (
-            <div className="rounded-lg border p-3 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-medium">{active.ticket_number}</div>
-                  <div className="text-sm">{active.subject}</div>
-                </div>
-                <div className="flex gap-1">
-                  <Badge className={statusClass(active.status)}>{active.status_label || STATUS_LABELS[active.status]}</Badge>
-                  {active.priority ? <Badge className={priorityClass(active.priority)}>{String(active.priority_label || active.priority)}</Badge> : null}
-                </div>
-              </div>
-              {active.booking?.booking_number && (
-                <p className="text-xs text-muted-foreground">
-                  {active.booking.booking_number} · {active.booking.service_name}
-                </p>
-              )}
-              <p className="text-sm whitespace-pre-wrap">{active.description}</p>
-              <div className="max-h-56 overflow-y-auto space-y-2">
-                {(active.events || []).map((ev: any) => (
-                  <div key={ev.id} className="text-sm rounded-md bg-muted/50 p-2">
-                    <div className="text-xs text-muted-foreground">
-                      {EVENT_LABELS[ev.event_type] || ev.event_type} · {formatDisplayDateTime(ev.created_at)}
-                    </div>
-                    {ev.body ? <p className="mt-1 whitespace-pre-wrap">{ev.body}</p> : null}
-                  </div>
-                ))}
-              </div>
-              {active.resolution ? (
-                <div className="text-sm rounded-md border p-2">
-                  <div className="font-medium">{t("web.support.resolution")}</div>
-                  <p>{active.resolution}</p>
-                </div>
-              ) : null}
-              {active.status === "closed" || active.status === "resolved" ? (
-                <Button size="sm" variant="outline" onClick={() => void reopen()}>
-                  {t("web.support.reopen")}
-                </Button>
-              ) : (
-                <>
-                  <Textarea rows={3} value={reply} onChange={(e) => setReply(e.target.value)} placeholder={t("web.support.replyPlaceholder")} />
-                  <Button size="sm" disabled={!reply.trim()} onClick={() => void sendReply()}>
-                    {t("web.support.reply")}
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(active)} onOpenChange={(open) => !open && setActive(null)}>
+        <DialogContent className="flex max-h-[min(90vh,720px)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+          {active ? (
+            <>
+              <DialogHeader className="shrink-0 space-y-2 border-b px-6 py-4 text-left">
+                <DialogTitle className="text-base leading-snug">{active.subject}</DialogTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-mono text-muted-foreground">{active.ticket_number}</span>
+                  <Badge className={statusClass(active.status)}>
+                    {active.status_label || STATUS_LABELS[active.status] || t(`status.${active.status}`)}
+                  </Badge>
+                  {active.priority ? (
+                    <Badge className={priorityClass(active.priority)}>{String(active.priority_label || active.priority)}</Badge>
+                  ) : null}
+                </div>
+              </DialogHeader>
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-6 py-4">
+                {active.booking?.booking_number && (
+                  <p className="text-xs text-muted-foreground">
+                    {active.booking.booking_number} · {active.booking.service_name}
+                  </p>
+                )}
+                <p className="text-sm whitespace-pre-wrap">{active.description}</p>
+                <div className="max-h-56 overflow-y-auto overscroll-contain space-y-2">
+                  {(active.events || []).map((ev: any) => (
+                    <div key={ev.id} className="text-sm rounded-md bg-muted/50 p-2">
+                      <div className="text-xs text-muted-foreground">
+                        {EVENT_LABELS[ev.event_type] || ev.event_type} · {formatDisplayDateTime(ev.created_at)}
+                      </div>
+                      {ev.body ? <p className="mt-1 whitespace-pre-wrap">{ev.body}</p> : null}
+                    </div>
+                  ))}
+                </div>
+                {active.resolution ? (
+                  <div className="text-sm rounded-md border p-2">
+                    <div className="font-medium">{t("web.support.resolution")}</div>
+                    <p>{active.resolution}</p>
+                  </div>
+                ) : null}
+                {active.status === "closed" || active.status === "resolved" ? (
+                  <Button size="sm" variant="outline" onClick={() => void reopen()}>
+                    {t("web.support.reopen")}
+                  </Button>
+                ) : (
+                  <>
+                    <Textarea
+                      rows={3}
+                      value={reply}
+                      onChange={(e) => setReply(e.target.value)}
+                      placeholder={t("web.support.replyPlaceholder")}
+                    />
+                    <Button size="sm" disabled={!reply.trim()} onClick={() => void sendReply()}>
+                      {t("web.support.reply")}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -492,7 +492,7 @@ def invoice_pdf(invoice_id: str, user=Depends(current_user), db: Session = Depen
     if not _invoice_visible(db, row, user):
         raise HTTPException(403, "Not allowed")
     try:
-        data = render_invoice_pdf(dict(row))
+        data = render_invoice_pdf(dict(row), db=db)
     except Exception as e:
         raise HTTPException(500, f"Could not generate PDF: {e}") from e
     name = pdf_filename(str(row["invoice_number"]))

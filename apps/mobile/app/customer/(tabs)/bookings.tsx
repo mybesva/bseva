@@ -1,7 +1,7 @@
 import { DONE_BOOKING_STATUSES, rupees } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
@@ -14,7 +14,9 @@ import { useI18n } from "@/providers/I18nProvider";
 export default function CustomerBookings() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { t } = useI18n();
+  const listReturnTo = from === "more" ? "/customer/(tabs)/more" : "/customer/(tabs)/bookings";
   const q = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   const rows = q.data || [];
   const upcoming = rows.filter((b) => !DONE_BOOKING_STATUSES.includes(b.status as never));
@@ -31,7 +33,15 @@ export default function CustomerBookings() {
         {q.isLoading ? <LoadingBlock /> : null}
         {!q.isLoading && rows.length === 0 ? <EmptyState title={t("mobile.noBookings")} subtitle={t("mobile.bookFromServices")} /> : null}
         {upcoming.map((b: Booking) => (
-          <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
+          <Pressable
+            key={b.id}
+            onPress={() =>
+              router.push({
+                pathname: `/customer/booking/${b.id}`,
+                params: { returnTo: listReturnTo },
+              } as never)
+            }
+          >
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
@@ -49,7 +59,15 @@ export default function CustomerBookings() {
         ))}
         {past.length > 0 ? <AppText variant="h3">{t("mobile.history")}</AppText> : null}
         {past.map((b: Booking) => (
-          <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
+          <Pressable
+            key={b.id}
+            onPress={() =>
+              router.push({
+                pathname: `/customer/booking/${b.id}`,
+                params: { returnTo: listReturnTo },
+              } as never)
+            }
+          >
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />

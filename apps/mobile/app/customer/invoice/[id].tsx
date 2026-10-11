@@ -9,7 +9,14 @@ import { ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
-import { cacheAuthorizedPdf, downloadAuthorizedPdf, pdfAlert, shareCachedPdf } from "@/utils/documentPdf";
+import {
+  cacheAuthorizedPdf,
+  downloadAuthorizedPdf,
+  pdfAlert,
+  printHtmlDocument,
+  printPdfFile,
+  shareCachedPdf,
+} from "@/utils/documentPdf";
 
 function InvoiceActionButton({
   label,
@@ -71,7 +78,7 @@ export default function InvoiceHtmlScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useI18n();
   const { width } = useWindowDimensions();
-  const [busy, setBusy] = useState<"download" | "share" | null>(null);
+  const [busy, setBusy] = useState<"download" | "share" | "print" | null>(null);
   const stackActions = width < 360;
   const q = useQuery({
     queryKey: ["invoice-html", id],
@@ -86,6 +93,22 @@ export default function InvoiceHtmlScreen() {
       pdfAlert(t("mobile.invoices"), t("mobile.invoiceSaved"));
     } catch (e: unknown) {
       pdfAlert(t("mobile.invoices"), e instanceof Error ? e.message : t("mobile.invoiceDownloadFailed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function printSave() {
+    setBusy("print");
+    try {
+      if (q.data) {
+        await printHtmlDocument(q.data);
+      } else {
+        const cached = await cacheAuthorizedPdf(`/api/v1/invoices/${id}/pdf`, `invoice-${id}.pdf`);
+        await printPdfFile(cached);
+      }
+    } catch (e: unknown) {
+      pdfAlert(t("mobile.invoices"), e instanceof Error ? e.message : t("mobile.invoicePrintFailed"));
     } finally {
       setBusy(null);
     }
@@ -107,11 +130,18 @@ export default function InvoiceHtmlScreen() {
     <Screen>
       <ScreenHeader title={t("mobile.invoices")} back />
       <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6 }}>
-        <View style={{ flexDirection: stackActions ? "column" : "row", gap: 8 }}>
+        <View style={{ flexDirection: stackActions ? "column" : "row", flexWrap: "wrap", gap: 8 }}>
+          <InvoiceActionButton
+            label={t("mobile.printSavePdf")}
+            icon="print-outline"
+            primary
+            loading={busy === "print"}
+            disabled={busy != null || !q.data}
+            onPress={() => void printSave()}
+          />
           <InvoiceActionButton
             label={t("mobile.downloadPdf")}
             icon="download-outline"
-            primary
             loading={busy === "download"}
             disabled={busy != null}
             onPress={() => void downloadPdf()}

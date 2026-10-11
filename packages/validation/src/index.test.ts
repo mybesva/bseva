@@ -65,6 +65,9 @@ describe("validation parity with web", () => {
       last_name: "validation.lastNameRequired",
     });
     expect(validatePersonNameParts({ first_name: "Ram", middle_name: "K", last_name: "Kumar" })).toEqual({});
+    expect(validatePersonNameParts({ first_name: "000", middle_name: "", last_name: "Kumar" })).toEqual({
+      first_name: "validation.nameLetters",
+    });
   });
 
   it("matches web phone validation", () => {

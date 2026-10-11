@@ -91,7 +91,8 @@ export function documentBodyCss() {
 .bseva-doc-header-left { flex: 1 1 58%; min-width: 0; }
 .bseva-doc-header-right { flex: 0 0 auto; text-align: right; min-width: 170px; max-width: 42%; }
 .bseva-doc-brand-row { display: flex; align-items: flex-start; gap: 10px; }
-.bseva-doc-logo { display: block; height: 50px; width: auto; max-width: 150px; object-fit: contain; flex-shrink: 0; }
+.bseva-doc-logo-wrap { flex-shrink: 0; }
+.bseva-doc-logo { display: block; height: 50px; width: auto; max-width: 56px; object-fit: contain; }
 .bseva-doc-brand-name { font-size: 18px; font-weight: 700; color: ${BSEVA_NAVY}; letter-spacing: .05em; line-height: 1.2; }
 .bseva-doc-motto { font-size: 9px; color: ${BSEVA_ORANGE}; letter-spacing: .08em; margin-top: 2px; text-transform: uppercase; }
 .bseva-doc-company { margin-top: 8px; font-size: 9.5px; line-height: 1.55; color: #334155; word-wrap: break-word; overflow-wrap: anywhere; }
@@ -116,6 +117,24 @@ pre.bseva-doc-pre { font: 14px/1.65 'Segoe UI', Helvetica, Arial, sans-serif; wh
   .noprint { display: none !important; }
   html, body { background: #fff !important; }
   .bseva-doc-viewport { padding: 0 !important; background: #fff !important; overflow: visible !important; }
+  .bseva-doc-watermark {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .bseva-doc-watermark img {
+    width: auto;
+    height: auto;
+    max-width: 420px;
+    max-height: 420px;
+    object-fit: contain;
+    opacity: ${WATERMARK_OPACITY};
+  }
+  .bseva-doc-body { position: relative; z-index: 1; }
   .bseva-doc-page { width: auto !important; min-width: 0 !important; max-width: none !important; box-shadow: none !important; margin: 0 !important; }
 }
 `.trim();
@@ -155,7 +174,14 @@ html, body {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.bseva-doc-watermark img { width: min(58%, 420px); opacity: ${WATERMARK_OPACITY}; }
+.bseva-doc-watermark img {
+  width: auto;
+  height: auto;
+  max-width: min(58%, 420px);
+  max-height: min(72vh, 520px);
+  object-fit: contain;
+  opacity: ${WATERMARK_OPACITY};
+}
 .bseva-doc-body { position: relative; z-index: 1; }
 ${documentBodyCss()}
 `.trim();
@@ -196,7 +222,9 @@ export function renderDocumentHeader(
 <div class="bseva-doc-header-block">
   <div class="bseva-doc-header-left">
     <div class="bseva-doc-brand-row">
-      <img class="bseva-doc-logo" src="${src}" alt="${brand}"/>
+      <div class="bseva-doc-logo-wrap">
+        <img class="bseva-doc-logo" src="${src}" alt="${brand}"/>
+      </div>
       <div class="bseva-doc-brand-text">
         <div class="bseva-doc-brand-name">B-SEVA</div>
         <div class="bseva-doc-motto">${escapeDocumentHtml(BSEVA_MOTTO)}</div>

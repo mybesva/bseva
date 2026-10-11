@@ -24,7 +24,7 @@ Android and iOS share the same React Native screens. Firebase project **`b-seva-
 | `/astrology` | Muhurtham / astrology | customer | `app/customer/astrology.tsx` | PARTIAL | PARTIAL | `/astrology/services`, `/muhurta-consultations` | api-client | List + book; not identical to web MuhurtaConsultationBook widget |
 | `/customer` | Dashboard, wallet, recs, panchang | customer | `customer/(tabs)/index.tsx` | DONE | DONE | bookings, wallet, recommendations, panchang, promos | locales, rupees | Promo banners + start-OTP on booking detail |
 | `/customer/profile` | Profile + photo | customer | `customer/profile.tsx` | DONE | DONE | `/customer/profile`, photo upload | validation | |
-| `/customer/address` | Address + geo | customer | `customer/address.tsx` | DONE | DONE | profile PATCH | addressSchema | |
+| `/customer/profile?tab=address` | Address + geo (under Profile) | customer | `customer/address.tsx` | DONE | PARTIAL | profile PATCH | addressSchema | Web: Profile tab; mobile still has standalone `customer/address.tsx` |
 | `/customer/wallet` | Balance, load, txns | customer | `customer/(tabs)/wallet.tsx` | DONE | DONE | `/wallet`, `/wallet/load` | walletLoadSchema | Wallet is the live payment rail |
 | `/customer/bookings` | Booking list | customer | `customer/(tabs)/bookings.tsx` | DONE | DONE | `GET /bookings` | api-client.listBookings | |
 | `/customer/notifications` | Inbox | customer | `customer/notifications.tsx` | DONE | DONE | `/notifications*` | mapNotificationLinkToMobile | |

@@ -1,15 +1,34 @@
-"""A4 PDF for issued BSeva invoices — snapshot only, no live settings."""
+"""A4 PDF for issued BSeva invoices — same HTML as View/Print, converted to PDF."""
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from app.document_brand import NAVY_RGB as NAVY
 from app.document_brand import ORANGE_RGB as ORANGE
-from app.document_brand import MOTTO, build_bseva_pdf, resolve_logo_file
+from app.document_brand import (
+    MOTTO,
+    build_bseva_pdf,
+    pdf_logo_flowable,
+    resolve_header_logo_file,
+)
 from app.invoice_docs import format_duration_minutes, format_payment_date
 
+logger = logging.getLogger("bseva.invoice_pdf")
+
 GRAY = (0.35, 0.35, 0.38)
+# Printable width on A4 with 14mm side margins (must match build_bseva_pdf).
+CONTENT_W_MM = 182
+
+
+def render_invoice_pdf(inv: dict[str, Any], *, db: Any) -> bytes:
+    """Generate PDF from the official invoice HTML (matches View / Print)."""
+    from app.html_pdf import html_document_to_pdf
+    from app.invoice_docs import render_invoice_html
+
+    html = render_invoice_html(db, inv)
+    return html_document_to_pdf(html)
 
 
 def _snap(inv: dict[str, Any]) -> dict[str, Any]:
@@ -30,7 +49,7 @@ def _pdf_header(story: list[Any], *, company: dict, title: str, meta: list[tuple
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
-    from reportlab.platypus import Image, Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
     styles = getSampleStyleSheet()
     brand = ParagraphStyle("brand", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=14, textColor=colors.Color(*NAVY))
@@ -39,12 +58,44 @@ def _pdf_header(story: list[Any], *, company: dict, title: str, meta: list[tuple
     doc_title = ParagraphStyle("doctitle", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=12, alignment=2, textColor=colors.Color(*NAVY))
     meta_style = ParagraphStyle("meta", parent=styles["Normal"], fontSize=8, alignment=2, textColor=colors.Color(*GRAY), leading=10)
 
-    left_cells: list[Any] = []
-    logo_path = resolve_logo_file(company.get("logo_path"))
+    logo_path = resolve_header_logo_file(company.get("logo_path"))
+    brand_bits: list[Any] = []
     if logo_path:
-        left_cells.append(Image(str(logo_path), width=38 * mm, height=16 * mm))
-    left_cells.append(Paragraph("B-SEVA", brand))
-    left_cells.append(Paragraph(MOTTO, motto))
+        brand_bits.append(pdf_logo_flowable(logo_path, max_width_mm=20, max_height_mm=14))
+    brand_text = Table(
+        [
+            [Paragraph("B-SEVA", brand)],
+            [Paragraph(MOTTO, motto)],
+        ],
+        colWidths=[72 * mm],
+    )
+    brand_text.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    brand_row = Table(
+        [[brand_bits[0] if brand_bits else "", brand_text]],
+        colWidths=[22 * mm, 74 * mm],
+    )
+    brand_row.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+
+    left_cells: list[Any] = [brand_row, Spacer(1, 4)]
     left_cells.append(Paragraph(str(company.get("legal_name") or ""), company_style))
     left_cells.append(Paragraph(str(company.get("address") or "").replace("\n", "<br/>"), company_style))
     contact = " · ".join(
@@ -66,7 +117,9 @@ def _pdf_header(story: list[Any], *, company: dict, title: str, meta: list[tuple
         if value:
             right_cells.append(Paragraph(f"<b>{label}:</b> {value}", meta_style))
 
-    header = Table([[left_cells, right_cells]], colWidths=[110 * mm, 68 * mm])
+    left_w = CONTENT_W_MM * 0.58
+    right_w = CONTENT_W_MM - left_w
+    header = Table([[left_cells, right_cells]], colWidths=[left_w * mm, right_w * mm])
     header.setStyle(
         TableStyle(
             [
@@ -80,7 +133,7 @@ def _pdf_header(story: list[Any], *, company: dict, title: str, meta: list[tuple
     story.append(Spacer(1, 8))
 
 
-def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
+def render_invoice_pdf_reportlab(inv: dict[str, Any]) -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
@@ -144,7 +197,7 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
                 [Paragraph("BILL TO", section), Paragraph("BOOKING DETAILS", section)],
                 [Paragraph(bill_txt, small), Paragraph(svc_txt, small)],
             ],
-            colWidths=[89 * mm, 89 * mm],
+            colWidths=[CONTENT_W_MM / 2 * mm, CONTENT_W_MM / 2 * mm],
             style=TableStyle(
                 [
                     ("BOX", (0, 0), (-1, -1), 0.4, colors.Color(0.84, 0.87, 0.91)),
@@ -173,7 +226,10 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
                 _inr(int(row.get("amount_paise") or row.get("taxable_paise") or 0)),
             ]
         )
-    tbl = Table(data, colWidths=[8 * mm, 68 * mm, 22 * mm, 10 * mm, 24 * mm, 24 * mm])
+    tbl = Table(
+        data,
+        colWidths=[10 * mm, 78 * mm, 24 * mm, 12 * mm, 28 * mm, 30 * mm],
+    )
     tbl.setStyle(
         TableStyle(
             [
@@ -208,7 +264,7 @@ def render_invoice_pdf(inv: dict[str, Any]) -> bytes:
 
     totals_tbl = Table(
         [[Paragraph(f"<para alignment='right'>{label}</para>", muted), Paragraph(f"<para alignment='right'><b>{value}</b></para>", small)] for label, value in totals],
-        colWidths=[44 * mm, 34 * mm],
+        colWidths=[48 * mm, 30 * mm],
         hAlign="RIGHT",
     )
     totals_tbl.setStyle(
