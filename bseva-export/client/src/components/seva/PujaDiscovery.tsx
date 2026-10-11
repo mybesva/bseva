@@ -19,7 +19,8 @@ import {
 import type { CatalogService, ServiceCategory } from "@bseva/types";
 
 const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
-const PAGE_SIZES = [6, 9, 12, 24];
+/** Multiples of 4 so desktop pages fill whole rows (4 cards per row). */
+const PAGE_SIZES = [8, 12, 16, 24];
 const URL_SYNC_DELAY_MS = 300;
 
 /**
@@ -40,7 +41,7 @@ export default function PujaDiscovery() {
   const [services, setServices] = useState<CatalogService[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(9);
+  const [pageSize, setPageSize] = useState(8);
 
   useEffect(() => {
     api<ServiceCategory[]>("/service-categories")
@@ -119,7 +120,7 @@ export default function PujaDiscovery() {
   }, [q, category, chips, t]);
 
   const renderGrid = (list: CatalogService[]) => (
-    <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 md:gap-7 lg:grid-cols-3 lg:gap-8">
+    <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 xl:gap-5">
       {list.map((s, i) => {
         const Icon = ICONS[i % ICONS.length];
         const starting = formatStartingFrom(s, lang);

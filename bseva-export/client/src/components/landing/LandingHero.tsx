@@ -7,7 +7,8 @@ import { LotusMark, MandalaOutline } from "./DevotionalPatterns";
 import LandingHeroAppPreview from "./LandingHeroAppPreview";
 
 const NAVY = "#071A33";
-const HERO = "/images/landing/hero-approved.jpg?v=9";
+// Navy fade baked into the artwork was reversed over the girl on the left so her face reads clearly.
+const HERO = "/images/landing/hero-approved-girl.jpg?v=2";
 
 /**
  * Full-bleed cinematic hero. The photograph already contains the family,
@@ -38,7 +39,7 @@ export default function LandingHero() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: `linear-gradient(90deg, ${NAVY} 0%, ${NAVY} 22%, ${NAVY}73 32%, ${NAVY}00 42%)`,
+            backgroundImage: `linear-gradient(90deg, ${NAVY} 0%, ${NAVY} 18%, ${NAVY}99 23%, ${NAVY}33 28%, ${NAVY}00 32%)`,
           }}
         />
         <MandalaOutline className="absolute -bottom-48 -left-40 h-[36rem] w-[36rem] text-white opacity-[0.055]" />
@@ -204,8 +205,106 @@ function HeroPhotoStage() {
           onLoad={() => setLoaded(true)}
           className="block h-full w-full"
         />
+        <HavanFireOverlay />
         <LandingHeroAppPreview />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Live-fire effect over the havan in the hero photo, in the photo's own pixel space
+ * (fire spans roughly x 1310–1470, base at y ≈ 880 of the 2048×1150 image).
+ * The real flames are copied from the photo and rippled with an animated SVG turbulence
+ * filter (heat shimmer), feathered into the original; a soft irregular glow and a few embers
+ * complete it. Nothing is drawn on top of the flames, so they stay photographic.
+ */
+const FIRE = { x: 1270, y: 600, w: 250, h: 300 };
+const EMBERS = [
+  { x: 1352, d: 3.2, delay: 0, drift: 18 },
+  { x: 1388, d: 2.7, delay: -1.1, drift: -10 },
+  { x: 1410, d: 3.6, delay: -2.2, drift: 22 },
+  { x: 1436, d: 2.9, delay: -0.6, drift: -16 },
+];
+const FIRE_BASE_Y = 860;
+
+function HavanFireOverlay() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div
+        className="lp-fire-glow absolute"
+        style={{
+          left: 1150,
+          top: 560,
+          width: 480,
+          height: 420,
+          background:
+            "radial-gradient(ellipse at 50% 70%, rgba(255,186,96,0.42) 0%, rgba(255,130,30,0.18) 40%, rgba(255,100,0,0) 70%)",
+        }}
+      />
+      <svg
+        className="absolute"
+        style={{ left: FIRE.x, top: FIRE.y }}
+        width={FIRE.w}
+        height={FIRE.h}
+        viewBox={`${FIRE.x} ${FIRE.y} ${FIRE.w} ${FIRE.h}`}
+      >
+        <defs>
+          <filter
+            id="lp-heat"
+            filterUnits="userSpaceOnUse"
+            x={FIRE.x}
+            y={FIRE.y}
+            width={FIRE.w}
+            height={FIRE.h}
+            colorInterpolationFilters="sRGB"
+          >
+            <feTurbulence type="fractalNoise" baseFrequency="0.018 0.055" numOctaves={2} seed={7} result="noise">
+              <animate
+                attributeName="baseFrequency"
+                dur="2.6s"
+                values="0.018 0.055;0.022 0.075;0.016 0.062;0.02 0.05;0.018 0.055"
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="22" xChannelSelector="R" yChannelSelector="G">
+              <animate attributeName="scale" dur="1.4s" values="16;26;18;24;16" repeatCount="indefinite" />
+            </feDisplacementMap>
+            <feComponentTransfer>
+              <feFuncR type="linear" slope="1.06">
+                <animate attributeName="slope" dur="1.3s" values="1.02;1.1;1.04;1.12;1.02" repeatCount="indefinite" />
+              </feFuncR>
+              <feFuncG type="linear" slope="1.03" />
+            </feComponentTransfer>
+          </filter>
+          <radialGradient id="lp-fire-feather" cx="50%" cy="58%" r="50%">
+            <stop offset="0%" stopColor="#fff" />
+            <stop offset="55%" stopColor="#fff" />
+            <stop offset="100%" stopColor="#000" />
+          </radialGradient>
+          <mask id="lp-fire-mask" maskUnits="userSpaceOnUse" x={FIRE.x} y={FIRE.y} width={FIRE.w} height={FIRE.h}>
+            <rect x={FIRE.x} y={FIRE.y} width={FIRE.w} height={FIRE.h} fill="url(#lp-fire-feather)" />
+          </mask>
+        </defs>
+        <g mask="url(#lp-fire-mask)">
+          <image href={HERO} x={0} y={0} width={PHOTO_W} height={PHOTO_H} filter="url(#lp-heat)" />
+        </g>
+      </svg>
+      {EMBERS.map((e, i) => (
+        <span
+          key={i}
+          className="lp-ember absolute"
+          style={
+            {
+              left: e.x,
+              top: FIRE_BASE_Y - 160,
+              animationDuration: `${e.d}s`,
+              animationDelay: `${e.delay}s`,
+              "--drift": `${e.drift}px`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
     </div>
   );
 }

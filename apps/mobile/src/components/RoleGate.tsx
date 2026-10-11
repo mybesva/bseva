@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "@/providers/AuthProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { isCustomerApp, isPujariApp } from "@/config/appVariant";
 
 export function RoleGate({
   allow,
@@ -22,6 +23,8 @@ export function RoleGate({
       </View>
     );
   }
+  // Each single-role app only ever shows its own section.
+  if ((allow === "pujari" && isCustomerApp) || (allow === "customer" && isPujariApp)) return <Redirect href="/" />;
   if (!user) return <Redirect href="/" />;
   if (isAdminRole(user.role)) return <Redirect href="/admin-web" />;
   if (allow === "customer" && !isCustomerRole(user.role)) {

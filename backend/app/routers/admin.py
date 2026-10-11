@@ -142,6 +142,116 @@ def stats(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
     }
 
 
+@router.get("/stats/overview")
+def stats_overview(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+    """Read-only operational snapshot for the admin dashboard (IST calendar days)."""
+    q = lambda sql, **p: db.execute(text(sql), p)
+    today = "(now() AT TIME ZONE 'Asia/Kolkata')::date"
+    live = "status NOT IN ('cancelled','rejected')"
+
+    def scalar(sql: str) -> int:
+        return int(q(sql).scalar() or 0)
+
+    revenue_month = scalar(
+        f"SELECT COALESCE(SUM(total_paise),0) FROM bookings WHERE {live} "
+        f"AND date_trunc('month', created_at AT TIME ZONE 'Asia/Kolkata') = date_trunc('month', {today}::timestamp)"
+    )
+    revenue_last_month = scalar(
+        f"SELECT COALESCE(SUM(total_paise),0) FROM bookings WHERE {live} "
+        f"AND date_trunc('month', created_at AT TIME ZONE 'Asia/Kolkata') = date_trunc('month', {today}::timestamp - interval '1 month')"
+    )
+    bookings_month = scalar(
+        "SELECT COUNT(*) FROM bookings WHERE "
+        f"date_trunc('month', created_at AT TIME ZONE 'Asia/Kolkata') = date_trunc('month', {today}::timestamp)"
+    )
+    bookings_last_month = scalar(
+        "SELECT COUNT(*) FROM bookings WHERE "
+        f"date_trunc('month', created_at AT TIME ZONE 'Asia/Kolkata') = date_trunc('month', {today}::timestamp - interval '1 month')"
+    )
+    new_customers_month = scalar(
+        "SELECT COUNT(*) FROM users WHERE role = 'customer' AND "
+        f"date_trunc('month', created_at AT TIME ZONE 'Asia/Kolkata') = date_trunc('month', {today}::timestamp)"
+    )
+
+    attention = {
+        "awaitingPujari": scalar("SELECT COUNT(*) FROM bookings WHERE status IN ('pending','pending_acceptance')"),
+        "unassigned": scalar(
+            "SELECT COUNT(*) FROM bookings WHERE pujari_id IS NULL AND status IN ('pending','pending_acceptance','confirmed')"
+        ),
+        "needsReassignment": scalar(
+            f"SELECT COUNT(*) FROM bookings WHERE COALESCE(needs_reassignment, FALSE) = TRUE AND {live} AND status <> 'completed'"
+        ),
+        "inProgress": scalar("SELECT COUNT(*) FROM bookings WHERE status = 'in_progress'"),
+        "openTickets": scalar("SELECT COUNT(*) FROM support_tickets WHERE status NOT IN ('resolved','closed')"),
+        "overdueTickets": scalar(
+            "SELECT COUNT(*) FROM support_tickets WHERE status NOT IN ('resolved','closed') AND sla_due_at IS NOT NULL AND sla_due_at < now()"
+        ),
+        "pendingVerification": scalar(
+            "SELECT COUNT(*) FROM pujari_profiles WHERE verification_status IN ('pending','under_review','correction_required')"
+        ),
+        "pendingSettlements": scalar("SELECT COUNT(*) FROM bookings WHERE settlement_status = 'pending' AND status = 'completed'"),
+    }
+
+    status_rows = q("SELECT status, COUNT(*) AS n FROM bookings GROUP BY status").mappings().all()
+    trend_rows = q(
+        f"""
+        SELECT d::date AS day, COUNT(b.id) AS n
+        FROM generate_series({today} - 6, {today}, interval '1 day') d
+        LEFT JOIN bookings b ON (b.created_at AT TIME ZONE 'Asia/Kolkata')::date = d::date
+        GROUP BY d ORDER BY d
+        """
+    ).mappings().all()
+    todays = q(
+        f"""
+        SELECT b.id, b.booking_number, b.start_time, b.status, b.mode, b.location_label,
+               s.name AS service_name, c.name AS customer_name, p.name AS pujari_name
+        FROM bookings b
+        LEFT JOIN services s ON s.id = b.service_id
+        LEFT JOIN users c ON c.id = b.customer_id
+        LEFT JOIN users p ON p.id = b.pujari_id
+        WHERE b.booking_date = {today} AND b.{live}
+        ORDER BY b.start_time NULLS LAST
+        LIMIT 8
+        """
+    ).mappings().all()
+    recent = q(
+        """
+        SELECT b.id, b.booking_number, b.booking_date, b.status, b.total_paise, b.created_at,
+               s.name AS service_name, c.name AS customer_name
+        FROM bookings b
+        LEFT JOIN services s ON s.id = b.service_id
+        LEFT JOIN users c ON c.id = b.customer_id
+        ORDER BY b.created_at DESC
+        LIMIT 6
+        """
+    ).mappings().all()
+    top = q(
+        f"""
+        SELECT s.name, COUNT(*) AS n, COALESCE(SUM(b.total_paise),0) AS revenue
+        FROM bookings b JOIN services s ON s.id = b.service_id
+        WHERE b.created_at >= now() - interval '30 days' AND b.{live}
+        GROUP BY s.name ORDER BY n DESC LIMIT 5
+        """
+    ).mappings().all()
+
+    return {
+        "todayBookings": scalar(f"SELECT COUNT(*) FROM bookings WHERE booking_date = {today} AND {live}"),
+        "month": {
+            "revenue": revenue_month,
+            "revenueLastMonth": revenue_last_month,
+            "bookings": bookings_month,
+            "bookingsLastMonth": bookings_last_month,
+            "newCustomers": new_customers_month,
+        },
+        "attention": attention,
+        "statusBreakdown": {r["status"]: int(r["n"]) for r in status_rows},
+        "last7Days": [{"day": str(r["day"]), "count": int(r["n"])} for r in trend_rows],
+        "todaySchedule": [row_dict(r) for r in todays],
+        "recentBookings": [row_dict(r) for r in recent],
+        "topServices": [{"name": r["name"], "count": int(r["n"]), "revenue": int(r["revenue"])} for r in top],
+    }
+
+
 @router.get("/users")
 def list_users(
     role: str | None = None,

@@ -23,30 +23,30 @@ function StatCard({ item, compact }: { item: StatItem; compact: boolean }) {
         minWidth: compact ? "100%" : "46%",
         maxWidth: compact ? "100%" : "48%",
         backgroundColor: colors.card,
-        borderRadius: 12,
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: colors.border,
-        padding: compact ? 10 : 12,
+        padding: compact ? 12 : 14,
         gap: 6,
-        minHeight: compact ? 88 : 96,
-        shadowColor: colors.navy,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 3,
-        elevation: 1,
+        minHeight: compact ? 96 : 108,
+        shadowColor: "#78400A",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 14,
+        elevation: 2,
       }}
     >
       <View
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: 8,
+          width: 38,
+          height: 38,
+          borderRadius: 12,
           backgroundColor: item.iconBg,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Ionicons name={item.icon} size={18} color={item.iconColor} />
+        <Ionicons name={item.icon} size={20} color={item.iconColor} />
       </View>
       <AppText variant="small" color={colors.mutedForeground} numberOfLines={1}>
         {item.label}
@@ -55,7 +55,7 @@ function StatCard({ item, compact }: { item: StatItem; compact: boolean }) {
         variant="h3"
         color={colors.foreground}
         numberOfLines={1}
-        style={{ fontSize: compact ? 18 : 20, lineHeight: compact ? 22 : 24 }}
+        style={{ fontSize: compact ? 20 : 22, lineHeight: compact ? 24 : 27, fontWeight: "800" }}
       >
         {item.value}
       </AppText>

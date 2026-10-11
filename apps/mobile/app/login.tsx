@@ -15,6 +15,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient, resolveApiBase } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { roleAllowedInApp, variantRole, wrongAppMessageKey } from "@/config/appVariant";
 
 function routeForRole(role: string) {
   const dest = dashboardPath(role);
@@ -24,9 +25,10 @@ function routeForRole(role: string) {
 
 export default function LoginScreen() {
   const { role } = useLocalSearchParams<{ role?: string }>();
-  const roleHint = role === "pujari" ? "pujari" : role === "customer" ? "customer" : undefined;
+  // Single-role apps (B-Seva / B-Seva Pujari) always sign in their own role.
+  const roleHint = variantRole ?? (role === "pujari" ? "pujari" : role === "customer" ? "customer" : undefined);
   const router = useRouter();
-  const { refresh } = useAuth();
+  const { refresh, logout } = useAuth();
   const { colors } = useAppTheme();
   const { t } = useI18n();
   const [identifier, setIdentifier] = useState("");
@@ -45,6 +47,12 @@ export default function LoginScreen() {
     setPending(true);
     try {
       const out = await apiClient.login(identifier.trim(), password);
+      if (!roleAllowedInApp(out.user.role)) {
+        // Valid account, wrong app: end this session and point to the right app.
+        await logout();
+        setError(t(wrongAppMessageKey(out.user.role)));
+        return;
+      }
       await refresh();
       if (isAdminRole(out.user.role)) {
         router.replace("/admin-web");

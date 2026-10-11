@@ -13,6 +13,7 @@ import { pujariLoginPage } from "./resources/pujariLoginPage";
 import { aboutPage } from "./resources/aboutPage";
 import { contactPage } from "./resources/contactPage";
 import { servicesPageRedesign } from "./resources/servicesPageRedesign";
+import { mobileWelcome } from "./resources/mobileWelcome";
 import { mobileCoverage } from "./resources/mobileCoverage";
 import { webCoverage } from "./resources/webCoverage";
 import { customerRequirements } from "./resources/customerRequirements";
@@ -79,6 +80,7 @@ const base: Record<string, string> = {
   ...aboutPage.en,
   ...contactPage.en,
   ...servicesPageRedesign.en,
+  ...mobileWelcome.en,
   ...sevaLocales.en,
 };
 
@@ -98,6 +100,7 @@ function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): 
     ...aboutPage[lang],
     ...contactPage[lang],
     ...servicesPageRedesign[lang],
+    ...mobileWelcome[lang],
     ...gapTranslations[lang],
   };
 }

@@ -1,7 +1,8 @@
-import { Flower2, Heart, Leaf, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Flower2, Heart, Leaf, ShieldCheck, Users } from "lucide-react";
+import { Link } from "wouter";
 import { useI18n } from "@/i18n/I18nProvider";
 
-const HERO_ART = "/images/customer-hero-art.jpg";
+const HERO_ART = "/images/landing/temple-sunrise.jpg";
 
 const TRUST = [
   { key: "customer.hero.trust.rituals" as const, Icon: Leaf },
@@ -15,20 +16,11 @@ export function customerGreetingName(fullName: string | null | undefined, fallba
   return trimmed || fallback;
 }
 
-function namasteParts(template: string) {
-  const idx = template.indexOf("🙏");
-  if (idx < 0) return { before: template, after: "" };
-  return {
-    before: template.slice(0, idx),
-    after: template.slice(idx + "🙏".length).replace(/^\s+/, ""),
-  };
-}
-
-function greetingClamp(name: string) {
-  const n = name.trim().length;
-  if (n > 28) return "clamp(1rem, 0.65rem + 1.45vw, 1.5rem)";
-  if (n > 16) return "clamp(1.08rem, 0.72rem + 1.6vw, 1.85rem)";
-  return "clamp(1.15rem, 0.8rem + 1.8vw, 2.25rem)";
+/** Splits "Namaste 🙏 {{name}}!" around the name so the name can be highlighted in any language. */
+function greetingParts(template: string, name: string) {
+  const idx = template.indexOf(name);
+  if (idx < 0) return { before: template, name: "", after: "" };
+  return { before: template.slice(0, idx), name, after: template.slice(idx + name.length) };
 }
 
 export default function CustomerWelcomeHero({
@@ -38,74 +30,80 @@ export default function CustomerWelcomeHero({
   publicId?: string | null;
 }) {
   const { t } = useI18n();
-  const greeting = namasteParts(t("customer.hero.namaste", { name: customerName }));
+  const g = greetingParts(t("customer.hero.namaste", { name: customerName }), customerName);
 
   return (
-    <section className="relative mb-8 overflow-hidden rounded-xl bg-[#FFF8E7] dark:bg-[#0B1424]">
-      <div
-        className="pointer-events-none absolute inset-0 bg-cover bg-no-repeat bg-[position:78%_center]"
-        style={{ backgroundImage: `url(${HERO_ART})` }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FFF8E7]/92 via-[#FFF8E7]/78 to-[#FFF8E7]/70 lg:bg-gradient-to-r lg:from-[#FFF8E7] lg:via-[#FFF8E7]/80 lg:to-transparent dark:from-[#0B1424]/92 dark:via-[#0B1424]/78 dark:to-[#0B1424]/55 lg:dark:from-[#0B1424] lg:dark:via-[#0B1424]/75 lg:dark:to-transparent"
-        aria-hidden
-      />
+    <section className="mb-6">
+      <div className="relative isolate overflow-hidden rounded-3xl bg-[#071A33] text-white">
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-full bg-cover bg-[position:70%_45%] opacity-60 sm:w-[70%] sm:opacity-100"
+          style={{ backgroundImage: `url(${HERO_ART})` }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#071A33_0%,#071A33_38%,rgba(7,26,51,0.55)_60%,rgba(7,26,51,0.05)_100%)]"
+          aria-hidden
+        />
 
-      <div className="relative z-[1] flex flex-col gap-3 p-4 sm:p-5 lg:block lg:h-[292px] lg:overflow-hidden lg:px-8 lg:py-6 xl:h-[300px]">
-        <p className="mb-0 flex items-center gap-2 text-[11px] font-medium tracking-wide text-foreground lg:mb-2.5 dark:text-white">
-          <Flower2 size={14} className="shrink-0 text-primary" aria-hidden />
-          {t("customer.hero.tagline")}
-          <span className="hidden h-px w-10 bg-primary sm:block" aria-hidden />
-        </p>
-
-        <div className="min-w-0 max-w-xl lg:max-w-[min(100%,38rem)]">
-          <h1
-            className="max-w-full min-w-0 break-words hyphens-auto [overflow-wrap:anywhere] [word-break:break-word] pr-6 sm:pr-10 lg:pr-4 font-bold leading-[1.15] tracking-tight text-foreground dark:text-white"
-            style={{ fontSize: greetingClamp(customerName) }}
-          >
-            {greeting.before}
-            <span className="pr-[0.4em]">🙏</span>
-            {greeting.after}
-          </h1>
-          <p className="mt-0 break-words text-[1.25rem] font-bold leading-[1.12] text-foreground sm:text-[1.5rem] lg:text-[36px] lg:leading-[1.08] dark:text-white">
-            {t("customer.hero.welcome")}
-          </p>
-          <p className="mt-1.5 text-sm font-semibold leading-snug text-foreground lg:mt-2 dark:text-white">
-            {t("customer.hero.blessing")}
-          </p>
-          <p className="mt-0.5 max-w-[36rem] text-[13px] leading-snug text-muted-foreground dark:text-text-secondary">
-            {t("customer.hero.support")}
-          </p>
-        </div>
-
-        <blockquote className="mt-6 flex max-w-md items-start gap-2.5 rounded-xl border border-[#E6D2A8] bg-white/80 px-3.5 py-2.5 shadow-sm backdrop-blur-sm lg:mt-8 lg:inline-flex lg:max-w-xl lg:items-center lg:gap-3 lg:px-4 lg:py-2 dark:border-[#D4AF37]/30 dark:bg-[#152238]/80">
-          <span className="mt-0.5 shrink-0 font-serif text-2xl leading-none text-[#D4AF37] lg:mt-0 lg:text-[22px]" aria-hidden>
-            “
-          </span>
-          <div className="min-w-0 lg:flex lg:flex-1 lg:items-center lg:gap-3">
-            <p className="text-[13px] italic leading-snug text-foreground dark:text-white">
-              {t("customer.hero.quote")}
+        <div className="relative grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr] lg:items-end lg:p-9">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#FF7A00]">
+              <Flower2 size={15} aria-hidden />
+              {t("customer.hero.tagline")}
             </p>
-            <footer className="mt-0.5 text-right text-[11px] font-medium text-primary lg:mt-0 lg:whitespace-nowrap dark:text-brand-orange">
+            <h1 className="mt-3 break-words font-display text-[clamp(1.75rem,1.2rem+2vw,2.6rem)] font-semibold leading-[1.15]">
+              {g.before}
+              {g.name ? <span className="text-[#FF7A00]">{g.name}</span> : null}
+              {g.after}
+            </h1>
+            <p className="mt-3 max-w-[36rem] text-[15px] font-medium leading-relaxed text-white/85">
+              {t("customer.hero.welcome")} {t("customer.hero.blessing")} {t("customer.hero.support")}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/services"
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#FF7A00] px-5 text-sm font-bold text-[#0E1830] shadow-[0_10px_18px_-10px_rgba(255,122,0,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                {t("nav.bookPuja")} <ArrowRight size={16} aria-hidden />
+              </Link>
+              <Link
+                href="/customer/bookings"
+                className="inline-flex h-11 items-center rounded-xl border-[1.5px] border-white/60 px-5 text-sm font-bold text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                {t("nav.bookings")}
+              </Link>
+            </div>
+          </div>
+
+          <blockquote className="relative justify-self-end rounded-2xl border border-[#D4AF37]/45 bg-[#071A33]/60 px-5 pb-4 pt-5 backdrop-blur-md lg:max-w-[22rem]">
+            <span className="absolute -top-5 left-4 font-display text-5xl leading-none text-[#D4AF37]" aria-hidden>
+              “
+            </span>
+            <p className="font-display text-[17px] font-semibold leading-snug">{t("customer.hero.quote")}</p>
+            <footer className="mt-1.5 text-xs font-bold uppercase tracking-[0.1em] text-[#D4AF37]">
               — {t("customer.hero.quoteBy")}
             </footer>
-          </div>
-        </blockquote>
-
-        <ul className="grid w-full grid-cols-2 gap-x-3 gap-y-3 rounded-xl border border-white/80 bg-white/85 px-3 py-3 shadow-sm backdrop-blur-md sm:gap-x-4 lg:absolute lg:bottom-6 lg:right-7 lg:mt-0 lg:w-auto lg:grid-cols-4 lg:gap-x-2.5 lg:px-3.5 lg:py-2 dark:border-white/10 dark:bg-[#152238]/80">
-          {TRUST.map(({ key, Icon }) => (
-            <li key={key} className="flex min-w-0 items-center gap-2 lg:w-[4.7rem] lg:flex-col lg:items-center lg:gap-1 lg:text-center">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center text-primary lg:h-7 lg:w-7">
-                <Icon size={17} strokeWidth={1.75} aria-hidden />
-              </span>
-              <span className="min-w-0 text-[11px] font-semibold leading-tight text-foreground lg:text-[10px] dark:text-white">
-                {t(key)}
-              </span>
-            </li>
-          ))}
-        </ul>
+          </blockquote>
+        </div>
       </div>
+
+      <ul className="mt-3 grid grid-cols-2 overflow-hidden rounded-2xl border border-[#EFE2CF] bg-white lg:grid-cols-4 dark:border-white/10 dark:bg-[#152238]">
+        {TRUST.map(({ key, Icon }, i) => (
+          <li
+            key={key}
+            className={`flex min-w-0 items-center gap-3 px-4 py-3.5 text-sm font-bold text-[#0E1830] dark:text-white ${
+              i % 2 ? "border-l border-[#EFE2CF] dark:border-white/10" : ""
+            } ${i > 1 ? "border-t lg:border-t-0 border-[#EFE2CF] dark:border-white/10" : ""} ${
+              i === 2 ? "lg:border-l" : ""
+            }`}
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFF1E2] text-[#FF7A00] dark:bg-[#FF7A00]/15">
+              <Icon size={18} strokeWidth={1.8} aria-hidden />
+            </span>
+            <span className="min-w-0 leading-tight">{t(key)}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

@@ -145,9 +145,34 @@ function PortalShell({
     .slice(0, 2)
     .toUpperCase();
 
+  // Both portals use the navy sidebar with a profile card; `isCustomer` kept for role-specific bits.
+  const isCustomer = true;
+  /** Nav groups: work · account · help. */
+  const groupBreakBefore = new Set(
+    role === "customer" ? ["/customer/profile", "/customer/support"] : ["/pujari/profile", "/pujari/support"],
+  );
+
   const Sidebar = (
-    <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="p-4 border-b border-sidebar-border shrink-0">
+    <div className={cn("flex h-full min-h-0 flex-col text-sidebar-foreground", isCustomer ? "bg-[#071A33]" : "bg-sidebar")}>
+      {isCustomer ? (
+        <div className="shrink-0 p-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3.5">
+            <Avatar className="h-12 w-12 shrink-0 ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#071A33]">
+              {photoUrl ? <AvatarImage src={photoUrl} alt="" /> : null}
+              <AvatarFallback className="bg-gradient-to-br from-[#FFB347] to-[#FF7A00] text-base font-extrabold text-[#071A33]">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold" title={user?.name || undefined}>{user?.name}</p>
+              {user?.public_id ? <p className="truncate font-mono text-[11px] text-white/60">{user.public_id}</p> : null}
+              <p className="mt-1 text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-[#FF7A00]">
+                {role === "pujari" ? t("auth.pujari") : t("auth.customer")}
+              </p>
+            </div>
+          </div>
+          {headerBelow ? <div className="mt-2 text-center">{headerBelow}</div> : null}
+        </div>
+      ) : null}
+      <div className={cn("p-4 border-b border-sidebar-border shrink-0", isCustomer && "hidden")}>
         <div className="flex flex-col items-center text-center gap-2 py-2">
           <Avatar className={cn("border-2 border-primary/30", photoRequired ?"h-24 w-24" :"h-16 w-16")}>
             {photoUrl ? <AvatarImage src={photoUrl} alt="" /> : null}
@@ -169,7 +194,7 @@ function PortalShell({
       </div>
       <nav
         ref={navRef}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-3 space-y-1"
+        className={cn("flex-1 min-h-0 overflow-y-auto overscroll-contain py-3 space-y-1", isCustomer ? "px-3 pt-1" : "px-2")}
         onScroll={(e) => {
           sidebarScrollY[scrollKey] = (e.target as HTMLElement).scrollTop;
         }}
@@ -179,12 +204,19 @@ function PortalShell({
               location === item.href ||
               (item.href !== "/customer" && item.href !== "/pujari" && location.startsWith(item.href));
             return (
+              <div key={item.href}>
+              {groupBreakBefore.has(item.href) ? <div className="mx-1 my-2.5 h-px bg-white/10" aria-hidden /> : null}
               <Link
-                key={item.href}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                  routeActive ? "bg-sidebar-accent text-primary font-medium" : "hover:bg-sidebar-accent/60",
+                  isCustomer
+                    ? routeActive
+                      ? "rounded-xl bg-[#FF7A00] py-2.5 font-bold text-[#071A33] shadow-[0_10px_20px_-12px_rgba(255,122,0,0.9)]"
+                      : "rounded-xl py-2.5 font-semibold text-white/80 hover:bg-white/[0.07] hover:text-white"
+                    : routeActive
+                      ? "bg-sidebar-accent text-primary font-medium"
+                      : "hover:bg-sidebar-accent/60",
                 )}
                 onClick={() => {
                   if (navRef.current) sidebarScrollY[scrollKey] = navRef.current.scrollTop;
@@ -210,6 +242,7 @@ function PortalShell({
                   }
                 />
               </Link>
+              </div>
             );
           })}
       </nav>

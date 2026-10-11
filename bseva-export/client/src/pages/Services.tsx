@@ -5,7 +5,6 @@ import SevaTypePane from "@/components/seva/SevaTypePane";
 import SevaTypeTabs from "@/components/seva/SevaTypeTabs";
 import ServicesHero from "@/components/services/ServicesHero";
 import ServicesWhyChoose from "@/components/services/ServicesWhyChoose";
-import ServicesCustomCta from "@/components/services/ServicesCustomCta";
 import { Loader2 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { api } from "@/lib/api";
@@ -68,10 +67,7 @@ export default function Services() {
       </section>
 
       {activeType === "puja" ? (
-        <>
-          <ServicesWhyChoose />
-          <ServicesCustomCta />
-        </>
+        <ServicesWhyChoose />
       ) : null}
     </Layout>
   );

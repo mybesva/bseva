@@ -64,7 +64,7 @@ export default function About() {
       <section className="relative overflow-hidden bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-story-title">
         {/* Faint mandala behind the photo's upper-right corner, cropped by the section edge */}
         <MandalaOutline className="pointer-events-none absolute -right-[6vw] top-[2%] hidden h-[clamp(18rem,24vw,30rem)] w-[clamp(18rem,24vw,30rem)] text-[#E8B15A] opacity-[0.16] lg:block dark:opacity-[0.08]" />
-        <div className="relative mx-auto grid w-full max-w-[1920px] items-center gap-10 px-5 py-12 sm:px-8 md:py-14 lg:grid-cols-[minmax(0,515fr)_minmax(0,886fr)] lg:gap-[2.35vw] lg:pl-[3.7vw] lg:pr-[2.75vw] lg:py-[clamp(4rem,10.8vw,11rem)]">
+        <div className="relative mx-auto grid w-full max-w-[1920px] items-center gap-10 px-5 py-12 sm:px-8 md:py-14 lg:grid-cols-[minmax(0,515fr)_minmax(0,886fr)] lg:gap-[2.35vw] lg:pl-[3.7vw] lg:pr-[2.75vw] lg:py-[clamp(3rem,4.6vw,6rem)]">
           <div>
             <p className="flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.2em] text-[#FF7A00] lg:text-[clamp(12px,1.04vw,18px)]">
               <span aria-hidden className="h-[2px] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
@@ -102,31 +102,41 @@ export default function About() {
         </div>
       </section>
 
-      <section className="bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-principles-title">
-        <div className="container py-12 md:py-14 lg:py-16">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="flex items-center justify-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs">
-              <span aria-hidden>—</span>
+      {/* ── Principles: centered heading + six accent cards ── */}
+      <section className="relative overflow-hidden bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-principles-title">
+        <MandalaOutline className="pointer-events-none absolute -left-28 top-10 h-72 w-72 text-[#E8B15A] opacity-[0.14] dark:opacity-[0.08]" />
+        <MandalaOutline className="pointer-events-none absolute -right-24 bottom-0 h-72 w-72 text-[#E8B15A] opacity-[0.12] dark:opacity-[0.08]" />
+        <div className="container relative py-12 md:py-14 lg:py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#FF7A00]/30 bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs dark:bg-transparent">
+              <Sparkles size={13} aria-hidden />
               {t("ab.principlesEyebrow")}
-              <span aria-hidden>—</span>
             </p>
-            <h2 id="about-principles-title" className="mt-3 text-[clamp(1.7rem,1rem+1.6vw,2.45rem)] font-bold leading-[1.15] tracking-tight">
+            <h2 id="about-principles-title" className="mt-4 text-[clamp(1.75rem,1rem+1.6vw,2.6rem)] font-bold leading-[1.12] tracking-tight">
               <span className="text-[#0E1830] dark:text-white">{t("ab.principles1")} </span>
               <span className="text-[#FF7A00]">{t("ab.principles2")}</span>
             </h2>
+            <span aria-hidden className="mx-auto mt-4 block h-[3px] w-16 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#D4AF37]" />
           </div>
 
-          <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:mt-10 lg:grid-cols-3">
-            {principles.map(({ icon: Icon, title, body }) => (
+          <ul className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+            {principles.map(({ icon: Icon, title, body }, i) => (
               <li
                 key={title}
-                className="flex h-full flex-col rounded-xl border border-[#F0E2D2] bg-white px-5 py-6 shadow-[0_8px_22px_-20px_rgba(120,70,20,0.5)] dark:border-white/10 dark:bg-[#152238]"
+                className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-[#F0E2D2] bg-white p-6 shadow-[0_18px_40px_-32px_rgba(120,70,20,0.6)] transition-all duration-300 hover:-translate-y-1 hover:border-[#FFCF9E] hover:shadow-[0_26px_50px_-30px_rgba(255,122,0,0.45)] lg:p-7 dark:border-white/10 dark:bg-[#152238]"
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-                  <Icon size={18} strokeWidth={1.75} aria-hidden />
+                <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FF7A00] via-[#FFA43D] to-[#D4AF37] opacity-80 transition-opacity group-hover:opacity-100" />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -right-1 -top-3 font-display text-[5.5rem] font-semibold leading-none text-[#FF7A00]/[0.07] transition-colors group-hover:text-[#FF7A00]/[0.12]"
+                >
+                  {String(i + 1).padStart(2, "0")}
                 </span>
-                <h3 className="mt-4 text-base font-bold text-[#0E1830] dark:text-white">{t(title)}</h3>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{t(body)}</p>
+                <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF9A3C] to-[#E86400] text-white shadow-[0_10px_20px_-10px_rgba(255,122,0,0.8)]">
+                  <Icon size={24} strokeWidth={1.8} aria-hidden />
+                </span>
+                <h3 className="relative mt-5 text-[1.1rem] font-bold leading-snug text-[#0E1830] dark:text-white">{t(title)}</h3>
+                <p className="relative mt-2.5 text-[14.5px] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{t(body)}</p>
               </li>
             ))}
           </ul>
@@ -135,33 +145,34 @@ export default function About() {
 
       <PublishedStatsStrip />
 
-      <section className="relative overflow-hidden bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-cta-title">
-        <MandalaOutline className="absolute -bottom-28 -left-24 h-72 w-72 text-[#E8B15A] opacity-[0.16] dark:opacity-[0.08]" />
-        <MandalaOutline className="absolute -right-24 -top-24 h-72 w-72 text-[#E8B15A] opacity-[0.14] dark:opacity-[0.08]" />
-        <div className="container relative mx-auto max-w-3xl py-14 text-center md:py-16">
-          <p className="flex items-center justify-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs">
-            <span aria-hidden>—</span>
-            {t("ab.ctaEyebrow")}
-            <span aria-hidden>—</span>
-          </p>
-          <h2 id="about-cta-title" className="mt-3 text-[clamp(1.7rem,1rem+1.6vw,2.45rem)] font-bold leading-[1.15] tracking-tight">
-            <span className="block text-[#0E1830] dark:text-white">{t("ab.cta1")}</span>
-            <span className="block text-[#FF7A00]">{t("ab.cta2")}</span>
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-[15px] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0] sm:text-base">
-            {t("ab.ctaDesc")}
-          </p>
-          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-            <Link href="/services">
-              <a className="inline-flex h-12 items-center justify-center rounded-lg bg-[#FF7A00] px-8 text-[15px] font-bold text-white hover:bg-[#F07400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] focus-visible:ring-offset-2">
-                {t("nav.bookPuja")}
-              </a>
-            </Link>
-            <Link href="/register?role=pujari">
-              <a className="inline-flex h-12 items-center justify-center rounded-lg border-2 border-[#FF7A00] bg-white px-8 text-[15px] font-bold text-[#FF7A00] hover:bg-[#FFF4EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] focus-visible:ring-offset-2 dark:bg-transparent dark:hover:bg-[#FF7A00]/10">
-                {t("lp.cta.joinPujari")}
-              </a>
-            </Link>
+      {/* ── Join: one saffron card with both paths ── */}
+      <section className="bg-[#FDF6EC] py-12 dark:bg-[#0B1424] md:py-14" aria-labelledby="about-cta-title">
+        <div className="container">
+          <div className="relative grid items-center gap-8 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#FF8A1F] to-[#E86400] p-7 text-white shadow-[0_30px_60px_-34px_rgba(232,100,0,0.8)] sm:p-9 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-10 lg:p-10">
+            <MandalaOutline className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 text-white opacity-[0.12]" />
+            <div className="relative hidden h-28 w-44 lg:block" aria-hidden>
+              <img src="/images/landing/customer-puja.jpg" alt="" className="absolute left-0 top-0 h-24 w-24 rounded-full border-4 border-white/80 object-cover shadow-lg" />
+              <img src="/images/landing/pujari-portrait.jpg" alt="" className="absolute bottom-0 right-0 h-24 w-24 rounded-full border-4 border-white/80 object-cover shadow-lg" />
+            </div>
+            <div className="relative">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/85 sm:text-xs">{t("ab.ctaEyebrow")}</p>
+              <h2 id="about-cta-title" className="mt-2 text-[clamp(1.6rem,1rem+1.4vw,2.3rem)] font-bold leading-[1.15] tracking-tight">
+                <span className="text-white">{t("ab.cta1")}</span> <span className="text-[#071A33]">{t("ab.cta2")}</span>
+              </h2>
+              <p className="mt-3 max-w-2xl text-[15px] font-medium leading-relaxed text-white/90">{t("ab.ctaDesc")}</p>
+            </div>
+            <div className="relative flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <Link href="/services">
+                <a className="inline-flex h-12 items-center justify-center rounded-xl bg-[#071A33] px-8 text-[15px] font-bold text-white transition-colors hover:bg-[#0D2445] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
+                  {t("nav.bookPuja")}
+                </a>
+              </Link>
+              <Link href="/register?role=pujari">
+                <a className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-white bg-transparent px-8 text-[15px] font-bold text-white transition-colors hover:bg-white hover:text-[#E86400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
+                  {t("lp.cta.joinPujari")}
+                </a>
+              </Link>
+            </div>
           </div>
         </div>
       </section>

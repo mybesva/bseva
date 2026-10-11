@@ -13,6 +13,7 @@ import { useI18n } from "@/providers/I18nProvider";
 import { userMessage } from "@/utils/userMessage";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { variantRole } from "@/config/appVariant";
 
 export default function RegisterScreen() {
   const { role } = useLocalSearchParams<{ role?: string }>();
@@ -20,7 +21,9 @@ export default function RegisterScreen() {
   const { refresh } = useAuth();
   const { setLang, lang, t } = useI18n();
   const { colors } = useAppTheme();
-  const [accountType, setAccountType] = useState<"customer" | "pujari">(role === "pujari" ? "pujari" : "customer");
+  const [accountType, setAccountType] = useState<"customer" | "pujari">(
+    variantRole ?? (role === "pujari" ? "pujari" : "customer"),
+  );
   const [name, setName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -121,7 +124,8 @@ export default function RegisterScreen() {
             <View style={{ alignItems: "center", marginBottom: 16 }}>
               <BrandLockup height={128} />
             </View>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+            {/* Account-type switch only in the combined app; single-role apps register their own role. */}
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16, display: variantRole ? "none" : "flex" }}>
               <View style={{ flex: 1 }}>
                 <PrimaryButton
                   title={t("auth.customer")}

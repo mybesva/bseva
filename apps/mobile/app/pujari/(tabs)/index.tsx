@@ -5,7 +5,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { RefreshControl, ScrollView } from "react-native";
 import { PujariDashboardSection } from "@/components/PujariDashboardSection";
-import { PujariHomeHeader } from "@/components/PujariHomeHeader";
+import { HomeBrandBar } from "@/components/ScreenHeader";
 import { PujariQuickActions } from "@/components/PujariQuickActions";
 import { PujariStatGrid } from "@/components/PujariStatGrid";
 import { PujariTodaySchedule } from "@/components/PujariTodaySchedule";
@@ -129,9 +129,10 @@ export default function PujariHome() {
 
   return (
     <Screen>
-      <PujariHomeHeader notificationsHref="/pujari/notifications" />
+      {/* Fixed header: logo, notifications and profile; content scrolls underneath. */}
+      <HomeBrandBar notificationsHref="/pujari/notifications" profileHref="/pujari/profile" photoKind="pujari" />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, gap: 16, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, gap: 16, paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
             refreshing={bookings.isRefetching || profile.isRefetching}

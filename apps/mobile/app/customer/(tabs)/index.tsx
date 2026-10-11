@@ -3,19 +3,24 @@ import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { Image, Linking, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Image, Linking, Pressable, RefreshControl, ScrollView } from "react-native";
 import { CustomerWelcomeHero, customerGreetingName } from "@/components/CustomerWelcomeHero";
 import { PanchangCard } from "@/components/PanchangCard";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { SeasonalPopup } from "@/components/SeasonalPopup";
-import { AppText, Card, EmptyState, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
-import { PujaTitle } from "@/components/PujaTitle";
+import { AppText, Card, EmptyState, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
+import {
+  CustomerQuickActions,
+  OngoingPujaCard,
+  RecommendedRail,
+  SectionHeader,
+  UpcomingList,
+} from "@/components/customer/CustomerHomeSections";
 import { PujaServiceCard } from "@/components/PujaImage";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
-import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
 
 export default function CustomerHome() {
   const { user } = useAuth();
@@ -55,16 +60,28 @@ export default function CustomerHome() {
       void availability.refetch();
     }, [profile.refetch, availability.refetch])
   );
-  const ongoing = (bookings.data || []).filter((b) => b.status === "in_progress");
-  const upcoming = (bookings.data || []).filter((b) => ["pending", "pending_acceptance", "confirmed"].includes(String(b.customer_display_status || b.status))).slice(0, 3);
+  // Same window as web: in progress, or confirmed and starting within the next 24h (until 2h after start).
+  const ongoing = (bookings.data || []).filter((b) => {
+    if (b.status === "in_progress") return true;
+    if (b.status !== "confirmed" || !b.booking_date) return false;
+    const start = new Date(`${String(b.booking_date).slice(0, 10)}T${String(b.start_time || "00:00").slice(0, 5)}:00`);
+    const ms = start.getTime() - Date.now();
+    return ms <= 24 * 60 * 60 * 1000 && ms >= -2 * 60 * 60 * 1000;
+  });
+  const ongoingIds = new Set(ongoing.map((b) => String(b.id)));
+  const upcoming = (bookings.data || [])
+    .filter((b) => !ongoingIds.has(String(b.id)))
+    .filter((b) => ["pending", "pending_acceptance", "confirmed"].includes(String(b.customer_display_status || b.status)))
+    .slice(0, 3);
   const recItems = recs.data?.items || (Array.isArray(recs.data) ? recs.data : []);
 
   return (
     <Screen>
-      <HomeBrandBar notificationsHref="/customer/notifications" />
+      {/* Fixed header: stays put while the home content scrolls underneath. */}
+      <HomeBrandBar />
       <SeasonalPopup />
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
         refreshControl={
           <RefreshControl
             refreshing={bookings.isRefetching || profile.isRefetching || availability.isRefetching}
@@ -82,6 +99,7 @@ export default function CustomerHome() {
           customerName={customerGreetingName(user?.name, t("auth.customer"))}
           publicId={(user as { public_id?: string } | null)?.public_id}
         />
+        <CustomerQuickActions />
         {hasCoords && availability.data && availability.data.service_available === false ? (
           <Card style={{ gap: 8, borderColor: colors.warning }}>
             <AppText variant="h3">
@@ -128,61 +146,41 @@ export default function CustomerHome() {
             </Card>
           </Pressable>
         ))}
-        <PanchangCard />
         {bookings.isLoading ? <LoadingBlock /> : null}
         {ongoing.length > 0 ? (
           <>
-            <AppText variant="h2">{t("customer.ongoingPuja")}</AppText>
+            <SectionHeader
+              title={t("customer.ongoingPuja")}
+              actionLabel={t("common.viewAll")}
+              onAction={() => router.push("/customer/bookings")}
+            />
             {ongoing.map((b: Booking) => (
-              <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
-                <Card>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
-                    <StatusBadge status={b.customer_display_status || b.status} />
-                  </View>
-                  <AppText variant="small" color={colors.mutedForeground}>
-                    #{b.booking_number} · {formatDisplayDate(b.booking_date)}
-                  </AppText>
-                </Card>
-              </Pressable>
+              <OngoingPujaCard key={b.id} booking={b} />
             ))}
           </>
         ) : null}
+        <PanchangCard />
         {upcoming.length > 0 ? (
           <>
-            <AppText variant="h2">{t("mobile.upcoming")}</AppText>
-            {upcoming.map((b: Booking) => (
-              <Pressable key={b.id} onPress={() => router.push(`/customer/booking/${b.id}`)}>
-                <Card>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
-                    <StatusBadge status={b.customer_display_status || b.status} />
-                  </View>
-                  <AppText variant="small">{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
-              {!b.pujari_details_visible && !["cancelled", "refunded", "completed"].includes(String(b.status)) ? (
-                <AppText variant="small" color={colors.mutedForeground}>{t("booking.pujariSharedLater")}</AppText>
-              ) : null}
-                </Card>
-              </Pressable>
-            ))}
+            <SectionHeader
+              title={t("mobile.upcoming")}
+              actionLabel={t("common.viewAll")}
+              onAction={() => router.push("/customer/bookings")}
+            />
+            <UpcomingList bookings={upcoming} />
           </>
         ) : null}
         {recItems.length > 0 ? (
           <>
-            <AppText variant="h2">{t("mobile.recommended")}</AppText>
-            {recItems.slice(0, 5).map((item, i) => {
-              const rec = item as { title?: string; name?: string; service_slug?: string; slug?: string };
-              return (
-                <Pressable key={i} onPress={() => rec.service_slug || rec.slug ? router.push(`/service/${rec.service_slug || rec.slug}`) : undefined}>
-                  <Card>
-                    <AppText>{rec.title || rec.name || t("mobile.recommendedPuja")}</AppText>
-                  </Card>
-                </Pressable>
-              );
-            })}
+            <SectionHeader title={t("mobile.recommended")} />
+            <RecommendedRail items={recItems} />
           </>
         ) : null}
-        <AppText variant="h2">{t("customer.bookServices")}</AppText>
+        <SectionHeader
+          title={t("customer.bookServices")}
+          actionLabel={t("common.viewAll")}
+          onAction={() => router.push("/customer/services")}
+        />
         {pujaServicesOnly(services.data).slice(0, 6).map((s: CatalogService) => (
           <PujaServiceCard key={s.id} service={s} onPress={() => router.push(`/service/${s.slug}`)} />
         ))}

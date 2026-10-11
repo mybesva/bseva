@@ -128,7 +128,11 @@ function FeaturedBookingCard({ booking }: { booking: Booking }) {
         </AppText>
       </View>
 
-      <PrimaryButton title={`${t("pujari.dashboard.viewDetails")} ›`} onPress={openDetail} />
+      <PrimaryButton
+        title={`${t("pujari.dashboard.viewDetails")} ›`}
+        variant={actionKind ? "outline" : "primary"}
+        onPress={openDetail}
+      />
 
       {actionKind === "accept_reject" ? (
         <View style={{ flexDirection: "row", gap: 8 }}>

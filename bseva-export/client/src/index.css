@@ -996,6 +996,49 @@ body:has(.soften-brand-mark) img[src="/bseva-mark.png"] {
 
 /* The About and Contact hero references have no central mark. */
 body:has(.about-hero-banner) img[src="/bseva-mark.png"],
-body:has(.contact-hero-banner) img[src="/bseva-mark.png"] {
+body:has(.contact-hero-banner) img[src="/bseva-mark.png"],
+body:has(.landing-hero-banner) img[src="/bseva-mark.png"] {
   opacity: 0;
+}
+
+/* Landing hero: live havan fire over the photograph (see HavanFireOverlay).
+   The real flames are rippled by an animated SVG heat filter; these rules add an
+   irregular warm glow and a few drifting embers. */
+.lp-fire-glow {
+  animation: lp-fire-glow 2.3s linear infinite;
+  transform-origin: 50% 80%;
+  mix-blend-mode: screen;
+}
+.lp-ember {
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #ffd98a;
+  box-shadow: 0 0 6px 2px rgba(255, 150, 40, 0.75);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation-name: lp-ember;
+  animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+  animation-iteration-count: infinite;
+}
+@keyframes lp-fire-glow {
+  0% { opacity: 0.62; transform: scale(1); }
+  9% { opacity: 0.8; transform: scale(1.02); }
+  17% { opacity: 0.58; transform: scale(0.99); }
+  31% { opacity: 0.86; transform: scale(1.03); }
+  44% { opacity: 0.66; transform: scale(1); }
+  52% { opacity: 0.78; transform: scale(1.015); }
+  68% { opacity: 0.6; transform: scale(0.985); }
+  81% { opacity: 0.88; transform: scale(1.03); }
+  100% { opacity: 0.62; transform: scale(1); }
+}
+@keyframes lp-ember {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  10% { opacity: 0.95; }
+  60% { opacity: 0.6; }
+  100% { transform: translate(var(--drift, 14px), -230px) scale(0.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-fire-glow { animation: none; }
+  .lp-ember { display: none; }
 }

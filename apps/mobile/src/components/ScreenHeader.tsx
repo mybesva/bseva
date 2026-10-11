@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandLockup } from "@/components/BrandLockup";
 import { useAuth } from "@/providers/AuthProvider";
@@ -203,16 +203,26 @@ export function HomeBrandBar({
   notificationsHref,
   subtitle,
   profileHref = "/customer/profile",
+  photoKind = "customer",
 }: {
   notificationsHref?: string;
   subtitle?: string;
   profileHref?: string;
+  photoKind?: "customer" | "pujari";
 }) {
   const { colors } = useAppTheme();
   const { t } = useI18n();
   const router = useRouter();
   return (
-    <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      edges={["top"]}
+      style={{
+        backgroundColor: colors.card,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.border,
+        zIndex: 2,
+      }}
+    >
       <View
         style={{
           paddingHorizontal: 16,
@@ -240,6 +250,7 @@ export function HomeBrandBar({
         ) : null}
         <HeaderProfileAvatar
           label={t("mobile.profile")}
+          photoKind={photoKind}
           onPress={() => router.push(profileHref as never)}
         />
       </View>

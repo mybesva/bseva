@@ -264,7 +264,7 @@ function PujariDashboardContent() {
       setSelectedBooking(row);
     };
     return (
-      <div className="w-full text-left p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary/30 transition-colors">
+      <div className="w-full rounded-2xl border border-[#EFE2CF] bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#FF7A00]/50 hover:shadow-[0_14px_28px_-22px_rgba(255,122,0,0.6)] dark:border-white/10 dark:bg-[#152238]">
         <button type="button" onClick={() => openDetail(null)} className="w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -356,18 +356,45 @@ function PujariDashboardContent() {
 
   return (
     <>
-      <section className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-primary tracking-tight">
-          Namaste, {user?.name}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("priest.subtitle")}</p>
-        {user?.public_id ? (
-          <p className="mt-1 text-sm text-muted-foreground font-mono">ID: {user.public_id}</p>
-        ) : null}
+      <section className="relative isolate mb-6 overflow-hidden rounded-3xl bg-[#071A33] text-white">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-full bg-cover bg-[position:70%_35%] opacity-50 sm:w-[60%] sm:opacity-100"
+          style={{ backgroundImage: "url(/images/landing/pujari-portrait.jpg)" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#071A33_0%,#071A33_42%,rgba(7,26,51,0.6)_62%,rgba(7,26,51,0.05)_100%)]"
+        />
+        <div className="relative max-w-[40rem] p-6 sm:p-8 lg:p-9">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#FF7A00]">{t("auth.pujari")}</p>
+          <h1 className="mt-2 font-display text-[clamp(1.75rem,1.2rem+2vw,2.5rem)] font-semibold leading-tight">
+            Namaste, <span className="text-[#FF9A2E]">{user?.name}</span>
+          </h1>
+          <p className="mt-2 text-[15px] text-white/80">{t("priest.subtitle")}</p>
+          {user?.public_id ? (
+            <p className="mt-1 font-mono text-xs text-white/55">ID: {user.public_id}</p>
+          ) : null}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button
+              className="h-11 rounded-xl bg-[#FF7A00] px-5 font-bold text-[#0E1830] hover:bg-[#FF8A1F]"
+              onClick={() => setLocation("/pujari/bookings")}
+            >
+              {t("nav.bookings")}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 rounded-xl border-white/50 bg-transparent px-5 font-bold text-white hover:bg-white/10 hover:text-white"
+              onClick={() => setLocation("/pujari/availability")}
+            >
+              {t("nav.availability")}
+            </Button>
+          </div>
+        </div>
       </section>
       <PromoBannerCarousel />
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => (
@@ -380,28 +407,30 @@ function PujariDashboardContent() {
                 </Card>
               ))
             : metricCards.map((m) => (
-                <Card key={m.title} className="border-none shadow-sm">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`p-2.5 rounded-lg ${m.bg}`}>
-                        <m.icon className={`w-5 h-5 ${m.color}`} />
-                      </div>
+                <Card key={m.title} className="rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${m.bg}`}>
+                      <m.icon className={`h-6 w-6 ${m.color}`} />
                     </div>
-                    <p className="text-sm text-muted-foreground mb-1">{m.title}</p>
-                    <p className="text-2xl font-bold text-foreground">{m.value}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{m.hint}</p>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{m.title}</p>
+                      <p className="text-2xl font-extrabold leading-tight text-foreground">{m.value}</p>
+                      <p className="truncate text-xs text-muted-foreground">{m.hint}</p>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
         </div>
 
-        <Card className="border-2 border-blue-200 bg-blue-50/40 shadow-sm">
+        <Card className="overflow-hidden rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
           <CardHeader className="pb-3">
             <CardTitle className="text-foreground flex items-center gap-2">
-              <PlayCircle className="text-blue-600" size={20} />
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF1E2] text-[#FF7A00] dark:bg-[#FF7A00]/15">
+                <PlayCircle size={18} />
+              </span>
               {t("priest.ongoingPuja")}
               {!isLoading && ongoing.length > 0 ? (
-                <Badge className="bg-blue-100 text-blue-800 ml-1">{ongoing.length}</Badge>
+                <Badge className="ml-1 bg-[#FF7A00] text-white">{ongoing.length}</Badge>
               ) : null}
             </CardTitle>
           </CardHeader>
@@ -431,14 +460,14 @@ function PujariDashboardContent() {
         <Card
           className={
             !isLoading && pendingAcceptance.length > 0
-              ? "border border-primary/25 bg-primary/[0.04] shadow-sm"
-              : "border-border shadow-sm"
+              ? "rounded-3xl border-2 border-[#FF7A00]/40 bg-[#FFF8F0] shadow-[0_22px_40px_-30px_rgba(255,122,0,0.55)] dark:bg-[#FF7A00]/[0.06]"
+              : "rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10"
           }
         >
           <CardHeader className="pb-3">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-primary/10 shrink-0">
-                <Inbox className="w-5 h-5 text-primary" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FF7A00] text-white">
+                <Inbox className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <CardTitle className="text-foreground text-lg leading-tight">
@@ -504,7 +533,7 @@ function PujariDashboardContent() {
         </Card>
 
         {!isLoading && readyToStart.length > 0 && (
-          <Card className="border border-blue-200 bg-blue-50/20">
+          <Card className="rounded-3xl border border-[#BFD3EE] bg-[#F1F6FD] dark:border-white/10 dark:bg-white/5">
             <CardHeader className="pb-2">
               <CardTitle className="text-base text-foreground">Ready to start (OTP)</CardTitle>
             </CardHeader>
@@ -523,8 +552,8 @@ function PujariDashboardContent() {
 
         <WalletPanel variant="priest" />
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <Card className="lg:col-span-1 border-border shadow-sm">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1 rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 <CalendarIcon size={18} className="text-primary" />
@@ -562,7 +591,7 @@ function PujariDashboardContent() {
           </Card>
 
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-border">
+            <Card className="rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
               <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-foreground">Your Bookings</CardTitle>
                 <Button variant="outline" size="sm" onClick={() => setLocation("/pujari/bookings")}>
@@ -689,10 +718,10 @@ function PujariDashboardContent() {
               </CardContent>
             </Card>
 
-            <Card className="border-border bg-secondary/20">
+            <Card className="rounded-3xl border-0 bg-[#071A33] text-white">
               <CardContent className="p-5 space-y-2">
-                <div className="font-semibold text-foreground">Dakshina & settlements</div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <div className="font-semibold text-[#FF9A2E]">Dakshina & settlements</div>
+                <p className="text-sm text-white/80 leading-relaxed">
                   Accept pending bookings, start with customer OTP, then mark complete when finished so
                   settlements stay accurate. Past-dated unfinished bookings appear under Expired; cancelled
                   bookings have their own tab.
