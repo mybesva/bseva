@@ -172,7 +172,7 @@ export default function PujariBookingsPage() {
 
   return (
     <PujariPortal>
-      <Card className="border-border shadow-sm">
+      <Card className="card-static border-border shadow-sm">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">{t("nav.bookings")}</CardTitle>
           <p className="text-sm text-muted-foreground">

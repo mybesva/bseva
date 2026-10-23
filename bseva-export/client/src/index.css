@@ -592,6 +592,17 @@ html body .container:not([class*="max-w-"]) {
     .card-hover-premium:hover::after {
       animation: card-hover-sheen 0.7s ease;
     }
+
+    /* Page-sized container cards (long lists with sticky toolbars) must not lift/scale on hover:
+       scaling a very tall card shifts everything inside it, so sticky bars drift while scrolling. */
+    .card-hover-premium.card-static:hover {
+      z-index: auto;
+      transform: none;
+    }
+
+    .card-hover-premium.card-static:hover::after {
+      animation: none;
+    }
   }
 
   /* Primary Book a Puja CTA — slow glow, slight scale, occasional sheen */

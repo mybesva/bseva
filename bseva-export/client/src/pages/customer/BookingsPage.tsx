@@ -198,7 +198,7 @@ export default function CustomerBookingsPage() {
 
   return (
     <CustomerPortal>
-      <Card className="overflow-visible">
+      <Card className="card-static overflow-visible">
         <CardHeader className="pb-2">
           <CardTitle>{t("nav.bookings")}</CardTitle>
         </CardHeader>
