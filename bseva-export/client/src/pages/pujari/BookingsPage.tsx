@@ -377,7 +377,7 @@ export default function PujariBookingsPage() {
                 pujaris_included_label: selected.booking.pujarisIncludedLabel,
               }}
               onUpdated={async (info) => {
-                await load();
+                // Close first so the dialog doesn't hang open while the list reloads.
                 if (
                   info?.decision === "accepted" ||
                   info?.decision === "rejected" ||
@@ -386,6 +386,7 @@ export default function PujariBookingsPage() {
                   setSelected(null);
                   setDetailIntent(null);
                 }
+                await load();
               }}
             />
           )}

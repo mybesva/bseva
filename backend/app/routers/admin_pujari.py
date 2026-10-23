@@ -19,7 +19,13 @@ from app.pujari_schedule import pujari_has_schedule_conflict
 from app.geo import haversine_km
 from app.platform_config import get_setting
 from app.profile_utils import parse_json_list, pujari_completion
-from app.rbac import require_any_permission, require_permission
+from app.rbac import (
+    BOOKING_MANAGE_ANY,
+    BOOKING_VIEW_ANY,
+    ensure_booking_access,
+    require_any_permission,
+    require_permission,
+)
 from app.schemas import BookingAssignIn, JoiningFeeWaiveIn, PujariProfileIn, PujariVerifiedServicesIn
 from app.storage import content_type_for, file_response, upload_bytes
 
@@ -342,9 +348,10 @@ def admin_document_file(
 @router.get("/bookings/{booking_id}/available-pujaris")
 def available_pujaris_for_booking(
     booking_id: str,
-    user=Depends(require_any_permission("view_bookings", "manage_bookings")),
+    user=Depends(require_any_permission(*BOOKING_VIEW_ANY)),
     db: Session = Depends(get_db),
 ):
+    ensure_booking_access(db, user, booking_id, "view")
     b = db.execute(
         text(
             """
@@ -490,9 +497,10 @@ def available_pujaris_for_booking(
 @router.post("/bookings/{booking_id}/refresh-offers")
 def refresh_booking_offers(
     booking_id: str,
-    admin=Depends(require_permission("manage_bookings")),
+    admin=Depends(require_any_permission(*BOOKING_MANAGE_ANY)),
     db: Session = Depends(get_db),
 ):
+    ensure_booking_access(db, admin, booking_id, "manage")
     """Re-send nearby pujari invites for a paid, unassigned in-person booking."""
     b = db.execute(
         text("SELECT id, pujari_id, payment_status, mode FROM bookings WHERE id = CAST(:id AS uuid)"),
@@ -518,9 +526,10 @@ def refresh_booking_offers(
 def assign_pujari_to_booking(
     booking_id: str,
     body: BookingAssignIn,
-    admin=Depends(require_permission("manage_bookings")),
+    admin=Depends(require_any_permission(*BOOKING_MANAGE_ANY)),
     db: Session = Depends(get_db),
 ):
+    ensure_booking_access(db, admin, booking_id, "manage")
     b = db.execute(
         text(
             """

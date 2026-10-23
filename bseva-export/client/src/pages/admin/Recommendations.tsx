@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Pencil, Plus } from "lucide-react";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const MONTHS = [
   "January",
@@ -54,6 +55,8 @@ const emptyForm = {
 };
 
 export default function RecommendationsAdmin() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_recommendations");
   const [rows, setRows] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -149,13 +152,15 @@ export default function RecommendationsAdmin() {
             “Any month” to show it all year.
           </p>
         </div>
-        <Button onClick={openAdd} className="gap-2">
-          <Plus size={16} />
-          Add recommendation
-        </Button>
+        {canManage && (
+          <Button onClick={openAdd} className="gap-2">
+            <Plus size={16} />
+            Add recommendation
+          </Button>
+        )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open && canManage} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="">
@@ -282,6 +287,7 @@ export default function RecommendationsAdmin() {
                 <Badge variant={r.active ? "default" : "secondary"}>{r.active ? "active" : "inactive"}</Badge>
               </TableCell>
               <TableCell>
+                {canManage && (
                 <div className="flex gap-2 justify-end">
                   <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(r)}>
                     <Pencil size={14} />
@@ -291,6 +297,7 @@ export default function RecommendationsAdmin() {
                     Delete
                   </Button>
                 </div>
+                )}
               </TableCell>
             </TableRow>
           ))}

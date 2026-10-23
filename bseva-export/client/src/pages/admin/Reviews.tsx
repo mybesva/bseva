@@ -29,9 +29,14 @@ import { Search, Star, Eye, CheckCircle, XCircle, ThumbsUp, MessageSquare } from
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
+
+type Direction = "customer_to_pujari" | "pujari_to_customer";
 
 type ReviewRow = {
   id: string;
+  booking_number?: string | null;
+  role_from?: "customer" | "pujari" | string;
   customer_name?: string | null;
   priest_name?: string | null;
   puja_type?: string | null;
@@ -49,6 +54,10 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Reviews() {
+  const { can } = useAdminCan();
+  const [direction, setDirection] = useState<Direction>("customer_to_pujari");
+  // Moderation applies to customer -> pujari reviews (those feed the public rating).
+  const canManage = can("manage_reviews") && direction === "customer_to_pujari";
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -61,7 +70,7 @@ export default function Reviews() {
   async function load() {
     setLoading(true);
     try {
-      setReviews(await api<ReviewRow[]>("/admin/reviews"));
+      setReviews(await api<ReviewRow[]>(`/admin/reviews?direction=${direction}`));
     } catch (e: any) {
       toast.error(e.message || "Could not load reviews");
     } finally {
@@ -71,7 +80,7 @@ export default function Reviews() {
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [direction]);
 
   const filteredReviews = useMemo(() => {
     return reviews.filter((review) => {
@@ -205,6 +214,28 @@ export default function Reviews() {
           </CardContent>
         </Card>
 
+        <div className="inline-flex rounded-xl border border-border bg-card p-1" role="tablist" aria-label="Rating direction">
+          {(
+            [
+              ["customer_to_pujari", "Customer → Pujari"],
+              ["pujari_to_customer", "Pujari → Customer"],
+            ] as [Direction, string][]
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={direction === key}
+              onClick={() => setDirection(key)}
+              className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
+                direction === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <Card>
           <CardContent className="p-0">
             {loading ? (
@@ -213,8 +244,9 @@ export default function Reviews() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Priest</TableHead>
+                    <TableHead>Booking</TableHead>
+                    <TableHead>{direction === "customer_to_pujari" ? "Customer (rated by)" : "Customer (rated)"}</TableHead>
+                    <TableHead>{direction === "customer_to_pujari" ? "Pujari (rated)" : "Pujari (rated by)"}</TableHead>
                     <TableHead>Puja Type</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Review</TableHead>
@@ -226,13 +258,14 @@ export default function Reviews() {
                 <TableBody>
                   {filteredReviews.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         No reviews match these filters.
                       </TableCell>
                     </TableRow>
                   )}
                   {filteredReviews.map((review) => (
                     <TableRow key={review.id}>
+                      <TableCell className="whitespace-nowrap font-mono text-xs">{review.booking_number || "—"}</TableCell>
                       <TableCell className="font-medium">{review.customer_name || "—"}</TableCell>
                       <TableCell>{review.priest_name || "—"}</TableCell>
                       <TableCell>{review.puja_type || "—"}</TableCell>
@@ -259,7 +292,7 @@ export default function Reviews() {
                           >
                             <Eye size={16} />
                           </Button>
-                          {review.status === "pending" && (
+                          {canManage && review.status === "pending" && (
                             <>
                               <Button
                                 variant="ghost"
@@ -328,7 +361,7 @@ export default function Reviews() {
                   <span className="text-muted-foreground text-sm">Review:</span>
                   <p className="mt-1 text-foreground">{selectedReview.comment || "—"}</p>
                 </div>
-                {selectedReview.status === "pending" && (
+                {canManage && selectedReview.status === "pending" && (
                   <div className="flex gap-2 pt-4">
                     <Button
                       className="flex-1 bg-green-600 hover:bg-green-700"

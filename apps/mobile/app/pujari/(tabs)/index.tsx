@@ -59,7 +59,7 @@ function buildFeaturedSection(
 
 export default function PujariHome() {
   const { user } = useAuth();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const router = useRouter();
   const profile = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
@@ -76,14 +76,6 @@ export default function PujariHome() {
   const showVerificationAlert = shouldShowPujariVerificationAlert(p);
 
   const stats = useMemo(() => pujariDashboardStats(allBookings, now), [allBookings, now]);
-
-  const monthLabel = useMemo(() => {
-    try {
-      return new Intl.DateTimeFormat(lang === "en" ? "en-IN" : lang, { month: "long", year: "numeric" }).format(now);
-    } catch {
-      return now.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-    }
-  }, [lang, now]);
 
   const ongoing = useMemo(
     () => filterAndSortBookings(allBookings, (b) => isOngoingBooking(b, now), now),
@@ -150,11 +142,10 @@ export default function PujariHome() {
         {showVerificationAlert ? <PujariVerificationAlert profile={p} /> : null}
 
         <PujariStatGrid
-          totalDakshina={rupees(stats.totalEarnings)}
+          requestCount={stats.requestCount}
+          scheduledCount={stats.scheduledCount}
           monthDakshina={rupees(stats.monthEarnings)}
-          monthLabel={monthLabel}
-          upcomingCount={stats.upcomingCount}
-          pendingCount={stats.pendingCount}
+          totalDakshina={rupees(stats.totalEarnings)}
           completedCount={stats.completedCount}
           completedEarnings={rupees(stats.completedEarnings)}
         />

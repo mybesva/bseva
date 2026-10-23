@@ -22,6 +22,7 @@ import {
 import { Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type SamagriItem = {
   id: string;
@@ -34,6 +35,8 @@ type SamagriItem = {
 };
 
 export default function AdminSamagri() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_samagri");
   const [items, setItems] = useState<SamagriItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -102,10 +105,12 @@ export default function AdminSamagri() {
             Master items with en / hi / te names. Link them per service in Services admin.
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add item
-        </Button>
+        {canManage && (
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add item
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -140,7 +145,7 @@ export default function AdminSamagri() {
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open && canManage} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add samagri item</DialogTitle>

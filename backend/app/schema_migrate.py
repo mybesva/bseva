@@ -1677,6 +1677,17 @@ def ensure_schema(*, quiet: bool = False) -> None:
     except Exception as e:
         log(f"  ! public_id backfill skipped: {e}")
 
+    # Admin RBAC v2: split permission catalogue, Super-Admin-only finance (one-time, idempotent)
+    try:
+        from app.rbac_migrate import ensure_rbac_v2
+
+        log("  → admin RBAC v2")
+        rep = ensure_rbac_v2(quiet=True)
+        log(f"     {'already applied' if rep['skipped'] else rep}")
+        ok += 1
+    except Exception as e:
+        failed.append(("admin RBAC v2", str(e).split("\n")[0][:180]))
+
     log(f"Schema migrate finished. Applied/ok steps: {ok}. Failed statements: {len(failed)}.")
     if failed:
         log("Failed (first 15):")

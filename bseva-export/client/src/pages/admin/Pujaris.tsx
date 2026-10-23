@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { nextSort, personLocation, SortableHead, StaticHead, type SortDir } from "@/components/SortableHead";
 import { AdminPager, DEFAULT_PAGE_SIZE, parsePage, parsePageSize } from "@/components/AdminPager";
 import { notifyBadgesChanged } from "@/components/NotificationBell";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const emptyForm = { name: "", email: "", phone: "", password: "", requested_level: 2, location: "" };
 
@@ -73,8 +74,22 @@ function formatVerificationStatus(status: string) {
   return displayTokenLabel(status);
 }
 
-function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; title: string }[]; onChanged: () => Promise<void> }) {
+function PujariRow({
+  u,
+  levels,
+  onChanged,
+  can,
+}: {
+  u: any;
+  levels: { level: number; title: string }[];
+  onChanged: () => Promise<void>;
+  can: (...anyOf: string[]) => boolean;
+}) {
   const [, setLocation] = useLocation();
+  const canVerify = can("verify_pujaris");
+  const canSetLevel = can("approve_pujaris", "verify_pujaris", "edit_pujaris");
+  const canHead = can("approve_pujaris");
+  const canBlock = can("block_pujaris");
   const [level, setLevel] = useState(Number(u.approved_level || u.requested_level || 1));
   const [saving, setSaving] = useState(false);
   const specializations = parseList(u.specializations);
@@ -146,8 +161,8 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
       <TableCell>
         <div className="space-y-1 min-w-[200px] max-w-[240px]">
           <p className="text-[11px] text-muted-foreground">Requested level {u.requested_level ?? "—"}</p>
-          <Select value={String(level)} onValueChange={(v) => void saveLevel(Number(v))} disabled={saving}>
-            <SelectTrigger className="h-9 text-xs">
+          <Select value={String(level)} onValueChange={(v) => void saveLevel(Number(v))} disabled={saving || !canSetLevel}>
+            <SelectTrigger className="h-9 text-xs" title={canSetLevel ? undefined : "You don't have permission"}>
               <SelectValue placeholder="Level" />
             </SelectTrigger>
             <SelectContent>
@@ -224,15 +239,19 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => void setVerification("approved")}>Approve profile</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void setVerification("correction_required")}>
-                Request correction
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void setVerification("rejected")}>Reject profile</DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {canVerify && (
+                <>
+                  <DropdownMenuItem onClick={() => void setVerification("approved")}>Approve profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void setVerification("correction_required")}>
+                    Request correction
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void setVerification("rejected")}>Reject profile</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem onClick={openServices}>Review services</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {u.is_head_pujari || u.role === "head_pujari" ? (
+              {(canHead || canBlock) && <DropdownMenuSeparator />}
+              {!canHead ? null : u.is_head_pujari || u.role === "head_pujari" ? (
                 <DropdownMenuItem
                   onClick={async () => {
                     await api(`/admin/pujaris/${u.id}/head`, {
@@ -259,6 +278,7 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
                   Make head pujari
                 </DropdownMenuItem>
               )}
+              {canBlock && (
               <DropdownMenuItem
                 onClick={async () => {
                   await api(`/admin/users/${u.id}/block`, {
@@ -271,9 +291,12 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
               >
                 {u.blocked ? "Unblock account" : "Block account"}
               </DropdownMenuItem>
+              )}
+              {canBlock && (
               <DropdownMenuItem disabled>
                 Delete account — use Block
               </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -283,6 +306,8 @@ function PujariRow({ u, levels, onChanged }: { u: any; levels: { level: number; 
 }
 
 export default function PujarisPage() {
+  const { can } = useAdminCan();
+  const canCreate = can("create_pujaris");
   const [rows, setRows] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -387,10 +412,12 @@ export default function PujarisPage() {
             onPageSize={(size) => updateFilters({ size })}
             sizeLabel="IDs / page"
           />
-          <Button onClick={() => setOpen(true)} className="gap-2">
-            <Plus size={16} />
-            Add pujari
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setOpen(true)} className="gap-2">
+              <Plus size={16} />
+              Add pujari
+            </Button>
+          )}
         </div>
       </div>
 
@@ -436,7 +463,7 @@ export default function PujarisPage() {
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open && canCreate} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="">Add pujari</DialogTitle>
@@ -541,7 +568,7 @@ export default function PujarisPage() {
         </TableHeader>
         <TableBody>
           {rows.map((u) => (
-            <PujariRow key={u.id} u={u} levels={pujariLevels} onChanged={load} />
+            <PujariRow key={u.id} u={u} levels={pujariLevels} onChanged={load} can={can} />
           ))}
         </TableBody>
       </Table>

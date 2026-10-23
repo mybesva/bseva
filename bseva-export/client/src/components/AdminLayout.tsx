@@ -37,6 +37,10 @@ import ThemeToggle from "@/components/ThemeToggle";
 import NotificationBell, { CountBadge } from "@/components/NotificationBell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import BSevaLogo from "@/components/BSevaLogo";
+import { AdminAccessProvider } from "@/components/AdminAccessContext";
+import { clearAdminPermissionsCache, useAdminPermissions } from "@/hooks/useAdminPermissions";
+import { ADMIN_ROUTE_ACCESS, accessForPath, canAccess } from "@/lib/adminAccess";
+import { ShieldAlert } from "lucide-react";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -49,8 +53,6 @@ interface NavItem {
   /** Public site route outside the admin console (e.g. About Us). */
   externalHref?: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  permissions?: string[];
-  superOnly?: boolean;
 }
 
 type NavBadges = {
@@ -76,55 +78,25 @@ const NAV_BADGE_KEYS: Record<string, keyof Omit<NavBadges, "tooltips">> = {
 
 const navigation: NavItem[] = [
   { nameKey: "admin.dashboard", suffix: "", icon: LayoutDashboard },
-  { nameKey: "admin.customers", suffix: "/customers", icon: Users, permissions: ["view_customers"] },
-  {
-    nameKey: "admin.pujaris",
-    suffix: "/pujaris",
-    icon: UserCog,
-    permissions: ["view_pujaris", "verify_pujaris", "edit_pujaris"],
-  },
-  { nameKey: "admin.temples", suffix: "/temples", icon: Church, permissions: ["manage_services"] },
-  { nameKey: "admin.services", suffix: "/services", icon: Sparkles, permissions: ["manage_services"] },
-  {
-    nameKey: "admin.recommendations",
-    suffix: "/recommendations",
-    icon: Lightbulb,
-    permissions: ["manage_services"],
-  },
-  { nameKey: "admin.samagri", suffix: "/samagri", icon: Flower2, permissions: ["manage_samagri"] },
-  { nameKey: "admin.bookings", suffix: "/bookings", icon: Calendar, permissions: ["view_bookings", "manage_bookings"] },
-  { nameKey: "admin.virtualPuja", suffix: "/virtual-puja", icon: Video, permissions: ["view_bookings", "manage_bookings"] },
-  { nameKey: "admin.sevaEvents", suffix: "/seva-events", icon: Video, permissions: ["manage_services", "manage_bookings"] },
-  { nameKey: "admin.muhurtham", suffix: "/muhurtham", icon: Clock3, permissions: ["view_bookings", "manage_bookings"] },
-  {
-    nameKey: "admin.settlements",
-    suffix: "/settlements",
-    icon: CreditCard,
-    permissions: ["manage_settlements", "view_payments"],
-  },
-  {
-    nameKey: "admin.invoices",
-    suffix: "/invoices",
-    icon: FileText,
-    permissions: ["view_payments", "manage_settlements", "manage_bookings"],
-  },
-  {
-    nameKey: "admin.payments",
-    suffix: "/payments",
-    icon: CreditCard,
-    permissions: ["view_payments", "manage_settlements"],
-  },
-  {
-    nameKey: "admin.pricing",
-    suffix: "/pricing",
-    icon: IndianRupee,
-    permissions: ["manage_config", "manage_services"],
-  },
-  { nameKey: "admin.permissions", suffix: "/permissions", icon: UserCog, permissions: ["manage_admins"] },
-  { nameKey: "admin.reviews", suffix: "/reviews", icon: Star, permissions: ["view_bookings"] },
-  { nameKey: "admin.promos", suffix: "/promos", icon: Sparkles, permissions: ["manage_config"] },
-  { nameKey: "admin.reports", suffix: "/reports", icon: BarChart3, permissions: ["view_reports"] },
-  { nameKey: "admin.settings", suffix: "/settings", icon: Settings, permissions: ["manage_config"] },
+  { nameKey: "admin.customers", suffix: "/customers", icon: Users },
+  { nameKey: "admin.pujaris", suffix: "/pujaris", icon: UserCog },
+  { nameKey: "admin.temples", suffix: "/temples", icon: Church },
+  { nameKey: "admin.services", suffix: "/services", icon: Sparkles },
+  { nameKey: "admin.recommendations", suffix: "/recommendations", icon: Lightbulb },
+  { nameKey: "admin.samagri", suffix: "/samagri", icon: Flower2 },
+  { nameKey: "admin.bookings", suffix: "/bookings", icon: Calendar },
+  { nameKey: "admin.virtualPuja", suffix: "/virtual-puja", icon: Video },
+  { nameKey: "admin.sevaEvents", suffix: "/seva-events", icon: Video },
+  { nameKey: "admin.muhurtham", suffix: "/muhurtham", icon: Clock3 },
+  { nameKey: "admin.settlements", suffix: "/settlements", icon: CreditCard },
+  { nameKey: "admin.invoices", suffix: "/invoices", icon: FileText },
+  { nameKey: "admin.payments", suffix: "/payments", icon: CreditCard },
+  { nameKey: "admin.pricing", suffix: "/pricing", icon: IndianRupee },
+  { nameKey: "admin.permissions", suffix: "/permissions", icon: UserCog },
+  { nameKey: "admin.reviews", suffix: "/reviews", icon: Star },
+  { nameKey: "admin.promos", suffix: "/promos", icon: Sparkles },
+  { nameKey: "admin.reports", suffix: "/reports", icon: BarChart3 },
+  { nameKey: "admin.settings", suffix: "/settings", icon: Settings },
   { nameKey: "nav.about", externalHref: "/about", icon: Info },
 ];
 
@@ -136,17 +108,9 @@ function AdminShell({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, loading } = useAuth();
   const t = (key: string) => dictionaries.en[key] || key;
-  const [permissions, setPermissions] = useState<string[] | null>(null);
+  const { permissions, isSuper } = useAdminPermissions(user);
   const [badges, setBadges] = useState<NavBadges>({});
-  const isSuper = user?.role === "super_admin";
   const opsBase = adminBasePath();
-
-  useEffect(() => {
-    if (!user || (user.role !== "admin" && user.role !== "super_admin")) return;
-    api<{ role: string; permissions: string[] }>("/admin/me/permissions")
-      .then((r) => setPermissions(r.permissions || []))
-      .catch(() => setPermissions([]));
-  }, [user]);
 
   useEffect(() => {
     if (!user || (user.role !== "admin" && user.role !== "super_admin")) return;
@@ -164,20 +128,25 @@ function AdminShell({ children }: AdminLayoutProps) {
     };
   }, [user, location]);
 
+  const perms = permissions ?? [];
+  const permissionsReady = isSuper || permissions !== null;
+  const can = (suffix: string) => canAccess(ADMIN_ROUTE_ACCESS[suffix], isSuper, perms);
+
   const filteredNavigation = useMemo(() => {
     return navigation.filter((item) => {
-      if (isSuper) return true;
-      if (item.superOnly) return false;
-      if (permissions == null) return item.suffix === "" || !!item.externalHref;
-      if (!item.permissions?.length) return true;
-      return item.permissions.some((p) => permissions.includes(p));
+      if (item.externalHref) return true;
+      if (!permissionsReady) return item.suffix === "";
+      return canAccess(ADMIN_ROUTE_ACCESS[item.suffix ?? ""], isSuper, perms);
     });
-  }, [isSuper, permissions]);
+  }, [isSuper, permissionsReady, perms]);
 
-  const showLegal = isSuper || (permissions?.includes("manage_legal") ?? false);
-  const showSupport = isSuper || (permissions?.includes("manage_support") ?? false);
+  const showLegal = permissionsReady && can("/legal");
+  const showSupport = permissionsReady && can("/support");
+  const showHeadRatings = permissionsReady && can("/head-ratings");
+  const pageAllowed = canAccess(accessForPath(location, opsBase), isSuper, perms);
 
   const handleLogout = async () => {
+    clearAdminPermissionsCache();
     await logout();
     setLocation(opsBase);
   };
@@ -289,18 +258,20 @@ function AdminShell({ children }: AdminLayoutProps) {
                   </a>
                 </Link>
               )}
-              <Link href={adminPath("/head-ratings")}>
-                <a
-                  className={cn(
-                    adminSidebarActionClass,
-                    navActive("/head-ratings") && "bg-primary/15 text-primary font-semibold"
-                  )}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Star size={18} />
-                  {t("nav.headRatings")}
-                </a>
-              </Link>
+              {showHeadRatings && (
+                <Link href={adminPath("/head-ratings")}>
+                  <a
+                    className={cn(
+                      adminSidebarActionClass,
+                      navActive("/head-ratings") && "bg-primary/15 text-primary font-semibold"
+                    )}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Star size={18} />
+                    {t("nav.headRatings")}
+                  </a>
+                </Link>
+              )}
               {showLegal && (
                 <Link href={adminPath("/legal")}>
                   <a
@@ -344,9 +315,39 @@ function AdminShell({ children }: AdminLayoutProps) {
           </Button>
         </header>
         <main className="min-w-0 p-4 lg:p-6 print:p-0" data-scroll-reset>
-          <div className="admin-canvas">{children}</div>
+          <div className="admin-canvas">
+            {!permissionsReady ? (
+              <Skeleton className="h-40 w-full" />
+            ) : pageAllowed ? (
+              <AdminAccessProvider isSuper={isSuper} permissions={perms}>
+                {children}
+              </AdminAccessProvider>
+            ) : (
+              <AccessDenied />
+            )}
+          </div>
         </main>
       </div>
+    </div>
+  );
+}
+
+/** Shown instead of the page when an admin opens a module they have no permission for. */
+function AccessDenied() {
+  return (
+    <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-[#EFE2CF] bg-white p-8 text-center shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10 dark:bg-[#152238]">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF1E4] text-[#E86A00] dark:bg-[#FF7A00]/15">
+        <ShieldAlert size={26} />
+      </span>
+      <h1 className="mt-4 text-xl font-bold text-[#0E1830] dark:text-white">You don&apos;t have access to this page</h1>
+      <p className="mt-2 text-sm text-[#5B6478] dark:text-white/60">
+        This module isn&apos;t included in your admin permissions. Ask a Super Admin if you need access.
+      </p>
+      <Link href={adminPath("")}>
+        <a className="mt-6 inline-flex h-10 items-center rounded-xl bg-[#071A33] px-5 text-sm font-semibold text-white hover:bg-[#0D2445]">
+          Back to dashboard
+        </a>
+      </Link>
     </div>
   );
 }

@@ -9,7 +9,14 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import require_roles
 from app.domain import row_dict
-from app.rbac import require_any_permission, require_permission
+from app.rbac import (
+    has_permission,
+    is_super_admin,
+    require_admin,
+    require_any_permission,
+    require_permission,
+    require_super_admin,
+)
 from app.schemas import (
     AdminCustomerUpdateIn,
     AdminUserIn,
@@ -105,7 +112,7 @@ def _sql_order(sort_by: str | None, sort_dir: str | None, columns: dict[str, str
 
 
 @router.get("/stats")
-def stats(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def stats(user=Depends(require_super_admin), db: Session = Depends(get_db)):
     customers = db.execute(text("SELECT COUNT(*) FROM users WHERE role = 'customer'")).scalar() or 0
     # Active Pujaris = approved + not blocked (aligns with Approved list / ?status=approved)
     approved_active = db.execute(
@@ -143,7 +150,7 @@ def stats(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
 
 
 @router.get("/stats/overview")
-def stats_overview(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def stats_overview(user=Depends(require_super_admin), db: Session = Depends(get_db)):
     """Read-only operational snapshot for the admin dashboard (IST calendar days)."""
     q = lambda sql, **p: db.execute(text(sql), p)
     today = "(now() AT TIME ZONE 'Asia/Kolkata')::date"
@@ -252,6 +259,200 @@ def stats_overview(user=Depends(require_roles("admin")), db: Session = Depends(g
     }
 
 
+@router.get("/dashboard/ops")
+def ops_dashboard(user=Depends(require_admin), db: Session = Depends(get_db)):
+    """Operational dashboard for normal Admins (Super Admins may call it too).
+
+    Every section is computed only when the caller holds the matching permission, and the
+    response never contains money: no revenue, fees, payouts, settlements or amounts.
+    """
+    q = lambda sql, **p: db.execute(text(sql), p)
+    scalar = lambda sql, **p: int(q(sql, **p).scalar() or 0)
+    can = lambda *perms: has_permission(db, user, *perms)
+    today = "(now() AT TIME ZONE 'Asia/Kolkata')::date"
+    month = f"date_trunc('month', {today}::timestamp)"
+    live = "status NOT IN ('cancelled','rejected')"
+    out: dict = {"role": user["role"], "sections": []}
+
+    if can("view_customers"):
+        out["customers"] = {
+            "total": scalar("SELECT COUNT(*) FROM users WHERE role = 'customer'"),
+            "new_this_month": scalar(
+                f"SELECT COUNT(*) FROM users WHERE role = 'customer' AND (created_at AT TIME ZONE 'Asia/Kolkata') >= {month}"
+            ),
+            "new_last_7_days": scalar(
+                "SELECT COUNT(*) FROM users WHERE role = 'customer' AND created_at >= now() - interval '7 days'"
+            ),
+            "recent": [row_dict(r) for r in q(
+                """
+                SELECT u.id, u.name, u.created_at, cp.city
+                FROM users u LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+                WHERE u.role = 'customer' ORDER BY u.created_at DESC LIMIT 5
+                """
+            ).mappings().all()],
+        }
+        out["sections"].append("customers")
+
+    if can("view_pujaris", "verify_pujaris"):
+        by_status = {r["s"]: int(r["n"]) for r in q(
+            "SELECT COALESCE(verification_status, 'pending') AS s, COUNT(*) AS n FROM pujari_profiles GROUP BY 1"
+        ).mappings().all()}
+        out["pujaris"] = {
+            "total": sum(by_status.values()),
+            "approved": by_status.get("approved", 0),
+            "pending_verification": by_status.get("pending", 0) + by_status.get("under_review", 0),
+            "correction_required": by_status.get("correction_required", 0),
+            "recent": [row_dict(r) for r in q(
+                """
+                SELECT u.id, u.name, pp.verification_status, pp.city, u.created_at
+                FROM pujari_profiles pp JOIN users u ON u.id = pp.user_id
+                ORDER BY u.created_at DESC LIMIT 5
+                """
+            ).mappings().all()],
+        }
+        out["sections"].append("pujaris")
+
+    if can("view_bookings"):
+        out["bookings"] = {
+            "today": scalar(f"SELECT COUNT(*) FROM bookings WHERE booking_date = {today} AND {live}"),
+            "upcoming": scalar(
+                f"SELECT COUNT(*) FROM bookings WHERE booking_date > {today} AND status IN ('pending','pending_acceptance','confirmed')"
+            ),
+            "pending_acceptance": scalar("SELECT COUNT(*) FROM bookings WHERE status IN ('pending','pending_acceptance')"),
+            "unassigned": scalar(
+                "SELECT COUNT(*) FROM bookings WHERE pujari_id IS NULL AND status IN ('pending','pending_acceptance','confirmed')"
+            ),
+            "needs_reassignment": scalar(
+                f"SELECT COUNT(*) FROM bookings WHERE COALESCE(needs_reassignment, FALSE) = TRUE AND {live} AND status <> 'completed'"
+            ),
+            "in_progress": scalar("SELECT COUNT(*) FROM bookings WHERE status = 'in_progress'"),
+            "completed_this_month": scalar(
+                f"SELECT COUNT(*) FROM bookings WHERE status = 'completed' AND booking_date >= {month}::date"
+            ),
+            "cancelled_this_month": scalar(
+                f"SELECT COUNT(*) FROM bookings WHERE status IN ('cancelled','rejected') AND (updated_at AT TIME ZONE 'Asia/Kolkata') >= {month}"
+            ),
+            "status_breakdown": {r["status"]: int(r["n"]) for r in q(
+                "SELECT status, COUNT(*) AS n FROM bookings GROUP BY status"
+            ).mappings().all()},
+            "last_7_days": [{"day": str(r["day"]), "count": int(r["n"])} for r in q(
+                f"""
+                SELECT d::date AS day, COUNT(b.id) AS n
+                FROM generate_series({today} - 6, {today}, interval '1 day') d
+                LEFT JOIN bookings b ON (b.created_at AT TIME ZONE 'Asia/Kolkata')::date = d::date
+                GROUP BY d ORDER BY d
+                """
+            ).mappings().all()],
+            "today_schedule": [row_dict(r) for r in q(
+                f"""
+                SELECT b.id, b.booking_number, b.start_time, b.status, b.mode, b.location_label,
+                       s.name AS service_name, c.name AS customer_name, p.name AS pujari_name
+                FROM bookings b
+                LEFT JOIN services s ON s.id = b.service_id
+                LEFT JOIN users c ON c.id = b.customer_id
+                LEFT JOIN users p ON p.id = b.pujari_id
+                WHERE b.booking_date = {today} AND b.{live}
+                ORDER BY b.start_time NULLS LAST LIMIT 8
+                """
+            ).mappings().all()],
+            "recent": [row_dict(r) for r in q(
+                """
+                SELECT b.id, b.booking_number, b.booking_date, b.status, b.mode, b.created_at,
+                       s.name AS service_name, c.name AS customer_name
+                FROM bookings b
+                LEFT JOIN services s ON s.id = b.service_id
+                LEFT JOIN users c ON c.id = b.customer_id
+                ORDER BY b.created_at DESC LIMIT 6
+                """
+            ).mappings().all()],
+        }
+        out["sections"].append("bookings")
+
+    if can("view_bookings", "view_services"):
+        # Popularity only: booking counts, never revenue.
+        out["top_services"] = [{"name": r["name"], "count": int(r["n"])} for r in q(
+            f"""
+            SELECT s.name, COUNT(*) AS n
+            FROM bookings b JOIN services s ON s.id = b.service_id
+            WHERE b.created_at >= now() - interval '30 days' AND b.{live}
+            GROUP BY s.name ORDER BY n DESC LIMIT 5
+            """
+        ).mappings().all()]
+        out["sections"].append("top_services")
+
+    if can("view_virtual_puja"):
+        out["virtual_puja"] = {
+            "today": scalar(f"SELECT COUNT(*) FROM bookings WHERE mode = 'virtual' AND booking_date = {today} AND {live}"),
+            "upcoming": scalar(
+                f"SELECT COUNT(*) FROM bookings WHERE mode = 'virtual' AND booking_date >= {today} AND status IN ('pending','pending_acceptance','confirmed')"
+            ),
+            "unassigned": scalar(
+                "SELECT COUNT(*) FROM bookings WHERE mode = 'virtual' AND pujari_id IS NULL AND status IN ('pending','pending_acceptance','confirmed')"
+            ),
+        }
+        out["sections"].append("virtual_puja")
+
+    if can("view_services"):
+        out["services"] = {
+            "active": scalar("SELECT COUNT(*) FROM services WHERE COALESCE(active, TRUE) = TRUE"),
+            "inactive": scalar("SELECT COUNT(*) FROM services WHERE COALESCE(active, TRUE) = FALSE"),
+        }
+        out["sections"].append("services")
+
+    if can("view_reviews", "manage_reviews"):
+        out["reviews"] = {
+            # Same population the moderation page lists: customer reviews, not skipped, NULL = approved.
+            "pending": scalar(
+                "SELECT COUNT(*) FROM ratings WHERE role_from = 'customer' AND COALESCE(skipped, FALSE) = FALSE "
+                "AND COALESCE(moderation_status, 'approved') = 'pending'"
+            ),
+        }
+        out["sections"].append("reviews")
+
+    if can("view_muhurtham", "manage_muhurtham"):
+        out["muhurtham"] = {
+            "requested": scalar("SELECT COUNT(*) FROM muhurta_consultations WHERE status = 'requested'"),
+            "in_progress": scalar(
+                "SELECT COUNT(*) FROM muhurta_consultations WHERE status NOT IN ('requested','completed','cancelled')"
+            ),
+        }
+        out["sections"].append("muhurtham")
+
+    if can("view_seva_events", "manage_seva_events"):
+        out["seva_events"] = {
+            "upcoming": scalar(
+                "SELECT COUNT(*) FROM seva_events WHERE start_at >= now() AND COALESCE(status, '') NOT IN ('cancelled','completed')"
+            ),
+        }
+        out["sections"].append("seva_events")
+
+    if can("manage_support"):
+        out["support"] = {
+            "open": scalar("SELECT COUNT(*) FROM support_tickets WHERE status NOT IN ('resolved','closed')"),
+            "overdue": scalar(
+                "SELECT COUNT(*) FROM support_tickets WHERE status NOT IN ('resolved','closed') AND sla_due_at IS NOT NULL AND sla_due_at < now()"
+            ),
+        }
+        out["sections"].append("support")
+
+    return out
+
+
+# Which permission an admin needs to see / change a user of each role. Admin accounts are
+# Super Admin territory only.
+_ROLE_VIEW_PERMISSION = {"customer": "view_customers", "pujari": "view_pujaris", "head_pujari": "view_pujaris"}
+_ROLE_EDIT_PERMISSION = {"customer": "edit_customers", "pujari": "edit_pujaris", "head_pujari": "edit_pujaris"}
+_ROLE_BLOCK_PERMISSION = {"customer": "edit_customers", "pujari": "block_pujaris", "head_pujari": "block_pujaris"}
+
+
+def _ensure_can_act_on(db: Session, admin: dict, target_role: str, mapping: dict[str, str]) -> None:
+    if is_super_admin(admin):
+        return
+    perm = mapping.get(target_role)
+    if not perm or not has_permission(db, admin, perm):
+        raise HTTPException(403, "You do not have permission to manage this account")
+
+
 @router.get("/users")
 def list_users(
     role: str | None = None,
@@ -278,6 +479,14 @@ def list_users(
         WHERE 1=1
     """
     params: dict = {}
+    if not is_super_admin(user):
+        visible = [r for r, perm in _ROLE_VIEW_PERMISSION.items() if has_permission(db, user, perm)]
+        if role and role not in visible:
+            raise HTTPException(403, "You do not have permission to view these accounts")
+        if not role:
+            sql += " AND u.role = ANY(:visible_roles)"
+            count_sql += " AND u.role = ANY(:visible_roles)"
+            params["visible_roles"] = visible
     if role:
         sql += " AND u.role = :role"
         count_sql += " AND u.role = :role"
@@ -313,12 +522,7 @@ def block_user(user_id: str, body: BlockIn, admin=Depends(require_any_permission
     target = db.execute(text("SELECT role FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}).first()
     if not target:
         raise HTTPException(404, "User not found")
-    if target[0] in ("pujari", "head_pujari"):
-        # block_pujaris required — already satisfied by require_any if only edit_customers
-        from app.rbac import is_super_admin, user_permissions
-
-        if not is_super_admin(admin) and "block_pujaris" not in user_permissions(db, admin):
-            raise HTTPException(403, "Missing permission: block_pujaris")
+    _ensure_can_act_on(db, admin, target[0], _ROLE_BLOCK_PERMISSION)
     db.execute(
         text(
             """
@@ -346,13 +550,9 @@ def block_user(user_id: str, body: BlockIn, admin=Depends(require_any_permission
 def create_user(body: AdminUserIn, admin=Depends(require_any_permission("create_customers", "create_pujaris")), db: Session = Depends(get_db)):
     from uuid import uuid4
 
-    from app.rbac import is_super_admin, user_permissions
-
-    perms = user_permissions(db, admin) if not is_super_admin(admin) else None
-    if body.role == "customer" and perms is not None and "create_customers" not in perms:
-        raise HTTPException(403, "Missing permission: create_customers")
-    if body.role == "pujari" and perms is not None and "create_pujaris" not in perms:
-        raise HTTPException(403, "Missing permission: create_pujaris")
+    needed = {"customer": "create_customers", "pujari": "create_pujaris"}[body.role]
+    if not has_permission(db, admin, needed):
+        raise HTTPException(403, f"Missing permission: {needed}")
 
     existing = db.execute(
         text("SELECT id FROM users WHERE email = :e OR phone = :p"),
@@ -491,14 +691,15 @@ def update_customer(
 
 
 @router.delete("/users/{user_id}")
-def delete_user(user_id: str, admin=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def delete_user(user_id: str, admin=Depends(require_any_permission("edit_customers", "edit_pujaris")), db: Session = Depends(get_db)):
     if str(admin["id"]) == user_id:
         raise HTTPException(400, "You cannot delete your own account")
     row = db.execute(text("SELECT role FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}).first()
     if not row:
         raise HTTPException(404, "User not found")
-    if row[0] == "admin":
-        raise HTTPException(400, "Cannot delete an admin")
+    if row[0] in ("admin", "super_admin"):
+        raise HTTPException(400, "Cannot delete an admin account")
+    _ensure_can_act_on(db, admin, row[0], _ROLE_EDIT_PERMISSION)
     n = db.execute(text("SELECT COUNT(*) FROM bookings WHERE customer_id = CAST(:id AS uuid)"), {"id": user_id}).scalar() or 0
     if n:
         raise HTTPException(400, "This customer has bookings. Block the account instead of deleting.")
@@ -635,7 +836,7 @@ def set_pujari_level(pujari_id: str, body: PujariLevelIn, admin=Depends(require_
 
 
 @router.get("/services")
-def admin_services(user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
+def admin_services(user=Depends(require_any_permission("view_services", "manage_services", "view_seva_events", "manage_seva_events")), db: Session = Depends(get_db)):
     from app.catalog import enrich_service
 
     # Available (priced + active) first, then Upcoming / Coming Soon
@@ -1159,7 +1360,7 @@ def remove_service_image(
 
 
 @router.get("/service-categories")
-def admin_list_categories(user=Depends(require_permission("manage_services")), db: Session = Depends(get_db)):
+def admin_list_categories(user=Depends(require_any_permission("view_services", "manage_services")), db: Session = Depends(get_db)):
     rows = db.execute(
         text("SELECT * FROM service_categories ORDER BY sort_order, name")
     ).mappings().all()
@@ -1234,12 +1435,12 @@ def delete_service(service_id: str, user=Depends(require_permission("manage_serv
 
 
 @router.get("/pricing")
-def get_pricing(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def get_pricing(user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
     return row_dict(db.execute(text("SELECT * FROM pricing_config WHERE id = 1")).mappings().one())
 
 
 @router.put("/pricing")
-def update_pricing(body: PricingIn, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def update_pricing(body: PricingIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
     db.execute(
         text("UPDATE pricing_config SET gst_percent = :g, peak_day_fee_paise = 0, updated_at = NOW() WHERE id = 1"),
         {"g": body.gst_percent},
@@ -1260,7 +1461,7 @@ def _serialize_pujari_role(row) -> dict:
 
 
 @router.get("/pujari-roles")
-def list_pujari_roles_admin(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def list_pujari_roles_admin(user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM pujari_roles ORDER BY level ASC")).mappings().all()
     out = []
     for r in rows:
@@ -1289,7 +1490,7 @@ def list_pujari_roles_admin(user=Depends(require_roles("admin")), db: Session = 
 
 
 @router.post("/pujari-roles")
-def create_pujari_role(body: PujariRoleIn, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def create_pujari_role(body: PujariRoleIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
     import json
     from uuid import uuid4
 
@@ -1316,7 +1517,7 @@ def create_pujari_role(body: PujariRoleIn, user=Depends(require_roles("admin")),
 
 
 @router.put("/pujari-roles/{role_id}")
-def update_pujari_role(role_id: str, body: PujariRoleUpdateIn, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def update_pujari_role(role_id: str, body: PujariRoleUpdateIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
     import json
 
     existing = db.execute(text("SELECT * FROM pujari_roles WHERE id = CAST(:id AS uuid)"), {"id": role_id}).mappings().first()
@@ -1341,7 +1542,7 @@ def update_pujari_role(role_id: str, body: PujariRoleUpdateIn, user=Depends(requ
 
 
 @router.delete("/pujari-roles/{role_id}")
-def delete_pujari_role(role_id: str, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def delete_pujari_role(role_id: str, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
     row = db.execute(text("SELECT level FROM pujari_roles WHERE id = CAST(:id AS uuid)"), {"id": role_id}).mappings().first()
     if not row:
         raise HTTPException(404, "Role not found")
@@ -1377,13 +1578,13 @@ def _serialize_legal_policy(row) -> dict:
 
 
 @router.get("/legal")
-def list_legal_policies(user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def list_legal_policies(user=Depends(require_permission("manage_legal")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM legal_policies ORDER BY sort_order ASC, title ASC")).mappings().all()
     return [_serialize_legal_policy(r) for r in rows]
 
 
 @router.put("/legal/{slug}")
-def update_legal_policy(slug: str, body: LegalPolicyUpdateIn, user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def update_legal_policy(slug: str, body: LegalPolicyUpdateIn, user=Depends(require_permission("manage_legal")), db: Session = Depends(get_db)):
     import json
 
     existing = db.execute(text("SELECT * FROM legal_policies WHERE slug = :slug"), {"slug": slug}).mappings().first()
@@ -1410,7 +1611,7 @@ def update_legal_policy(slug: str, body: LegalPolicyUpdateIn, user=Depends(requi
 @router.get("/legal/{slug}/translations")
 def list_legal_policy_translations(
     slug: str,
-    user=Depends(require_roles("admin")),
+    user=Depends(require_permission("manage_legal")),
     db: Session = Depends(get_db),
 ):
     rows = db.execute(
@@ -1432,7 +1633,7 @@ def list_legal_policy_translations(
 def upsert_legal_policy_translation(
     slug: str,
     body: LegalPolicyTranslationIn,
-    user=Depends(require_roles("admin")),
+    user=Depends(require_permission("manage_legal")),
     db: Session = Depends(get_db),
 ):
     import json
@@ -1464,7 +1665,7 @@ def upsert_legal_policy_translation(
 @router.post("/email/test-templates")
 def admin_test_email_templates(
     to: str = Query("mybseva@gmail.com", max_length=200),
-    user=Depends(require_roles("admin")),
+    user=Depends(require_permission("manage_config")),
     db: Session = Depends(get_db),
 ):
     """Admin-only: send all branded TEST templates with dummy data. Never uses live bookings."""
@@ -1482,7 +1683,7 @@ def admin_test_email_templates(
 
 
 @router.get("/email/smtp-status")
-def admin_smtp_status(user=Depends(require_roles("admin"))):
+def admin_smtp_status(user=Depends(require_permission("manage_config"))):
     from app.mail.smtp_client import smtp_status
 
     return smtp_status()

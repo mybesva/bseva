@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 from app.db import get_db
 from app.domain import row_dict
-from app.rbac import require_any_permission
+from app.rbac import require_permission
 
 router = APIRouter(prefix="/admin", tags=["admin-reports"])
 
@@ -83,7 +83,7 @@ def generate_report(
     range: str = Query("last_30_days"),
     date_from: str | None = Query(None, alias="from"),
     date_to: str | None = Query(None, alias="to"),
-    user=Depends(require_any_permission("view_reports", "view_bookings")),
+    user=Depends(require_permission("view_reports")),
     db: Session = Depends(get_db),
 ):
     start, end, label = period_bounds(range, date_from, date_to)

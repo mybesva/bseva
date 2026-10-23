@@ -499,3 +499,53 @@ def seva_discovery(db: Session = Depends(get_db)):
         )
     ).mappings().all()
     return [row_dict(r) for r in rows]
+
+
+@router.get("/customer/seva/registrations/{registration_id}/proof")
+def seva_registration_proof(registration_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    """Serve the released puja proof for a Seva registration to its customer (or an admin with Seva
+    Events access). Clear 404 messages when no proof is released or the file is missing."""
+    from fastapi.responses import RedirectResponse
+
+    from app.rbac import ensure_admin_permission, is_admin_like
+    from app.storage import file_response
+
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT r.customer_id, r.proof_image_path, r.proof_released,
+                       e.proof_image_path AS event_proof_image_path, e.proof_released AS event_proof_released
+                FROM seva_event_registrations r
+                JOIN seva_events e ON e.id = r.event_id
+                WHERE r.id = CAST(:id AS uuid)
+                """
+            ),
+            {"id": registration_id},
+        ).mappings().first()
+    except Exception:
+        db.rollback()
+        row = None
+    if not row:
+        raise HTTPException(404, "Registration not found")
+    if is_admin_like(user):
+        ensure_admin_permission(db, user, "view_seva_events", "manage_seva_events")
+    elif str(row["customer_id"]) != str(user["id"]):
+        raise HTTPException(403, "Not allowed")
+
+    path = None
+    if row["proof_released"] and (row["proof_image_path"] or "").strip():
+        path = row["proof_image_path"].strip()
+    elif row["event_proof_released"] and (row["event_proof_image_path"] or "").strip():
+        path = row["event_proof_image_path"].strip()
+    if not path:
+        raise HTTPException(404, "Proof has not been shared for this seva yet.")
+    if path.startswith(("http://", "https://")):
+        return RedirectResponse(path, status_code=307)
+    try:
+        return file_response(path.lstrip("/"), filename=path.rsplit("/", 1)[-1])
+    except HTTPException as e:
+        missing = e.status_code == 404 or "not found" in str(e.detail).lower()
+        if missing:
+            raise HTTPException(404, "The proof file could not be found. Please contact support.")
+        raise

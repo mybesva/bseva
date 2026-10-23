@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import current_user, require_roles
+from app.rbac import ensure_admin_permission, ensure_booking_access, has_permission, is_super_admin
 from app.domain import (
     SERVICE_RADIUS_KM,
     apply_wallet,
@@ -483,6 +484,7 @@ def quote(
 
 @router.get("/pujaris")
 def list_pujaris(db: Session = Depends(get_db), user=Depends(require_roles("customer", "admin"))):
+    ensure_admin_permission(db, user, "view_pujaris", "manage_bookings", "manage_virtual_puja")
     rows = db.execute(
         text(
             """
@@ -548,6 +550,7 @@ def nearby(
     db: Session = Depends(get_db),
     user=Depends(require_roles("customer", "admin")),
 ):
+    ensure_admin_permission(db, user, "view_pujaris", "manage_bookings", "manage_virtual_puja")
     from app.domain import pujari_free_for_slot
 
     required = 1
@@ -1451,6 +1454,10 @@ def list_bookings(
     payment_stats = None
 
     if user["role"] in ("admin", "super_admin"):
+        if not has_permission(db, user, "view_bookings", "manage_bookings"):
+            if not has_permission(db, user, "view_virtual_puja", "manage_virtual_puja"):
+                raise HTTPException(403, "You do not have permission to view bookings")
+            mode_n = "virtual"
         extra, filter_params = admin_booking_filters(
             mode=mode_n,
             status=status,
@@ -1502,7 +1509,7 @@ def list_bookings(
             enrich_booking_pujari_team(item)
             utc = item.get("start_at_utc")
             item["schedule_display"] = display_pair(utc, item.get("customer_timezone"))
-        if stats:
+        if stats and is_super_admin(user):
             pay = db.execute(
                 text(
                     f"""
@@ -1677,6 +1684,7 @@ def update_status(booking_id: str, status: str = Query(...), user=Depends(requir
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
+    ensure_booking_access(db, user, booking_id, "manage")
     if user["role"] == "pujari" and str(b["pujari_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
     if user["role"] == "pujari" and status in ("in_progress", "completed"):
@@ -1719,6 +1727,7 @@ def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = De
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
+    ensure_booking_access(db, user, booking_id, "view")
     actor = _cancel_actor(user, b)
     if b["status"] not in ("pending", "pending_acceptance", "confirmed"):
         raise HTTPException(400, f"Cannot cancel a booking in status {b['status']}")
@@ -1751,6 +1760,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
+    ensure_booking_access(db, user, booking_id, "manage")
     actor = _cancel_actor(user, b)
     if b["status"] == "cancelled":
         raise HTTPException(400, "Already cancelled")
@@ -1910,6 +1920,7 @@ def cancel_recurring_series(series_id: str, reason: str | None = None, user=Depe
         raise HTTPException(404, "Series not found")
     if user["role"] not in ("admin", "super_admin") and str(series["customer_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
+    ensure_admin_permission(db, user, "manage_bookings")
     db.execute(
         text("UPDATE recurring_series SET active = FALSE WHERE id = CAST(:id AS uuid)"),
         {"id": series_id},

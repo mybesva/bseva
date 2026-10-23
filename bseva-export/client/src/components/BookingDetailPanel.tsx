@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,6 +64,8 @@ export type BookingDetail = {
   customer_name?: string;
   pujari_name?: string;
   rating_status?: string;
+  /** Viewer's own rating for this booking: null = not yet, "rated" or "skipped". */
+  my_rating?: "rated" | "skipped" | null;
   customer_id?: string;
   pujari_id?: string;
   details_level?: string;
@@ -214,8 +216,11 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     );
   }, [viewerRole, bookingId]);
 
+  // Open the reject confirmation once per booking; later reloads must not pop it open again.
+  const rejectIntentShownFor = useRef<string | null>(null);
   useEffect(() => {
-    if (initialIntent === "reject" && !loading) {
+    if (initialIntent === "reject" && !loading && rejectIntentShownFor.current !== bookingId) {
+      rejectIntentShownFor.current = bookingId;
       setRejectReason("");
       setRejectOpen(true);
     }
@@ -230,8 +235,14 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     try {
       await action();
       toast.success(okMsg);
+      if (decision === "rejected") {
+        // After a reject the pujari may no longer be able to read this booking, so skip the reload.
+        setRejectOpen(false);
+        onUpdated?.({ decision });
+        return;
+      }
       await load();
-      if (decision === "accepted" || decision === "rejected" || decision === "cancelled") {
+      if (decision === "accepted" || decision === "cancelled") {
         onUpdated?.({ decision });
       } else {
         onUpdated?.();
@@ -301,11 +312,12 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     }
   }
   const canComplete = viewerRole === "pujari" && status === "in_progress";
-  const ratingDoneForRole =
+  // Per-person state from the API (my_rating); older responses fall back to the booking-wide status.
+  const ratingDoneForRole = booking.my_rating !== undefined ? booking.my_rating != null : (
     booking.rating_status === "completed" ||
     booking.rating_status === "skipped" ||
     (viewerRole === "customer" && booking.rating_status === "customer_done") ||
-    (viewerRole === "pujari" && booking.rating_status === "pujari_done");
+    (viewerRole === "pujari" && booking.rating_status === "pujari_done"));
   const showRate =
     status === "completed" &&
     !ratingDoneForRole &&

@@ -18,6 +18,7 @@ import { formatDisplayDateTime } from "@/lib/formatDate";
 import { toast } from "sonner";
 import { adminPath } from "@/const";
 import { Link } from "wouter";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type InvoiceRow = {
   id: string;
@@ -34,6 +35,8 @@ type InvoiceRow = {
 };
 
 export default function AdminInvoices() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_invoices");
   const [rows, setRows] = useState<InvoiceRow[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -165,7 +168,7 @@ export default function AdminInvoices() {
                     >
                       PDF
                     </Button>
-                    {inv.invoice_type === "customer" && (
+                    {canManage && inv.invoice_type === "customer" && (
                       <Button size="sm" disabled={busy === inv.id} onClick={() => void resend(inv.id)}>
                         {busy === inv.id ? "Sending…" : "Resend"}
                       </Button>

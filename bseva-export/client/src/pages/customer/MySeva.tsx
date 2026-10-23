@@ -4,7 +4,7 @@ import { CustomerPortal } from "@/components/RolePortals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, mediaSrc, rupees } from "@/lib/api";
+import { api, apiBase, getToken, rupees } from "@/lib/api";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Link, useLocation } from "wouter";
@@ -97,9 +97,26 @@ export default function MySevaPage() {
     }
   }
 
-  function openProof(reg: SevaRegistration) {
-    const src = mediaSrc(reg.proof_image_path);
-    if (src) window.open(src, "_blank", "noopener,noreferrer");
+  /** Proof files are private: fetch with the customer's session, then show the file in a new tab. */
+  async function openProof(reg: SevaRegistration) {
+    const tab = window.open("", "_blank"); // open synchronously so popup blockers allow it
+    try {
+      const headers = new Headers();
+      const token = getToken();
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      const res = await fetch(`${apiBase()}/api/v1/customer/seva/registrations/${reg.id}/proof`, { headers });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail || t("seva.proofUnavailable"));
+      }
+      const url = URL.createObjectURL(await res.blob());
+      if (tab) tab.location.href = url;
+      else window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      tab?.close();
+      toast.error(e?.message || t("seva.proofUnavailable"));
+    }
   }
 
   return (

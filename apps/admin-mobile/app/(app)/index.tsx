@@ -115,9 +115,23 @@ export default function AdminDashboard() {
   const { t } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
+  const isSuper = user?.role === "super_admin";
+  // Financial totals (/admin/stats) are Super Admin only; normal Admins get the scoped ops dashboard.
   const q = useQuery({
-    queryKey: ["admin-stats"],
-    queryFn: () => apiClient.adminStats() as Promise<Record<string, unknown>>,
+    queryKey: ["admin-stats", isSuper ? "super" : "ops"],
+    queryFn: async (): Promise<Record<string, unknown>> => {
+      if (isSuper) return (await apiClient.adminStats()) as Record<string, unknown>;
+      const d = (await apiClient.adminOpsDashboard()) as {
+        customers?: { total: number };
+        pujaris?: { approved: number };
+        bookings?: { status_breakdown: Record<string, number> };
+      };
+      return {
+        totalCustomers: d.customers?.total,
+        activePriests: d.pujaris?.approved,
+        totalBookings: d.bookings ? Object.values(d.bookings.status_breakdown).reduce((a, n) => a + n, 0) : undefined,
+      };
+    },
   });
   const stats = q.data || {};
 
@@ -144,7 +158,7 @@ export default function AdminDashboard() {
       title: "Revenue",
       value: stats.monthlyRevenue != null ? rupees(Number(stats.monthlyRevenue)) : "—",
       href: "/payments",
-      show: can(["view_payments"]),
+      show: isSuper,
     },
   ].filter((c) => c.show);
 
@@ -187,7 +201,7 @@ export default function AdminDashboard() {
       count: badges.settlements ?? 0,
       icon: "cash-outline" as ActionIcon,
       href: "/settlements?status=awaiting",
-      show: can(["manage_settlements", "view_payments"]),
+      show: can("manage_settlements"),
     },
     {
       key: "support",

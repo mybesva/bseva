@@ -14,7 +14,7 @@ from app.audit import write_audit
 from app.db import get_db
 from app.deps import current_user, require_roles
 from app.domain import apply_wallet, row_dict
-from app.rbac import require_permission
+from app.rbac import ensure_admin_permission, require_any_permission, require_permission
 from app.schemas import MuhurtaConsultationIn, ServiceRecommendationIn
 
 router = APIRouter(tags=["consultations"])
@@ -71,7 +71,7 @@ def list_recommendations(
 
 @router.get("/admin/recommendations")
 def admin_list_recommendations(
-    admin=Depends(require_permission("manage_services")),
+    admin=Depends(require_any_permission("view_recommendations", "manage_recommendations")),
     db: Session = Depends(get_db),
 ):
     rows = db.execute(
@@ -90,7 +90,7 @@ def admin_list_recommendations(
 @router.post("/admin/recommendations")
 def admin_create_recommendation(
     body: ServiceRecommendationIn,
-    admin=Depends(require_permission("manage_services")),
+    admin=Depends(require_permission("manage_recommendations")),
     db: Session = Depends(get_db),
 ):
     rid = str(uuid4())
@@ -125,7 +125,7 @@ def admin_create_recommendation(
 def admin_update_recommendation(
     rec_id: str,
     body: ServiceRecommendationIn,
-    admin=Depends(require_permission("manage_services")),
+    admin=Depends(require_permission("manage_recommendations")),
     db: Session = Depends(get_db),
 ):
     result = db.execute(
@@ -160,7 +160,7 @@ def admin_update_recommendation(
 @router.get("/admin/recommendations/{rec_id}/translations")
 def admin_list_recommendation_translations(
     rec_id: str,
-    admin=Depends(require_permission("manage_services")),
+    admin=Depends(require_any_permission("view_recommendations", "manage_recommendations")),
     db: Session = Depends(get_db),
 ):
     rows = db.execute(
@@ -181,7 +181,7 @@ def admin_list_recommendation_translations(
 def admin_upsert_recommendation_translation(
     rec_id: str,
     body: RecommendationTranslationIn,
-    admin=Depends(require_permission("manage_services")),
+    admin=Depends(require_permission("manage_recommendations")),
     db: Session = Depends(get_db),
 ):
     result = db.execute(
@@ -217,7 +217,7 @@ def admin_upsert_recommendation_translation(
 @router.delete("/admin/recommendations/{rec_id}")
 def admin_delete_recommendation(
     rec_id: str,
-    admin=Depends(require_permission("manage_services")),
+    admin=Depends(require_permission("manage_recommendations")),
     db: Session = Depends(get_db),
 ):
     db.execute(text("DELETE FROM service_recommendations WHERE id = CAST(:id AS uuid)"), {"id": rec_id})
@@ -324,6 +324,7 @@ def list_muhurta_consultations(user=Depends(current_user), db: Session = Depends
     from app.routers.notifications import mask_customer_display_name
 
     if user["role"] in ("admin", "super_admin"):
+        ensure_admin_permission(db, user, "view_muhurtham", "manage_muhurtham")
         rows = db.execute(
             text(
                 """
@@ -387,6 +388,7 @@ def update_muhurta_consultation(
     ).mappings().first()
     if not m:
         raise HTTPException(404, "Consultation not found")
+    ensure_admin_permission(db, user, "manage_muhurtham")
     if user["role"] == "customer" and str(m["customer_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
     if user["role"] not in ("admin", "super_admin", "pujari", "head_pujari") and linked_booking_id is None:

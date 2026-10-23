@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import current_user, require_roles
+from app.rbac import ensure_admin_permission, require_permission
 from app.domain import row_dict
 
 router = APIRouter(prefix="/support", tags=["support"])
@@ -56,6 +57,7 @@ def create_conversation(body: ConversationCreateIn, user=Depends(require_roles("
 
 @router.get("/conversations")
 def list_conversations(user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     if user["role"] in ("customer", "pujari", "head_pujari"):
         rows = db.execute(
             text(
@@ -98,6 +100,7 @@ def _can_access_conversation(conv, user) -> None:
 
 @router.get("/conversations/{conversation_id}/messages")
 def list_messages(conversation_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     conv = db.execute(
         text("SELECT * FROM support_conversations WHERE id = CAST(:id AS uuid)"),
         {"id": conversation_id},
@@ -120,6 +123,7 @@ def list_messages(conversation_id: str, user=Depends(current_user), db: Session 
 
 @router.post("/conversations/{conversation_id}/messages")
 def post_message(conversation_id: str, body: MessageIn, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     conv = db.execute(
         text("SELECT * FROM support_conversations WHERE id = CAST(:id AS uuid)"),
         {"id": conversation_id},
@@ -180,7 +184,7 @@ def post_message(conversation_id: str, body: MessageIn, user=Depends(current_use
 
 
 @router.post("/conversations/{conversation_id}/close")
-def close_conversation(conversation_id: str, user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+def close_conversation(conversation_id: str, user=Depends(require_permission("manage_support")), db: Session = Depends(get_db)):
     db.execute(
         text(
             """

@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -14,7 +14,18 @@ from app.db import get_db
 from app.deps import current_user, require_roles
 from app.domain import row_dict
 from app.platform_config import get_all_settings, get_setting, set_setting
-from app.rbac import ALL_PERMISSIONS, require_admin, require_any_permission, require_permission, user_permissions
+from app.rbac import (
+    ADMIN_ASSIGNABLE,
+    catalog_payload,
+    ensure_admin_permission,
+    has_permission,
+    is_super_admin,
+    require_admin,
+    require_any_permission,
+    require_permission,
+    require_super_admin,
+    user_permissions,
+)
 
 router = APIRouter(tags=["ops"])
 
@@ -270,7 +281,7 @@ def service_preparation_public(
 
 
 @router.get("/admin/services/{service_id}/preparation-content")
-def get_prep_content(service_id: str, user=Depends(require_permission("manage_samagri")), db: Session = Depends(get_db)):
+def get_prep_content(service_id: str, user=Depends(require_any_permission("view_samagri", "manage_samagri", "view_services")), db: Session = Depends(get_db)):
     rows = db.execute(
         text("SELECT * FROM service_preparation_content WHERE service_id = CAST(:id AS uuid) ORDER BY language_code"),
         {"id": service_id},
@@ -361,24 +372,32 @@ def update_config(body: SettingIn, user=Depends(require_permission("manage_confi
 
 
 @router.get("/admin/permissions/catalog")
-def permission_catalog(user=Depends(require_admin)):
-    return {"permissions": ALL_PERMISSIONS}
+def permission_catalog(user=Depends(require_super_admin)):
+    return catalog_payload()
 
 
 @router.get("/admin/me/permissions")
 def my_permissions(user=Depends(require_admin), db: Session = Depends(get_db)):
-    return {"role": user["role"], "permissions": user_permissions(db, user)}
+    return {
+        "role": user["role"],
+        "is_super_admin": is_super_admin(user),
+        "permissions": user_permissions(db, user),
+    }
 
 
 @router.put("/admin/users/{user_id}/permissions")
-def grant_permissions(user_id: str, body: PermissionGrantIn, user=Depends(require_permission("manage_admins")), db: Session = Depends(get_db)):
+def grant_permissions(user_id: str, body: PermissionGrantIn, user=Depends(require_super_admin), db: Session = Depends(get_db)):
     target = db.execute(text("SELECT role FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}).first()
-    if not target or target[0] not in ("admin", "super_admin"):
-        raise HTTPException(400, "Target must be admin")
+    if not target:
+        raise HTTPException(404, "Admin not found")
+    if target[0] != "admin":
+        raise HTTPException(400, "Permissions can only be assigned to Admin accounts (Super Admins have full access)")
+    requested = list(dict.fromkeys(body.permissions))
+    invalid = [p for p in requested if p not in ADMIN_ASSIGNABLE]
+    if invalid:
+        raise HTTPException(400, f"Not assignable to an Admin: {', '.join(invalid)}")
     db.execute(text("DELETE FROM admin_permissions WHERE user_id = CAST(:id AS uuid)"), {"id": user_id})
-    for p in body.permissions:
-        if p not in ALL_PERMISSIONS:
-            continue
+    for p in requested:
         db.execute(
             text(
                 """
@@ -389,13 +408,13 @@ def grant_permissions(user_id: str, body: PermissionGrantIn, user=Depends(requir
             ),
             {"u": user_id, "p": p, "g": user["id"]},
         )
-    write_audit(db, str(user["id"]), "permissions_grant", "user", user_id)
+    write_audit(db, str(user["id"]), f"permissions_set:{','.join(sorted(requested)) or 'none'}", "user", user_id)
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "permissions": [p for p in ADMIN_ASSIGNABLE if p in requested]}
 
 
 @router.post("/admin/users/{user_id}/promote-super")
-def promote_super(user_id: str, user=Depends(require_permission("manage_admins")), db: Session = Depends(get_db)):
+def promote_super(user_id: str, user=Depends(require_admin), db: Session = Depends(get_db)):
     if user["role"] != "super_admin":
         # Allow first bootstrap: if no super_admin exists, admin can promote
         count = db.execute(text("SELECT COUNT(*) FROM users WHERE role = 'super_admin'")).scalar() or 0
@@ -419,6 +438,7 @@ def my_rewards(user=Depends(current_user), db: Session = Depends(get_db)):
 @router.get("/invoices")
 def my_invoices(user=Depends(current_user), db: Session = Depends(get_db)):
     if user["role"] in ("admin", "super_admin"):
+        ensure_admin_permission(db, user, "view_invoices")
         rows = db.execute(text("SELECT * FROM invoices ORDER BY created_at DESC LIMIT 200")).mappings().all()
     else:
         rows = db.execute(
@@ -431,7 +451,7 @@ def my_invoices(user=Depends(current_user), db: Session = Depends(get_db)):
 def _invoice_visible(db: Session, row, user) -> bool:
     """Customer invoices stay with the customer; the assigned pujari may open them too."""
     if user["role"] in ("admin", "super_admin"):
-        return True
+        return has_permission(db, user, "view_invoices")
     if str(row["user_id"]) == str(user["id"]):
         return True
     if user["role"] not in ("pujari", "head_pujari"):
@@ -504,7 +524,7 @@ def invoice_pdf(invoice_id: str, user=Depends(current_user), db: Session = Depen
 
 
 @router.post("/invoices/{invoice_id}/resend")
-def resend_invoice_email(invoice_id: str, user=Depends(require_permission("manage_bookings")), db: Session = Depends(get_db)):
+def resend_invoice_email(invoice_id: str, user=Depends(require_permission("manage_invoices")), db: Session = Depends(get_db)):
     from app.invoice_docs import email_customer_invoice
 
     row = db.execute(
@@ -526,7 +546,7 @@ def resend_invoice_email(invoice_id: str, user=Depends(require_permission("manag
 def admin_list_invoices(
     q: str = "",
     invoice_type: str = "customer",
-    user=Depends(require_any_permission("view_payments", "manage_bookings", "manage_settlements")),
+    user=Depends(require_permission("view_invoices")),
     db: Session = Depends(get_db),
 ):
     from app.invoice_docs import _ensure_invoice_schema
@@ -607,7 +627,7 @@ def apply_referral(body: ReferralApplyIn, user=Depends(current_user), db: Sessio
 
 
 @router.get("/admin/admins")
-def list_admins(user=Depends(require_permission("manage_admins")), db: Session = Depends(get_db)):
+def list_admins(user=Depends(require_super_admin), db: Session = Depends(get_db)):
     rows = db.execute(
         text(
             """
@@ -716,6 +736,7 @@ def _resolve_pujari_user_id(db: Session, raw: str) -> str:
 
 @router.get("/head/pujaris")
 def list_pujaris_for_head(user=Depends(require_roles("head_pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "view_pujaris")
     if user["role"] == "head_pujari":
         flag = db.execute(
             text("SELECT is_head_pujari FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
@@ -740,6 +761,7 @@ def list_pujaris_for_head(user=Depends(require_roles("head_pujari", "admin", "su
 
 @router.post("/head/ratings")
 def head_rate_pujari(body: HeadRatingIn, user=Depends(require_roles("head_pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "edit_pujaris")
     if user["role"] == "head_pujari":
         flag = db.execute(
             text("SELECT is_head_pujari FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
@@ -781,6 +803,7 @@ def head_rate_pujari(body: HeadRatingIn, user=Depends(require_roles("head_pujari
 
 @router.get("/head/ratings")
 def list_head_ratings(user=Depends(require_roles("head_pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "view_pujaris")
     if user["role"] in ("admin", "super_admin"):
         rows = db.execute(text("SELECT * FROM head_pujari_ratings ORDER BY created_at DESC LIMIT 300")).mappings().all()
     else:
@@ -825,13 +848,13 @@ class SurgeRuleIn(BaseModel):
 
 
 @router.get("/admin/location-prices")
-def list_location_prices(user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
+def list_location_prices(user=Depends(require_any_permission("view_pricing", "manage_pricing")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM location_prices ORDER BY city")).mappings().all()
     return [row_dict(r) for r in rows]
 
 
 @router.post("/admin/location-prices")
-def create_location_price(body: LocationPriceIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
+def create_location_price(body: LocationPriceIn, user=Depends(require_permission("manage_pricing")), db: Session = Depends(get_db)):
     iid = str(uuid4())
     if body.service_id:
         db.execute(
@@ -858,13 +881,13 @@ def create_location_price(body: LocationPriceIn, user=Depends(require_permission
 
 
 @router.get("/admin/surge-rules")
-def list_surge_rules(user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
+def list_surge_rules(user=Depends(require_any_permission("view_pricing", "manage_pricing")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM surge_rules ORDER BY priority DESC")).mappings().all()
     return [row_dict(r) for r in rows]
 
 
 @router.post("/admin/surge-rules")
-def create_surge_rule(body: SurgeRuleIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
+def create_surge_rule(body: SurgeRuleIn, user=Depends(require_permission("manage_pricing")), db: Session = Depends(get_db)):
     iid = str(uuid4())
     if body.service_id:
         db.execute(
@@ -1017,22 +1040,32 @@ def _require_cron_auth(request: Request) -> None:
 
 
 @router.get("/admin/reviews")
-def admin_list_reviews(user=Depends(require_permission("view_bookings")), db: Session = Depends(get_db)):
+def admin_list_reviews(
+    direction: str = Query("customer_to_pujari", pattern="^(customer_to_pujari|pujari_to_customer|all)$"),
+    user=Depends(require_any_permission("view_reviews", "manage_reviews")),
+    db: Session = Depends(get_db),
+):
+    """Ratings in either direction (customer -> pujari is the moderated public review)."""
+    role_filter = {"customer_to_pujari": "AND r.role_from = 'customer'",
+                   "pujari_to_customer": "AND r.role_from = 'pujari'",
+                   "all": ""}[direction]
     rows = db.execute(
         text(
-            """
-            SELECT r.id, r.stars, r.comment, r.created_at, r.booking_id,
+            f"""
+            SELECT r.id, r.stars, r.comment, r.created_at, r.booking_id, r.role_from,
+                   r.from_user_id, r.to_user_id,
                    COALESCE(r.moderation_status, 'approved') AS status,
-                   cu.name AS customer_name,
-                   pu.name AS priest_name,
+                   fu.name AS from_name, tu.name AS to_name,
+                   CASE WHEN r.role_from = 'customer' THEN fu.name ELSE tu.name END AS customer_name,
+                   CASE WHEN r.role_from = 'customer' THEN tu.name ELSE fu.name END AS priest_name,
                    s.name AS puja_type,
-                   b.booking_date
+                   b.booking_date, b.booking_number
             FROM ratings r
-            JOIN users cu ON cu.id = r.from_user_id
-            LEFT JOIN users pu ON pu.id = r.to_user_id
+            JOIN users fu ON fu.id = r.from_user_id
+            LEFT JOIN users tu ON tu.id = r.to_user_id
             LEFT JOIN bookings b ON b.id = r.booking_id
             LEFT JOIN services s ON s.id = b.service_id
-            WHERE COALESCE(r.skipped, FALSE) = FALSE AND r.role_from = 'customer'
+            WHERE COALESCE(r.skipped, FALSE) = FALSE {role_filter}
             ORDER BY r.created_at DESC
             LIMIT 500
             """
@@ -1043,14 +1076,14 @@ def admin_list_reviews(user=Depends(require_permission("view_bookings")), db: Se
 
 @router.post("/admin/reviews/{review_id}/approve")
 def admin_approve_review(
-    review_id: str, user=Depends(require_permission("view_bookings")), db: Session = Depends(get_db)
+    review_id: str, user=Depends(require_permission("manage_reviews")), db: Session = Depends(get_db)
 ):
     return _set_review_status(db, review_id, "approved")
 
 
 @router.post("/admin/reviews/{review_id}/reject")
 def admin_reject_review(
-    review_id: str, user=Depends(require_permission("view_bookings")), db: Session = Depends(get_db)
+    review_id: str, user=Depends(require_permission("manage_reviews")), db: Session = Depends(get_db)
 ):
     return _set_review_status(db, review_id, "rejected")
 

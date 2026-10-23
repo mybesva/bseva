@@ -535,8 +535,28 @@ def nav_badges(user=Depends(current_user), db: Session = Depends(get_db)):
     if str(user.get("role") or "") in ("admin", "super_admin"):
         from app.admin_nav_badges import admin_action_badges
 
+        from app.rbac import has_permission
+
         action = admin_action_badges(db)
         tooltips = dict(action.pop("tooltips") or {})
+        # Only return queue counts for modules this admin may open (no cross-module leakage).
+        badge_permissions = {
+            "pujaris": ("view_pujaris", "verify_pujaris"),
+            "bookings": ("view_bookings", "manage_bookings"),
+            "virtual_puja": ("view_virtual_puja", "manage_virtual_puja"),
+            "support": ("manage_support",),
+            "payments": ("view_payments",),
+            "settlements": ("manage_settlements",),
+            "muhurtham": ("view_muhurtham", "manage_muhurtham"),
+            "customers": ("view_customers",),
+        }
+        for key, perms in badge_permissions.items():
+            if not has_permission(db, user, *perms):
+                action.pop(key, None)
+                tooltips.pop(key, None)
+        if "bookings" not in action:
+            out["bookings"] = 0
+            out["tooltips"].pop("bookings", None)
         out.update(action)
         # Bell still uses unread; sidebar operational keys overwrite bookings/support/etc.
         out["unread"] = unread

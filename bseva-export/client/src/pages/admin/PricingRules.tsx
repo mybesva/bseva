@@ -7,8 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, rupees } from "@/lib/api";
 import { toast } from "sonner";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 export default function AdminPricingRules() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_pricing");
   const [locations, setLocations] = useState<any[]>([]);
   const [surges, setSurges] = useState<any[]>([]);
   const [city, setCity] = useState("");
@@ -38,6 +41,7 @@ export default function AdminPricingRules() {
             <CardTitle className="text-base">City / location adjustments</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {canManage && (
             <div className="flex gap-2 flex-wrap">
               <div className="space-y-1 flex-1 min-w-[8rem]">
                 <Label>City</Label>
@@ -70,6 +74,7 @@ export default function AdminPricingRules() {
                 Add
               </Button>
             </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -94,6 +99,8 @@ export default function AdminPricingRules() {
             <CardTitle className="text-base">Surge rules</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {canManage && (
+            <>
             <div className="grid sm:grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label>Label</Label>
@@ -130,6 +137,8 @@ export default function AdminPricingRules() {
             >
               Add surge rule
             </Button>
+            </>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>

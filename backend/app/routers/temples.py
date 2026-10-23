@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.domain import row_dict
-from app.rbac import require_permission
+from app.rbac import require_any_permission, require_permission
 from app.schemas import TempleBulkIn, TempleIn
 
 router = APIRouter(prefix="/admin", tags=["temples"])
@@ -124,7 +124,7 @@ def list_temples(
     q: str | None = Query(None),
     city: str | None = Query(None),
     db: Session = Depends(get_db),
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_any_permission("view_temples", "manage_temples")),
 ):
     extra = ""
     params: dict[str, Any] = {}
@@ -157,7 +157,7 @@ def list_temples(
 
 
 @router.post("/temples")
-def create_temple(body: TempleIn, db: Session = Depends(get_db), user=Depends(require_permission("manage_services"))):
+def create_temple(body: TempleIn, db: Session = Depends(get_db), user=Depends(require_permission("manage_temples"))):
     tid = str(uuid4())
     vals = _row(body)
     db.execute(
@@ -184,7 +184,7 @@ def update_temple(
     temple_id: str,
     body: TempleIn,
     db: Session = Depends(get_db),
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_permission("manage_temples")),
 ):
     existing = db.execute(
         text("SELECT id FROM temples WHERE id = CAST(:id AS uuid)"),
@@ -216,7 +216,7 @@ def update_temple(
 
 
 @router.delete("/temples/{temple_id}")
-def delete_temple(temple_id: str, db: Session = Depends(get_db), user=Depends(require_permission("manage_services"))):
+def delete_temple(temple_id: str, db: Session = Depends(get_db), user=Depends(require_permission("manage_temples"))):
     result = db.execute(text("DELETE FROM temples WHERE id = CAST(:id AS uuid)"), {"id": temple_id})
     if result.rowcount == 0:
         raise HTTPException(404, "Temple not found")
@@ -225,7 +225,7 @@ def delete_temple(temple_id: str, db: Session = Depends(get_db), user=Depends(re
 
 
 @router.post("/temples/bulk")
-def bulk_import_temples(body: TempleBulkIn, db: Session = Depends(get_db), user=Depends(require_permission("manage_services"))):
+def bulk_import_temples(body: TempleBulkIn, db: Session = Depends(get_db), user=Depends(require_permission("manage_temples"))):
     if not body.items:
         raise HTTPException(400, "No temple rows to import")
     index = pujari_phone_index(db)

@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
 import { notifyBadgesChanged } from "@/components/NotificationBell";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 import {
   AdminPager,
   BOOKING_PAGE_SIZES,
@@ -97,6 +98,8 @@ function last30Dates() {
 }
 
 export default function Bookings() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_bookings");
   const [rows, setRows] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -417,6 +420,7 @@ export default function Bookings() {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2 justify-end">
+                    {canManage && (
                     <Button
                       size="sm"
                       variant={needsAttention ? "default" : "outline"}
@@ -424,7 +428,8 @@ export default function Bookings() {
                     >
                       {!b.pujari_id ? "Assign pujari" : "Reassign"}
                     </Button>
-                    {canPenalise && b.pujari_id && (
+                    )}
+                    {canManage && canPenalise && b.pujari_id && (
                       <Button
                         size="sm"
                         variant="outline"

@@ -1,5 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import { Flame, Flower, Heart, Home, Loader2, Moon, Search, Sparkles, Star, Sun } from "lucide-react";
+import {
+  Baby,
+  BookOpen,
+  Briefcase,
+  CalendarClock,
+  Car,
+  Coins,
+  Flame,
+  Flower,
+  Heart,
+  HeartPulse,
+  Home,
+  Loader2,
+  Moon,
+  Search,
+  Shield,
+  Sparkles,
+  Star,
+  Sun,
+  Sunset,
+  type LucideIcon,
+} from "lucide-react";
 import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +39,41 @@ import {
 } from "@bseva/config";
 import type { CatalogService, ServiceCategory } from "@bseva/types";
 
-const ICONS = [Flower, Home, Flame, Heart, Sun, Star, Moon, Sparkles];
+/** Icon per puja, chosen from the puja itself (never from its position in the list). */
+const ICON_BY_NAME: [RegExp, LucideIcon][] = [
+  [/homam|havan/i, Flame],
+  [/lakshmi|kubera/i, Coins],
+  [/hanuman/i, Shield],
+  [/saraswati|aksharabhyasam|vidyarambham/i, BookOpen],
+];
+const ICON_BY_CATEGORY: Record<string, LucideIcon> = {
+  "home-property": Home,
+  ganapathi: Flower,
+  shiva: Moon,
+  "lakshmi-wealth": Coins,
+  "homam-havan": Flame,
+  marriage: Heart,
+  "baby-children": Baby,
+  "navagraha-dosha": Sun,
+  "health-wellness": HeartPulse,
+  festivals: Sparkles,
+  "vratham-parayanam": BookOpen,
+  "business-office": Briefcase,
+  "life-milestones": Star,
+  vehicle: Car,
+  "death-ancestor": Sunset,
+  "astrology-muhurtham": CalendarClock,
+};
+
+function pujaIcon(s: CatalogService): LucideIcon {
+  const byName = ICON_BY_NAME.find(([re]) => re.test(s.name || ""));
+  if (byName) return byName[1];
+  for (const c of s.categories || []) {
+    const icon = c.slug ? ICON_BY_CATEGORY[c.slug] : undefined;
+    if (icon) return icon;
+  }
+  return Flower;
+}
 /** Multiples of 4 so desktop pages fill whole rows (4 cards per row). */
 const PAGE_SIZES = [8, 12, 16, 24];
 const URL_SYNC_DELAY_MS = 300;
@@ -121,8 +176,8 @@ export default function PujaDiscovery() {
 
   const renderGrid = (list: CatalogService[]) => (
     <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 xl:gap-5">
-      {list.map((s, i) => {
-        const Icon = ICONS[i % ICONS.length];
+      {list.map((s) => {
+        const Icon = pujaIcon(s);
         const starting = formatStartingFrom(s, lang);
         const desc =
           s.short_description ||

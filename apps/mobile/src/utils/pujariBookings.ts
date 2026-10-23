@@ -77,6 +77,8 @@ export function pujariDashboardStats(bookings: Booking[], now = new Date()) {
   let upcomingCount = 0;
   let completedCount = 0;
   let pendingCount = 0;
+  let requestCount = 0;
+  let scheduledCount = 0;
 
   for (const b of bookings) {
     const expired = isExpiredBooking(b.status, b.booking_date, b.start_time, now);
@@ -95,12 +97,24 @@ export function pujariDashboardStats(bookings: Booking[], now = new Date()) {
 
     if (isUpcomingBooking(b.status, b.booking_date, b.start_time, now)) {
       upcomingCount += 1;
+      if (!["pending", "pending_acceptance"].includes(String(b.status || ""))) scheduledCount += 1;
     }
+
+    if (isPendingAcceptanceBooking(b, now)) requestCount += 1;
 
     if (isPendingAcceptanceBooking(b, now) || (b.status === "confirmed" && !expired)) {
       pendingCount += 1;
     }
   }
 
-  return { completedEarnings, monthEarnings, totalEarnings, upcomingCount, completedCount, pendingCount };
+  return {
+    completedEarnings,
+    monthEarnings,
+    totalEarnings,
+    upcomingCount,
+    completedCount,
+    pendingCount,
+    requestCount,
+    scheduledCount,
+  };
 }

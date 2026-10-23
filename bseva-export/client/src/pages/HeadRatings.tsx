@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 function RatingHistoryStars({ stars }: { stars: number }) {
   return (
@@ -43,7 +44,7 @@ function RatingHistoryStars({ stars }: { stars: number }) {
   );
 }
 
-function RatingsForm() {
+function RatingsForm({ canSubmit = true }: { canSubmit?: boolean }) {
   const [pujaris, setPujaris] = useState<HeadRatingPujari[]>([]);
   const [pujarisLoading, setPujarisLoading] = useState(true);
   const [pujariId, setPujariId] = useState("");
@@ -97,6 +98,7 @@ function RatingsForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canSubmit) return;
     const validation = validateHeadRatingSubmission({ pujariId, manualId, stars, comments });
     if (!validation.ok) {
       setFieldErrors({ [validation.field || "comments"]: validation.message });
@@ -216,7 +218,12 @@ function RatingsForm() {
               {fieldErrors.comments ? <p className="text-sm text-destructive">{fieldErrors.comments}</p> : null}
             </div>
 
-            <Button type="submit" disabled={saving} className="h-11 w-full sm:w-auto">
+            <Button
+              type="submit"
+              disabled={saving || !canSubmit}
+              title={canSubmit ? undefined : "You don't have permission"}
+              className="h-11 w-full sm:w-auto"
+            >
               {saving ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -317,11 +324,12 @@ function RatingsForm() {
 
 export default function HeadRatingsPage() {
   const { user } = useAuth();
+  const { can } = useAdminCan();
   if (user?.role === "admin" || user?.role === "super_admin") {
     return (
       <AdminLayout>
         <h1 className="text-h1 mb-6">Pujari Ratings</h1>
-        <RatingsForm />
+        <RatingsForm canSubmit={can("edit_pujaris")} />
       </AdminLayout>
     );
   }

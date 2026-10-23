@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import current_user, require_roles
+from app.rbac import require_any_permission, require_permission
 from app.domain import row_dict
 from app.storage import content_type_for, file_response, upload_bytes
 
@@ -124,7 +125,7 @@ async def store_promo_image(file: UploadFile) -> tuple[str, str]:
 @router.post("/admin/promos/images")
 async def admin_upload_promo_image(
     file: UploadFile = File(...),
-    user=Depends(require_roles("admin", "super_admin")),
+    user=Depends(require_permission("manage_promotions")),
 ):
     _rel, image_url = await store_promo_image(file)
     return {
@@ -185,13 +186,13 @@ def list_active_popups(lang: str = "en", user=Depends(current_user), db: Session
 
 
 @router.get("/admin/promos/banners")
-def admin_list_banners(user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+def admin_list_banners(user=Depends(require_any_permission("view_promotions", "manage_promotions")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM promo_banners ORDER BY display_order, created_at DESC")).mappings().all()
     return [row_dict(r) for r in rows]
 
 
 @router.post("/admin/promos/banners")
-def admin_create_banner(body: BannerIn, user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+def admin_create_banner(body: BannerIn, user=Depends(require_permission("manage_promotions")), db: Session = Depends(get_db)):
     bid = str(uuid4())
     db.execute(
         text(
@@ -225,7 +226,7 @@ def admin_create_banner(body: BannerIn, user=Depends(require_roles("admin", "sup
 def admin_patch_banner(
     banner_id: str,
     body: BannerIn,
-    user=Depends(require_roles("admin", "super_admin")),
+    user=Depends(require_permission("manage_promotions")),
     db: Session = Depends(get_db),
 ):
     exists = db.execute(text("SELECT id FROM promo_banners WHERE id = CAST(:id AS uuid)"), {"id": banner_id}).first()
@@ -264,7 +265,7 @@ def admin_patch_banner(
 @router.delete("/admin/promos/banners/{banner_id}")
 def admin_delete_banner(
     banner_id: str,
-    user=Depends(require_roles("admin", "super_admin")),
+    user=Depends(require_permission("manage_promotions")),
     db: Session = Depends(get_db),
 ):
     result = db.execute(
@@ -278,13 +279,13 @@ def admin_delete_banner(
 
 
 @router.get("/admin/promos/popups")
-def admin_list_popups(user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+def admin_list_popups(user=Depends(require_any_permission("view_promotions", "manage_promotions")), db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT * FROM seasonal_popups ORDER BY created_at DESC")).mappings().all()
     return [row_dict(r) for r in rows]
 
 
 @router.post("/admin/promos/popups")
-def admin_create_popup(body: PopupIn, user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+def admin_create_popup(body: PopupIn, user=Depends(require_permission("manage_promotions")), db: Session = Depends(get_db)):
     pid = str(uuid4())
     db.execute(
         text(
@@ -321,7 +322,7 @@ def admin_create_popup(body: PopupIn, user=Depends(require_roles("admin", "super
 def admin_patch_popup(
     popup_id: str,
     body: PopupIn,
-    user=Depends(require_roles("admin", "super_admin")),
+    user=Depends(require_permission("manage_promotions")),
     db: Session = Depends(get_db),
 ):
     exists = db.execute(text("SELECT id FROM seasonal_popups WHERE id = CAST(:id AS uuid)"), {"id": popup_id}).first()
@@ -360,7 +361,7 @@ def admin_patch_popup(
 @router.delete("/admin/promos/popups/{popup_id}")
 def admin_delete_popup(
     popup_id: str,
-    user=Depends(require_roles("admin", "super_admin")),
+    user=Depends(require_permission("manage_promotions")),
     db: Session = Depends(get_db),
 ):
     result = db.execute(

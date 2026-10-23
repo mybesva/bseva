@@ -14,7 +14,7 @@ from app.audit import write_audit
 from app.db import get_db
 from app.deps import current_user
 from app.domain import row_dict
-from app.rbac import is_admin_like, require_permission
+from app.rbac import ensure_admin_permission, is_admin_like, require_permission
 from app.support_domain import (
     CATEGORIES,
     CATEGORY_LABELS,
@@ -322,6 +322,7 @@ def _notify_user(db: Session, user_id: str | None, title: str, body: str, ticket
 
 @router.get("/tickets/meta")
 def ticket_meta(user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     from app.platform_config import get_setting
 
     configured = get_setting(db, "support_categories", list(CATEGORIES))
@@ -439,6 +440,7 @@ def directory_bookings(
 
 @router.post("/tickets")
 def create_ticket(body: TicketCreateIn, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     from app.validation_rules import validate_support_text
 
     admin = _admin(user)
@@ -639,6 +641,7 @@ def list_tickets(
     user=Depends(current_user),
     db: Session = Depends(get_db),
 ):
+    ensure_admin_permission(db, user, "manage_support")
     extra, params = ticket_list_filters(
         q=q,
         status=status,
@@ -726,6 +729,7 @@ def list_tickets(
 
 @router.get("/tickets/{ticket_id}")
 def get_ticket(ticket_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     t = _load_ticket(db, ticket_id)
     if not t:
         raise HTTPException(404, "Ticket not found")
@@ -866,6 +870,7 @@ def add_message(
     user=Depends(current_user),
     db: Session = Depends(get_db),
 ):
+    ensure_admin_permission(db, user, "manage_support")
     t = _load_ticket(db, ticket_id)
     if not t:
         raise HTTPException(404, "Ticket not found")
@@ -1046,6 +1051,7 @@ def resolve_ticket(
 
 @router.post("/tickets/{ticket_id}/reopen")
 def reopen_ticket(ticket_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     t = _load_ticket(db, ticket_id)
     if not t:
         raise HTTPException(404, "Ticket not found")
@@ -1081,6 +1087,7 @@ def reopen_ticket(ticket_id: str, user=Depends(current_user), db: Session = Depe
 
 @router.post("/tickets/{ticket_id}/feedback")
 def ticket_feedback(ticket_id: str, body: FeedbackIn, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_admin_permission(db, user, "manage_support")
     t = _load_ticket(db, ticket_id)
     if not t:
         raise HTTPException(404, "Ticket not found")

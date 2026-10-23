@@ -25,6 +25,7 @@ import { ArrowLeft } from "lucide-react";
 import { PUJARI_SPECIALIZATIONS } from "@/lib/pujariSpecializations";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { notifyBadgesChanged } from "@/components/NotificationBell";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const DOC_LABELS: Record<string, string> = {
   identity: "Aadhaar (required)",
@@ -77,6 +78,7 @@ function ServiceBucket({
   items,
   verifiedDraft,
   onToggleVerify,
+  readOnly = false,
 }: {
   title: string;
   subtitle: string;
@@ -85,6 +87,7 @@ function ServiceBucket({
   items: ServiceRow[];
   verifiedDraft: Set<string>;
   onToggleVerify: (serviceId: string, verified: boolean) => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className={`rounded-lg border p-3 flex flex-col min-h-[200px] ${accent}`}>
@@ -103,6 +106,7 @@ function ServiceBucket({
               <Checkbox
                 className="mt-0.5 shrink-0"
                 checked={verifiedDraft.has(s.id)}
+                disabled={readOnly}
                 onCheckedChange={(v) => onToggleVerify(s.id, Boolean(v))}
                 aria-label={`Verify ${s.name}`}
               />
@@ -126,9 +130,14 @@ export default function PujariDetailPage() {
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { levels } = usePujariLevels();
+  const { can } = useAdminCan();
+  const canEdit = can("edit_pujaris");
+  const canVerify = can("verify_pujaris");
+  const canHead = can("approve_pujaris");
+  const canBlock = can("block_pujaris");
 
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(() => new URLSearchParams(search).get("edit") === "1");
+  const [editingRaw, setEditing] = useState(() => new URLSearchParams(search).get("edit") === "1");
   const [profile, setProfile] = useState<any>(null);
   const [draft, setDraft] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -143,6 +152,7 @@ export default function PujariDetailPage() {
   const [offersBusy, setOffersBusy] = useState(false);
   const [verifiedDraft, setVerifiedDraft] = useState<Set<string>>(new Set());
   const [serviceQ, setServiceQ] = useState("");
+  const editing = editingRaw && canEdit;
 
   async function load() {
     if (!id) return;
@@ -349,7 +359,7 @@ export default function PujariDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!editing ? (
+          {!canEdit ? null : !editing ? (
             <Button onClick={() => setEditing(true)}>Edit profile</Button>
           ) : (
             <>
@@ -361,7 +371,7 @@ export default function PujariDetailPage() {
               </Button>
             </>
           )}
-          {profile.is_head_pujari || profile.role === "head_pujari" ? (
+          {!canHead ? null : profile.is_head_pujari || profile.role === "head_pujari" ? (
             <Button
               variant="outline"
               onClick={async () => {
@@ -390,6 +400,7 @@ export default function PujariDetailPage() {
               Make Head
             </Button>
           )}
+          {canBlock && (
           <Button
             variant="outline"
             onClick={async () => {
@@ -403,6 +414,7 @@ export default function PujariDetailPage() {
           >
             {profile.blocked ? "Unblock" : "Block"}
           </Button>
+          )}
         </div>
       </div>
 
@@ -429,6 +441,7 @@ export default function PujariDetailPage() {
                       </>
                     ) : null}
                   </p>
+                  {canEdit && (
                   <Button
                     size="sm"
                     disabled={offersBusy}
@@ -453,6 +466,7 @@ export default function PujariDetailPage() {
                   >
                     {offersBusy ? "Saving…" : "Save"}
                   </Button>
+                  )}
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-3">
@@ -463,6 +477,7 @@ export default function PujariDetailPage() {
                     empty="None verified yet — check items in Pending or All applied"
                     items={(serviceOffers.services || []).filter((s: any) => verifiedDraft.has(s.id))}
                     verifiedDraft={verifiedDraft}
+                    readOnly={!canEdit}
                     onToggleVerify={(sid, on) => {
                       setVerifiedDraft((prev) => {
                         const next = new Set(prev);
@@ -479,6 +494,7 @@ export default function PujariDetailPage() {
                     empty="No new applications"
                     items={serviceOffers.pending_review_services || []}
                     verifiedDraft={verifiedDraft}
+                    readOnly={!canEdit}
                     onToggleVerify={(sid, on) => {
                       setVerifiedDraft((prev) => {
                         const next = new Set(prev);
@@ -495,6 +511,7 @@ export default function PujariDetailPage() {
                     empty="No applications"
                     items={serviceOffers.applied_services || []}
                     verifiedDraft={verifiedDraft}
+                    readOnly={!canEdit}
                     onToggleVerify={(sid, on) => {
                       setVerifiedDraft((prev) => {
                         const next = new Set(prev);
@@ -506,6 +523,7 @@ export default function PujariDetailPage() {
                   />
                 </div>
 
+                {canEdit && (
                 <div className="border-t pt-4 space-y-2">
                   <p className="text-xs text-muted-foreground">
                     Optional: verify a catalog service the pujari did not apply for (search, then add).
@@ -556,6 +574,7 @@ export default function PujariDetailPage() {
                     </ul>
                   ) : null}
                 </div>
+                )}
               </>
             )}
           </CardContent>
@@ -969,7 +988,7 @@ export default function PujariDetailPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Approved level</Label>
-                <Select value={String(verifyLevel)} onValueChange={(v) => setVerifyLevel(Number(v))}>
+                <Select value={String(verifyLevel)} onValueChange={(v) => setVerifyLevel(Number(v))} disabled={!canVerify}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -987,11 +1006,13 @@ export default function PujariDetailPage() {
                 <Textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
+                  disabled={!canVerify}
                   rows={3}
                   placeholder="Required when rejecting or requesting correction"
                 />
               </div>
             </div>
+            {canVerify && (
             <div className="flex flex-wrap gap-2">
               <Button disabled={verifying} onClick={() => void verify("approved")}>
                 Approve
@@ -1006,6 +1027,7 @@ export default function PujariDetailPage() {
                 Mark Under Review
               </Button>
             </div>
+            )}
             <div className="pt-4 border-t space-y-2">
               <h3 className="text-sm font-semibold">Verification history</h3>
               {history.length === 0 && <p className="text-sm text-muted-foreground">No history yet.</p>}

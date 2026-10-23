@@ -59,7 +59,15 @@ def set_booking_status(
     elif new_status == "completed":
         extras = ", completed_at = COALESCE(completed_at, NOW()), rating_status = 'pending', settlement_status = CASE WHEN settlement_status = 'legacy' THEN 'legacy' ELSE 'pending' END"
     elif new_status == "confirmed":
-        extras = ", accepted_at = COALESCE(accepted_at, NOW()), needs_reassignment = FALSE"
+        # A (re)assigned pujari accepting starts a fresh tracking window: clear state left by the
+        # previous assignment (reassigned / rejected), keep it for any other stop reason.
+        extras = (
+            ", accepted_at = COALESCE(accepted_at, NOW()), needs_reassignment = FALSE"
+            ", tracking_stopped_at = CASE WHEN tracking_stop_reason IN ('reassigned','rejected') THEN NULL ELSE tracking_stopped_at END"
+            ", arrived_at = CASE WHEN tracking_stop_reason IN ('reassigned','rejected') THEN NULL ELSE arrived_at END"
+            ", arrival_hit_count = CASE WHEN tracking_stop_reason IN ('reassigned','rejected') THEN 0 ELSE arrival_hit_count END"
+            ", tracking_stop_reason = CASE WHEN tracking_stop_reason IN ('reassigned','rejected') THEN NULL ELSE tracking_stop_reason END"
+        )
     elif new_status == "rejected":
         extras = ", rejected_at = COALESCE(rejected_at, NOW()), needs_reassignment = TRUE"
     elif new_status == "pending_acceptance":

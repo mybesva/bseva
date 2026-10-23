@@ -5,13 +5,15 @@ import * as Application from "expo-application";
  * Which B-Seva app this binary is. Decided at runtime from the native bundle id, so one JS bundle
  * (and one Metro server in development) serves every variant.
  *
- * - `com.bseva.customer` → "customer"  (B-Seva)
- * - `com.bseva.pujari`   → "pujari"    (B-Seva Pujari)
- * - anything else (today's `com.bseva.app`) → "combined": the original single app, unchanged.
+ * - `com.bseva.app`      → "customer"  (B-Seva, the existing store app, now customers only)
+ * - `com.bseva.customer` → "customer"  (older test builds)
+ * - `com.bseva.pujari`   → "pujari"    (B-Seva Pujari, the new app)
+ * - anything else (e.g. Expo Go) → "combined": both roles, for development.
  */
 export type AppVariant = "combined" | "customer" | "pujari";
 
 const BUNDLE_VARIANTS: Record<string, AppVariant> = {
+  "com.bseva.app": "customer",
   "com.bseva.customer": "customer",
   "com.bseva.pujari": "pujari",
 };

@@ -16,7 +16,7 @@ from app.db import get_db
 from app.deps import current_user, require_roles
 from app.domain import apply_wallet, hours_until, row_dict
 from app.platform_config import get_setting
-from app.rbac import require_admin, require_permission
+from app.rbac import ensure_booking_access, require_admin, require_permission, require_super_admin
 from app.schemas import BookingRejectIn, NoShowPenaltyIn
 from app.no_show import apply_no_show_to_booking
 from app.pricing import dakshina_share_percent
@@ -61,6 +61,7 @@ class SettlementOverrideIn(BaseModel):
 
 @router.get("/bookings/{booking_id}")
 def get_booking(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "view")
     row = None
     # UUID id
     try:
@@ -120,11 +121,22 @@ def get_booking(booking_id: str, user=Depends(current_user), db: Session = Depen
         data["preparation"] = get_booking_preparation(db, str(row["id"]))
     except Exception:
         data["preparation"] = None
+    # The viewer's own rating for this booking (per person, not booking-wide): none / rated / skipped
+    try:
+        mine = db.execute(
+            text("SELECT skipped FROM ratings WHERE booking_id = CAST(:b AS uuid) AND from_user_id = CAST(:u AS uuid)"),
+            {"b": str(row["id"]), "u": user["id"]},
+        ).first()
+        data["my_rating"] = None if mine is None else ("skipped" if mine[0] else "rated")
+    except Exception:
+        db.rollback()
+        data["my_rating"] = None
     return data
 
 
 @router.get("/bookings/{booking_id}/preparation")
 def booking_preparation(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "view")
     row = db.execute(
         text(
             """
@@ -201,6 +213,7 @@ def _load_booking_for_documents(db: Session, booking_id: str, user: dict) -> dic
 
 @router.get("/bookings/{booking_id}/receipt/html")
 def booking_receipt_html(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "view")
     from fastapi.responses import HTMLResponse
     from app.booking_receipt_docs import render_booking_receipt_html
 
@@ -210,6 +223,7 @@ def booking_receipt_html(booking_id: str, user=Depends(current_user), db: Sessio
 
 @router.get("/bookings/{booking_id}/receipt/pdf")
 def booking_receipt_pdf(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "view")
     from fastapi.responses import Response
     from app.booking_receipt_docs import receipt_pdf_filename, render_booking_receipt_pdf
 
@@ -494,6 +508,7 @@ def mark_no_show_penalty(
     db: Session = Depends(get_db),
 ):
     """Admin marks accepted pujari as no-show and deducts 100% of that puja's cost from their wallet."""
+    ensure_booking_access(db, admin, booking_id, "manage")
     waive = bool(body.waive)
     reason = body.reason
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
@@ -522,6 +537,7 @@ def mark_no_show_penalty(
 
 @router.post("/bookings/{booking_id}/start-otp/request")
 def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "manage")
     from app.puja_otp import (
         PURPOSE_START,
         PujaOtpError,
@@ -561,6 +577,7 @@ def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "adm
 @router.get("/bookings/{booking_id}/start-otp")
 def get_start_otp(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
     """Customer (and admin) can view start OTP only inside the pre-start window. Never reveal to pujari."""
+    ensure_booking_access(db, user, booking_id, "view")
     from app.puja_otp import PURPOSE_START, otp_window_minutes, reveal_display_code, within_start_window
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
@@ -645,6 +662,7 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
 
 @router.post("/bookings/{booking_id}/admin/start")
 def admin_start_booking(booking_id: str, body: AdminOverrideIn, user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "manage")
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
@@ -754,6 +772,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
 @router.post("/bookings/{booking_id}/complete")
 def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
     """Pujari cannot bypass customer completion OTP. Admin must use /admin/complete."""
+    ensure_booking_access(db, user, booking_id, "manage")
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
@@ -767,6 +786,7 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
 
 @router.post("/bookings/{booking_id}/complete-otp/request")
 def request_complete_otp(booking_id: str, user=Depends(require_roles("pujari", "admin", "super_admin")), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "manage")
     from app.puja_otp import (
         PURPOSE_COMPLETE,
         PujaOtpError,
@@ -803,6 +823,7 @@ def request_complete_otp(booking_id: str, user=Depends(require_roles("pujari", "
 @router.get("/bookings/{booking_id}/complete-otp")
 def get_complete_otp(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
     """Pujari (and admin) see completion OTP. Customer never receives the code from this API."""
+    ensure_booking_access(db, user, booking_id, "view")
     from app.puja_otp import (
         PURPOSE_COMPLETE,
         complete_otp_before_minutes,
@@ -850,6 +871,7 @@ def get_complete_otp(booking_id: str, user=Depends(current_user), db: Session = 
 
 @router.post("/bookings/{booking_id}/complete-otp/verify")
 def verify_complete_otp(booking_id: str, body: CompleteOtpVerifyIn, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "manage")
     from app.puja_otp import PURPOSE_COMPLETE, PujaOtpError, verify_puja_otp
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
@@ -873,6 +895,7 @@ def verify_complete_otp(booking_id: str, body: CompleteOtpVerifyIn, user=Depends
 
 @router.post("/bookings/{booking_id}/admin/complete")
 def admin_complete_booking(booking_id: str, body: AdminOverrideIn, user=Depends(require_roles("admin", "super_admin")), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "manage")
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
@@ -1009,8 +1032,19 @@ def submit_rating(booking_id: str, body: RatingIn, user=Depends(current_user), d
         raise HTTPException(400, "Booking must be completed")
     if str(user["id"]) not in (str(b["customer_id"]), str(b["pujari_id"])):
         raise HTTPException(403, "Not allowed")
+    if not b["pujari_id"]:
+        raise HTTPException(400, "No Pujari was assigned to this booking")
     role_from = "customer" if str(user["id"]) == str(b["customer_id"]) else "pujari"
     to_id = str(b["pujari_id"]) if role_from == "customer" else str(b["customer_id"])
+    existing = db.execute(
+        text("SELECT skipped FROM ratings WHERE booking_id = CAST(:b AS uuid) AND from_user_id = CAST(:f AS uuid)"),
+        {"b": booking_id, "f": user["id"]},
+    ).first()
+    if existing is not None and not existing[0]:
+        # One rating per person per booking: never silently overwrite a submitted rating.
+        raise HTTPException(409, "You have already rated this puja.")
+    if body.skip and existing is not None:
+        return {"ok": True, "rating_status": b.get("rating_status"), "my_rating": "skipped"}
     if body.skip:
         db.execute(
             text(
@@ -1055,7 +1089,47 @@ def submit_rating(booking_id: str, body: RatingIn, user=Depends(current_user), d
         st = "pending"
     db.execute(text("UPDATE bookings SET rating_status = :s WHERE id = CAST(:id AS uuid)"), {"s": st, "id": booking_id})
     db.commit()
-    return {"ok": True, "rating_status": st}
+    return {"ok": True, "rating_status": st, "my_rating": "skipped" if body.skip else "rated"}
+
+
+@router.get("/ratings/pending")
+def pending_ratings(user=Depends(current_user), db: Session = Depends(get_db)):
+    """Completed bookings (last 60 days) the signed-in customer / pujari has not rated or skipped yet.
+    Drives the post-puja rating prompt; each person is tracked separately."""
+    role = str(user.get("role") or "")
+    if role == "customer":
+        own, other_join, counterpart = "b.customer_id", "LEFT JOIN users o ON o.id = b.pujari_id", "pujari"
+    elif role in ("pujari", "head_pujari"):
+        own, other_join, counterpart = "b.pujari_id", "LEFT JOIN users o ON o.id = b.customer_id", "customer"
+    else:
+        return []
+    rows = db.execute(
+        text(
+            f"""
+            SELECT b.id AS booking_id, b.booking_number, b.booking_date, s.name AS service_name,
+                   o.name AS counterpart_name
+            FROM bookings b
+            JOIN services s ON s.id = b.service_id
+            {other_join}
+            WHERE {own} = CAST(:u AS uuid)
+              AND b.status = 'completed'
+              AND b.pujari_id IS NOT NULL
+              AND COALESCE(b.completed_at, b.updated_at, b.created_at) >= NOW() - INTERVAL '60 days'
+              AND NOT EXISTS (
+                SELECT 1 FROM ratings r WHERE r.booking_id = b.id AND r.from_user_id = CAST(:u AS uuid)
+              )
+            ORDER BY COALESCE(b.completed_at, b.updated_at) DESC NULLS LAST
+            LIMIT 10
+            """
+        ),
+        {"u": user["id"]},
+    ).mappings().all()
+    out = []
+    for r in rows:
+        d = row_dict(r)
+        d["counterpart_role"] = counterpart
+        out.append(d)
+    return out
 
 
 @router.post("/bookings/{booking_id}/location")
@@ -1163,6 +1237,7 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
 
 @router.get("/bookings/{booking_id}/location")
 def get_location(booking_id: str, user=Depends(current_user), db: Session = Depends(get_db)):
+    ensure_booking_access(db, user, booking_id, "view")
     from app.booking_tracking import location_payload, tracking_should_be_active
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
@@ -1181,20 +1256,24 @@ def get_location(booking_id: str, user=Depends(current_user), db: Session = Depe
                 text(
                     """
                     SELECT latitude, longitude, recorded_at, accuracy_m FROM pujari_location_pings
-                    WHERE booking_id = CAST(:b AS uuid) ORDER BY recorded_at DESC LIMIT 1
+                    WHERE booking_id = CAST(:b AS uuid)
+                      AND (CAST(:p AS uuid) IS NULL OR pujari_id = CAST(:p AS uuid))
+                    ORDER BY recorded_at DESC LIMIT 1
                     """
                 ),
-                {"b": booking_id},
+                {"b": booking_id, "p": str(b["pujari_id"]) if b["pujari_id"] else None},
             ).mappings().first()
         except Exception:
             ping = db.execute(
                 text(
                     """
                     SELECT latitude, longitude, recorded_at FROM pujari_location_pings
-                    WHERE booking_id = CAST(:b AS uuid) ORDER BY recorded_at DESC LIMIT 1
+                    WHERE booking_id = CAST(:b AS uuid)
+                      AND (CAST(:p AS uuid) IS NULL OR pujari_id = CAST(:p AS uuid))
+                    ORDER BY recorded_at DESC LIMIT 1
                     """
                 ),
-                {"b": booking_id},
+                {"b": booking_id, "p": str(b["pujari_id"]) if b["pujari_id"] else None},
             ).mappings().first()
     include_dest = is_customer or is_admin or (is_pujari and booking.get("latitude") is not None)
     # Pujari only receives destination coords if booking_for_role would already unlock them.
@@ -1263,7 +1342,8 @@ def list_settlements(
     user=Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    if user["role"] not in ("admin", "super_admin", "pujari"):
+    if user["role"] not in ("super_admin", "pujari"):
+        # Settlements are Super Admin only on the back office (pujaris see their own below).
         raise HTTPException(403, "Not allowed")
 
     days = int(get_setting(db, "pujari_settlement_days", 14) or 14)
@@ -1324,7 +1404,7 @@ def list_settlements(
             )
     db.commit()
 
-    if user["role"] not in ("admin", "super_admin"):
+    if user["role"] != "super_admin":
         rows = db.execute(
             text("SELECT * FROM settlements WHERE pujari_id = CAST(:id AS uuid) ORDER BY created_at DESC"),
             {"id": user["id"]},
@@ -1408,7 +1488,7 @@ def list_settlements(
 def override_settlement(
     settlement_id: str,
     body: SettlementOverrideIn,
-    user=Depends(require_permission("manage_settlements")),
+    user=Depends(require_super_admin),
     db: Session = Depends(get_db),
 ):
     s = db.execute(text("SELECT * FROM settlements WHERE id = CAST(:id AS uuid)"), {"id": settlement_id}).mappings().first()

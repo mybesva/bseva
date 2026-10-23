@@ -61,12 +61,17 @@ def arrival_confirm_pings(db: Session) -> int:
     return max(1, _int_setting(db, "pujari_arrival_confirm_pings", 2))
 
 
+def tracking_after_start_minutes(db: Session) -> int:
+    """How long after the scheduled start tracking may continue if the puja has not started."""
+    return max(15, _int_setting(db, "pujari_tracking_after_start_minutes", 120))
+
+
 def within_pre_start_minutes(db: Session, booking_date, start_time, *, minutes: int) -> bool:
-    """True from N minutes before scheduled start onward (no lower bound while still confirmed)."""
+    """True from N minutes before scheduled start until the post-start limit (never indefinite)."""
     if booking_date is None or start_time is None:
         return False
-    hrs = hours_until(booking_date, start_time)
-    return hrs * 60 <= minutes + 0.5
+    mins_until = hours_until(booking_date, start_time) * 60
+    return -tracking_after_start_minutes(db) <= mins_until <= minutes + 0.5
 
 
 def tracking_is_stopped(booking: dict) -> bool:

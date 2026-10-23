@@ -1168,5 +1168,20 @@
     "review_note": null,
     "style": "premium-realistic-ai",
     "aspect": "4:3"
+  },
+  "hanuman-puja": {
+    "slug": "hanuman-puja",
+    "stored": "/images/services/hanuman-jayanti.jpg",
+    "source": "BSeva premium AI visual library",
+    "commons_title": null,
+    "source_page": null,
+    "artist": "BSeva",
+    "license": "BSeva proprietary catalog asset",
+    "license_url": "",
+    "relevance": "Shared approved Hanuman ceremony image (same asset as hanuman-jayanti)",
+    "needs_review": false,
+    "review_note": null,
+    "style": "premium-realistic-ai",
+    "aspect": "4:3"
   }
 }

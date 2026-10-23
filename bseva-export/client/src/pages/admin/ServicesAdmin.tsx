@@ -31,6 +31,7 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
 import { FolderTree, ImageIcon, Pencil, Plus } from "lucide-react";
 import { serviceImageUrl } from "@/lib/serviceImage";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const PROVIDERS = [
   { value: "included", label: "Included in price" },
@@ -136,6 +137,9 @@ export default function ServicesAdmin() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isSuper = user?.role === "super_admin";
+  const { can } = useAdminCan();
+  const canServices = can("manage_services");
+  const canSamagri = can("manage_samagri");
   const { config: publicConfig } = usePublicConfig();
   const virtualFlagOn = Boolean(publicConfig.virtual_puja_enabled);
 
@@ -423,10 +427,12 @@ export default function ServicesAdmin() {
           <Button variant="outline" onClick={() => setLocation(adminPath("/pricing"))}>
             Location & surge pricing
           </Button>
-          <Button onClick={openAdd} className="gap-2">
-            <Plus size={16} />
-            Add service
-          </Button>
+          {canServices && (
+            <Button onClick={openAdd} className="gap-2">
+              <Plus size={16} />
+              Add service
+            </Button>
+          )}
         </div>
       </div>
 
@@ -445,6 +451,7 @@ export default function ServicesAdmin() {
           <DialogHeader>
             <DialogTitle className="">Service categories</DialogTitle>
           </DialogHeader>
+          {canServices && (
           <form id="category-form" onSubmit={handleCategorySave} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -506,6 +513,7 @@ export default function ServicesAdmin() {
               )}
             </div>
           </form>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -528,9 +536,11 @@ export default function ServicesAdmin() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => openCategoryEdit(c)}>
-                      Edit
-                    </Button>
+                    {canServices && (
+                      <Button size="sm" variant="outline" onClick={() => openCategoryEdit(c)}>
+                        Edit
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -809,7 +819,7 @@ export default function ServicesAdmin() {
                   <p className="text-sm text-muted-foreground">
                     Upload a new file to replace the catalog image for this puja. JPG, PNG, WebP, or GIF up to 8MB.
                   </p>
-                  {editId ? (
+                  {!canServices ? null : editId ? (
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
@@ -1554,6 +1564,8 @@ export default function ServicesAdmin() {
                   ))}
                   {linked.length === 0 && <li className="text-muted-foreground">None linked yet</li>}
                 </ul>
+                {canSamagri && (
+                <>
                 <div className="grid grid-cols-2 gap-2">
                   <Select value={linkItemId} onValueChange={setLinkItemId}>
                     <SelectTrigger className="col-span-2">
@@ -1640,6 +1652,8 @@ export default function ServicesAdmin() {
                 >
                   Link item
                 </Button>
+                </>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Save the service first to manage samagri items.</p>
@@ -1663,9 +1677,11 @@ export default function ServicesAdmin() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" form="add-service-form" disabled={saving}>
-              {saving ? "Saving…" : editId ? "Save changes" : "Add service"}
-            </Button>
+            {canServices && (
+              <Button type="submit" form="add-service-form" disabled={saving}>
+                {saving ? "Saving…" : editId ? "Save changes" : "Add service"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1772,6 +1788,7 @@ export default function ServicesAdmin() {
                         >
                           {avail ? "Available" : "Coming Soon"}
                         </Badge>
+                        {canServices && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -1786,6 +1803,7 @@ export default function ServicesAdmin() {
                         >
                           {avail ? "Set Coming Soon" : "Set Available"}
                         </Button>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1793,10 +1811,14 @@ export default function ServicesAdmin() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-end">
+                        {(canServices || canSamagri) && (
                         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(s)}>
                           <Pencil size={14} />
                           Edit
                         </Button>
+                        )}
+                        {canServices && (
+                        <>
                         <Button
                           size="sm"
                           variant="secondary"
@@ -1834,6 +1856,8 @@ export default function ServicesAdmin() {
                           Delete
                         </Button>
                         </span>
+                        </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

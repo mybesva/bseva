@@ -53,8 +53,18 @@ export function formatPanchangDateSubtitle(
   if (calendarType === "lunar") {
     return formatSolarPanchangDate(isoDate);
   }
-  const lunar = formatLunarPanchangDate(data);
-  return lunar;
+  // Solar mode: solar (Souramana) month and day — not the lunar month / tithi.
+  return formatSolarMonthLabel(data);
+}
+
+/** Solar month label for solar mode, e.g. "Purattasi · Day 23" (API solarMonth/solarDay). */
+export function formatSolarMonthLabel(
+  data: (PanchangDateParts & { solarMonth?: string; solarDay?: number | null }) | null | undefined,
+): string | null {
+  const month = data?.solarMonth ?? data?.lunarMonth;
+  if (!month) return null;
+  const day = data?.solarDay ?? data?.lunarDay;
+  return day != null ? `${month} · Day ${day}` : month;
 }
 
 /** API query calendar param — matches backend normalize_calendar_pref. */

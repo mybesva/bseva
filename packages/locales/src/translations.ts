@@ -308,7 +308,7 @@ const en: Dict = {
   "invoice.viewPrint": "View / Print PDF",
   "invoice.popupBlocked": "Pop-up blocked — allow pop-ups to view invoice",
   "invoice.openFailed": "Could not open invoice",
-  "admin.permissions": "Admin permissions",
+  "admin.permissions": "Admin Permissions",
   "admin.permissions.title": "Admin permissions",
   "admin.permissions.admins": "Admins",
   "admin.permissions.select": "Select an admin",

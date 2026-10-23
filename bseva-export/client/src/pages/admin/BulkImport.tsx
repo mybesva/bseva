@@ -43,6 +43,7 @@ import {
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { parseCsv, rowsToObjects } from "@/lib/csv";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type EntityType = "customers" | "pujaris" | "temples" | "services" | "samagri";
 
@@ -92,6 +93,8 @@ const entityConfig: Record<EntityType, {
 };
 
 export default function BulkImportPage() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_temples");
   const [selectedEntity, setSelectedEntity] = useState<EntityType>("customers");
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
@@ -465,7 +468,8 @@ export default function BulkImportPage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  disabled={isImporting || validationErrors.length > 0}
+                  disabled={isImporting || validationErrors.length > 0 || !canManage}
+                  title={canManage ? undefined : "You don't have permission"}
                   className="bg-saffron-500 hover:bg-saffron-600"
                 >
                   <Upload size={16} className="mr-2" />

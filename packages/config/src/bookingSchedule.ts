@@ -1,4 +1,5 @@
-const TERMINAL = new Set(["completed", "cancelled", "refunded"]);
+/** Final for the pujari: never "upcoming" or "expired". A pujari-rejected booking is closed for them. */
+const TERMINAL = new Set(["completed", "cancelled", "refunded", "rejected"]);
 
 export const PUJARI_JOB_SEGMENTS = ["all", "upcoming", "completed", "cancelled", "expired"] as const;
 export type PujariJobSegment = (typeof PUJARI_JOB_SEGMENTS)[number];

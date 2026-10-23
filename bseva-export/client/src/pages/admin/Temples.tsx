@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { parseCsv, rowsToObjects } from "@/lib/csv";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 interface TempleFormData {
   name: string;
@@ -108,6 +109,8 @@ const CSV_HEADERS = [
 ];
 
 export default function TemplesPage() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_temples");
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -286,6 +289,8 @@ export default function TemplesPage() {
               <Download size={16} className="mr-2" />
               Export
             </Button>
+            {canManage && (
+            <>
             <Button variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}>
               <Upload size={16} className="mr-2" />
               {importing ? "Importing…" : "Bulk Import"}
@@ -304,6 +309,8 @@ export default function TemplesPage() {
               <Plus size={16} className="mr-2" />
               Add Temple
             </Button>
+            </>
+            )}
           </div>
         </div>
 
@@ -437,6 +444,7 @@ export default function TemplesPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
+                      {canManage && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
@@ -454,6 +462,7 @@ export default function TemplesPage() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -469,7 +478,7 @@ export default function TemplesPage() {
         </div>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen && canManage} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTemple ? "Edit Temple" : "Add New Temple"}</DialogTitle>

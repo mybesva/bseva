@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, mediaSrc, uploadPromoImage } from "@/lib/api";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 import {
   dateInputToIsoEnd,
   dateInputToIsoStart,
@@ -256,6 +257,8 @@ function DraftPanel({
 }
 
 export default function PromosAdmin() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_promotions");
   const [banners, setBanners] = useState<Banner[]>([]);
   const [popups, setPopups] = useState<Popup[]>([]);
   const [bannerForm, setBannerForm] = useState<Banner>(emptyBanner);
@@ -455,6 +458,7 @@ export default function PromosAdmin() {
           <TabsTrigger value="popups">Seasonal popups</TabsTrigger>
         </TabsList>
         <TabsContent value="banners" className="space-y-6 mt-4">
+          {canManage && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -548,6 +552,7 @@ export default function PromosAdmin() {
               )}
             </div>
           </form>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -575,6 +580,7 @@ export default function PromosAdmin() {
                       {b.active ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
+                      {canManage && (
                       <div className="flex flex-wrap justify-end gap-2">
                         <Button type="button" size="sm" variant="outline" onClick={() => setBannerForm({ ...emptyBanner, ...b })}>
                           {b.active ? "Edit" : "Review"}
@@ -592,6 +598,7 @@ export default function PromosAdmin() {
                           Delete
                         </Button>
                       </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -600,6 +607,7 @@ export default function PromosAdmin() {
           </Table>
         </TabsContent>
         <TabsContent value="popups" className="space-y-6 mt-4">
+          {canManage && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -694,6 +702,7 @@ export default function PromosAdmin() {
               )}
             </div>
           </form>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -719,6 +728,7 @@ export default function PromosAdmin() {
                       {p.active ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
+                      {canManage && (
                       <div className="flex flex-wrap justify-end gap-2">
                         <Button type="button" size="sm" variant="outline" onClick={() => setPopupForm({ ...emptyPopup, ...p })}>
                           {p.active ? "Edit" : "Review"}
@@ -736,6 +746,7 @@ export default function PromosAdmin() {
                           Delete
                         </Button>
                       </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

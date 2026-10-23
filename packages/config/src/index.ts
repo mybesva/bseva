@@ -91,6 +91,7 @@ export function isLangCode(code: string | null | undefined): code is LangCode {
   return !!code && (LANGS as readonly string[]).includes(code);
 }
 
+/** Permissions a Super Admin may assign to an Admin (mirrors backend/app/rbac.py ADMIN_ASSIGNABLE). */
 export const ADMIN_PERMISSIONS = [
   "view_customers",
   "create_customers",
@@ -101,18 +102,42 @@ export const ADMIN_PERMISSIONS = [
   "approve_pujaris",
   "verify_pujaris",
   "block_pujaris",
+  "view_temples",
+  "manage_temples",
+  "view_services",
+  "manage_services",
+  "view_recommendations",
+  "manage_recommendations",
+  "view_samagri",
+  "manage_samagri",
   "view_bookings",
   "manage_bookings",
+  "view_virtual_puja",
+  "manage_virtual_puja",
+  "view_seva_events",
+  "manage_seva_events",
+  "view_muhurtham",
+  "manage_muhurtham",
+  "view_invoices",
+  "manage_invoices",
   "view_payments",
-  "manage_settlements",
-  "manage_services",
-  "manage_samagri",
+  "view_pricing",
+  "manage_pricing",
+  "view_reviews",
+  "manage_reviews",
+  "view_promotions",
   "manage_promotions",
-  "manage_config",
-  "manage_admins",
   "manage_support",
   "manage_legal",
+] as const;
+
+/** Super Admin only — never assignable, never effective for an Admin (backend SUPER_ADMIN_ONLY). */
+export const SUPER_ADMIN_ONLY_PERMISSIONS = [
+  "manage_admins",
+  "manage_settlements",
   "view_reports",
+  "view_financials",
+  "manage_config",
 ] as const;
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
 
@@ -403,6 +428,7 @@ export {
   formatLunarPanchangDate,
   formatPanchangDateSubtitle,
   formatPanchangSelectedDate,
+  formatSolarMonthLabel,
   formatSolarPanchangDate,
   isoDateFromLocalDate,
   localDateFromIso,

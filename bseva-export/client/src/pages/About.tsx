@@ -5,8 +5,15 @@ import Layout from "@/components/Layout";
 import { PublishedStatsStrip } from "@/components/PublishedStatsStrip";
 import { MandalaOutline } from "@/components/landing/DevotionalPatterns";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function About() {
+  const { user } = useAuth();
+  const role = user?.role;
+  const isPujariUser = role === "pujari" || role === "head_pujari";
+  // Signed-in users only see the call to action that fits their role.
+  const showBookCta = !isPujariUser;
+  const showJoinCta = !(role === "customer" || isPujariUser);
   const { t } = useI18n();
 
   const principles = [
@@ -162,16 +169,20 @@ export default function About() {
               <p className="mt-3 max-w-2xl text-[15px] font-medium leading-relaxed text-white/90">{t("ab.ctaDesc")}</p>
             </div>
             <div className="relative flex flex-col gap-3 sm:flex-row lg:flex-col">
+              {showBookCta ? (
               <Link href="/services">
                 <a className="inline-flex h-12 items-center justify-center rounded-xl bg-[#071A33] px-8 text-[15px] font-bold text-white transition-colors hover:bg-[#0D2445] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
                   {t("nav.bookPuja")}
                 </a>
               </Link>
+              ) : null}
+              {showJoinCta ? (
               <Link href="/register?role=pujari">
                 <a className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-white bg-transparent px-8 text-[15px] font-bold text-white transition-colors hover:bg-white hover:text-[#E86400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
                   {t("lp.cta.joinPujari")}
                 </a>
               </Link>
+              ) : null}
             </div>
           </div>
         </div>

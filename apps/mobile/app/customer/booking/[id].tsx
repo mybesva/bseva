@@ -54,11 +54,15 @@ type LocationPing = {
   stale?: boolean;
 };
 
-function lastUpdatedLabel(iso: string | null | undefined, justNow: string) {
-  if (!iso) return justNow;
+function lastUpdatedLabel(iso: string | null | undefined, _justNow?: string) {
+  // A missing timestamp is unknown, never "just now" (BUG-19).
+  if (!iso) return "—";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return justNow;
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (Number.isNaN(d.getTime())) return "—";
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return sameDay
+    ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function CustomerStartOtp({ bookingId }: { bookingId: string }) {
@@ -159,9 +163,14 @@ function LiveTrackCard({ bookingId, role }: { bookingId: string; role: "customer
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <View style={{ flex: 1 }}>
           <AppText variant="h3">{t("track.title")}</AppText>
+          {hasCoords ? (
+            <AppText variant="small" color={ping?.stale ? "#92400E" : "#047857"} style={{ fontWeight: "700" }}>
+              {ping?.stale ? t("track.lastKnown") : t("track.live")}
+            </AppText>
+          ) : null}
           <AppText variant="small" color={colors.mutedForeground}>
             {hasCoords
-              ? `${t("track.lastUpdated")}: ${lastUpdatedLabel(ping?.recorded_at, t("mobile.justNow"))}`
+              ? `${t("track.lastUpdated")}: ${lastUpdatedLabel(ping?.recorded_at)}`
               : t("track.waitingPujari")}
           </AppText>
         </View>
@@ -306,7 +315,9 @@ export default function BookingDetail() {
     setError(null);
     try {
       await apiClient.rejectBooking(b.id, rejectReason);
-      await refreshBookingData();
+      // The pujari may lose access to this booking after rejecting, so don't wait on a re-fetch
+      // (a 403 would be retried with back-off and leave the screen spinning).
+      void qc.invalidateQueries({ queryKey: ["bookings"] });
       showSuccessAlert(t("mobile.bookingRejectedSuccess"), undefined, [
         {
           text: t("mobile.backToList"),
@@ -639,7 +650,7 @@ export default function BookingDetail() {
           </Card>
         ) : null}
 
-        {!pujari && b.status === "completed" ? (
+        {!pujari && b.status === "completed" && !b.my_rating ? (
           <>
             <AppText variant="small">{t("mobile.rating")}</AppText>
             <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
@@ -754,7 +765,7 @@ export default function BookingDetail() {
           </>
         ) : null}
 
-        {pujari && b.status === "completed" ? (
+        {pujari && b.status === "completed" && !b.my_rating ? (
           <>
             <ChoiceChips options={["1", "2", "3", "4", "5"].map((n) => ({ id: n, label: n }))} value={stars} onChange={(v) => setStars(String(v))} />
             <Field label={t("mobile.comment")} value={comment} onChangeText={setComment} />

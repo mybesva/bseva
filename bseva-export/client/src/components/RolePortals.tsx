@@ -32,6 +32,7 @@ import PujariProfileGate from "@/components/PujariProfileGate";
 import ThemeToggle from "@/components/ThemeToggle";
 import FooterRights from "@/components/FooterRights";
 import SeasonalPopup from "@/components/SeasonalPopup";
+import RatingPrompt from "@/components/RatingPrompt";
 import BSevaLogo from "@/components/BSevaLogo";
 import NotificationBell, { CountBadge } from "@/components/NotificationBell";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -425,6 +426,7 @@ export function CustomerPortal({ children }: { children: ReactNode }) {
     <RolePortalGate role="customer">
       <CustomerShell>
         <SeasonalPopup />
+        <RatingPrompt />
         {children}
       </CustomerShell>
     </RolePortalGate>
@@ -437,6 +439,7 @@ export function PujariPortal({ children }: { children: ReactNode }) {
       <PujariProfileGate>
         <PujariShell>
           <SeasonalPopup />
+          <RatingPrompt />
           {children}
         </PujariShell>
       </PujariProfileGate>

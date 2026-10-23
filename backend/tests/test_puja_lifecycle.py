@@ -123,3 +123,29 @@ def test_noisy_accuracy_does_not_count_as_arrival(monkeypatch):
     booking = _booking()
     assert maybe_detect_arrival(db, booking, lat=12.9352, lng=77.6245, accuracy_m=500) is False
     db.execute.assert_not_called()
+
+
+def test_tracking_window_has_an_end_after_scheduled_start(monkeypatch):
+    """BUG-19: never expose the pujari's location indefinitely if the puja is not started."""
+    monkeypatch.setattr("app.booking_tracking.get_setting", lambda db, key, default=None: default)
+    db = MagicMock()
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo("Asia/Kolkata")
+    in_window = datetime.now(tz) + timedelta(minutes=10)      # 10 min before start
+    just_late = datetime.now(tz) - timedelta(minutes=30)      # 30 min after start, not started
+    long_late = datetime.now(tz) - timedelta(hours=3)         # 3 h after start
+    early = datetime.now(tz) + timedelta(minutes=40)          # before the 15-min window
+    mk = lambda dt: _booking(booking_date=dt.date(), start_time=dt.time().replace(microsecond=0))
+    assert tracking_should_be_active(db, mk(in_window)) is True
+    assert tracking_should_be_active(db, mk(just_late)) is True
+    assert tracking_should_be_active(db, mk(long_late)) is False
+    assert tracking_should_be_active(db, mk(early)) is False
+
+
+def test_stale_ping_is_flagged(monkeypatch):
+    monkeypatch.setattr("app.booking_tracking.get_setting", lambda db, key, default=None: default)
+    db = MagicMock()
+    old = datetime.now(timezone.utc) - timedelta(minutes=10)
+    out = location_payload(db, _booking(), {"latitude": 12.94, "longitude": 77.62, "recorded_at": old}, include_destination=True)
+    assert out.get("stale") is True

@@ -28,10 +28,14 @@ import { Plus } from "lucide-react";
 import { nextSort, personLocation, SortableHead, StaticHead, type SortDir } from "@/components/SortableHead";
 import { PREFERRED_LANGUAGES } from "@/lib/languages";
 import { AdminPager, DEFAULT_PAGE_SIZE, parsePage, parsePageSize } from "@/components/AdminPager";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const emptyForm = { name: "", email: "", phone: "", password: "", location: "" };
 
 export default function CustomersPage() {
+  const { can } = useAdminCan();
+  const canCreate = can("create_customers");
+  const canEdit = can("edit_customers");
   const [rows, setRows] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -132,14 +136,16 @@ export default function CustomersPage() {
             onPage={(p) => updateFilters({ page: p })}
             onPageSize={(size) => updateFilters({ size })}
           />
-          <Button onClick={() => setOpen(true)} className="gap-2">
-            <Plus size={16} />
-            Add customer
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setOpen(true)} className="gap-2">
+              <Plus size={16} />
+              Add customer
+            </Button>
+          )}
         </div>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open && canCreate} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="">Add customer</DialogTitle>
@@ -273,6 +279,8 @@ export default function CustomersPage() {
               <TableCell>
                 <select
                   className="border rounded px-2 py-1 text-sm bg-background"
+                  disabled={!canEdit}
+                  title={canEdit ? undefined : "You don't have permission"}
                   value={PREFERRED_LANGUAGES.some((l) => l.code === (u.preferred_language || "en")) ? (u.preferred_language || "en") : "en"}
                   onChange={async (e) => {
                     const preferred_language = e.target.value;
@@ -299,6 +307,7 @@ export default function CustomersPage() {
                 <Badge variant={u.blocked ? "destructive" : "secondary"}>{u.blocked ? "Blocked" : "Active"}</Badge>
               </TableCell>
               <TableCell className="space-x-2 whitespace-nowrap">
+                {canEdit && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -317,11 +326,14 @@ export default function CustomersPage() {
                 >
                   {u.blocked ? "Unblock" : "Block"}
                 </Button>
+                )}
+                {canEdit && (
                 <span title="Cannot delete — bookings stay linked. Use Block to stop access." className="inline-flex">
                   <Button size="sm" variant="destructive" disabled>
                     Delete
                   </Button>
                 </span>
+                )}
               </TableCell>
             </TableRow>
           ))}

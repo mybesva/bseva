@@ -15,12 +15,15 @@ import { api, coerceListResponse } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { toast } from "sonner";
 import type { SevaEvent } from "@bseva/types";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type ServiceRow = { id: string; name: string; service_type?: string };
 type TempleRow = { id: string; name: string };
 type PujariRow = { id: string; name: string };
 
 export default function SevaEventsAdmin() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_seva_events");
   const [events, setEvents] = useState<SevaEvent[]>([]);
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [temples, setTemples] = useState<TempleRow[]>([]);
@@ -123,9 +126,11 @@ export default function SevaEventsAdmin() {
             {displayTokenLabel(f)}
           </Button>
         ))}
-        <Button className="ml-auto" onClick={() => setOpen(true)}>
-          Create event
-        </Button>
+        {canManage && (
+          <Button className="ml-auto" onClick={() => setOpen(true)}>
+            Create event
+          </Button>
+        )}
       </div>
       <Table>
         <TableHeader>
@@ -158,9 +163,11 @@ export default function SevaEventsAdmin() {
               </TableCell>
               <TableCell>{ev.published ? "Published" : "Draft"}</TableCell>
               <TableCell className="space-x-2">
-                <Button size="sm" variant="outline" onClick={() => togglePublish(ev)}>
-                  {ev.published ? "Unpublish" : "Publish"}
-                </Button>
+                {canManage && (
+                  <Button size="sm" variant="outline" onClick={() => togglePublish(ev)}>
+                    {ev.published ? "Unpublish" : "Publish"}
+                  </Button>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => openManifest(ev)}>
                   Sankalp list
                 </Button>
@@ -170,7 +177,7 @@ export default function SevaEventsAdmin() {
         </TableBody>
       </Table>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open && canManage} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Seva Event</DialogTitle>

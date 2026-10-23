@@ -108,7 +108,11 @@ def download_document(doc_id: str, user=Depends(require_roles("pujari", "admin")
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Document not found")
-    if user["role"] != "admin" and str(row["pujari_id"]) != str(user["id"]):
+    if user["role"] in ("admin", "super_admin"):
+        from app.rbac import ensure_admin_permission
+
+        ensure_admin_permission(db, user, "view_pujaris", "verify_pujaris", "edit_pujaris")
+    elif str(row["pujari_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
     return file_response(str(row["storage_path"]), filename=Path(str(row["storage_path"])).name)
 
@@ -200,6 +204,10 @@ def apply_level(body: PujariApplyLevelIn, user=Depends(require_roles("pujari")),
     raise HTTPException(403, "Role upgrades are managed by Admin. Contact support if you need a level change.")
 
 
+PERSONAL_PROFILE_FIELDS = ("full_name", "first_name", "middle_name", "last_name", "father_name", "gotra", "pravara", "date_of_birth")
+PHOTO_REQUIRED_MESSAGE = "Please upload your profile photo before saving your profile."
+
+
 @router.patch("/profile")
 def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
     from app.validation_rules import (
@@ -209,6 +217,18 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
         validate_pujari_dob,
         phone_for_user_account,
     )
+
+    # Profile photo is mandatory for the personal profile section (BUG-11). Address / bank /
+    # onboarding-step updates use this endpoint too and are not blocked; the photo itself is
+    # uploaded separately via POST /pujari/profile/photo, so users can always add it first.
+    sent = body.model_dump(exclude_unset=True)
+    if any(k in sent for k in PERSONAL_PROFILE_FIELDS):
+        has_photo = db.execute(
+            text("SELECT COALESCE(btrim(profile_photo_path), '') <> '' FROM pujari_profiles WHERE user_id = :id"),
+            {"id": user["id"]},
+        ).scalar()
+        if not has_photo:
+            raise HTTPException(400, PHOTO_REQUIRED_MESSAGE)
 
     year = body.qualification_year
     if year is not None and year > date.today().year:
@@ -539,6 +559,12 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
     profile = _load_profile(db, user)
     if not profile.get("profile_photo_path"):
         raise HTTPException(400, "Profile photo is required before submission")
+    try:  # the stored path must point at a real file (e.g. after a storage migration)
+        from app.storage import fetch_bytes
+
+        fetch_bytes(str(profile["profile_photo_path"]))
+    except HTTPException:
+        raise HTTPException(400, "Your profile photo could not be found. Please upload it again before submitting.")
     from app.profile_utils import pujari_profile_missing_required
 
     missing = pujari_profile_missing_required(profile)

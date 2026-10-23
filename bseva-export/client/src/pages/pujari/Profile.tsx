@@ -50,6 +50,8 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
   const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
   const [profile, setProfile] = useState<any>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  /** A photo path is stored but the file cannot be loaded (e.g. lost in a storage move). */
+  const [photoMissing, setPhotoMissing] = useState(false);
   const [signUrl, setSignUrl] = useState<string | null>(null);
   const [sameAddr, setSameAddr] = useState(false);
   const [sameWa, setSameWa] = useState(false);
@@ -66,8 +68,14 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
     setProfile({ ...p, mobile_number: parsed.national || p.mobile_number });
     setSameAddr(!!p.permanent_address && p.permanent_address === p.present_address);
     setSameWa(!!p.mobile_number && p.mobile_number === p.whatsapp_number);
-    if (p.profile_photo_path) setPhotoUrl(await pujariMediaUrl("photo"));
-    else setPhotoUrl(null);
+    if (p.profile_photo_path) {
+      const url = await pujariMediaUrl("photo");
+      setPhotoUrl(url);
+      setPhotoMissing(!url);
+    } else {
+      setPhotoUrl(null);
+      setPhotoMissing(false);
+    }
     if (p.signature_path) setSignUrl(await pujariMediaUrl("signature"));
     else setSignUrl(null);
   }
@@ -122,7 +130,8 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
     const parts = collectNameParts();
     return validatePujariProfileForm(
       {
-        profile_photo_path: profile?.profile_photo_path,
+        // A stored path only counts if the photo actually loads (mandatory photo, BUG-11).
+        profile_photo_path: photoMissing ? null : profile?.profile_photo_path,
         hasPhotoUrl: !!photoUrl,
         ...parts,
         date_of_birth: profile?.date_of_birth,
@@ -326,6 +335,8 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
           </div>
           {fieldErrors.profile_photo_path ? (
             <p className="text-xs text-red-600 mt-1">{t(fieldErrors.profile_photo_path)}</p>
+          ) : photoMissing ? (
+            <p className="text-xs text-amber-700 mt-1">{t("pujari.photo.missingFile")}</p>
           ) : null}
         </div>
         <PersonNameFields

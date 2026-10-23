@@ -2,7 +2,7 @@ import { Link, useLocation, useSearch } from "wouter";
 import FooterRights from "@/components/FooterRights";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin, Download } from "lucide-react";
+import { ArrowUp, Menu, Phone, Mail, Facebook, Twitter, Youtube, Linkedin, Download } from "lucide-react";
 import { releaseStaleUiLocks } from "@/lib/releaseStaleUiLocks";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -407,6 +407,20 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold">{t("lp.footer.language")}</span>
               <LanguageSelect triggerClassName="h-9 w-[9rem] border-white/40 bg-transparent text-white [&_svg]:text-white [&_svg]:opacity-90" />
+              <button
+                type="button"
+                onClick={() =>
+                  window.scrollTo({
+                    top: 0,
+                    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                  })
+                }
+                aria-label={t("lp.footer.backToTop")}
+                title={t("lp.footer.backToTop")}
+                className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FF7A00] text-white shadow-[0_8px_18px_-10px_rgba(255,122,0,0.9)] transition hover:bg-[#FF8A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <ArrowUp size={17} aria-hidden />
+              </button>
             </div>
           </div>
         </div>

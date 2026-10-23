@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatLunarPanchangDate,
   formatPanchangDateSubtitle,
+  formatSolarMonthLabel,
   formatPanchangSelectedDate,
   formatSolarPanchangDate,
   panchangApiCalendarParam,
@@ -35,5 +36,12 @@ describe("panchangDisplay", () => {
   it("normalizes API calendar param", () => {
     expect(panchangApiCalendarParam("lunar")).toBe("lunar");
     expect(panchangApiCalendarParam("solar")).toBe("solar");
+  });
+
+  it("solar subtitle shows the solar month and day, not lunar tithi info", () => {
+    const solar = { tithi: "Chaturdashi", paksha: "Krishna Paksha", lunarMonth: "Purattasi", lunarDay: 23, solarMonth: "Purattasi", solarDay: 23 };
+    expect(formatPanchangDateSubtitle("solar", "2026-10-09", solar)).toBe("Purattasi · Day 23");
+    expect(formatSolarMonthLabel({ solarMonth: "Aippasi", solarDay: 1 })).toBe("Aippasi · Day 1");
+    expect(formatSolarMonthLabel(null)).toBeNull();
   });
 });

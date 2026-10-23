@@ -93,6 +93,7 @@ import FamilySankalpPage from "./pages/customer/FamilySankalp";
 import PublicPujariProfile from "./pages/PublicPujariProfile";
 import AdminPujariDetail from "./pages/admin/PujariDetail";
 import { adminBasePath } from "./const";
+import { adminRoute } from "./components/AdminRouteGate";
 import { CustomerNotificationsPage, PujariNotificationsPage } from "./pages/NotificationsInbox";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -160,35 +161,35 @@ function Router() {
       <Route path="/contact" component={Contact} />
 
       {/* Private admin UI (secret path). Public /admin is blocked below. */}
-      <Route path={`${ops}/head-ratings`} component={HeadRatingsPage} />
-      <Route path={`${ops}/permissions`} component={AdminPermissionsPage} />
-      <Route path={ops} component={AdminDashboard} />
-      <Route path={`${ops}/customers`} component={AdminCustomers} />
-      <Route path={`${ops}/pujaris/:id`} component={AdminPujariDetail} />
-      <Route path={`${ops}/pujaris`} component={AdminPujaris} />
-      <Route path={`${ops}/temples`} component={AdminTemples} />
-      <Route path={`${ops}/services`} component={AdminServices} />
-      <Route path={`${ops}/recommendations`} component={AdminRecommendations} />
-      <Route path={`${ops}/bulk-import`} component={AdminBulkImport} />
-      <Route path={`${ops}/bookings`} component={AdminBookings} />
-      <Route path={`${ops}/virtual-puja`} component={AdminVirtualPuja} />
-      <Route path={`${ops}/seva-events`} component={AdminSevaEvents} />
-      <Route path={`${ops}/muhurtham`} component={AdminMuhurtham} />
-      <Route path={`${ops}/settlements`} component={AdminSettlements} />
-      <Route path={`${ops}/invoices`} component={AdminInvoices} />
-      <Route path={`${ops}/payments`} component={AdminPayments} />
-      <Route path={`${ops}/reviews`} component={AdminReviews} />
-      <Route path={`${ops}/samagri`} component={AdminSamagri} />
-      <Route path={`${ops}/notifications`} component={AdminNotifications} />
-      <Route path={`${ops}/promos`} component={AdminPromos} />
-      <Route path={`${ops}/profile`} component={AdminProfile} />
-      <Route path={`${ops}/settings`} component={AdminSettings} />
-      <Route path={`${ops}/pricing`} component={AdminPricingRules} />
-      <Route path={`${ops}/support`} component={AdminSupport} />
-      <Route path={`${ops}/legal`} component={AdminLegal} />
-      <Route path={`${ops}/email-templates`} component={AdminEmailTemplates} />
-      <Route path={`${ops}/sms-templates`} component={AdminSMSTemplates} />
-      <Route path={`${ops}/reports`} component={AdminReports} />
+      <Route path={`${ops}/head-ratings`} component={adminRoute(HeadRatingsPage)} />
+      <Route path={`${ops}/permissions`} component={adminRoute(AdminPermissionsPage)} />
+      <Route path={ops} component={adminRoute(AdminDashboard)} />
+      <Route path={`${ops}/customers`} component={adminRoute(AdminCustomers)} />
+      <Route path={`${ops}/pujaris/:id`} component={adminRoute(AdminPujariDetail)} />
+      <Route path={`${ops}/pujaris`} component={adminRoute(AdminPujaris)} />
+      <Route path={`${ops}/temples`} component={adminRoute(AdminTemples)} />
+      <Route path={`${ops}/services`} component={adminRoute(AdminServices)} />
+      <Route path={`${ops}/recommendations`} component={adminRoute(AdminRecommendations)} />
+      <Route path={`${ops}/bulk-import`} component={adminRoute(AdminBulkImport)} />
+      <Route path={`${ops}/bookings`} component={adminRoute(AdminBookings)} />
+      <Route path={`${ops}/virtual-puja`} component={adminRoute(AdminVirtualPuja)} />
+      <Route path={`${ops}/seva-events`} component={adminRoute(AdminSevaEvents)} />
+      <Route path={`${ops}/muhurtham`} component={adminRoute(AdminMuhurtham)} />
+      <Route path={`${ops}/settlements`} component={adminRoute(AdminSettlements)} />
+      <Route path={`${ops}/invoices`} component={adminRoute(AdminInvoices)} />
+      <Route path={`${ops}/payments`} component={adminRoute(AdminPayments)} />
+      <Route path={`${ops}/reviews`} component={adminRoute(AdminReviews)} />
+      <Route path={`${ops}/samagri`} component={adminRoute(AdminSamagri)} />
+      <Route path={`${ops}/notifications`} component={adminRoute(AdminNotifications)} />
+      <Route path={`${ops}/promos`} component={adminRoute(AdminPromos)} />
+      <Route path={`${ops}/profile`} component={adminRoute(AdminProfile)} />
+      <Route path={`${ops}/settings`} component={adminRoute(AdminSettings)} />
+      <Route path={`${ops}/pricing`} component={adminRoute(AdminPricingRules)} />
+      <Route path={`${ops}/support`} component={adminRoute(AdminSupport)} />
+      <Route path={`${ops}/legal`} component={adminRoute(AdminLegal)} />
+      <Route path={`${ops}/email-templates`} component={adminRoute(AdminEmailTemplates)} />
+      <Route path={`${ops}/sms-templates`} component={adminRoute(AdminSMSTemplates)} />
+      <Route path={`${ops}/reports`} component={adminRoute(AdminReports)} />
 
       {/* Legacy public admin URLs → not found */}
       <Route path="/admin/:rest*" component={NotFound} />

@@ -83,10 +83,10 @@ export default function PujariLiveTrackCard({
 
   useEffect(() => {
     if (intervalMs < 5000) return;
-    if (ping?.tracking_active === false && ping?.available === false) return;
+    if (ping?.stop_reason || ping?.arrived) return; // ended (started / arrived / cancelled / completed)
     const t = window.setInterval(() => void load({ silent: true }), intervalMs);
     return () => window.clearInterval(t);
-  }, [load, intervalMs, ping?.tracking_active, ping?.available]);
+  }, [load, intervalMs, ping?.stop_reason, ping?.arrived]);
 
   const lat = ping?.latitude != null ? Number(ping.latitude) : null;
   const lng = ping?.longitude != null ? Number(ping.longitude) : null;
@@ -193,6 +193,12 @@ export default function PujariLiveTrackCard({
           {t("track.title")}
         </p>
         <p>{ping?.message || t("track.notAvailable")}</p>
+        {!ping?.stop_reason && !ping?.arrived ? (
+          <Button type="button" size="sm" variant="outline" className="mt-2" disabled={refreshing} onClick={() => void load()}>
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+            {t("track.refresh")}
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -207,10 +213,20 @@ export default function PujariLiveTrackCard({
           <p className="font-semibold text-foreground flex items-center gap-2">
             <Navigation size={16} className="text-primary" />
             {t("track.title")}
+            {hasCoords ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[0.7rem] font-semibold",
+                  ping?.stale ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800",
+                )}
+              >
+                {ping?.stale ? t("track.lastKnown") : t("track.live")}
+              </span>
+            ) : null}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {hasCoords
-              ? `${t("track.lastUpdated")} ${ping?.recorded_at ? formatDisplayDateTime(ping.recorded_at) : t("track.justNow")}`
+              ? `${t("track.lastUpdated")} ${ping?.recorded_at ? formatDisplayDateTime(ping.recorded_at) : "—"}`
               : t("track.waitingPujari")}
           </p>
         </div>
@@ -220,7 +236,7 @@ export default function PujariLiveTrackCard({
         </Button>
       </div>
 
-      {(etaText || straightKm) && (
+      {!ping?.stale && (etaText || straightKm) && (
         <div className="flex flex-wrap gap-3 text-sm">
           {etaText ? (
             <span className="rounded-full bg-background px-2.5 py-0.5 border border-border">

@@ -33,15 +33,16 @@ import {
   MapPin,
   Clock,
   Sparkles,
-  IndianRupee,
   CheckCircle2,
   Hourglass,
-  TrendingUp,
   PlayCircle,
   Inbox,
   Video,
+  BellRing,
+  Wallet,
+  ChevronRight,
 } from "lucide-react";
-import { format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
+import { format, isSameDay, isSameMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +86,6 @@ function PujariDashboardContent() {
 
   const rows = useMemo(() => (bookings || []).map(mapApiBooking), [bookings]);
   const now = new Date();
-  const monthStart = startOfMonth(now);
 
   const stats = useMemo(() => {
     const completed = rows.filter((r) => r.booking.status === "completed");
@@ -120,6 +120,10 @@ function PujariDashboardContent() {
       upcomingCount: upcoming.length,
       completedCount: completed.length,
       pendingCount: pending.length,
+      requestCount: rows.filter(
+        (r) => ["pending", "pending_acceptance"].includes(r.booking.status) && !isExpiredBooking(r, now)
+      ).length,
+      scheduledCount: upcoming.filter((r) => !["pending", "pending_acceptance"].includes(r.booking.status)).length,
       totalBookings: rows.length,
     };
   }, [rows]);
@@ -157,9 +161,10 @@ function PujariDashboardContent() {
     [rows]
   );
 
+  // Accepted, scheduled pujas only. Pending requests are listed once, under "New Puja Requests".
   const upcoming = useMemo(() => {
     return rows
-      .filter((b) => isUpcomingBooking(b, now))
+      .filter((b) => isUpcomingBooking(b, now) && !["pending", "pending_acceptance"].includes(b.booking.status))
       .sort((a, b) => compareByPujaSchedule(a, b, "asc"));
   }, [rows, now]);
 
@@ -206,38 +211,45 @@ function PujariDashboardContent() {
     });
   }, [rows]);
 
+  // Booking requests is the call to action (opens Bookings filtered to pending, where the pujari
+  // can accept or reject). Dakshina is a single card: this month, with the running total underneath.
   const metricCards = [
     {
-      title: "Total Dakshina",
-      value: formatPaise(stats.totalEarnings),
-      hint: "Dakshina from confirmed & completed pujas",
-      icon: IndianRupee,
+      title: t("pd.requests"),
+      value: String(stats.requestCount),
+      hint: stats.requestCount > 0 ? t("pd.requestsHint") : t("pd.requestsNone"),
+      icon: BellRing,
       color: "text-orange-600",
       bg: "bg-orange-100",
+      href: "/pujari/bookings?tab=upcoming&status=pending",
+      highlight: stats.requestCount > 0,
     },
     {
-      title: "This Month",
-      value: formatPaise(stats.monthEarnings),
-      hint: format(monthStart, "MMMM yyyy"),
-      icon: TrendingUp,
-      color: "text-green-600",
-      bg: "bg-green-100",
-    },
-    {
-      title: "Upcoming",
-      value: String(stats.upcomingCount),
-      hint: `${stats.pendingCount} pending / confirmed`,
-      icon: Hourglass,
+      title: t("mobile.upcoming"),
+      value: String(stats.scheduledCount),
+      hint: t("pd.upcomingHint"),
+      icon: CalendarIcon,
       color: "text-blue-600",
       bg: "bg-blue-100",
+      href: "/pujari/bookings?tab=upcoming&status=confirmed",
     },
     {
-      title: "Completed",
+      title: t("pd.dakshina"),
+      value: formatPaise(stats.monthEarnings),
+      hint: t("pd.dakshinaTotal", { amount: formatPaise(stats.totalEarnings) }),
+      icon: Wallet,
+      color: "text-green-600",
+      bg: "bg-green-100",
+      href: "/pujari/earnings",
+    },
+    {
+      title: t("pd.completed"),
       value: String(stats.completedCount),
       hint: `${formatPaise(stats.completedEarnings)} earned`,
       icon: CheckCircle2,
       color: "text-emerald-700",
       bg: "bg-emerald-100",
+      href: "/pujari/bookings?tab=completed",
     },
   ];
 
@@ -407,18 +419,34 @@ function PujariDashboardContent() {
                 </Card>
               ))
             : metricCards.map((m) => (
-                <Card key={m.title} className="rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
-                  <CardContent className="flex items-center gap-4 p-5">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${m.bg}`}>
-                      <m.icon className={`h-6 w-6 ${m.color}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{m.title}</p>
-                      <p className="text-2xl font-extrabold leading-tight text-foreground">{m.value}</p>
-                      <p className="truncate text-xs text-muted-foreground">{m.hint}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <button
+                  key={m.title}
+                  type="button"
+                  onClick={() => setLocation(m.href)}
+                  className={`group flex items-center gap-4 rounded-3xl border p-5 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] ${
+                    m.highlight
+                      ? "border-[#E86A00] bg-gradient-to-br from-[#FF8A1F] to-[#E86A00] text-white shadow-[0_18px_36px_-18px_rgba(232,106,0,0.9)]"
+                      : "border-[#EFE2CF] bg-card shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] hover:border-[#FF7A00]/40 dark:border-white/10"
+                  }`}
+                >
+                  <div
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${m.highlight ? "bg-white/20" : m.bg}`}
+                  >
+                    <m.icon className={`h-6 w-6 ${m.highlight ? "text-white" : m.color}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-[12px] font-bold uppercase tracking-[0.1em] ${m.highlight ? "text-white/90" : "text-muted-foreground"}`}
+                    >
+                      {m.title}
+                    </p>
+                    <p className={`text-2xl font-extrabold leading-tight ${m.highlight ? "text-white" : "text-foreground"}`}>{m.value}</p>
+                    <p className={`truncate text-xs ${m.highlight ? "text-white/85" : "text-muted-foreground"}`}>{m.hint}</p>
+                  </div>
+                  <ChevronRight
+                    className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${m.highlight ? "text-white/80" : "text-muted-foreground"}`}
+                  />
+                </button>
               ))}
         </div>
 
@@ -778,7 +806,7 @@ function PujariDashboardContent() {
                 customer_name: selectedBooking.customer.name || undefined,
               }}
               onUpdated={async (info) => {
-                await loadBookings();
+                // Close first so the dialog doesn't hang open while the list reloads.
                 if (
                   info?.decision === "accepted" ||
                   info?.decision === "rejected" ||
@@ -787,6 +815,7 @@ function PujariDashboardContent() {
                   setSelectedBooking(null);
                   setDetailIntent(null);
                 }
+                await loadBookings();
               }}
             />
           )}

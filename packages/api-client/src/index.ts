@@ -630,6 +630,11 @@ export function createApiClient(opts: ApiClientOptions) {
       return api("/admin/stats");
     },
 
+    /** Permission-scoped operational dashboard for normal Admins (no financial data). */
+    adminOpsDashboard() {
+      return api("/admin/dashboard/ops");
+    },
+
     uploadCustomerPhoto(file: UploadFile) {
       const normalized = normalizeUploadFile(file);
       const form = new FormData();

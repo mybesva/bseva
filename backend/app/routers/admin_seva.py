@@ -31,7 +31,7 @@ def admin_list_events(
     status: str | None = None,
     limit: int = Query(100, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    user=Depends(require_any_permission("manage_bookings", "manage_services")),
+    user=Depends(require_any_permission("view_seva_events", "manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     where = ["1=1"]
@@ -63,7 +63,7 @@ def admin_list_events(
 @router.post("/events")
 def create_event(
     body: SevaEventIn,
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     svc = db.execute(
@@ -141,7 +141,7 @@ def create_event(
 def patch_event(
     event_id: str,
     body: SevaEventPatchIn,
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     existing = get_event(db, event_id, published_only=False)
@@ -205,7 +205,7 @@ def patch_event(
 @router.get("/events/{event_id}/registrations")
 def event_registrations(
     event_id: str,
-    user=Depends(require_any_permission("manage_bookings", "manage_services")),
+    user=Depends(require_any_permission("view_seva_events", "manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     rows = db.execute(
@@ -226,7 +226,7 @@ def event_registrations(
 @router.get("/events/{event_id}/sankalp-manifest")
 def sankalp_manifest(
     event_id: str,
-    user=Depends(require_any_permission("manage_bookings", "manage_services")),
+    user=Depends(require_any_permission("view_seva_events", "manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     """Consolidated participant/Sankalp list for group puja and proxy puja."""
@@ -256,7 +256,7 @@ def update_prasad_status(
     prasad_status: str = Query(...),
     prasad_courier: str | None = None,
     prasad_tracking: str | None = None,
-    user=Depends(require_any_permission("manage_bookings", "manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     if prasad_status not in PRASAD_STATUSES:
@@ -283,7 +283,7 @@ def update_prasad_status(
 async def upload_event_proof(
     event_id: str,
     file: UploadFile = File(...),
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     event = get_event(db, event_id, published_only=False)
@@ -314,7 +314,7 @@ async def upload_event_proof(
 async def upload_registration_proof(
     registration_id: str,
     file: UploadFile = File(...),
-    user=Depends(require_any_permission("manage_bookings", "manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     ext = (file.filename or "proof.jpg").rsplit(".", 1)[-1].lower()
@@ -341,7 +341,7 @@ async def upload_registration_proof(
 @router.get("/services/{service_id}/packages")
 def list_service_packages(
     service_id: str,
-    user=Depends(require_any_permission("manage_services", "manage_bookings")),
+    user=Depends(require_any_permission("view_seva_events", "manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     rows = db.execute(
@@ -361,7 +361,7 @@ def list_service_packages(
 def create_service_package(
     service_id: str,
     body: ServicePackageIn,
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     pid = str(uuid4())
@@ -400,7 +400,7 @@ def create_service_package(
 def patch_service_package(
     package_id: str,
     body: ServicePackagePatchIn,
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     fields = []
@@ -425,7 +425,7 @@ def patch_service_package(
 @router.post("/discovery")
 def create_discovery_link(
     body: SevaDiscoveryLinkIn,
-    user=Depends(require_permission("manage_services")),
+    user=Depends(require_permission("manage_seva_events")),
     db: Session = Depends(get_db),
 ):
     lid = str(uuid4())

@@ -27,6 +27,7 @@ import { notifyBadgesChanged } from "@/components/NotificationBell";
 import { api, rupees } from "@/lib/api";
 import { formatDisplayDate, formatDisplayDateTime } from "@/lib/formatDate";
 import { toast } from "sonner";
+import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type ConsultationStatus = "requested" | "in_progress" | "guided" | "completed" | "cancelled";
 
@@ -67,6 +68,8 @@ function preferredDates(value: Consultation["preferred_dates"]) {
 }
 
 export default function Muhurtham() {
+  const { can } = useAdminCan();
+  const canManage = can("manage_muhurtham");
   const [rows, setRows] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("actionable");
@@ -197,7 +200,7 @@ export default function Muhurtham() {
                 <TableCell><Badge variant={row.status === "cancelled" ? "destructive" : "secondary"}>{displayTokenLabel(row.status)}</Badge></TableCell>
                 <TableCell className="whitespace-nowrap">{formatDisplayDateTime(row.created_at)}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" variant="outline" onClick={() => openEditor(row)}>Manage</Button>
+                  <Button size="sm" variant="outline" onClick={() => openEditor(row)}>{canManage ? "Manage" : "View"}</Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -215,12 +218,12 @@ export default function Muhurtham() {
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Manage {editing?.consultation_number || "consultation"}</DialogTitle>
+            <DialogTitle>{canManage ? "Manage" : "View"} {editing?.consultation_number || "consultation"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
               <Label>Status</Label>
-              <Select value={status} onValueChange={(value) => setStatus(value as ConsultationStatus)}>
+              <Select value={status} onValueChange={(value) => setStatus(value as ConsultationStatus)} disabled={!canManage}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {STATUSES.map((item) => (
@@ -231,17 +234,19 @@ export default function Muhurtham() {
             </div>
             <div className="space-y-1">
               <Label>Guidance notes</Label>
-              <Textarea rows={5} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Record Muhurtham guidance and follow-up details." />
+              <Textarea rows={5} value={notes} disabled={!canManage} onChange={(event) => setNotes(event.target.value)} placeholder="Record Muhurtham guidance and follow-up details." />
             </div>
             <div className="space-y-1">
               <Label>Linked booking ID (optional)</Label>
-              <Input value={linkedBookingId} onChange={(event) => setLinkedBookingId(event.target.value)} placeholder="Booking UUID" />
+              <Input value={linkedBookingId} disabled={!canManage} onChange={(event) => setLinkedBookingId(event.target.value)} placeholder="Booking UUID" />
               <p className="text-xs text-muted-foreground">Link the booking created after guidance. Existing links are preserved unless changed.</p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button>
-            <Button onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+            {canManage && (
+              <Button onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
