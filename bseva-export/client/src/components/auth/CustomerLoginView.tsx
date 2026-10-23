@@ -236,14 +236,6 @@ export default function CustomerLoginView({
             </Link>
 
             <p className="mt-4 text-center text-sm font-medium text-[#1A2B4A] dark:text-[#E8ECF0]">
-              {t("auth.newHere")}{" "}
-              <Link href={registerHref}>
-                <a className="font-semibold text-[#FF7A00] underline underline-offset-2 hover:text-[#E06C00]">
-                  {t(pujari ? "auth.createPujariAccount" : "auth.createCustomerAccount")}
-                </a>
-              </Link>
-            </p>
-            <p className="mt-1.5 text-center text-sm font-medium text-[#1A2B4A] dark:text-[#E8ECF0]">
               {t("auth.orUseShared")}{" "}
               <button
                 type="button"

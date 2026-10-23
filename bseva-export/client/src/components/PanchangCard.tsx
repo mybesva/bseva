@@ -267,9 +267,10 @@ export default function PanchangCard({ className }: { className?: string }) {
           <div className="grid grid-cols-2 gap-3">
             <PanchangInfoCard label={cleanLabel(t("calendar.tithi"))} value={tithiValue} />
             <PanchangInfoCard label={cleanLabel(t("calendar.nakshatra"))} value={panchang.nakshatra} />
-            {calendarType === "lunar" ? (
-              <PanchangInfoCard label={cleanLabel(t("calendar.lunarMonth"))} value={lunarMonthValue} />
-            ) : null}
+            <PanchangInfoCard
+              label={cleanLabel(t(calendarType === "lunar" ? "calendar.lunarMonth" : "calendar.solarMonth"))}
+              value={lunarMonthValue}
+            />
             <PanchangInfoCard label={cleanLabel(t("calendar.rahuKalam"))} value={panchang.rahukaalam} highlight />
           </div>
         ) : (

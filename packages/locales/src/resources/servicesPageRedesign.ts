@@ -254,6 +254,16 @@ const ROWS: readonly Row[] = [
     "1 മുതൽ 5 വരെ നക്ഷത്രങ്ങൾ തിരഞ്ഞെടുക്കുക.",
   ],
   [
+    "calendar.solarMonth",
+    "Solar month",
+    "सौर मास",
+    "సౌర మాసం",
+    "सौर महिना",
+    "சூரிய மாதம்",
+    "ಸೌರ ಮಾಸ",
+    "സൗരമാസം",
+  ],
+  [
     "seva.proofUnavailable",
     "Proof is not available yet. Please try again later.",
     "प्रमाण अभी उपलब्ध नहीं है। कृपया बाद में पुनः प्रयास करें।",

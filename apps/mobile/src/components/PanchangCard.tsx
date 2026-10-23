@@ -317,9 +317,10 @@ export function PanchangCard() {
             <PanchangField label={cleanLabel(t("calendar.nakshatra"))} value={data.nakshatra} />
           </View>
           <View style={{ flexDirection: "row", gap: CARD_GAP, alignItems: "stretch" }}>
-            {calendarType === "lunar" ? (
-              <PanchangField label={cleanLabel(t("calendar.lunarMonth"))} value={lunarMonthValue} />
-            ) : null}
+            <PanchangField
+              label={cleanLabel(t(calendarType === "lunar" ? "calendar.lunarMonth" : "calendar.solarMonth"))}
+              value={lunarMonthValue}
+            />
             <PanchangField
               label={cleanLabel(t("calendar.rahuKalam"))}
               value={data.rahukaalam}
