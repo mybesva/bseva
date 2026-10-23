@@ -151,7 +151,6 @@ export default function RolePortalGate({
           onPassword={setPassword}
           onSubmit={onLogin}
           registerHref={registerHref}
-          onSharedLogin={() => setLocation(`/login?role=${expected}`)}
         />
       </MarketingLayout>
     );

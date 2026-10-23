@@ -60,7 +60,6 @@ export default function CustomerLoginView({
   onPassword,
   onSubmit,
   registerHref,
-  onSharedLogin,
 }: {
   variant?: "customer" | "pujari";
   identifier: string;
@@ -70,7 +69,6 @@ export default function CustomerLoginView({
   onPassword: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   registerHref: string;
-  onSharedLogin: () => void;
 }) {
   const { t } = useI18n();
   const pujari = variant === "pujari";
@@ -234,17 +232,6 @@ export default function CustomerLoginView({
                 {t(pujari ? "pl.createNew" : "cl.createNew")}
               </a>
             </Link>
-
-            <p className="mt-4 text-center text-sm font-medium text-[#1A2B4A] dark:text-[#E8ECF0]">
-              {t("auth.orUseShared")}{" "}
-              <button
-                type="button"
-                onClick={onSharedLogin}
-                className="font-semibold text-[#FF7A00] underline underline-offset-2 hover:text-[#E06C00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] rounded-sm"
-              >
-                {t("auth.loginPage")}
-              </button>
-            </p>
           </div>
         </div>
 
