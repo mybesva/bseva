@@ -6,7 +6,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
 const MENU_ITEMS: { type: SevaServiceType; labelKey: string; icon: typeof Flower }[] = [
-  { type: "puja", labelKey: "seva.pujaServices", icon: Flower },
+  { type: "puja", labelKey: "seva.puja", icon: Flower },
   { type: "chadhava", labelKey: "seva.chadhava", icon: Flame },
   { type: "pravachan", labelKey: "seva.pravachan", icon: Sparkles },
 ];

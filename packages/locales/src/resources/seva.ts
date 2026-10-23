@@ -3,7 +3,7 @@ import type { Lang } from "../constants";
 type Dict = Record<string, string>;
 
 const en: Dict = {
-  "seva.puja": "Puja Seva",
+  "seva.puja": "Puja Services",
   "seva.pujaServices": "Puja Services",
   "seva.chadhava": "Chadhava Seva",
   "seva.pravachan": "Pravachan Seva",
@@ -68,7 +68,7 @@ const en: Dict = {
 };
 
 const hi: Dict = {
-  "seva.puja": "पूजा सेवा",
+  "seva.puja": "पूजा सेवाएँ",
   "seva.pujaServices": "पूजा सेवाएँ",
   "seva.chadhava": "चढ़ावा सेवा",
   "seva.pravachan": "प्रवचन सेवा",
@@ -133,7 +133,7 @@ const hi: Dict = {
 };
 
 const te: Dict = {
-  "seva.puja": "పూజ సేవ",
+  "seva.puja": "పూజా సేవలు",
   "seva.pujaServices": "పూజా సేవలు",
   "seva.chadhava": "చఢవ సేవ",
   "seva.pravachan": "ప్రవచన సేవ",
@@ -263,7 +263,7 @@ const mr: Dict = {
 };
 
 const kn: Dict = {
-  "seva.puja": "ಪೂಜೆ ಸೇವೆ",
+  "seva.puja": "ಪೂಜಾ ಸೇವೆಗಳು",
   "seva.pujaServices": "ಪೂಜಾ ಸೇವೆಗಳು",
   "seva.chadhava": "ಚಢಾವ ಸೇವೆ",
   "seva.pravachan": "ಪ್ರವಚನ ಸೇವೆ",
@@ -328,7 +328,7 @@ const kn: Dict = {
 };
 
 const ta: Dict = {
-  "seva.puja": "பூஜை சேவை",
+  "seva.puja": "பூஜை சேவைகள்",
   "seva.pujaServices": "பூஜை சேவைகள்",
   "seva.chadhava": "சடாவா சேவை",
   "seva.pravachan": "பிரவசன சேவை",
@@ -393,7 +393,7 @@ const ta: Dict = {
 };
 
 const ml: Dict = {
-  "seva.puja": "പൂജാ സേവ",
+  "seva.puja": "പൂജാ സേവനങ്ങൾ",
   "seva.pujaServices": "പൂജാ സേവനങ്ങൾ",
   "seva.chadhava": "ചഢാവാ സേവ",
   "seva.pravachan": "പ്രവചന സേവ",
