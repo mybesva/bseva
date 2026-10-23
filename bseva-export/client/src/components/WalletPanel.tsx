@@ -53,17 +53,17 @@ export default function WalletPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-3 rounded-lg bg-orange-50">
+          <div className="@container min-w-0 p-3 rounded-lg bg-orange-50">
             <p className="text-xs text-muted-foreground">{t("wallet.balance")}</p>
-            <p className="text-price text-primary">{rupees(balance)}</p>
+            <p className="whitespace-nowrap tabular-nums tracking-tight leading-tight text-[clamp(1rem,12cqi,1.875rem)] font-bold text-primary">{rupees(balance)}</p>
           </div>
-          <div className="p-3 rounded-lg bg-green-50">
+          <div className="@container min-w-0 p-3 rounded-lg bg-green-50">
             <p className="text-xs text-muted-foreground">{t("web.wallet.credits")}</p>
-            <p className="text-xl font-semibold text-green-700">{rupees(credits)}</p>
+            <p className="whitespace-nowrap tabular-nums tracking-tight leading-tight text-[clamp(0.95rem,11cqi,1.375rem)] font-semibold text-green-700">{rupees(credits)}</p>
           </div>
-          <div className="p-3 rounded-lg bg-blue-50">
+          <div className="@container min-w-0 p-3 rounded-lg bg-blue-50">
             <p className="text-xs text-muted-foreground">{t("web.wallet.debits")}</p>
-            <p className="text-xl font-semibold text-blue-700">{rupees(debits)}</p>
+            <p className="whitespace-nowrap tabular-nums tracking-tight leading-tight text-[clamp(0.95rem,11cqi,1.375rem)] font-semibold text-blue-700">{rupees(debits)}</p>
           </div>
         </div>
         {variant === "customer" && (

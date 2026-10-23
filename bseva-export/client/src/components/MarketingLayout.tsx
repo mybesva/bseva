@@ -405,8 +405,6 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <FooterRights />
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">{t("lp.footer.language")}</span>
-              <LanguageSelect triggerClassName="h-9 w-[9rem] border-white/40 bg-transparent text-white [&_svg]:text-white [&_svg]:opacity-90" />
               <button
                 type="button"
                 onClick={() =>
@@ -417,7 +415,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 }
                 aria-label={t("lp.footer.backToTop")}
                 title={t("lp.footer.backToTop")}
-                className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FF7A00] text-white shadow-[0_8px_18px_-10px_rgba(255,122,0,0.9)] transition hover:bg-[#FF8A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FF7A00] text-white shadow-[0_8px_18px_-10px_rgba(255,122,0,0.9)] transition hover:bg-[#FF8A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <ArrowUp size={17} aria-hidden />
               </button>

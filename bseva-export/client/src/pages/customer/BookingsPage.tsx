@@ -204,7 +204,7 @@ export default function CustomerBookingsPage() {
         </CardHeader>
         <CardContent className="space-y-4 overflow-visible">
           <Tabs value={tab} onValueChange={setTab}>
-            <div className="sticky top-16 z-30 -mx-1 bg-background/95 backdrop-blur-sm py-3">
+            <div className="sticky top-16 z-30 -mx-6 border-b border-primary/15 bg-card px-6 py-3">
             <TabsList className="bg-secondary/30 h-auto min-h-12 w-full flex flex-wrap justify-start gap-2 overflow-visible p-1.5">
               <TabsTrigger value="upcoming" className="h-auto min-h-10 flex-none px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
                 {t("customer.upcoming")} ({upcoming.length})

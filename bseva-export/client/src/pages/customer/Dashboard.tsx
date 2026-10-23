@@ -509,9 +509,9 @@ function WalletRewardsSummary() {
   return (
     <SectionCard icon={<Wallet size={18} />} title={t("customer.walletPayments")}>
       <div className="grid grid-cols-2 gap-3">
-        <Link href="/customer/wallet" className="rounded-2xl bg-[#FFF6EA] p-4 dark:bg-[#FF7A00]/10">
+        <Link href="/customer/wallet" className="@container min-w-0 rounded-2xl bg-[#FFF6EA] p-4 dark:bg-[#FF7A00]/10">
           <span className="block text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">{t("wallet.balance")}</span>
-          <span className="mt-1 block text-2xl font-extrabold text-foreground">
+          <span className="mt-1 block whitespace-nowrap tabular-nums tracking-tight text-[clamp(1rem,12cqi,1.5rem)] font-extrabold text-foreground">
             {balance == null ? "—" : `₹${(balance / 100).toLocaleString("en-IN")}`}
           </span>
         </Link>
