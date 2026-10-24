@@ -21,10 +21,15 @@ import {
   User,
   Loader2,
 } from "lucide-react";
-import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useSearch } from "wouter";
 import { toast } from "sonner";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Contact subjects: support categories plus "custom puja" (linked from the Services page CTA). */
+const CUSTOM_PUJA_SUBJECT = "custom_puja";
+const CONTACT_SUBJECTS = [CUSTOM_PUJA_SUBJECT, ...CUSTOMER_SUPPORT_CATS] as const;
 const TEN_DIGIT_RE = /^\d{10}$/;
 
 const COUNTRY_CODES = [
@@ -138,10 +143,32 @@ export default function Contact() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const formId = useId();
+  const search = useSearch();
+  const formCardRef = useRef<HTMLDivElement>(null);
+  const [highlightForm, setHighlightForm] = useState(false);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, []);
+    const subject = new URLSearchParams(search).get("subject");
+    if (!subject || !(CONTACT_SUBJECTS as readonly string[]).includes(subject)) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      return;
+    }
+    // Arrived from a "Request Custom Puja" style link: preselect the subject, bring the form
+    // into view and briefly highlight it so the visitor knows where to continue.
+    setForm((f) => ({ ...f, subject }));
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const scrollTimer = window.setTimeout(() => {
+      formCardRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      document.getElementById(`${formId}-name`)?.focus({ preventScroll: true });
+      setHighlightForm(true);
+    }, 250); // after ScrollToTop's route-change resets (0/50/150 ms), which would undo this scroll
+    const clearTimer = window.setTimeout(() => setHighlightForm(false), 3700);
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(clearTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   function validate(values: FormState): FormErrors {
     const next: FormErrors = {};
@@ -169,7 +196,8 @@ export default function Contact() {
       toast.error(t("contact.errRequired"));
       return;
     }
-    const subjectLabel = CATEGORY_LABELS[form.subject] || form.subject;
+    const subjectLabel =
+      form.subject === CUSTOM_PUJA_SUBJECT ? "Custom puja request" : CATEGORY_LABELS[form.subject] || form.subject;
     setSubmitting(true);
     try {
       const res = await api<{ ok: boolean; message?: string }>("/support/contact", {
@@ -288,7 +316,13 @@ export default function Contact() {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-[#FF9A3C] bg-white px-5 py-6 shadow-[0_16px_40px_-28px_rgba(120,70,20,0.55)] sm:px-7 sm:py-7 dark:border-[#FF7A00] dark:bg-[#152238]">
+          <div
+            ref={formCardRef}
+            id="contact-form"
+            className={`relative scroll-mt-28 overflow-hidden rounded-2xl border border-[#FF9A3C] bg-white px-5 py-6 shadow-[0_16px_40px_-28px_rgba(120,70,20,0.55)] transition-shadow duration-700 sm:px-7 sm:py-7 dark:border-[#FF7A00] dark:bg-[#152238] ${
+              highlightForm ? "ring-4 ring-[#FF7A00]/45 shadow-[0_0_0_8px_rgba(255,122,0,0.12),0_16px_40px_-20px_rgba(255,122,0,0.6)]" : ""
+            }`}
+          >
             <MandalaOutline className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 text-[#E8B15A] opacity-25 dark:opacity-[0.12]" />
             <div className="relative flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
@@ -434,9 +468,9 @@ export default function Contact() {
                       className={`${fieldClass} appearance-none pl-10 pr-9`}
                     >
                       <option value="">{t("contact.subjectPh")}</option>
-                      {CUSTOMER_SUPPORT_CATS.map((id) => (
+                      {CONTACT_SUBJECTS.map((id) => (
                         <option key={id} value={id}>
-                          {t(`web.support.category.${id}`)}
+                          {id === CUSTOM_PUJA_SUBJECT ? t("contact.subject.customPuja") : t(`web.support.category.${id}`)}
                         </option>
                       ))}
                     </select>

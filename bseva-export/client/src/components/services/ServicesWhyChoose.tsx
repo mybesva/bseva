@@ -62,8 +62,7 @@ export default function ServicesWhyChoose() {
               type="button"
               className="relative mt-5 inline-flex h-11 w-fit items-center gap-2 rounded-xl bg-[#FF7A00] px-5 text-[0.95rem] font-bold text-[#0E1830] shadow-[0_8px_18px_-10px_rgba(255,122,0,0.8)] transition-colors hover:bg-[#FF8A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]"
               onClick={() => {
-                window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-                setLocation("/contact");
+                setLocation("/contact?subject=custom_puja");
               }}
             >
               {t("services.requestCustom")}

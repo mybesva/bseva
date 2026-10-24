@@ -61,7 +61,7 @@ export default function CustomerWelcomeHero({
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
-                href="/services"
+                href="/services?focus=pujas"
                 className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#FF7A00] px-5 text-sm font-bold text-[#0E1830] shadow-[0_10px_18px_-10px_rgba(255,122,0,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 {t("nav.bookPuja")} <ArrowRight size={16} aria-hidden />

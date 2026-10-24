@@ -581,7 +581,7 @@ function PujariDashboardContent() {
         <WalletPanel variant="priest" />
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1 rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
+          <Card className="lg:col-span-1 lg:self-start rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 <CalendarIcon size={18} className="text-primary" />

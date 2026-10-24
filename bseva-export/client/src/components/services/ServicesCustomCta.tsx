@@ -24,8 +24,7 @@ export default function ServicesCustomCta() {
         <Button
           className="mt-5 h-11 rounded-[10px] bg-[#FF7A00] px-6 text-[0.95rem] font-bold text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.65)] hover:bg-[#FF7A00]/90"
           onClick={() => {
-            window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-            setLocation("/contact");
+            setLocation("/contact?subject=custom_puja");
           }}
         >
           {t("services.requestCustom")}

@@ -42,7 +42,7 @@ export default function LandingFinalCta() {
             {t("lp.final.title")}
           </h2>
           <p className="mt-3 text-base font-semibold leading-relaxed text-[#0A1630] md:text-lg">{t("lp.final.desc")}</p>
-          <Link href="/services">
+          <Link href="/services?focus=pujas">
             <a className="group mt-7 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#0A1630] px-7 text-base font-bold text-white shadow-lg transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A1630] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFC46B] sm:w-auto">
               {t("lp.cta.bookToday")}
               <ArrowRight size={18} aria-hidden className="lp-arrow" />

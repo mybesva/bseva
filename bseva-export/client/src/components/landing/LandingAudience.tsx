@@ -102,7 +102,7 @@ export default function LandingAudience() {
           title={t("lp.aud.cTitle")}
           bullets={[t("lp.aud.c1"), t("lp.aud.c2"), t("lp.aud.c3"), t("lp.aud.c4"), t("lp.aud.c5")]}
           cta={t("lp.cta.book")}
-          href="/services"
+          href="/services?focus=pujas"
           image="/images/landing/customer-puja.jpg"
           imageAlt={t("lp.aud.cImgAlt")}
         />

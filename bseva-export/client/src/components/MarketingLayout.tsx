@@ -205,7 +205,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 xl:ml-0">
-            <Link href="/services">
+            <Link href="/services?focus=pujas">
               <a className="book-puja-nav-cta-wrap shrink-0" aria-label={t("nav.bookPuja")}>
                 <span className={cn(
                   "book-puja-nav-cta book-puja-nav-cta-compact xl:h-11 xl:px-5 xl:text-[0.9375rem]",
@@ -272,7 +272,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                         </Link>
                       ),
                     )}
-                    <Link href="/services">
+                    <Link href="/services?focus=pujas">
                       <a
                         className="book-puja-nav-cta-wrap w-full mt-2"
                         aria-label={t("nav.bookPuja")}

@@ -170,7 +170,7 @@ export default function About() {
             </div>
             <div className="relative flex flex-col gap-3 sm:flex-row lg:flex-col">
               {showBookCta ? (
-              <Link href="/services">
+              <Link href="/services?focus=pujas">
                 <a className="inline-flex h-12 items-center justify-center rounded-xl bg-[#071A33] px-8 text-[15px] font-bold text-white transition-colors hover:bg-[#0D2445] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
                   {t("nav.bookPuja")}
                 </a>

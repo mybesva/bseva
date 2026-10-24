@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Layout from "@/components/Layout";
 import PujaDiscovery from "@/components/seva/PujaDiscovery";
 import SevaTypePane from "@/components/seva/SevaTypePane";
@@ -42,6 +42,21 @@ export default function Services() {
   const requestedType = useMemo(() => new URLSearchParams(searchStr).get("type"), [searchStr]);
   const activeType = resolveSevaServiceType(requestedType, enabledTypes);
 
+  // "Book a Puja" links open /services?focus=pujas: skip the hero and show the puja list.
+  // Runs after ScrollToTop's route-change resets (0/50/150 ms), which would otherwise undo it.
+  // PujaDiscovery soon rewrites the URL (dropping `focus`), so the timer is only cleared on unmount.
+  const focusPujas = new URLSearchParams(searchStr).get("focus") === "pujas";
+  const focusTimer = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!focusPujas) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.clearTimeout(focusTimer.current);
+    focusTimer.current = window.setTimeout(() => {
+      document.getElementById("puja-list")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    }, 250);
+  }, [focusPujas]);
+  useEffect(() => () => window.clearTimeout(focusTimer.current), []);
+
   function selectType(type: SevaServiceType) {
     setLocation(servicesPathForType(type));
   }
@@ -50,7 +65,7 @@ export default function Services() {
     <Layout>
       <ServicesHero />
 
-      <section className="relative bg-[#FFF8EE] pb-2 pt-6 dark:bg-background md:pt-8">
+      <section id="puja-list" className="relative scroll-mt-28 bg-[#FFF8EE] pb-2 pt-6 dark:bg-background md:pt-8">
         <div className="container relative z-10">
           <SevaTypeTabs value={activeType} types={enabledTypes} onChange={selectType}>
             {activeType === "puja" ? (
