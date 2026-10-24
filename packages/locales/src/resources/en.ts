@@ -914,7 +914,7 @@ const en: Record<string, string> = {
 
   "errors.invalidOtp": "Invalid OTP. Please try again.",
   "errors.otpExpired": "OTP expired. Request a new code.",
-  "errors.loginFailed": "Login failed. Check your details and try again.",
+  "errors.loginFailed": "Incorrect email/phone or password. Please check and try again.",
   "errors.accountBlocked": "Your account has been blocked. Please contact BSeva support.",
   "errors.bookingNotAvailable": "This booking slot is no longer available.",
   "errors.bookingConflict": "This time conflicts with another booking.",

@@ -13,17 +13,19 @@ import { toast } from "sonner";
 
 type TranslateFn = (key: string) => string;
 
-export function notifyBookingBlocked(status: ServiceAvailabilityStatus, t: TranslateFn) {
+/** `onAddAddress`: when given, the "add your address" prompt gets a button that opens My Address. */
+export function notifyBookingBlocked(status: ServiceAvailabilityStatus, t: TranslateFn, onAddAddress?: () => void) {
+  const addressAction = onAddAddress ? { action: { label: t("web.availability.myAddress"), onClick: onAddAddress } } : {};
   if (status === "unavailable") {
     toast.message(t(COMING_SOON_TITLE), { description: t(COMING_SOON_BODY) });
     return;
   }
   if (status === "no_address") {
-    toast.message(t(MY_ADDRESS_TITLE), { description: t(MY_ADDRESS_BODY) });
+    toast.message(t(MY_ADDRESS_TITLE), { description: t(MY_ADDRESS_BODY), ...addressAction });
     return;
   }
   if (status === "permission_denied" || status === "unsupported") {
-    toast.message(t(ENABLE_LOCATION_TITLE), { description: t(ENABLE_LOCATION_BODY) });
+    toast.message(t(ENABLE_LOCATION_TITLE), { description: t(ENABLE_LOCATION_BODY), ...addressAction });
     return;
   }
   toast.message(t(AVAILABILITY_ERROR_TITLE), { description: t(AVAILABILITY_ERROR_BODY) });

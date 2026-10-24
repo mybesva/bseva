@@ -152,7 +152,7 @@ def render_booking_receipt_html(db: Session, booking: dict[str, Any]) -> str:
     if booking.get("customer_email"):
         customer_lines.append(f"Email: {html.escape(str(booking['customer_email']))}")
 
-    mode = str(booking.get("mode") or "").title() or "—"
+    mode = str(booking.get("mode") or "").replace("_", " ").title() or "—"
     location = str(booking.get("location_label") or booking.get("address") or "—")
     if mode.lower() == "virtual":
         if booking.get("meeting_url"):
@@ -195,7 +195,10 @@ def render_booking_receipt_html(db: Session, booking: dict[str, Any]) -> str:
     selections = (preparation or {}).get("selections") or (preparation or {}).get("selected_addons") or []
     for sel in selections:
         if isinstance(sel, dict) and sel.get("selected"):
-            addons.append(str(sel.get("label") or sel.get("key") or "Add-on"))
+            label = str(sel.get("label") or sel.get("key") or "Add-on")
+            # Charge-based lines above already list these ("Samagri Package — Included").
+            if not any(a.split(" — ")[0].lower() == label.lower() for a in addons):
+                addons.append(label)
 
     body = f"""
   <p class="noprint"><button onclick="window.print()">Print / Save PDF</button></p>
@@ -231,6 +234,17 @@ def render_booking_receipt_html(db: Session, booking: dict[str, Any]) -> str:
 
 
 def render_booking_receipt_pdf(booking: dict[str, Any], db: Session) -> bytes:
+    """PDF from the official receipt HTML (same header/layout as the invoice and View / Print).
+    Falls back to the ReportLab layout only when no HTML-to-PDF engine is available."""
+    from app.html_pdf import html_document_to_pdf
+
+    try:
+        return html_document_to_pdf(render_booking_receipt_html(db, booking))
+    except Exception:
+        return _render_booking_receipt_pdf_reportlab(booking, db)
+
+
+def _render_booking_receipt_pdf_reportlab(booking: dict[str, Any], db: Session) -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
@@ -284,7 +298,7 @@ def render_booking_receipt_pdf(booking: dict[str, Any], db: Session) -> bytes:
                 if booking.get("duration_minutes") is not None
                 else ""
             ),
-            f"Mode: {str(booking.get('mode') or '—').title()}",
+            f"Mode: {str(booking.get('mode') or '—').replace('_', ' ').title()}",
             f"Location: {booking.get('location_label') or booking.get('address') or '—'}",
             f"Pujari: {booking['pujari_name']}" if booking.get("pujari_name") else "",
         ]
@@ -329,7 +343,7 @@ def render_booking_receipt_pdf(booking: dict[str, Any], db: Session) -> bytes:
 
     story.append(Paragraph("Payment Summary", section))
     for label, value in _payment_summary_rows(booking):
-        story.append(Paragraph(f"<b>{label}:</b> {value}", muted))
+        story.append(Paragraph(f"<b>{label}:</b> {value.replace('₹', 'Rs ')}", muted))
     story.append(Spacer(1, 6))
     story.append(
         Paragraph(

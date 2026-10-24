@@ -1,9 +1,9 @@
 import { contactSchema } from "@bseva/validation";
-import { PHONE_COUNTRY_CODES } from "@bseva/config";
 import { Linking, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton } from "@/components/ui";
+import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton } from "@/components/ui";
+import { PhoneWithCountryCode } from "@/components/PhoneWithCountryCode";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiErrorMessage, userMessage } from "@/utils/userMessage";
@@ -50,8 +50,13 @@ export function CustomerContactPanel() {
         {sent ? <AppText>{t("contact.sent")}</AppText> : null}
         <Field label={t("auth.name")} value={name} onChangeText={setName} />
         <Field label={t("auth.email")} value={mail} onChangeText={setMail} autoCapitalize="none" keyboardType="email-address" />
-        <ChoiceChips options={PHONE_COUNTRY_CODES.map((c: { code: string }) => ({ id: c.code, label: c.code }))} value={countryCode} onChange={(v) => setCountryCode(String(v))} />
-        <Field label={t("auth.phone")} value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
+        <PhoneWithCountryCode
+          label={t("auth.phone")}
+          countryCode={countryCode}
+          national={mobile}
+          onCountryCodeChange={setCountryCode}
+          onNationalChange={setMobile}
+        />
         <Field label={t("contact.subject")} value={subject} onChangeText={setSubject} />
         <Field label={t("contact.message")} value={message} onChangeText={setMessage} multiline />
         <PrimaryButton

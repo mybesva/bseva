@@ -20,6 +20,23 @@ def public_images_root() -> Path | None:
     return None
 
 
+# Same per-type placeholders the web uses (client/src/lib/serviceImage.ts) for Seva lines
+# whose services have no cover image of their own.
+_SEVA_TYPE_DEFAULT = {
+    "chadhava": "chadhava-offering.webp",
+    "pravachan": "pravachan-discourse.webp",
+}
+
+
+def seva_type_default_image(service_type: str | None) -> Path | None:
+    name = _SEVA_TYPE_DEFAULT.get(str(service_type or "").strip().lower())
+    root = public_images_root()
+    if not name or root is None:
+        return None
+    path = root / "seva" / name
+    return path if path.is_file() else None
+
+
 def catalog_image_file(slug: str | None, image_url: str | None, image_path: str | None) -> Path | None:
     names: list[str] = []
     for raw in (image_url, image_path):

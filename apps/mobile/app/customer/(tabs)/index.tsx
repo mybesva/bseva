@@ -78,7 +78,7 @@ export default function CustomerHome() {
   return (
     <Screen>
       {/* Fixed header: stays put while the home content scrolls underneath. */}
-      <HomeBrandBar />
+      <HomeBrandBar notificationsHref="/customer/notifications" />
       <SeasonalPopup />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}

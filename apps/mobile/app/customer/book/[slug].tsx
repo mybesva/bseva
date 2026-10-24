@@ -13,6 +13,7 @@ import {
 import type { CustomerAddress, LegalPolicy, Quote } from "@bseva/types";
 import { formatAddressLines } from "@bseva/validation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
@@ -605,17 +606,45 @@ export default function BookService() {
         {step === 1 ? (
           <>
             <AppText variant="h3">{t("mobile.packageMode")}</AppText>
+            <AppText variant="small" style={{ fontWeight: "700", marginTop: 4 }}>{t("booking.package")}</AppText>
             {availablePackages.includes("standard") ? (
-              <PrimaryButton title={`${t("booking.standard")} ${svc.standard_price_paise ? rupees(svc.standard_price_paise) : ""}`} variant={pkg === "standard" ? "primary" : "outline"} onPress={() => setPkg("standard")} />
+              <OptionCard
+                selected={pkg === "standard"}
+                onPress={() => setPkg("standard")}
+                title={t("booking.standard")}
+                subtitle={t("web.booking.pujarisIncluded", { count: Number(svc.standard_pujaris_required || svc.pujaris_required || 1) })}
+                right={svc.standard_price_paise ? rupees(svc.standard_price_paise) : undefined}
+              />
             ) : null}
             {availablePackages.includes("premium") ? (
-              <PrimaryButton title={`${t("booking.premium")} ${rupees(svc.premium_price_paise)}`} variant={pkg === "premium" ? "primary" : "outline"} onPress={() => setPkg("premium")} />
+              <OptionCard
+                selected={pkg === "premium"}
+                onPress={() => setPkg("premium")}
+                title={t("booking.premium")}
+                subtitle={t("web.booking.pujarisIncluded", { count: Number(svc.premium_pujaris_required || svc.pujaris_required || 2) })}
+                right={rupees(svc.premium_price_paise)}
+              />
             ) : null}
-            <PrimaryButton title={t("mobile.inPerson")} variant={mode === "in_person" ? "navy" : "outline"} onPress={() => setMode("in_person")} />
+            <AppText variant="small" style={{ fontWeight: "700", marginTop: 8 }}>{t("booking.mode")}</AppText>
+            <OptionCard
+              selected={mode === "in_person"}
+              onPress={() => setMode("in_person")}
+              icon="home-outline"
+              title={t("mobile.inPerson")}
+              subtitle={t("mobile.mode.inPersonDesc")}
+            />
             {virtualEnabled ? (
-              <PrimaryButton title={t("mobile.virtual")} variant={mode === "virtual" ? "navy" : "outline"} onPress={() => setMode("virtual")} />
+              <OptionCard
+                selected={mode === "virtual"}
+                onPress={() => setMode("virtual")}
+                icon="videocam-outline"
+                title={t("mobile.virtual")}
+                subtitle={t("mobile.mode.virtualDesc")}
+              />
             ) : null}
-            <PrimaryButton title={t("mobile.next")} onPress={() => { setServiceAvailable(null); setStep(2); }} />
+            <View style={{ marginTop: 8 }}>
+              <PrimaryButton title={t("mobile.next")} onPress={() => { setServiceAvailable(null); setStep(2); }} />
+            </View>
           </>
         ) : null}
         {step === 2 ? (
@@ -1058,5 +1087,67 @@ export default function BookService() {
         ) : null}
       </ScrollView>
     </Screen>
+  );
+}
+
+/** Radio-style option card for choices (package, mode). Selected: orange border and tint. */
+function OptionCard({
+  selected,
+  onPress,
+  title,
+  subtitle,
+  right,
+  icon,
+}: {
+  selected: boolean;
+  onPress: () => void;
+  title: string;
+  subtitle?: string;
+  right?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        borderRadius: 14,
+        borderWidth: selected ? 2 : 1,
+        borderColor: selected ? colors.primary : colors.border,
+        backgroundColor: selected ? "rgba(255,122,0,0.08)" : colors.card,
+        opacity: pressed ? 0.85 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          borderWidth: 2,
+          borderColor: selected ? colors.primary : colors.border,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {selected ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} /> : null}
+      </View>
+      {icon ? (
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name={icon} size={18} color={colors.primary} />
+        </View>
+      ) : null}
+      <View style={{ flex: 1, gap: 2 }}>
+        <AppText style={{ fontWeight: "700", fontSize: 16 }}>{title}</AppText>
+        {subtitle ? <AppText variant="small" style={{ opacity: 0.75 }}>{subtitle}</AppText> : null}
+      </View>
+      {right ? <AppText style={{ fontWeight: "800", fontSize: 16, color: colors.primary }}>{right}</AppText> : null}
+    </Pressable>
   );
 }

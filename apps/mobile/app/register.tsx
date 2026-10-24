@@ -1,11 +1,12 @@
-import { dashboardPath, LANGS, PHONE_COUNTRY_CODES, PRIVACY_VERSION, TERMS_VERSION, toE164 } from "@bseva/config";
+import { dashboardPath, LANGS, PRIVACY_VERSION, TERMS_VERSION, toE164 } from "@bseva/config";
 import { LANG_LABELS, type Lang } from "@bseva/locales";
 import { registerSchema } from "@bseva/validation";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from "react-native";
 import { InlineLink } from "@/components/InlineLink";
-import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { PhoneWithCountryCode } from "@/components/PhoneWithCountryCode";
 import { BrandLockup } from "@/components/BrandLockup";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/providers/AuthProvider";
@@ -35,24 +36,54 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpSentTo, setOtpSentTo] = useState("");
+  const [otpValidMins, setOtpValidMins] = useState(10);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
   const [consent, setConsent] = useState(false);
   const [language, setLanguage] = useState<Lang>(lang);
   const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  // Countdown for the emailed code (same behaviour as the web sign-up).
+  useEffect(() => {
+    if (!otpExpiresAt) return;
+    const tick = () => setOtpSecondsLeft(Math.max(0, Math.ceil((otpExpiresAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [otpExpiresAt]);
+  const otpExpired = otpSent && otpExpiresAt != null && otpSecondsLeft <= 0;
+  // Short cooldown before Resend so the code isn't re-requested by double taps.
+  const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= otpValidMins * 60 - 30);
+  const mmss = `${Math.floor(otpSecondsLeft / 60)}:${String(otpSecondsLeft % 60).padStart(2, "0")}`;
+
   async function sendOtp() {
     setError(null);
     const e164 = toE164(countryCode, phone);
-    if (!e164 && !email) {
-      setError(t("validation.identifier"));
+    const emailNorm = email.trim().toLowerCase();
+    if (!emailNorm) {
+      // The registration code is emailed, so an email address is needed first.
+      setError(t("contact.errEmail"));
       return;
     }
+    setOtpSending(true);
     try {
-      await apiClient.requestOtp({ phone: e164 || undefined, email, purpose: "register" });
+      const out = (await apiClient.requestOtp({ phone: e164 || undefined, email: emailNorm, purpose: "register" })) as {
+        expires_in_minutes?: number;
+        email?: string;
+      };
+      const mins = out?.expires_in_minutes ?? 10;
+      setOtpSentTo(out?.email || emailNorm);
+      setOtpValidMins(mins);
+      setOtpExpiresAt(Date.now() + mins * 60 * 1000);
       setOtpSent(true);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not send OTP");
+    } finally {
+      setOtpSending(false);
     }
   }
 
@@ -158,9 +189,13 @@ export default function RegisterScreen() {
                 <Field label={t("auth.name")} value={name} onChangeText={setName} />
               )}
               <Field label={t("auth.email")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-              <AppText variant="small">{t("auth.phone")}</AppText>
-              <ChoiceChips options={PHONE_COUNTRY_CODES.map((c: { code: string }) => ({ id: c.code, label: c.code }))} value={countryCode} onChange={(v) => setCountryCode(String(v))} />
-              <Field label={t("auth.phone")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+              <PhoneWithCountryCode
+                label={t("auth.phone")}
+                countryCode={countryCode}
+                national={phone}
+                onCountryCodeChange={setCountryCode}
+                onNationalChange={setPhone}
+              />
               <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
               <Field label={t("auth.confirmPassword")} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
               <AppText variant="small">{t("profile.preferredLanguage")}</AppText>
@@ -183,11 +218,34 @@ export default function RegisterScreen() {
                 ))}
               </View>
               <Field label={t("auth.referralOptional")} value={referralCode} onChangeText={setReferralCode} autoCapitalize="characters" />
-              <PrimaryButton title={otpSent ? t("auth.resendOtp") : t("auth.sendOtp")} variant="outline" onPress={sendOtp} />
+              <PrimaryButton
+                title={otpSent ? t("auth.resendOtp") : t("auth.sendOtp")}
+                variant="outline"
+                loading={otpSending}
+                disabled={!canResendOtp}
+                onPress={sendOtp}
+              />
               {otpSent ? (
-                <AppText variant="small" color={colors.mutedForeground}>
-                  {t("auth.otpDemo")}
-                </AppText>
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderRadius: 10,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    gap: 4,
+                    borderColor: otpExpired ? "#F2B8B5" : "#A7E3C4",
+                    backgroundColor: otpExpired ? "#FDECEC" : "#E9F8F0",
+                  }}
+                >
+                  <AppText variant="small" style={{ color: otpExpired ? "#B42318" : "#065F46" }}>
+                    {otpExpired ? t("auth.otpExpired") : t("auth.otpSentTo", { email: otpSentTo, mins: otpValidMins })}
+                  </AppText>
+                  {!otpExpired ? (
+                    <AppText variant="small" style={{ color: "#065F46", fontWeight: "700" }}>
+                      {t("auth.otpTimeLeft", { time: mmss })}
+                    </AppText>
+                  ) : null}
+                </View>
               ) : null}
               <Field label={t("auth.otp")} value={otp} onChangeText={setOtp} keyboardType="number-pad" />
               <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>

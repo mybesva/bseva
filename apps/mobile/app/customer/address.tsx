@@ -2,10 +2,10 @@ import type { CustomerAddress } from "@bseva/types";
 import { formatAddressLines } from "@bseva/validation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Redirect } from "expo-router";
 import { Alert, ScrollView, View } from "react-native";
 import { AddressForm, type AddressFormValue } from "@/components/AddressForm";
-import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
 import { showSuccessAlert } from "@/utils/actionFeedback";
@@ -52,7 +52,8 @@ function formatCardBody(addr: CustomerAddress) {
   return lines.join("\n");
 }
 
-export default function CustomerAddress() {
+/** Address editor, shown as the Address tab of the Profile screen. */
+export function CustomerAddressContent() {
   const { t } = useI18n();
   const { colors } = useAppTheme();
   const qc = useQueryClient();
@@ -145,17 +146,10 @@ export default function CustomerAddress() {
   }
 
   if (addressesQ.isLoading) {
-    return (
-      <Screen>
-        <ScreenHeader title={t("mobile.address")} back />
-        <LoadingBlock />
-      </Screen>
-    );
+    return <LoadingBlock />;
   }
 
   return (
-    <Screen>
-      <ScreenHeader title={t("mobile.address")} back />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <ErrorBanner message={error} />
         {mode === "list" ? (
@@ -181,9 +175,6 @@ export default function CustomerAddress() {
               ))
             )}
             <View style={{ height: 20 }} />
-            <AppText variant="small" style={{ marginBottom: 8 }}>
-              GSTIN (optional)
-            </AppText>
             <Field
               label="GSTIN (optional)"
               value={gstin}
@@ -241,6 +232,10 @@ export default function CustomerAddress() {
           </>
         )}
       </ScrollView>
-    </Screen>
   );
+}
+
+/** Old Address links (More menu, banners, after sign-up) open Profile → Address. */
+export default function CustomerAddress() {
+  return <Redirect href="/customer/profile?tab=address" />;
 }

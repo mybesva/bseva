@@ -1,15 +1,16 @@
 import { addressSchema } from "@bseva/validation";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Redirect } from "expo-router";
 import { ScrollView } from "react-native";
 import { AddressForm, type AddressFormValue } from "@/components/AddressForm";
-import { ScreenHeader } from "@/components/ScreenHeader";
-import { ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
+import { ErrorBanner, LoadingBlock } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { useI18n } from "@/providers/I18nProvider";
 
-export default function PujariAddress() {
+/** Address editor, shown as the Address tab of the Profile screen. */
+export function PujariAddressContent() {
   const { t } = useI18n();
   const q = useQuery({ queryKey: ["pujari-profile"], queryFn: () => apiClient.getPujariProfile() });
   const [form, setForm] = useState<AddressFormValue>({
@@ -39,16 +40,9 @@ export default function PujariAddress() {
     });
   }, [q.data]);
   if (q.isLoading) {
-    return (
-      <Screen>
-        <ScreenHeader title={t("mobile.address")} back />
-        <LoadingBlock />
-      </Screen>
-    );
+    return <LoadingBlock />;
   }
   return (
-    <Screen>
-      <ScreenHeader title={t("mobile.address")} back />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <ErrorBanner message={error} />
         <AddressForm
@@ -78,6 +72,10 @@ export default function PujariAddress() {
           }}
         />
       </ScrollView>
-    </Screen>
   );
+}
+
+/** Old Address links (More menu, banners, after sign-up) open Profile → Address. */
+export default function PujariAddress() {
+  return <Redirect href="/pujari/profile?tab=address" />;
 }

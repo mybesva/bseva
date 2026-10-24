@@ -39,7 +39,7 @@
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1A2B4A"
+        "backgroundColor": "#FFF8E7"
       },
       "splash": {
         "image": "./assets/splash-android.png",

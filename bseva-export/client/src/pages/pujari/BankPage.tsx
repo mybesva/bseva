@@ -12,6 +12,7 @@ import {
   validateSettlement,
 } from "@/lib/fieldValidation";
 import { toast } from "sonner";
+import { Lock, Pencil } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 
 type BankDraft = {
@@ -201,6 +202,12 @@ export default function PujariBankPage() {
             <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <form className="space-y-4" onSubmit={save}>
+              {!onboardingActive && !editing ? (
+                <p className="flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm font-medium text-foreground">
+                  <Lock size={16} className="mt-0.5 shrink-0 text-primary" aria-hidden />
+                  {t("web.bank.lockedHint")}
+                </p>
+              ) : null}
               {errors.settlement && (
                 <p className="text-sm text-destructive">{t(errors.settlement)}</p>
               )}
@@ -283,17 +290,20 @@ export default function PujariBankPage() {
               {!onboardingActive ? (
                 <div className="flex flex-wrap gap-2">
                   {!editing ? (
-                    <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+                    <Button type="button" className="gap-1.5 font-bold" onClick={() => setEditing(true)}>
+                      <Pencil size={15} aria-hidden />
                       {t("common.edit")}
                     </Button>
                   ) : (
-                    <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
-                      {t("common.cancel")}
-                    </Button>
+                    <>
+                      <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
+                        {t("common.cancel")}
+                      </Button>
+                      <Button type="submit" disabled={saving || !dirty}>
+                        {saving ? t("web.common.saving") : t("common.save")}
+                      </Button>
+                    </>
                   )}
-                  <Button type="submit" disabled={saving || !editing || !dirty}>
-                    {saving ? t("web.common.saving") : t("common.save")}
-                  </Button>
                 </div>
               ) : null}
               <PujariOnboardingWalkthrough

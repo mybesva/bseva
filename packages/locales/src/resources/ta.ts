@@ -780,7 +780,7 @@ const ta: Record<string, string> = {
   "validation.phoneIntl": "சரியான தொலைபேசி எண்ணை உள்ளிடவும் (8–12 இலக்கங்கள்)",
   "errors.invalidOtp": "தவறான OTP. மீண்டும் முயல்க.",
   "errors.otpExpired": "OTP காலாவதி. புதிய குறியீடு கோரவும்.",
-  "errors.loginFailed": "உள்நுழைவு தோல்வி. விவரங்களைச் சரிபார்க்கவும்.",
+  "errors.loginFailed": "மின்னஞ்சல்/தொலைபேசி அல்லது கடவுச்சொல் தவறானது. சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
   "errors.accountBlocked": "உங்கள் கணக்கு தடுக்கப்பட்டுள்ளது. BSeva ஆதரவைத் தொடர்பு கொள்ளவும்.",
   "errors.bookingNotAvailable": "இந்த முன்பதிவு நேரம் இனி கிடைக்காது.",
   "errors.bookingConflict": "இந்த நேரம் மற்றொரு முன்பதிவுடன் மோதுகிறது.",

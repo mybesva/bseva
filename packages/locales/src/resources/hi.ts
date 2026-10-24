@@ -797,7 +797,7 @@ const hi: Record<string, string> = {
   "validation.phoneIntl": "मान्य फोन नंबर दर्ज करें (8–12 अंक)",
   "errors.invalidOtp": "अमान्य OTP। फिर कोशिश करें।",
   "errors.otpExpired": "OTP समाप्त। नया कोड माँगें।",
-  "errors.loginFailed": "लॉगिन असफल। विवरण जाँचें।",
+  "errors.loginFailed": "ईमेल/फ़ोन या पासवर्ड गलत है। कृपया जाँचें और फिर से प्रयास करें।",
   "errors.accountBlocked": "आपका खाता अवरुद्ध है। BSeva सपोर्ट से संपर्क करें।",
   "errors.bookingNotAvailable": "यह बुकिंग स्लॉट अब उपलब्ध नहीं है।",
   "errors.bookingConflict": "यह समय दूसरी बुकिंग से टकराता है।",

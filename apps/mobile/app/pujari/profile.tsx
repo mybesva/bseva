@@ -24,6 +24,7 @@ import { apiClient } from "@/services/api";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
+import { PujariAddressContent } from "./address";
 
 export default function PujariProfile() {
   const { colors } = useAppTheme();
@@ -43,7 +44,7 @@ export default function PujariProfile() {
   const [activeTab, setActiveTab] = useState<ProfileTabId>("profile");
 
   useEffect(() => {
-    if (params.tab === "password" || params.tab === "terms") {
+    if (params.tab === "address" || params.tab === "password" || params.tab === "terms") {
       setActiveTab(params.tab);
     } else if (params.tab === "profile" || !params.tab) {
       setActiveTab("profile");
@@ -229,6 +230,7 @@ export default function PujariProfile() {
         />
       </ScrollView>
       ) : null}
+      {activeTab === "address" ? <PujariAddressContent /> : null}
       {activeTab === "password" ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}

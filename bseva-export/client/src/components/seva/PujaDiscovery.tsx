@@ -30,6 +30,7 @@ import { serviceImageUrl } from "@/lib/serviceImage";
 import { formatStartingFrom } from "@/lib/servicePricing";
 import { useStartBooking } from "@/hooks/useStartBooking";
 import { toast } from "sonner";
+import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
 import { useLocation, useSearch } from "wouter";
 import {
   buildServicesApiQuery,
@@ -86,7 +87,7 @@ export default function PujaDiscovery() {
   const { t, lang } = useI18n();
   const [, setLocation] = useLocation();
   const searchStr = useSearch();
-  const { startBooking, bookingBlocked, checking } = useStartBooking();
+  const { startBooking, bookingBlocked, blockedCta } = useStartBooking();
 
   const params = useMemo(() => new URLSearchParams(searchStr), [searchStr]);
   const category = params.get("category") || "all";
@@ -207,9 +208,8 @@ export default function PujaDiscovery() {
               icon={<Icon size={20} />}
               comingSoon={!s.bookable}
               bookingDisabled={Boolean(s.bookable && bookingBlocked)}
-              bookingDisabledLabel={
-                checking ? t("services.checkingAvailability") : t("services.bookingUnavailableArea")
-              }
+              bookingDisabledLabel={blockedCta.label}
+              onBookingDisabledAction={blockedCta.action}
               onReadMore={() => openDetails(s.slug)}
               onBookNow={() => startBooking(s.slug)}
             />
@@ -271,6 +271,8 @@ export default function PujaDiscovery() {
 
   return (
     <div className="space-y-6" data-testid="puja-discovery">
+      {/* Signed-in customers only (idle for everyone else): e.g. "Add your address" to book. */}
+      <ServiceAvailabilityBanner showChecking={false} />
       <div className="relative mx-auto w-full max-w-3xl">
         <Search
           className="pointer-events-none absolute left-4 top-1/2 h-[1.125rem] w-[1.125rem] -translate-y-1/2 text-muted-foreground"

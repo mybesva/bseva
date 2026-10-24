@@ -288,7 +288,7 @@ def get_service_image(slug: str, db: Session = Depends(get_db)):
     from fastapi.responses import FileResponse
 
     from app.catalog import resolve_service_by_slug
-    from app.catalog_images import catalog_image_file
+    from app.catalog_images import catalog_image_file, seva_type_default_image
     from app.storage import file_response
 
     row = resolve_service_by_slug(db, slug, active_only=False)
@@ -300,6 +300,9 @@ def get_service_image(slug: str, db: Session = Depends(get_db)):
     local = catalog_image_file(row.get("slug") or slug, row.get("image_url"), row.get("image_path"))
     if local and local.is_file():
         return FileResponse(local)
+    seva_default = seva_type_default_image(row.get("service_type"))
+    if seva_default:
+        return FileResponse(seva_default)
     raise HTTPException(404, "No uploaded image")
 
 

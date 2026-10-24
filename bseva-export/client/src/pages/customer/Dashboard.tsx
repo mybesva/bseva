@@ -33,7 +33,7 @@ function CustomerDashboardContent() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { canBook, checking, status } = useServiceAvailability();
-  const { startBooking, bookingBlocked } = useStartBooking();
+  const { startBooking, bookingBlocked, blockedCta, needsAddress, goToAddress } = useStartBooking();
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pujas, setPujas] = useState<any[]>([]);
@@ -307,11 +307,11 @@ function CustomerDashboardContent() {
                     <Button
                       size="sm"
                       className="font-bold"
-                      disabled={!canBook || checking}
-                      title={!canBook ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
+                      disabled={checking || (!canBook && !needsAddress)}
+                      title={!canBook && !needsAddress ? t(BOOKING_UNAVAILABLE_HINT) : undefined}
                       onClick={() => {
                         if (!canBook || checking) {
-                          notifyBookingBlocked(status, t);
+                          notifyBookingBlocked(status, t, goToAddress);
                           return;
                         }
                         setLocation(`/book/${rec.service_slug}`);
@@ -353,7 +353,8 @@ function CustomerDashboardContent() {
                   image={serviceImageUrl(puja)}
                   comingSoon={!puja.bookable}
                   bookingDisabled={Boolean(puja.bookable && bookingBlocked)}
-                  bookingDisabledLabel={checking ? t("services.checkingAvailability") : t("services.bookingUnavailableArea")}
+                  bookingDisabledLabel={blockedCta.label}
+                  onBookingDisabledAction={blockedCta.action}
                   onReadMore={() => setLocation(`/services/${puja.slug}`)}
                   onBookNow={() => startBooking(puja.slug)}
                 />

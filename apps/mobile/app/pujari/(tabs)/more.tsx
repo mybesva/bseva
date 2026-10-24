@@ -28,7 +28,6 @@ export default function PujariMore() {
     { href: "/pujari/services", label: t("mobile.serviceOffers"), icon: "layers-outline" as const },
     { href: "/pujari/experience", label: t("pujari.experience"), icon: "school-outline" as const },
     { href: "/pujari/seva-events", label: t("seva.pujari.eventsTitle"), icon: "calendar-outline" as const },
-    { href: "/pujari/address", label: t("mobile.address"), icon: "location-outline" as const },
     { href: "/pujari/bank", label: t("nav.bank"), icon: "card-outline" as const },
     { href: "/pujari/referral", label: t("nav.referral"), icon: "share-social-outline" as const },
     { href: "/pujari/support-contact", label: t("mobile.supportAndContact"), icon: "help-circle-outline" as const },

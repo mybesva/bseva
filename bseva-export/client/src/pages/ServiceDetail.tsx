@@ -17,6 +17,7 @@ import { notifyBookingBlocked } from "@/lib/notifyBookingBlocked";
 import { formatStartingFrom } from "@/lib/servicePricing";
 import ServiceAvailabilityBanner from "@/components/ServiceAvailabilityBanner";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { CUSTOMER_ADDRESS_PATH } from "@/hooks/useStartBooking";
 import { PujaTitle } from "@/components/PujaTitle";
 
 type Svc = {
@@ -108,13 +109,22 @@ export default function ServiceDetail() {
       return;
     }
     if (!canBook && !(config.virtual_puja_enabled && svc.virtual_available !== false)) {
-      notifyBookingBlocked(status, t);
+      notifyBookingBlocked(status, t, () => setLocation(CUSTOMER_ADDRESS_PATH));
       return;
     }
     setLocation(path);
   }
 
   const img = serviceImageUrl(svc);
+  // No saved address (and no virtual option): keep "Book this Puja" enabled; it prompts for the address.
+  const needsAddress = Boolean(
+    svc?.bookable &&
+      isAuthenticated &&
+      user?.role === "customer" &&
+      !checking &&
+      status === "no_address" &&
+      !(config.virtual_puja_enabled && svc.virtual_available !== false)
+  );
 
   return (
     <Layout>
@@ -290,6 +300,7 @@ export default function ServiceDetail() {
                   size="lg"
                   className="bg-primary text-white font-bold"
                   disabled={
+                    needsAddress ? false :
                     !svc.bookable ||
                     (isAuthenticated &&
                       user?.role === "customer" &&
@@ -303,7 +314,9 @@ export default function ServiceDetail() {
                   }
                   onClick={book}
                 >
-                  {!svc.bookable
+                  {needsAddress
+                    ? t("web.service.bookThisPuja")
+                    : !svc.bookable
                     ? t("common.comingSoon")
                     : checking
                       ? t("services.checkingAvailability")

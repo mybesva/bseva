@@ -33,6 +33,7 @@ import { clearCustomerProfilePhotoCache, fetchCustomerProfilePhotoSource } from 
 import { useAppTheme } from "@/theme/ThemeContext";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { apiErrorMessage, userMessage } from "@/utils/userMessage";
+import { CustomerAddressContent } from "./address";
 
 function namePartsFromUser(
   account: (AuthUser & { first_name?: string | null; middle_name?: string | null; last_name?: string | null }) | null,
@@ -59,7 +60,7 @@ export default function CustomerProfile() {
   const [activeTab, setActiveTab] = useState<ProfileTabId>("profile");
 
   useEffect(() => {
-    if (params.tab === "password" || params.tab === "terms") {
+    if (params.tab === "address" || params.tab === "password" || params.tab === "terms") {
       setActiveTab(params.tab);
     } else if (params.tab === "profile" || !params.tab) {
       setActiveTab("profile");
@@ -343,6 +344,7 @@ export default function CustomerProfile() {
           </Card>
         </ScrollView>
       ) : null}
+      {activeTab === "address" ? <CustomerAddressContent /> : null}
       {activeTab === "password" ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}

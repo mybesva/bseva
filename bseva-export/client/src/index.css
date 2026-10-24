@@ -261,6 +261,16 @@ html body .container:not([class*="max-w-"]) {
     @apply bg-background text-foreground font-sans text-base font-medium antialiased;
     line-height: 1.55;
   }
+  /* Dialogs, dropdowns and popovers (Radix) lock page scroll with body { overflow: hidden }.
+     With overflow-x: clip above, that turns <body> into its own scroll container, so the sticky
+     header and sidebar jump off-screen while anything is open. Lock the viewport (html) instead. */
+  html:has(> body[data-scroll-locked]) {
+    overflow: hidden !important;
+  }
+  html body[data-scroll-locked] {
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+  }
   p,
   li,
   dd,

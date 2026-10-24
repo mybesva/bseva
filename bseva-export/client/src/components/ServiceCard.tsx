@@ -16,6 +16,8 @@ interface ServiceCardProps {
   /** Area / location gate — service is listed but booking CTAs disabled */
   bookingDisabled?: boolean;
   bookingDisabledLabel?: string;
+  /** When set, the blocked state is a button that fixes the problem (e.g. "Add your address"). */
+  onBookingDisabledAction?: () => void;
   /** Occasion-oriented line, shown above the description when present. */
   occasion?: string;
   onReadMore?: () => void;
@@ -146,6 +148,7 @@ export default function ServiceCard({
   comingSoon,
   bookingDisabled,
   bookingDisabledLabel,
+  onBookingDisabledAction,
   occasion,
   onReadMore,
   onBookNow,
@@ -232,6 +235,19 @@ export default function ServiceCard({
           <span className="w-full inline-flex items-center justify-center h-9 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
             {t("services.comingSoonLabel")}
           </span>
+        ) : bookingDisabled && onBookingDisabledAction ? (
+          <Button
+            type="button"
+            variant="outline"
+            size={explore ? "default" : "sm"}
+            className={`w-full border-primary font-bold text-primary hover:bg-primary/10 ${explore ? "h-11 text-sm" : "h-9"}`}
+            onClick={(e) => {
+              stopCardClick(e);
+              onBookingDisabledAction();
+            }}
+          >
+            {bookingDisabledLabel}
+          </Button>
         ) : bookingDisabled ? (
           <span className="w-full inline-flex items-center justify-center h-9 text-xs font-semibold text-muted-foreground text-center leading-tight">
             {bookingDisabledLabel || t("services.bookingUnavailableArea")}

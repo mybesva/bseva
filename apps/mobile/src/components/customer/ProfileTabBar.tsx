@@ -4,14 +4,14 @@ import { AppText } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 
-export type ProfileTabId = "profile" | "password" | "terms";
+export type ProfileTabId = "profile" | "address" | "password" | "terms";
 
 type ProfileTabBarProps = {
   value: ProfileTabId;
   onChange: (tab: ProfileTabId) => void;
 };
 
-const MIN_SEGMENTED_WIDTH = 320;
+const MIN_SEGMENTED_WIDTH = 360;
 
 export function ProfileTabBar({ value, onChange }: ProfileTabBarProps) {
   const { t } = useI18n();
@@ -28,6 +28,7 @@ export function ProfileTabBar({ value, onChange }: ProfileTabBarProps) {
     lines: 1 | 2;
   }[] = [
     { id: "profile", label: t("profile.tab.profile"), accessibilityLabel: t("profile.tab.profile"), lines: 1 },
+    { id: "address", label: t("mobile.address"), accessibilityLabel: t("mobile.address"), lines: 1 },
     {
       id: "password",
       label: t("profile.tab.changePasswordLines"),

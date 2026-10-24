@@ -52,10 +52,10 @@ def _pdf_header(story: list[Any], *, company: dict, title: str, meta: list[tuple
     from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
     styles = getSampleStyleSheet()
-    brand = ParagraphStyle("brand", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=14, textColor=colors.Color(*NAVY))
+    brand = ParagraphStyle("brand", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=14, leading=17, textColor=colors.Color(*NAVY))
     motto = ParagraphStyle("motto", parent=styles["Normal"], fontSize=7, textColor=colors.Color(*ORANGE), leading=9)
     company_style = ParagraphStyle("co", parent=styles["Normal"], fontSize=8, textColor=colors.Color(*GRAY), leading=10)
-    doc_title = ParagraphStyle("doctitle", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=12, alignment=2, textColor=colors.Color(*NAVY))
+    doc_title = ParagraphStyle("doctitle", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=12, leading=16, alignment=2, spaceAfter=3, textColor=colors.Color(*NAVY))
     meta_style = ParagraphStyle("meta", parent=styles["Normal"], fontSize=8, alignment=2, textColor=colors.Color(*GRAY), leading=10)
 
     logo_path = resolve_header_logo_file(company.get("logo_path"))

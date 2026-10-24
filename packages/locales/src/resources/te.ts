@@ -797,7 +797,7 @@ const te: Record<string, string> = {
   "validation.phoneIntl": "చెల్లుబాటు అయ్యే ఫోన్ నంబర్ నమోదు చేయండి (8–12 అంకెలు)",
   "errors.invalidOtp": "చెల్లని OTP. మళ్లీ ప్రయత్నించండి.",
   "errors.otpExpired": "OTP గడువు ముగిసింది. కొత్త కోడ్ అభ్యర్థించండి.",
-  "errors.loginFailed": "లాగిన్ విఫలమైంది. వివరాలు చూసి మళ్లీ ప్రయత్నించండి.",
+  "errors.loginFailed": "ఈమెయిల్/ఫోన్ లేదా పాస్‌వర్డ్ తప్పు. దయచేసి చూసి మళ్లీ ప్రయత్నించండి.",
   "errors.accountBlocked": "మీ ఖాతా బ్లాక్ చేయబడింది. BSeva సపోర్ట్‌ను సంప్రదించండి.",
   "errors.bookingNotAvailable": "ఈ బుకింగ్ స్లాట్ ఇక అందుబాటులో లేదు.",
   "errors.bookingConflict": "ఈ సమయం మరో బుకింగ్‌తో ఢీకొంటోంది.",

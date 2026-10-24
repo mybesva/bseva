@@ -780,7 +780,7 @@ const kn: Record<string, string> = {
   "validation.phoneIntl": "ಮಾನ್ಯ ಫೋನ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ (8–12 ಅಂಕಿಗಳು)",
   "errors.invalidOtp": "ಅಮಾನ್ಯ OTP. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   "errors.otpExpired": "OTP ಅವಧಿ ಮುಗಿದಿದೆ. ಹೊಸ ಕೋಡ್ ವಿನಂತಿಸಿ.",
-  "errors.loginFailed": "ಲಾಗಿನ್ ವಿಫಲ. ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
+  "errors.loginFailed": "ಇಮೇಲ್/ಫೋನ್ ಅಥವಾ ಪಾಸ್‌ವರ್ಡ್ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   "errors.accountBlocked": "ನಿಮ್ಮ ಖಾತೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ. BSeva ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ.",
   "errors.bookingNotAvailable": "ಈ ಬುಕಿಂಗ್ ಸ್ಲಾಟ್ ಇನ್ನು ಲಭ್ಯವಿಲ್ಲ.",
   "errors.bookingConflict": "ಈ ಸಮಯ ಇನ್ನೊಂದು ಬುಕಿಂಗ್‌ನೊಂದಿಗೆ ಘರ್ಷಿಸುತ್ತದೆ.",
