@@ -140,3 +140,12 @@ def test_seva_proof_falls_back_to_released_event_proof_url():
     )
     resp = seva_registration_proof("r1", user={"id": CUST, "role": "customer"}, db=db)
     assert resp.status_code == 307 and resp.headers["location"] == "https://cdn.example/p.jpg"
+
+
+def test_pujari_cannot_open_customer_invoice():
+    from app.routers.ops import _invoice_visible
+
+    row = {"user_id": CUST, "booking_id": BK}
+    assert _invoice_visible(None, row, {"id": CUST, "role": "customer"})
+    assert not _invoice_visible(None, row, {"id": PUJ, "role": "pujari"})
+    assert not _invoice_visible(None, row, {"id": PUJ, "role": "head_pujari"})

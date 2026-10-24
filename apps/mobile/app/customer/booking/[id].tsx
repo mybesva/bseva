@@ -537,11 +537,12 @@ export default function BookingDetail() {
           />
         ) : null}
 
-        {b.invoice_id ? (
+        {/* Invoices belong to the customer; Pujaris never see the customer's invoice. */}
+        {!pujari && b.invoice_id ? (
           <PrimaryButton
             title={t("mobile.viewInvoice")}
             variant="outline"
-            onPress={() => router.push(pujari ? `/pujari/invoice/${b.invoice_id}` : `/customer/invoice/${b.invoice_id}`)}
+            onPress={() => router.push(`/customer/invoice/${b.invoice_id}`)}
           />
         ) : null}
 

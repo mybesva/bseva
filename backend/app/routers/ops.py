@@ -449,23 +449,12 @@ def my_invoices(user=Depends(current_user), db: Session = Depends(get_db)):
 
 
 def _invoice_visible(db: Session, row, user) -> bool:
-    """Customer invoices stay with the customer; the assigned pujari may open them too."""
+    """An invoice is visible only to the user it was issued to (and admins with view_invoices).
+    Customer invoices contain the customer's billing details and payment breakdown, so the
+    assigned Pujari must not see them."""
     if user["role"] in ("admin", "super_admin"):
         return has_permission(db, user, "view_invoices")
-    if str(row["user_id"]) == str(user["id"]):
-        return True
-    if user["role"] not in ("pujari", "head_pujari"):
-        return False
-    booking_id = row.get("booking_id")
-    if not booking_id:
-        return False
-    from app.booking_access import same_id
-
-    owner = db.execute(
-        text("SELECT pujari_id::text FROM bookings WHERE id = CAST(:id AS uuid)"),
-        {"id": str(booking_id)},
-    ).scalar()
-    return same_id(owner, user["id"])
+    return str(row["user_id"]) == str(user["id"])
 
 
 @router.get("/invoices/{invoice_id}")

@@ -72,6 +72,9 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
 
         enrich_booking_pujari_team(data)
         try:
+            # The customer invoice is only linked for the customer and admins, never the Pujari.
+            if role in ("pujari", "head_pujari"):
+                raise LookupError
             inv = db.execute(
                 text(
                     """
@@ -87,6 +90,9 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                 data["invoice_number"] = inv["invoice_number"]
         except Exception:
             pass
+        if role in ("pujari", "head_pujari"):
+            data.pop("invoice_id", None)
+            data.pop("invoice_number", None)
         for secret in ("start_otp_code", "complete_otp_code"):
             data.pop(secret, None)
         return data
