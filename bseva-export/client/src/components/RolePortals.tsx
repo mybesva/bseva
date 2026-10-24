@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
   User,
-  MapPin,
   Wallet,
   Calendar,
   FileText,
@@ -66,7 +65,6 @@ const pujariNav: NavItem[] = [
   { labelKey: "nav.onboarding", href: "/pujari/onboarding", icon: Sparkles },
   { labelKey: "nav.profile", href: "/pujari/profile", icon: User },
   { labelKey: "nav.documents", href: "/pujari/documents", icon: FolderOpen },
-  { labelKey: "nav.address", href: "/pujari/address", icon: MapPin },
   { labelKey: "nav.bank", href: "/pujari/bank", icon: Landmark },
   { labelKey: "nav.referral", href: "/pujari/referral", icon: Gift },
   { labelKey: "nav.headRatings", href: "/pujari/head-ratings", icon: Star },

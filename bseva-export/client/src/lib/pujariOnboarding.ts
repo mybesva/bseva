@@ -25,7 +25,7 @@ export function routeForOnboardingStep(step: number): string {
     case 1:
       return "/pujari/profile";
     case 2:
-      return "/pujari/address";
+      return "/pujari/profile?tab=address";
     case 3:
       return "/pujari/profile#professional";
     case 4:

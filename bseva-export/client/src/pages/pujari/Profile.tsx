@@ -31,6 +31,7 @@ import {
 } from "@/lib/fieldValidation";
 import { cn } from "@/lib/utils";
 import { splitDisplayName, type PersonNameParts } from "@/lib/personName";
+import { PujariAddressPanel } from "@/pages/pujari/AddressPage";
 
 function RequiredMark() {
   return <span className="text-red-600 font-semibold"> *</span>;
@@ -742,6 +743,7 @@ export default function PujariProfilePage() {
 
   const profileTabs = [
     { id: "profile", label: t("profile.tab.profile") },
+    { id: "address", label: t("nav.address") },
     {
       id: "password",
       label: t("profile.tab.changePassword"),
@@ -764,6 +766,7 @@ export default function PujariProfilePage() {
           allowMultiline
         />
 
+        {activeTab === "address" ? <PujariAddressPanel /> : null}
         {activeTab === "password" ? <ChangePasswordForm embedded /> : null}
         {activeTab === "terms" ? <PortalTermsContent /> : null}
 

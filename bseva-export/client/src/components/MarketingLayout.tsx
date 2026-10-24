@@ -151,11 +151,11 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   const socialLinks = useMemo(
     () => [
       { icon: WhatsAppIcon, href: whatsappHref(config.bseva_whatsapp_number), label: "WhatsApp", color: SOCIAL_BRAND.whatsapp, gradient: undefined as string | undefined },
-      { icon: InstagramIcon, href: "https://instagram.com/bseva", label: "Instagram", color: null as string | null, gradient: INSTAGRAM_GRADIENT },
-      { icon: Youtube, href: "https://youtube.com/@bseva", label: "YouTube", color: SOCIAL_BRAND.youtube, gradient: undefined },
-      { icon: Facebook, href: "https://facebook.com/bseva", label: "Facebook", color: SOCIAL_BRAND.facebook, gradient: undefined },
-      { icon: Twitter, href: "https://twitter.com/bseva", label: "X", color: SOCIAL_BRAND.twitter, gradient: undefined },
-      { icon: Linkedin, href: "https://linkedin.com/company/bseva", label: "LinkedIn", color: SOCIAL_BRAND.linkedin, gradient: undefined },
+      { icon: InstagramIcon, href: "https://www.instagram.com/mybseva/", label: "Instagram", color: null as string | null, gradient: INSTAGRAM_GRADIENT },
+      { icon: Youtube, href: "https://www.youtube.com/@mybseva", label: "YouTube", color: SOCIAL_BRAND.youtube, gradient: undefined },
+      { icon: Facebook, href: "https://www.facebook.com/profile.php?id=61593588052553", label: "Facebook", color: SOCIAL_BRAND.facebook, gradient: undefined },
+      { icon: Twitter, href: "https://x.com/mybseva", label: "X", color: SOCIAL_BRAND.twitter, gradient: undefined },
+      { icon: Linkedin, href: "https://www.linkedin.com/in/b-seva-162822446/", label: "LinkedIn", color: SOCIAL_BRAND.linkedin, gradient: undefined },
     ],
     [config.bseva_whatsapp_number],
   );

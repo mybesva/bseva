@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PujariPortal } from "@/components/RolePortals";
+import { Redirect } from "wouter";
 import AddressFields, { type AddressValue } from "@/components/AddressFields";
 import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/components/PujariOnboardingWalkthrough";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,8 @@ const empty: AddressValue = {
   longitude: null,
 };
 
-export default function PujariAddressPage() {
+/** Pujari address form, shown as the Address tab of the Profile page. */
+export function PujariAddressPanel() {
   const { t } = useI18n();
   const { active: onboardingActive } = usePujariOnboardingGate("address");
   const [value, setValue] = useState<AddressValue>(empty);
@@ -89,8 +90,7 @@ export default function PujariAddressPage() {
   }
 
   return (
-    <PujariPortal>
-      <Card className="max-w-2xl">
+    <Card>
         <CardHeader>
           <CardTitle className="">{t("address.title")}</CardTitle>
         </CardHeader>
@@ -115,7 +115,11 @@ export default function PujariAddressPage() {
             </form>
           )}
         </CardContent>
-      </Card>
-    </PujariPortal>
+    </Card>
   );
+}
+
+/** Old /pujari/address links (notifications, onboarding, bookmarks) open the Profile → Address tab. */
+export default function PujariAddressPage() {
+  return <Redirect to="/pujari/profile?tab=address" replace />;
 }
