@@ -1260,7 +1260,6 @@ export default function ServicesAdmin() {
                       type="number"
                       min={0}
                       step={1}
-                      disabled={!form.samagri_available}
                       value={Number(form.samagri_price_paise) / 100}
                       onChange={(e) =>
                         setForm({
@@ -1279,6 +1278,11 @@ export default function ServicesAdmin() {
                 </div>
                 {form.samagri_available && Number(form.samagri_price_paise) <= 0 && (
                   <p className="text-xs text-amber-700 pl-6">Set a price above ₹0 so it appears on booking.</p>
+                )}
+                {!form.samagri_available && (
+                  <p className="text-xs text-muted-foreground pl-6">
+                    Off for this puja. Choose “Yes” above (and a price above ₹0) to offer Samagri to customers.
+                  </p>
                 )}
               </div>
 
@@ -1316,7 +1320,6 @@ export default function ServicesAdmin() {
                       type="number"
                       min={0}
                       step={1}
-                      disabled={!form.alankaram_available}
                       value={Number(form.alankaram_price_paise) / 100}
                       onChange={(e) =>
                         setForm({
@@ -1335,6 +1338,11 @@ export default function ServicesAdmin() {
                 </div>
                 {form.alankaram_available && Number(form.alankaram_price_paise) <= 0 && (
                   <p className="text-xs text-amber-700 pl-6">Set a price above ₹0 so it appears on booking.</p>
+                )}
+                {!form.alankaram_available && (
+                  <p className="text-xs text-muted-foreground pl-6">
+                    Off for this puja. Choose “Yes” above (and a price above ₹0) to offer Alankaram to customers.
+                  </p>
                 )}
               </div>
             </div>

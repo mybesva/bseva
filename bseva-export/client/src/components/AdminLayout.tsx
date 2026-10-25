@@ -143,7 +143,8 @@ function AdminShell({ children }: AdminLayoutProps) {
   const showLegal = permissionsReady && can("/legal");
   const showSupport = permissionsReady && can("/support");
   const showHeadRatings = permissionsReady && can("/head-ratings");
-  const pageAllowed = canAccess(accessForPath(location, opsBase), isSuper, perms);
+  // Public site pages (About, Contact, …) render inside this shell for admins; they need no permission.
+  const pageAllowed = !location.startsWith(opsBase) || canAccess(accessForPath(location, opsBase), isSuper, perms);
 
   const handleLogout = async () => {
     clearAdminPermissionsCache();
