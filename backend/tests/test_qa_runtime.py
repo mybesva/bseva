@@ -3,6 +3,7 @@ reminder SQL time zone, and demo-seed refusal in production."""
 from __future__ import annotations
 
 import inspect
+import os
 from pathlib import Path
 from contextlib import contextmanager
 
@@ -255,3 +256,23 @@ def test_otp_test_code_only_for_test_domains_on_qa(monkeypatch):
     prod = Settings(environment="production", **base)
     assert prod.otp_test_code_for("a@bseva.test") is None
     assert any("QA-only" in p for p in insecure_settings_problems(prod, env={}))
+
+
+def test_reference_import_on_production_needs_catalog_flag_and_skips_capabilities(monkeypatch, tmp_path):
+    import importlib.util, json as _json
+    spec = importlib.util.spec_from_file_location("reference_data", Path(__file__).resolve().parents[1] / "scripts/reference_data.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    f = tmp_path / "ref.json"; f.write_text(_json.dumps({}))
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with pytest.raises(SystemExit):
+        mod.import_(str(f), apply=False)
+    assert "capability:" in inspect.getsource(mod.import_) and "production_catalog" in inspect.getsource(mod.import_)
+
+
+def test_bootstrap_admin_refuses_qa_domains_and_weak_passwords(monkeypatch):
+    import subprocess, sys as _sys
+    script = Path(__file__).resolve().parents[1] / "scripts/bootstrap_admin.py"
+    for email, pw in (("x@bseva.test", "s" * 20), ("x@qa.b-seva.com", "s" * 20), ("owner@example.com", "short")):
+        r = subprocess.run([_sys.executable, str(script), "--email", email, "--name", "Owner"], env={**os.environ, "BOOTSTRAP_PASSWORD": pw},
+                           capture_output=True, text=True)
+        assert r.returncode != 0 and "Refusing" in (r.stderr + r.stdout)

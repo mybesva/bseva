@@ -6,7 +6,8 @@ personal or internal columns in SCRUB replaced. Rows are matched on natural keys
 so the target keeps its own IDs and every existing booking or invoice keeps pointing at the same service.
 
   export  --source-env FILE --out ref.json   read-only session on the source; writes sanitized JSON
-  import  --in ref.json [--apply]           upserts into DATABASE_URL (dry run unless --apply); refuses production
+  import  --in ref.json [--apply]           upserts into DATABASE_URL (dry run unless --apply)
+          [--production-catalog]                required on production: imports the catalog/configuration tables only
 """
 from __future__ import annotations
 
@@ -104,12 +105,16 @@ def _pk(cur, table: str) -> list[str]:
     return [r[0] for r in cur.fetchall()]
 
 
-def import_(path: str, apply: bool) -> None:
+def import_(path: str, apply: bool, production_catalog: bool = False) -> None:
     import psycopg
 
-    if (os.environ.get("ENVIRONMENT") or "").strip().lower() == "production":
-        raise SystemExit("Refusing: reference import is for QA/development targets only")
+    production = (os.environ.get("ENVIRONMENT") or "").strip().lower() == "production"
+    if production and not production_catalog:
+        raise SystemExit("Refusing: on production pass --production-catalog (catalog and configuration tables only)")
     data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if production:
+        # Never the demo pujaris' capabilities (or anything user-linked) on production.
+        data = {k: v for k, v in data.items() if not k.startswith("capability:")}
     idmap: dict[str, dict[str, str]] = {}
     report = {}
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.cursor() as cur:
@@ -192,11 +197,12 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     e = sub.add_parser("export"); e.add_argument("--source-env", required=True); e.add_argument("--out", required=True)
     i = sub.add_parser("import"); i.add_argument("--in", dest="inp", required=True); i.add_argument("--apply", action="store_true")
+    i.add_argument("--production-catalog", action="store_true")
     a = ap.parse_args()
     if a.cmd == "export":
         export(a.source_env, a.out)
     else:
-        import_(a.inp, a.apply)
+        import_(a.inp, a.apply, a.production_catalog)
     return 0
 
 
