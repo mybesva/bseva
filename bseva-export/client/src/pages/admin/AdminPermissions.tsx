@@ -164,7 +164,7 @@ function PermissionsWorkspace() {
         {/* Admin directory */}
         <aside className={cn(CARD, "flex h-fit flex-col p-4 xl:sticky xl:top-20")}>
           <div className="relative">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8A7F70]" />
+            <Search size="1rem" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8A7F70]" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -233,7 +233,7 @@ function PermissionsWorkspace() {
           {!selected && (
             <div className={cn(CARD, "flex flex-col items-center px-6 py-14 text-center")}>
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF1E4] text-[#E86A00] dark:bg-[#FF7A00]/15">
-                <UserCog size={26} />
+                <UserCog size="1.625rem" />
               </span>
               <h2 className="mt-4 text-lg font-bold text-[#0E1830] dark:text-white">Select an admin</h2>
               <p className="mt-1 max-w-sm text-sm text-[#5B6478] dark:text-white/60">
@@ -262,7 +262,7 @@ function PermissionsWorkspace() {
                       disabled={saving}
                       className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/10 px-3 text-xs font-semibold hover:bg-white/20 disabled:opacity-50"
                     >
-                      <CheckCheck size={14} /> Select all
+                      <CheckCheck size="0.875rem" /> Select all
                     </button>
                     <button
                       type="button"
@@ -270,12 +270,12 @@ function PermissionsWorkspace() {
                       disabled={saving}
                       className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/10 px-3 text-xs font-semibold hover:bg-white/20 disabled:opacity-50"
                     >
-                      <Eraser size={14} /> Clear all
+                      <Eraser size="0.875rem" /> Clear all
                     </button>
                   </div>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F0C35A]/20 px-3 py-1 text-xs font-bold text-[#F0C35A]">
-                    <Crown size={13} /> Super Admin
+                    <Crown size="0.8125rem" /> Super Admin
                   </span>
                 )}
               </div>
@@ -284,7 +284,7 @@ function PermissionsWorkspace() {
 
           {selected?.role === "super_admin" && (
             <div className={cn(CARD, "flex items-start gap-3 p-5")}>
-              <ShieldCheck className="mt-0.5 shrink-0 text-[#E86A00]" size={20} />
+              <ShieldCheck className="mt-0.5 shrink-0 text-[#E86A00]" size="1.25rem" />
               <p className="text-sm text-[#1A2B4A] dark:text-white/80">
                 Super Admins have unrestricted access to every module, including finance and reporting. Their access isn&apos;t configured
                 here.
@@ -340,7 +340,7 @@ function PermissionsWorkspace() {
 
               <div className={cn(CARD, "border-dashed p-5")}>
                 <p className="flex items-center gap-2 text-sm font-bold text-[#0E1830] dark:text-white">
-                  <Lock size={15} className="text-[#E86A00]" /> Super Admin only (not assignable)
+                  <Lock size="0.9375rem" className="text-[#E86A00]" /> Super Admin only (not assignable)
                 </p>
                 <ul className="mt-3 flex flex-wrap gap-2">
                   {SUPER_ONLY_CAPABILITIES.map((c) => (
@@ -368,7 +368,7 @@ function PermissionsWorkspace() {
               disabled={!dirty || saving}
               className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#EFE2CF] px-4 text-sm font-semibold text-[#1A2B4A] hover:bg-[#FFF8EE] disabled:opacity-40 dark:border-white/15 dark:text-white"
             >
-              <RotateCcw size={15} /> Reset
+              <RotateCcw size="0.9375rem" /> Reset
             </button>
             <button
               type="button"
@@ -376,7 +376,7 @@ function PermissionsWorkspace() {
               disabled={!dirty || saving}
               className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF8A1F] to-[#E86A00] px-5 text-sm font-bold text-white shadow-[0_10px_20px_-12px_rgba(232,106,0,0.9)] disabled:opacity-40"
             >
-              {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              {saving ? <Loader2 size="0.9375rem" className="animate-spin" /> : <Save size="0.9375rem" />}
               {saving ? "Saving…" : "Save Permissions"}
             </button>
           </div>

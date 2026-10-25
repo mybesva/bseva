@@ -31,7 +31,7 @@ function SideCard({ icon, title, children }: { icon: ReactNode; title: string; c
         </span>
         <DevotionalTitle>{title}</DevotionalTitle>
       </div>
-      <p className="mt-4 text-[15px] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{children}</p>
+      <p className="mt-4 text-[0.9375rem] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{children}</p>
     </article>
   );
 }
@@ -55,7 +55,7 @@ export function AboutEssenceCards() {
   return (
     <section className="relative z-10 bg-[#FDF6EC] dark:bg-[#0B1424]" aria-label={t("ab.vision")}>
       <div className="container grid grid-cols-1 gap-5 py-8 md:grid-cols-2 lg:-mt-10 lg:grid-cols-[1fr_1.15fr_1fr] lg:items-stretch lg:gap-6 lg:pb-6 lg:pt-0">
-        <SideCard icon={<Eye size={22} strokeWidth={1.75} aria-hidden />} title={t("ab.vision")}>
+        <SideCard icon={<Eye size="1.375rem" strokeWidth={1.75} aria-hidden />} title={t("ab.vision")}>
           {t("ab.visionBody")}
         </SideCard>
 
@@ -63,7 +63,7 @@ export function AboutEssenceCards() {
           <MandalaOutline className="pointer-events-none absolute -bottom-20 -right-16 h-60 w-60 text-[#E8B15A] opacity-[0.16]" />
           <div className="relative flex items-center gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F0C35A] to-[#C98A1A] text-[#071A33]">
-              <Gem size={22} strokeWidth={1.9} aria-hidden />
+              <Gem size="1.375rem" strokeWidth={1.9} aria-hidden />
             </span>
             <DevotionalTitle light>{t("ab.essence")}</DevotionalTitle>
           </div>
@@ -74,7 +74,7 @@ export function AboutEssenceCards() {
           </div>
         </article>
 
-        <SideCard icon={<Target size={22} strokeWidth={1.75} aria-hidden />} title={t("ab.mission")}>
+        <SideCard icon={<Target size="1.375rem" strokeWidth={1.75} aria-hidden />} title={t("ab.mission")}>
           {t("ab.missionBody")}
         </SideCard>
       </div>

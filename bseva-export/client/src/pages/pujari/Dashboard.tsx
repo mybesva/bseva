@@ -283,24 +283,24 @@ function PujariDashboardContent() {
               <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
                 <PujaTitle name={row.pujaType.name} className="min-w-0" nameClassName="truncate" />
                 {row.booking.samagriRequested ? (
-                  <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[10px] uppercase tracking-wide">
+                  <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[0.625rem] uppercase tracking-wide">
                     Samagri Selected
                   </Badge>
                 ) : null}
               </div>
               <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
                 <span className="flex items-center gap-1">
-                  <CalendarIcon size={14} />
+                  <CalendarIcon size="0.875rem" />
                   {row.booking.bookingDate
                     ? formatDisplayDate(row.booking.bookingDate)
                     : "—"}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Clock size={14} />
+                  <Clock size="0.875rem" />
                   {row.booking.indiaLocal || row.booking.bookingTime || "—"}
                 </span>
                 <span className="flex items-center gap-1">
-                  <MapPin size={14} />
+                  <MapPin size="0.875rem" />
                   {row.booking.city || "—"}
                 </span>
               </div>
@@ -313,7 +313,7 @@ function PujariDashboardContent() {
               {row.booking.mode === "virtual" && row.booking.meetingUrl && (
                 <div className="mt-3 rounded-md border-2 border-blue-300 bg-blue-50 px-3 py-2">
                   <p className="text-xs font-semibold text-foreground flex items-center gap-1 mb-2">
-                    <Video size={14} className="text-blue-600" />
+                    <Video size="0.875rem" className="text-blue-600" />
                     {t("web.dashboard.meetReadyShort")}
                   </p>
                   <Button
@@ -379,11 +379,11 @@ function PujariDashboardContent() {
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#071A33_0%,#071A33_42%,rgba(7,26,51,0.6)_62%,rgba(7,26,51,0.05)_100%)]"
         />
         <div className="relative max-w-[40rem] p-6 sm:p-8 lg:p-9">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#FF7A00]">{t("auth.pujari")}</p>
+          <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.18em] text-[#FF7A00]">{t("auth.pujari")}</p>
           <h1 className="mt-2 font-display text-[clamp(1.75rem,1.2rem+2vw,2.5rem)] font-semibold leading-tight">
             Namaste, <span className="text-[#FF9A2E]">{user?.name}</span>
           </h1>
-          <p className="mt-2 text-[15px] text-white/80">{t("priest.subtitle")}</p>
+          <p className="mt-2 text-[0.9375rem] text-white/80">{t("priest.subtitle")}</p>
           {user?.public_id ? (
             <p className="mt-1 font-mono text-xs text-white/55">ID: {user.public_id}</p>
           ) : null}
@@ -436,7 +436,7 @@ function PujariDashboardContent() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p
-                      className={`text-[12px] font-bold uppercase tracking-[0.1em] ${m.highlight ? "text-white/90" : "text-muted-foreground"}`}
+                      className={`text-[0.75rem] font-bold uppercase tracking-[0.1em] ${m.highlight ? "text-white/90" : "text-muted-foreground"}`}
                     >
                       {m.title}
                     </p>
@@ -454,7 +454,7 @@ function PujariDashboardContent() {
           <CardHeader className="pb-3">
             <CardTitle className="text-foreground flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF1E2] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-                <PlayCircle size={18} />
+                <PlayCircle size="1.125rem" />
               </span>
               {t("priest.ongoingPuja")}
               {!isLoading && ongoing.length > 0 ? (
@@ -584,7 +584,7 @@ function PujariDashboardContent() {
           <Card className="lg:col-span-1 lg:self-start rounded-3xl border border-[#EFE2CF] shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
-                <CalendarIcon size={18} className="text-primary" />
+                <CalendarIcon size="1.125rem" className="text-primary" />
                 Booking Calendar
               </CardTitle>
             </CardHeader>
@@ -630,10 +630,10 @@ function PujariDashboardContent() {
                 <Tabs value={listTab} onValueChange={setListTab}>
                   <TabsList className="bg-secondary/30 mb-4 h-auto flex flex-wrap justify-start gap-1">
                     <TabsTrigger value="upcoming" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
-                      <Hourglass size={14} /> Upcoming ({upcoming.length})
+                      <Hourglass size="0.875rem" /> Upcoming ({upcoming.length})
                     </TabsTrigger>
                     <TabsTrigger value="completed" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
-                      <CheckCircle2 size={14} /> Completed ({completedOnly.length})
+                      <CheckCircle2 size="0.875rem" /> Completed ({completedOnly.length})
                     </TabsTrigger>
                     <TabsTrigger value="cancelled" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-white">
                       Cancelled ({cancelledOnly.length})

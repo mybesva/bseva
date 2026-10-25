@@ -159,7 +159,7 @@ export default function Payments() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <IndianRupee size={16} /> Paid revenue
+              <IndianRupee size="1rem" /> Paid revenue
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -169,7 +169,7 @@ export default function Payments() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp size={16} /> Platform fees
+              <TrendingUp size="1rem" /> Platform fees
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -179,7 +179,7 @@ export default function Payments() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Wallet size={16} /> Pujari payouts
+              <Wallet size="1rem" /> Pujari payouts
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -189,7 +189,7 @@ export default function Payments() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CreditCard size={16} /> Transactions
+              <CreditCard size="1rem" /> Transactions
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -202,7 +202,7 @@ export default function Payments() {
         <div className="space-y-1">
           <Label className="text-xs">Payment status</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[11.25rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -224,7 +224,7 @@ export default function Payments() {
               updateFilters({ range: v, from: v === "custom" ? dateFrom : "", to: v === "custom" ? dateTo : "" })
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[11.25rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -238,15 +238,15 @@ export default function Payments() {
           <>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
-              <Input type="date" className="h-9 w-[150px]" value={dateFrom} onChange={(e) => updateFilters({ from: e.target.value })} />
+              <Input type="date" className="h-9 w-[9.375rem]" value={dateFrom} onChange={(e) => updateFilters({ from: e.target.value })} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">To</Label>
-              <Input type="date" className="h-9 w-[150px]" value={dateTo} onChange={(e) => updateFilters({ to: e.target.value })} />
+              <Input type="date" className="h-9 w-[9.375rem]" value={dateTo} onChange={(e) => updateFilters({ to: e.target.value })} />
             </div>
           </>
         )}
-        <div className="flex gap-2 flex-1 min-w-[220px] items-end">
+        <div className="flex gap-2 flex-1 min-w-[13.75rem] items-end">
           <Input
             placeholder="Search number, customer, pujari, service"
             value={q}

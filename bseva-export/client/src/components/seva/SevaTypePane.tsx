@@ -92,7 +92,7 @@ export default function SevaTypePane({ type }: SevaTypePaneProps) {
                     title={svc.name}
                     description={desc}
                     image={serviceImageUrl(svc)}
-                    icon={<Icon size={20} />}
+                    icon={<Icon size="1.25rem" />}
                     startingFrom={starting}
                     onReadMore={open}
                     onBookNow={open}

@@ -163,7 +163,7 @@ export default function RolePortalGate({
           <CardHeader className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Icon size={20} />
+                <Icon size="1.25rem" />
               </div>
               <div>
                 <CardTitle>{copy.title}</CardTitle>

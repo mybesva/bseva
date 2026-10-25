@@ -15,7 +15,7 @@ import { Ban, FileText, Scale, Shield } from "lucide-react";
 
 type LegalKind = "terms" | "privacy";
 
-const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number | string; className?: string }>> = {
   platform_terms: Scale,
   booking_terms: FileText,
   cancellation_policy: Ban,
@@ -68,7 +68,7 @@ function SectionPicker({
                 active ? "bg-primary text-white" : "bg-secondary text-foreground"
               )}
             >
-              <Icon size={14} />
+              <Icon size="0.875rem" />
             </span>
             <span className="leading-snug">{policy.title}</span>
           </button>

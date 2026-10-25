@@ -231,7 +231,7 @@ export default function PujariAvailabilityPage() {
             <CardHeader className="pb-4 space-y-3">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                  <Clock size={20} strokeWidth={2} />
+                  <Clock size="1.25rem" strokeWidth={2} />
                 </span>
                 <div>
                   <CardTitle className="text-foreground text-lg md:text-xl">{t("web.pujariAvailability.settings")}</CardTitle>
@@ -273,7 +273,7 @@ export default function PujariAvailabilityPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="service-radius" className="text-foreground text-sm font-medium flex items-center gap-1.5">
-                      <MapPin size={14} className="text-primary shrink-0" />
+                      <MapPin size="0.875rem" className="text-primary shrink-0" />
                       {t("web.pujariAvailability.radius")}
                     </Label>
                     <Input
@@ -283,7 +283,7 @@ export default function PujariAvailabilityPage() {
                       step="0.1"
                       value={radius}
                       onChange={(e) => setRadius(e.target.value)}
-                      className="max-w-[160px] border-border bg-background focus-visible:ring-primary/30"
+                      className="max-w-[10rem] border-border bg-background focus-visible:ring-primary/30"
                       placeholder={t("web.pujariAvailability.radiusPlaceholder")}
                     />
                     <p className="text-xs text-muted-foreground">{t("web.pujariAvailability.radiusDescription")}</p>
@@ -293,7 +293,7 @@ export default function PujariAvailabilityPage() {
                     <Button
                       type="submit"
                       disabled={saving}
-                      className="w-full sm:w-auto min-w-[140px] bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
+                      className="w-full sm:w-auto min-w-[8.75rem] bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
                     >
                       {saving ? t("web.common.saving") : t("web.pujariAvailability.saveSettings")}
                     </Button>
@@ -316,7 +316,7 @@ export default function PujariAvailabilityPage() {
             <CardHeader className="pb-4 space-y-3">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sidebar/10 text-foreground">
-                  <CalendarDays size={20} strokeWidth={2} />
+                  <CalendarDays size="1.25rem" strokeWidth={2} />
                 </span>
                 <div>
                   <CardTitle className="text-foreground text-lg md:text-xl">{t("web.pujariAvailability.blockDates")}</CardTitle>
@@ -335,7 +335,7 @@ export default function PujariAvailabilityPage() {
                   modifiers={{ blocked: blockedDates }}
                   components={{ DayButton: AvailabilityDayButton }}
                   disabled={{ before: startOfDay(new Date()) }}
-                  className="mx-auto w-full max-w-[340px] bg-transparent p-0 [--cell-size:2.5rem] sm:[--cell-size:2.75rem]"
+                  className="mx-auto w-full max-w-[21.25rem] bg-transparent p-0 [--cell-size:2.5rem] sm:[--cell-size:2.75rem]"
                   classNames={{
                     months: "w-full",
                     month: "w-full gap-4",
@@ -356,23 +356,23 @@ export default function PujariAvailabilityPage() {
 
                 <div className="mt-5 pt-4 border-t border-[#D4AF37]/20 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
                   <LegendSwatch label={t("status.available")}>
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-[11px] font-medium text-foreground">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-[0.6875rem] font-medium text-foreground">
                       12
                     </span>
                   </LegendSwatch>
                   <LegendSwatch label={t("web.pujariAvailability.legendBlocked")}>
-                    <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-[#F4E4C1]/80 text-[11px] font-medium text-foreground/55 line-through decoration-sidebar/50">
+                    <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-[#F4E4C1]/80 text-[0.6875rem] font-medium text-foreground/55 line-through decoration-sidebar/50">
                       15
                       <Ban className="absolute -top-1 -right-1 size-3 text-primary stroke-[2.5]" aria-hidden />
                     </span>
                   </LegendSwatch>
                   <LegendSwatch label={t("common.selected")}>
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-[11px] font-semibold text-primary-foreground">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-[0.6875rem] font-semibold text-primary-foreground">
                       18
                     </span>
                   </LegendSwatch>
                   <LegendSwatch label={t("web.pujariAvailability.today")}>
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-[#D4AF37]/80 bg-sidebar/[0.06] text-[11px] font-medium text-foreground">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-[#D4AF37]/80 bg-sidebar/[0.06] text-[0.6875rem] font-medium text-foreground">
                       26
                     </span>
                   </LegendSwatch>
@@ -382,7 +382,7 @@ export default function PujariAvailabilityPage() {
               {upcomingBlocks.length > 0 ? (
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Ban size={14} className="text-primary" />
+                    <Ban size="0.875rem" className="text-primary" />
                     {t("web.pujariAvailability.upcomingBlocked")}
                     <span className="text-xs font-normal text-muted-foreground">({upcomingBlocks.length})</span>
                   </p>

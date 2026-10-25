@@ -55,7 +55,7 @@ export default function JoinMeetPage() {
         <Card className="border-2 border-primary/30 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
-              <Video className="text-primary" size={22} />
+              <Video className="text-primary" size="1.375rem" />
               {t("booking.meetingLink")}
             </CardTitle>
           </CardHeader>

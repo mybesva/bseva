@@ -213,7 +213,7 @@ function RatingsForm({ canSubmit = true }: { canSubmit?: boolean }) {
                 }}
                 placeholder="Add a comment about this pujari..."
                 rows={4}
-                className="min-h-[100px] resize-y"
+                className="min-h-[6.25rem] resize-y"
               />
               {fieldErrors.comments ? <p className="text-sm text-destructive">{fieldErrors.comments}</p> : null}
             </div>
@@ -254,7 +254,7 @@ function RatingsForm({ canSubmit = true }: { canSubmit?: boolean }) {
               value={starsFilter === "all" ? "all" : String(starsFilter)}
               onValueChange={(v) => setStarsFilter(v === "all" ? "all" : Number(v))}
             >
-              <SelectTrigger className="h-10 w-full sm:w-[130px]">
+              <SelectTrigger className="h-10 w-full sm:w-[8.125rem]">
                 <SelectValue placeholder="Rating" />
               </SelectTrigger>
               <SelectContent>
@@ -267,7 +267,7 @@ function RatingsForm({ canSubmit = true }: { canSubmit?: boolean }) {
               </SelectContent>
             </Select>
             <Select value={historySort} onValueChange={(v) => setHistorySort(v as HeadRatingSort)}>
-              <SelectTrigger className="h-10 w-full sm:w-[150px]">
+              <SelectTrigger className="h-10 w-full sm:w-[9.375rem]">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>

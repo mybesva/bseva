@@ -145,7 +145,7 @@ function CustomerDashboardContent() {
 
       <div className="mt-6 space-y-6">
         <SectionCard
-          icon={<PlayCircle size={18} />}
+          icon={<PlayCircle size="1.125rem" />}
           title={t("customer.ongoingPuja")}
           action={<ViewAllLink href="/customer/bookings" label={t("common.viewAll")} />}
         >
@@ -163,10 +163,10 @@ function CustomerDashboardContent() {
                   <div className="min-w-0 space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusPill status={customerStatus(booking)} label={customerStatusLabel(booking)} />
-                      <span className="rounded-full bg-[#FFF1E2] px-2.5 py-1 text-[11.5px] font-extrabold text-[#C25E00] dark:bg-[#FF7A00]/15 dark:text-[#FFB066]">
+                      <span className="rounded-full bg-[#FFF1E2] px-2.5 py-1 text-[0.7188rem] font-extrabold text-[#C25E00] dark:bg-[#FF7A00]/15 dark:text-[#FFB066]">
                         {translatedTokenLabel(t(`booking.${booking.package_type}`), `booking.${booking.package_type}`, booking.package_type, "")}
                       </span>
-                      <span className="rounded-full bg-[#EEF1F6] px-2.5 py-1 font-mono text-[11.5px] font-bold text-[#2E4A6F] dark:bg-white/10 dark:text-white/80">
+                      <span className="rounded-full bg-[#EEF1F6] px-2.5 py-1 font-mono text-[0.7188rem] font-bold text-[#2E4A6F] dark:bg-white/10 dark:text-white/80">
                         #{booking.booking_number}
                       </span>
                     </div>
@@ -174,9 +174,9 @@ function CustomerDashboardContent() {
                       <PujaTitle name={booking.service_name} />
                     </h3>
                     <div className="grid gap-2 text-sm font-semibold text-muted-foreground sm:grid-cols-2">
-                      <span className="flex items-center gap-2"><Calendar size={16} className="text-[#FF7A00]" />{formatDisplayDate(booking.booking_date)}</span>
-                      <span className="flex items-center gap-2"><Clock size={16} className="text-[#FF7A00]" />{booking.start_time || "—"}</span>
-                      <span className="flex items-center gap-2 sm:col-span-2"><MapPin size={16} className="text-[#FF7A00]" />{booking.location_label || displayTokenLabel(booking.mode, "")}</span>
+                      <span className="flex items-center gap-2"><Calendar size="1rem" className="text-[#FF7A00]" />{formatDisplayDate(booking.booking_date)}</span>
+                      <span className="flex items-center gap-2"><Clock size="1rem" className="text-[#FF7A00]" />{booking.start_time || "—"}</span>
+                      <span className="flex items-center gap-2 sm:col-span-2"><MapPin size="1rem" className="text-[#FF7A00]" />{booking.location_label || displayTokenLabel(booking.mode, "")}</span>
                     </div>
 
                     {booking.status === "in_progress" && (
@@ -185,7 +185,7 @@ function CustomerDashboardContent() {
                         <p className="text-xs text-muted-foreground">{t("otp.completeEnter")}</p>
                         <div className="flex flex-wrap gap-2">
                           <Input
-                            className="h-10 max-w-[170px] bg-white tracking-[0.3em] dark:bg-transparent"
+                            className="h-10 max-w-[10.625rem] bg-white tracking-[0.3em] dark:bg-transparent"
                             maxLength={8}
                             value={completeCodeByBooking[String(booking.id)] || ""}
                             onChange={(e) =>
@@ -221,7 +221,7 @@ function CustomerDashboardContent() {
                     {booking.mode === "virtual" && (booking.meeting_url || booking.public_invite_url) && (
                       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#BFD3EE] bg-[#F1F6FD] px-4 py-3 dark:border-white/15 dark:bg-white/5">
                         <p className="flex items-center gap-2 text-sm font-bold text-foreground">
-                          <Video size={17} className="text-[#2E4A6F] dark:text-[#7AA2D4]" />
+                          <Video size="1.0625rem" className="text-[#2E4A6F] dark:text-[#7AA2D4]" />
                           {t("web.dashboard.meetReady")}
                         </p>
                         {booking.meeting_url ? (
@@ -248,7 +248,7 @@ function CustomerDashboardContent() {
                   {showStartOtp ? (
                     <div className="flex flex-col justify-between gap-4 self-start rounded-2xl bg-[#071A33] p-5 text-white">
                       <div>
-                        <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#FF7A00]">{t("otp.startTitle")}</p>
+                        <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.16em] text-[#FF7A00]">{t("otp.startTitle")}</p>
                         {otp?.available && otp.code ? (
                           <div className="mt-3 flex flex-wrap gap-2" aria-label={otp.code}>
                             {String(otp.code).split("").map((ch, i) => (
@@ -282,7 +282,7 @@ function CustomerDashboardContent() {
         </div>
 
         {recommendations.length > 0 && (
-          <SectionCard icon={<Sparkles size={18} />} title="Recommended for you">
+          <SectionCard icon={<Sparkles size="1.125rem" />} title="Recommended for you">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {recommendations.map((rec) => (
                 <div
@@ -290,7 +290,7 @@ function CustomerDashboardContent() {
                   className="flex h-full flex-col rounded-2xl border border-[#FFD9B3] bg-gradient-to-br from-[#FFF4E8] to-white p-5 dark:border-[#FF7A00]/25 dark:from-[#FF7A00]/10 dark:to-transparent"
                 >
                   {rec.recurrence_hint ? (
-                    <span className="self-start rounded-full bg-[#FFE6CC] px-2.5 py-1 text-[11px] font-extrabold text-[#C25E00] dark:bg-[#FF7A00]/20 dark:text-[#FFB066]">
+                    <span className="self-start rounded-full bg-[#FFE6CC] px-2.5 py-1 text-[0.6875rem] font-extrabold text-[#C25E00] dark:bg-[#FF7A00]/20 dark:text-[#FFB066]">
                       {rec.recurrence_hint}
                     </span>
                   ) : null}
@@ -327,7 +327,7 @@ function CustomerDashboardContent() {
         )}
 
         <SectionCard
-          icon={<Flower2 size={18} />}
+          icon={<Flower2 size="1.125rem" />}
           title={t("customer.bookServices")}
           action={<ViewAllLink href="/services" label={t("common.viewAll")} />}
         >
@@ -364,7 +364,7 @@ function CustomerDashboardContent() {
         </SectionCard>
 
         <SectionCard
-          icon={<Calendar size={18} />}
+          icon={<Calendar size="1.125rem" />}
           title={t("customer.myBookings")}
           action={<ViewAllLink href="/customer/bookings" label={t("common.viewAll")} />}
         >
@@ -379,7 +379,7 @@ function CustomerDashboardContent() {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="text-left text-[11.5px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">
+                    <tr className="text-left text-[0.7188rem] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">
                       <th className="px-3 pb-3">{t("booking.service")}</th>
                       <th className="px-3 pb-3">{t("common.date")}</th>
                       <th className="px-3 pb-3">{t("booking.address")}</th>
@@ -451,7 +451,7 @@ const STATUS_TONE: Record<string, string> = {
 function StatusPill({ status, label }: { status: string; label: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-extrabold ${
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[0.7188rem] font-extrabold ${
         STATUS_TONE[status] || "bg-[#FFF1E2] text-[#C25E00] dark:bg-[#FF7A00]/15 dark:text-[#FFB066]"
       }`}
     >
@@ -488,7 +488,7 @@ function SectionCard({
 function ViewAllLink({ href, label }: { href: string; label: string }) {
   return (
     <Link href={href} className="inline-flex items-center gap-1 text-sm font-bold text-[#FF7A00] hover:underline">
-      {label} <ArrowRight size={15} aria-hidden />
+      {label} <ArrowRight size="0.9375rem" aria-hidden />
     </Link>
   );
 }
@@ -508,16 +508,16 @@ function WalletRewardsSummary() {
   }, []);
 
   return (
-    <SectionCard icon={<Wallet size={18} />} title={t("customer.walletPayments")}>
+    <SectionCard icon={<Wallet size="1.125rem" />} title={t("customer.walletPayments")}>
       <div className="grid grid-cols-2 gap-3">
         <Link href="/customer/wallet" className="@container min-w-0 rounded-2xl bg-[#FFF6EA] p-4 dark:bg-[#FF7A00]/10">
-          <span className="block text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">{t("wallet.balance")}</span>
+          <span className="block text-[0.6875rem] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">{t("wallet.balance")}</span>
           <span className="mt-1 block whitespace-nowrap tabular-nums tracking-tight text-[clamp(1rem,12cqi,1.5rem)] font-extrabold text-foreground">
             {balance == null ? "—" : `₹${(balance / 100).toLocaleString("en-IN")}`}
           </span>
         </Link>
         <Link href="/customer/rewards" className="rounded-2xl bg-[#F2EDFA] p-4 dark:bg-[#6B4BA8]/20">
-          <span className="block text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">{t("nav.rewards")}</span>
+          <span className="block text-[0.6875rem] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">{t("nav.rewards")}</span>
           <span className="mt-1 block text-2xl font-extrabold text-foreground">{rewardCount == null ? "—" : rewardCount}</span>
         </Link>
       </div>

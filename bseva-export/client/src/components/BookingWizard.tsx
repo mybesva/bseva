@@ -637,7 +637,7 @@ export default function BookingWizard({
                     {samagriListPaise > 0 ? formatPlusPrice(samagriListPaise) : "—"}
                   </p>
                   {includeSamagri && samagriListPaise > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1">{t("booking.includedInTotal")}</p>
+                    <p className="text-[0.6875rem] text-muted-foreground mt-1">{t("booking.includedInTotal")}</p>
                   )}
                 </div>
               </div>
@@ -679,7 +679,7 @@ export default function BookingWizard({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2 flex-wrap">
                     <span className="font-medium text-muted-foreground">{t("booking.alankaram")}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 shrink-0">
+                    <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 shrink-0">
                       {t("common.comingSoon")}
                     </span>
                   </div>
@@ -714,7 +714,7 @@ export default function BookingWizard({
                     {t("web.booking.foodDescription")}
                   </p>
                   {includeFood && foodPrice > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1 text-right">{t("booking.includedInTotal")}</p>
+                    <p className="text-[0.6875rem] text-muted-foreground mt-1 text-right">{t("booking.includedInTotal")}</p>
                   )}
                 </div>
               </label>
@@ -1397,7 +1397,7 @@ export default function BookingWizard({
                   <p className="text-muted-foreground">{t("web.booking.cityValue", { city: selectedSavedAddress.city })}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin size={12} /> {t("web.booking.assignedPujariLocation")}
+                  <MapPin size="0.75rem" /> {t("web.booking.assignedPujariLocation")}
                   {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
                 </p>
               </div>
@@ -1507,7 +1507,7 @@ export default function BookingWizard({
                   <p className="text-xs text-destructive">{step2Errors.mapLocation}</p>
                 )}
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin size={12} /> {t("web.booking.pinHint")}
+                  <MapPin size="0.75rem" /> {t("web.booking.pinHint")}
                   {lat != null && lng != null ? ` · GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : ""}
                 </p>
                 {geoError && <p className="text-xs text-destructive">{geoError}</p>}

@@ -99,7 +99,7 @@ export default function LandingServices({ categories, loading }: Props) {
           <Link href="/services">
             <a className="group lp-orange-ink inline-flex shrink-0 items-center gap-2 self-start rounded-md py-2 text-base font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:self-auto">
               {t("lp.svc.viewAll")}
-              <ArrowRight size={18} aria-hidden className="lp-arrow" />
+              <ArrowRight size="1.125rem" aria-hidden className="lp-arrow" />
             </a>
           </Link>
         </div>
@@ -133,7 +133,7 @@ export default function LandingServices({ categories, loading }: Props) {
           <div className="relative min-w-0 flex-1">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground"
-              size={18}
+              size="1.125rem"
               aria-hidden
             />
             <Input
@@ -204,7 +204,7 @@ export default function LandingServices({ categories, loading }: Props) {
                             aria-hidden
                             className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform duration-300 group-hover:translate-x-1"
                           >
-                            <ArrowRight size={16} />
+                            <ArrowRight size="1rem" />
                           </span>
                         </div>
                       </div>

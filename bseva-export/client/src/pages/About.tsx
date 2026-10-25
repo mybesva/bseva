@@ -50,16 +50,16 @@ export default function About() {
           }}
         />
 
-        <div className="relative z-10 mx-auto flex h-[440px] w-full max-w-[1920px] items-center px-5 sm:h-[460px] sm:px-8 lg:h-[clamp(350px,26.6vw,500px)] lg:px-[7.2%]">
+        <div className="relative z-10 mx-auto flex h-[27.5rem] w-full max-w-[120rem] items-center px-5 sm:h-[28.75rem] sm:px-8 lg:h-[clamp(350px,26.6vw,500px)] lg:px-[7.2%]">
           <div className="w-full max-w-[40rem] lg:max-w-[58%]">
-            <p className="inline-flex rounded-full border border-white/25 bg-white/[0.06] px-3.5 py-1 text-[12px] font-bold uppercase tracking-[0.14em] text-[#FF7A00] lg:px-[1em] lg:py-[0.3em] lg:text-[clamp(13px,0.95vw,16px)]">
+            <p className="inline-flex rounded-full border border-white/25 bg-white/[0.06] px-3.5 py-1 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-[#FF7A00] lg:px-[1em] lg:py-[0.3em] lg:text-[clamp(13px,0.95vw,16px)]">
               {t("ab.eyebrow")}
             </p>
             <h1 id="about-hero-title" className="mt-5 font-sans text-[clamp(2rem,6vw,2.5rem)] font-extrabold leading-[1.1] tracking-[-0.02em] lg:mt-[1.15vw] lg:text-[clamp(44px,4vw,72px)] lg:leading-[1.08]">
               <span className="block text-white lg:whitespace-nowrap">{t("ab.hero1")}</span>
               <span className="block text-[#FF7A00] lg:whitespace-nowrap">{t("ab.hero2")}</span>
             </h1>
-            <p className="mt-5 max-w-[34rem] text-[17px] font-medium leading-[1.6] text-white/90 antialiased lg:mt-[1.35vw] lg:max-w-none lg:whitespace-pre-line lg:text-[clamp(16px,1.3vw,22px)] lg:leading-[1.65]">
+            <p className="mt-5 max-w-[34rem] text-[1.0625rem] font-medium leading-[1.6] text-white/90 antialiased lg:mt-[1.35vw] lg:max-w-none lg:whitespace-pre-line lg:text-[clamp(16px,1.3vw,22px)] lg:leading-[1.65]">
               {t("ab.heroDesc")}
             </p>
           </div>
@@ -71,12 +71,12 @@ export default function About() {
       <section className="relative overflow-hidden bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-story-title">
         {/* Faint mandala behind the photo's upper-right corner, cropped by the section edge */}
         <MandalaOutline className="pointer-events-none absolute -right-[6vw] top-[2%] hidden h-[clamp(18rem,24vw,30rem)] w-[clamp(18rem,24vw,30rem)] text-[#E8B15A] opacity-[0.16] lg:block dark:opacity-[0.08]" />
-        <div className="relative mx-auto grid w-full max-w-[1920px] items-center gap-10 px-5 py-12 sm:px-8 md:py-14 lg:grid-cols-[minmax(0,515fr)_minmax(0,886fr)] lg:gap-[2.35vw] lg:pl-[3.7vw] lg:pr-[2.75vw] lg:py-[clamp(3rem,4.6vw,6rem)]">
+        <div className="relative mx-auto grid w-full max-w-[120rem] items-center gap-10 px-5 py-12 sm:px-8 md:py-14 lg:grid-cols-[minmax(0,515fr)_minmax(0,886fr)] lg:gap-[2.35vw] lg:pl-[3.7vw] lg:pr-[2.75vw] lg:py-[clamp(3rem,4.6vw,6rem)]">
           <div>
             <p className="flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.2em] text-[#FF7A00] lg:text-[clamp(12px,1.04vw,18px)]">
-              <span aria-hidden className="h-[2px] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
+              <span aria-hidden className="h-[0.125rem] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
               {t("ab.storyEyebrow")}
-              <span aria-hidden className="h-[2px] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
+              <span aria-hidden className="h-[0.125rem] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
             </p>
             <h2
               id="about-story-title"
@@ -94,8 +94,8 @@ export default function About() {
 
           <div className="relative mx-auto w-full max-w-2xl lg:max-w-none">
             {/* Orange L-brackets sitting just outside the photo's top-left and bottom-right corners */}
-            <span aria-hidden className="pointer-events-none absolute -left-3 -top-3 h-16 w-16 rounded-tl-[18px] border-l-[3px] border-t-[3px] border-[#FF7A00] lg:-left-[1.25vw] lg:-top-[1.1vw] lg:h-[clamp(4rem,5.6vw,7rem)] lg:w-[clamp(4rem,5.8vw,7.25rem)] lg:rounded-tl-[22px] lg:border-l-4 lg:border-t-4" />
-            <span aria-hidden className="pointer-events-none absolute -bottom-3 -right-3 h-16 w-16 rounded-br-[18px] border-b-[3px] border-r-[3px] border-[#FF7A00] lg:-bottom-[1.3vw] lg:-right-[1.05vw] lg:h-[clamp(4rem,5.6vw,7rem)] lg:w-[clamp(4rem,6.2vw,7.75rem)] lg:rounded-br-[22px] lg:border-b-4 lg:border-r-4" />
+            <span aria-hidden className="pointer-events-none absolute -left-3 -top-3 h-16 w-16 rounded-tl-[1.125rem] border-l-[3px] border-t-[3px] border-[#FF7A00] lg:-left-[1.25vw] lg:-top-[1.1vw] lg:h-[clamp(4rem,5.6vw,7rem)] lg:w-[clamp(4rem,5.8vw,7.25rem)] lg:rounded-tl-[1.375rem] lg:border-l-4 lg:border-t-4" />
+            <span aria-hidden className="pointer-events-none absolute -bottom-3 -right-3 h-16 w-16 rounded-br-[1.125rem] border-b-[3px] border-r-[3px] border-[#FF7A00] lg:-bottom-[1.3vw] lg:-right-[1.05vw] lg:h-[clamp(4rem,5.6vw,7rem)] lg:w-[clamp(4rem,6.2vw,7.75rem)] lg:rounded-br-[1.375rem] lg:border-b-4 lg:border-r-4" />
             <img
               src="/images/about-story-guidance.webp"
               alt={t("ab.storyAlt")}
@@ -103,7 +103,7 @@ export default function About() {
               height={1412}
               loading="lazy"
               decoding="async"
-              className="relative aspect-[898/706] w-full rounded-[18px] object-cover object-[58%_center] lg:rounded-[22px]"
+              className="relative aspect-[898/706] w-full rounded-[1.125rem] object-cover object-[58%_center] lg:rounded-[1.375rem]"
             />
           </div>
         </div>
@@ -115,15 +115,15 @@ export default function About() {
         <MandalaOutline className="pointer-events-none absolute -right-24 bottom-0 h-72 w-72 text-[#E8B15A] opacity-[0.12] dark:opacity-[0.08]" />
         <div className="container relative py-12 md:py-14 lg:py-16">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="inline-flex items-center gap-2 rounded-full border border-[#FF7A00]/30 bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs dark:bg-transparent">
-              <Sparkles size={13} aria-hidden />
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#FF7A00]/30 bg-white px-4 py-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs dark:bg-transparent">
+              <Sparkles size="0.8125rem" aria-hidden />
               {t("ab.principlesEyebrow")}
             </p>
             <h2 id="about-principles-title" className="mt-4 text-[clamp(1.75rem,1rem+1.6vw,2.6rem)] font-bold leading-[1.12] tracking-tight">
               <span className="text-[#0E1830] dark:text-white">{t("ab.principles1")} </span>
               <span className="text-[#FF7A00]">{t("ab.principles2")}</span>
             </h2>
-            <span aria-hidden className="mx-auto mt-4 block h-[3px] w-16 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#D4AF37]" />
+            <span aria-hidden className="mx-auto mt-4 block h-[0.1875rem] w-16 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#D4AF37]" />
           </div>
 
           <ul className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
@@ -140,10 +140,10 @@ export default function About() {
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF9A3C] to-[#E86400] text-white shadow-[0_10px_20px_-10px_rgba(255,122,0,0.8)]">
-                  <Icon size={24} strokeWidth={1.8} aria-hidden />
+                  <Icon size="1.5rem" strokeWidth={1.8} aria-hidden />
                 </span>
                 <h3 className="relative mt-5 text-[1.1rem] font-bold leading-snug text-[#0E1830] dark:text-white">{t(title)}</h3>
-                <p className="relative mt-2.5 text-[14.5px] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{t(body)}</p>
+                <p className="relative mt-2.5 text-[0.9062rem] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{t(body)}</p>
               </li>
             ))}
           </ul>
@@ -162,23 +162,23 @@ export default function About() {
               <img src="/images/landing/pujari-portrait.jpg" alt="" className="absolute bottom-0 right-0 h-24 w-24 rounded-full border-4 border-white/80 object-cover shadow-lg" />
             </div>
             <div className="relative">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/85 sm:text-xs">{t("ab.ctaEyebrow")}</p>
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-white/85 sm:text-xs">{t("ab.ctaEyebrow")}</p>
               <h2 id="about-cta-title" className="mt-2 text-[clamp(1.6rem,1rem+1.4vw,2.3rem)] font-bold leading-[1.15] tracking-tight">
                 <span className="text-white">{t("ab.cta1")}</span> <span className="text-[#071A33]">{t("ab.cta2")}</span>
               </h2>
-              <p className="mt-3 max-w-2xl text-[15px] font-medium leading-relaxed text-white/90">{t("ab.ctaDesc")}</p>
+              <p className="mt-3 max-w-2xl text-[0.9375rem] font-medium leading-relaxed text-white/90">{t("ab.ctaDesc")}</p>
             </div>
             <div className="relative flex flex-col gap-3 sm:flex-row lg:flex-col">
               {showBookCta ? (
               <Link href="/services?focus=pujas">
-                <a className="inline-flex h-12 items-center justify-center rounded-xl bg-[#071A33] px-8 text-[15px] font-bold text-white transition-colors hover:bg-[#0D2445] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
+                <a className="inline-flex h-12 items-center justify-center rounded-xl bg-[#071A33] px-8 text-[0.9375rem] font-bold text-white transition-colors hover:bg-[#0D2445] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
                   {t("nav.bookPuja")}
                 </a>
               </Link>
               ) : null}
               {showJoinCta ? (
               <Link href="/register?role=pujari">
-                <a className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-white bg-transparent px-8 text-[15px] font-bold text-white transition-colors hover:bg-white hover:text-[#E86400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
+                <a className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-white bg-transparent px-8 text-[0.9375rem] font-bold text-white transition-colors hover:bg-white hover:text-[#E86400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF7A00]">
                   {t("lp.cta.joinPujari")}
                 </a>
               </Link>

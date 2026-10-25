@@ -15,7 +15,7 @@ function HomeScreen({ categories, brand }: { categories: LandingCategory[]; bran
         <span className="text-[0.6rem] font-extrabold tracking-wide">{brand}</span>
       </div>
       <div className="mt-2 flex items-center gap-1.5 rounded-md bg-white px-2 py-1.5 text-[0.5rem] font-semibold text-[#0E1830]/70 shadow-sm">
-        <Search size={9} />
+        <Search size="0.5625rem" />
         <span className="truncate">{t("services.searchPujas")}</span>
       </div>
       <div className="mt-2 flex gap-1 overflow-hidden">
@@ -74,7 +74,7 @@ function StoreBadge({ href, label }: { href: string; label: string }) {
       aria-label={label}
       className="inline-flex h-12 items-center gap-2 rounded-lg border border-white/40 bg-black px-4 text-sm font-bold text-white transition-colors hover:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1630]"
     >
-      <Download size={18} aria-hidden />
+      <Download size="1.125rem" aria-hidden />
       {label}
     </a>
   );
@@ -111,7 +111,7 @@ export default function LandingAppShowcase({ categories }: Props) {
       <div className="container relative z-10 grid items-center gap-12 lg:grid-cols-[1fr_1.05fr_1fr] lg:gap-8">
         <div className="text-center lg:text-left">
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-orange">
-            <Smartphone size={16} aria-hidden />
+            <Smartphone size="1rem" aria-hidden />
             {t("lp.app.eyebrow")}
           </p>
           <h2
@@ -147,7 +147,7 @@ export default function LandingAppShowcase({ categories }: Props) {
                 aria-hidden
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brand-orange/70 text-brand-orange"
               >
-                <Icon size={21} strokeWidth={1.6} />
+                <Icon size="1.3125rem" strokeWidth={1.6} />
               </span>
               <div className="min-w-0">
                 <h3 className="text-base font-bold leading-snug text-white">{title}</h3>

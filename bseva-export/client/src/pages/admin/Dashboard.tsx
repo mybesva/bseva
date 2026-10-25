@@ -220,7 +220,7 @@ function SuperAdminDashboard() {
       <div className="soften-brand-mark space-y-6">
         {loadError && (
           <p className="flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-            <AlertTriangle size={16} /> {loadError}
+            <AlertTriangle size="1rem" /> {loadError}
           </p>
         )}
 
@@ -231,7 +231,7 @@ function SuperAdminDashboard() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <p className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-[#E8C46A]">
-                <ShieldCheck size={13} /> Admin console
+                <ShieldCheck size="0.8125rem" /> Admin console
               </p>
               <h1 className="mt-3 text-[1.75rem] font-bold leading-tight sm:text-[2rem]">
                 {greeting()}, <span className="text-[#FF9A2E]">{firstName}</span>
@@ -257,7 +257,7 @@ function SuperAdminDashboard() {
                 { label: "Open tickets", value: fmt(a?.openTickets), icon: LifeBuoy },
               ].map((s) => (
                 <div key={s.label} className="rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm sm:p-4">
-                  <s.icon size={16} className="text-[#FF9A2E]" />
+                  <s.icon size="1rem" className="text-[#FF9A2E]" />
                   <p className="mt-2 text-xl font-bold sm:text-2xl">{s.value}</p>
                   <p className="text-[0.7rem] text-white/65 sm:text-xs">{s.label}</p>
                 </div>
@@ -272,7 +272,7 @@ function SuperAdminDashboard() {
             aria-label="Refresh dashboard"
             title="Refresh"
           >
-            <RefreshCw size={16} className={cn(loading && "animate-spin")} />
+            <RefreshCw size="1rem" className={cn(loading && "animate-spin")} />
           </button>
         </section>
 
@@ -326,7 +326,7 @@ function SuperAdminDashboard() {
                         )}
                       >
                         <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", TONE[it.tone])}>
-                          <it.icon size={17} />
+                          <it.icon size="1.0625rem" />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-[#0E1830] dark:text-white">{it.label}</span>
@@ -335,7 +335,7 @@ function SuperAdminDashboard() {
                           )}
                         </span>
                         <span className="text-lg font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(it.value)}</span>
-                        <ArrowRight size={15} className="shrink-0 text-[#B9A58A]" />
+                        <ArrowRight size="0.9375rem" className="shrink-0 text-[#B9A58A]" />
                       </a>
                     </Link>
                   </li>
@@ -368,7 +368,7 @@ function SuperAdminDashboard() {
                           <span className="ml-1.5 font-normal text-[#5B6478] dark:text-white/50">· {b.customer_name || "Customer"}</span>
                         </p>
                         <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-[#5B6478] dark:text-white/55">
-                          {b.mode === "virtual" ? <Video size={12} /> : <MapPin size={12} />}
+                          {b.mode === "virtual" ? <Video size="0.75rem" /> : <MapPin size="0.75rem" />}
                           <span className="truncate">{b.mode === "virtual" ? "Virtual" : b.location_label || "On-site"}</span>
                           <span>·</span>
                           {b.pujari_name ? (
@@ -448,7 +448,7 @@ function SuperAdminDashboard() {
                 <li key={p.label} className={cn(i === 0 && "xl:col-span-2")}>
                   <Link href={adminPath(p.href)}>
                     <a className="flex items-center gap-2.5 rounded-2xl bg-[#FFF8EE] px-3 py-2.5 transition hover:bg-[#FFF1E4] dark:bg-white/5 dark:hover:bg-white/10">
-                      <p.icon size={18} className={p.cls} />
+                      <p.icon size="1.125rem" className={p.cls} />
                       <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#5B6478] dark:text-white/65">{p.label}</span>
                       <span className="text-base font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(p.value)}</span>
                     </a>

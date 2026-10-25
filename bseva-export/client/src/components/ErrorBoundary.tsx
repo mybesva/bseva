@@ -29,7 +29,7 @@ class ErrorBoundary extends Component<Props, State> {
         <div className="flex items-center justify-center min-h-screen p-8 bg-background">
           <div className="flex flex-col items-center w-full max-w-2xl p-8">
             <AlertTriangle
-              size={48}
+              size="3rem"
               className="text-destructive mb-6 flex-shrink-0"
             />
 
@@ -49,7 +49,7 @@ class ErrorBoundary extends Component<Props, State> {
                 "hover:opacity-90 cursor-pointer"
               )}
             >
-              <RotateCcw size={16} />
+              <RotateCcw size="1rem" />
               {this.props.t("web.errorBoundary.reload")}
             </button>
           </div>

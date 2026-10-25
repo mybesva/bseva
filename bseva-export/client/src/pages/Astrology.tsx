@@ -65,7 +65,7 @@ export default function AstrologyPage() {
             <Card key={s.id} className="hover:shadow-md transition-shadow border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg text-foreground flex items-center gap-2">
-                  <Sparkles className="text-primary" size={18} />
+                  <Sparkles className="text-primary" size="1.125rem" />
                   {s.name}
                 </CardTitle>
               </CardHeader>

@@ -90,7 +90,7 @@ function ServiceBucket({
   readOnly?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border p-3 flex flex-col min-h-[200px] ${accent}`}>
+    <div className={`rounded-lg border p-3 flex flex-col min-h-[12.5rem] ${accent}`}>
       <div className="mb-2">
         <p className="text-sm font-semibold text-foreground">
           {title} ({items.length})
@@ -331,7 +331,7 @@ export default function PujariDetailPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <Link href={adminPath("/pujaris")} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft size={14} />
+            <ArrowLeft size="0.875rem" />
             Back to pujaris
           </Link>
           <div className="flex flex-wrap items-center gap-2">

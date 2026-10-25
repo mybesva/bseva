@@ -623,7 +623,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           <p className="text-sm font-medium">{t("otp.verifyComplete")}</p>
           <p className="text-xs text-muted-foreground">{t("otp.completeEnter")}</p>
           <div className="flex flex-wrap gap-2 items-end">
-            <div className="space-y-1 flex-1 min-w-[140px]">
+            <div className="space-y-1 flex-1 min-w-[8.75rem]">
               <Label>OTP</Label>
               <Input value={completeCode} onChange={(e) => setCompleteCode(e.target.value)} placeholder="Enter OTP" maxLength={8} />
             </div>
@@ -928,7 +928,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             </Button>
           </div>
           <div className="flex flex-wrap gap-2 items-end">
-            <div className="space-y-1 flex-1 min-w-[140px]">
+            <div className="space-y-1 flex-1 min-w-[8.75rem]">
               <Label>OTP code</Label>
               <Input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="Enter OTP" maxLength={8} />
             </div>

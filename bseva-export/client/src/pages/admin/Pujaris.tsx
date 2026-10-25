@@ -140,7 +140,7 @@ function PujariRow({
   return (
     <TableRow className="align-top">
       <TableCell className="font-mono text-xs whitespace-nowrap">{u.public_id || "—"}</TableCell>
-      <TableCell className="min-w-[140px]">
+      <TableCell className="min-w-[8.75rem]">
         <button
           type="button"
           className="text-left font-medium text-primary hover:underline"
@@ -152,15 +152,15 @@ function PujariRow({
           {u.profile_completion_percentage != null ? `${u.profile_completion_percentage}% profile` : ""}
         </div>
       </TableCell>
-      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={u.email}>
+      <TableCell className="max-w-[12.5rem] truncate text-sm text-muted-foreground" title={u.email}>
         {u.email}
       </TableCell>
-      <TableCell className="max-w-[200px] truncate text-sm" title={personLocation(u)}>
+      <TableCell className="max-w-[12.5rem] truncate text-sm" title={personLocation(u)}>
         {personLocation(u)}
       </TableCell>
       <TableCell>
-        <div className="space-y-1 min-w-[200px] max-w-[240px]">
-          <p className="text-[11px] text-muted-foreground">Requested level {u.requested_level ?? "—"}</p>
+        <div className="space-y-1 min-w-[12.5rem] max-w-[15rem]">
+          <p className="text-[0.6875rem] text-muted-foreground">Requested level {u.requested_level ?? "—"}</p>
           <Select value={String(level)} onValueChange={(v) => void saveLevel(Number(v))} disabled={saving || !canSetLevel}>
             <SelectTrigger className="h-9 text-xs" title={canSetLevel ? undefined : "You don't have permission"}>
               <SelectValue placeholder="Level" />
@@ -173,7 +173,7 @@ function PujariRow({
               ))}
             </SelectContent>
           </Select>
-          {saving ? <p className="text-[11px] text-muted-foreground">Saving…</p> : null}
+          {saving ? <p className="text-[0.6875rem] text-muted-foreground">Saving…</p> : null}
         </div>
       </TableCell>
       <TableCell className="text-sm whitespace-nowrap">
@@ -183,7 +183,7 @@ function PujariRow({
           <span title={specializations.join(", ") || undefined}>
             {u.experience_years} yrs
             {specializations.length > 0 ? (
-              <span className="block text-xs text-muted-foreground truncate max-w-[120px]">
+              <span className="block text-xs text-muted-foreground truncate max-w-[7.5rem]">
                 {specializations.slice(0, 2).join(", ")}
                 {specializations.length > 2 ? ` +${specializations.length - 2}` : ""}
               </span>
@@ -192,7 +192,7 @@ function PujariRow({
         )}
       </TableCell>
       <TableCell>
-        <div className="flex flex-col gap-2 min-w-[130px]">
+        <div className="flex flex-col gap-2 min-w-[8.125rem]">
           <div className="text-xs leading-relaxed">
             <span className="font-medium text-foreground">{verifiedCount}</span>
             <span className="text-muted-foreground"> verified</span>
@@ -414,7 +414,7 @@ export default function PujarisPage() {
           />
           {canCreate && (
             <Button onClick={() => setOpen(true)} className="gap-2">
-              <Plus size={16} />
+              <Plus size="1rem" />
               Add pujari
             </Button>
           )}
@@ -425,7 +425,7 @@ export default function PujarisPage() {
         <div className="space-y-1">
           <Label className="text-xs">Status filter</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="w-[13.75rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -438,7 +438,7 @@ export default function PujarisPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2 flex-1 min-w-[200px]">
+        <div className="flex gap-2 flex-1 min-w-[12.5rem]">
           <Input
             placeholder="Search ID, name, email, phone, location"
             value={q}
@@ -554,16 +554,16 @@ export default function PujarisPage() {
       <Table className="border-separate border-spacing-0" containerClassName="max-h-[calc(100vh-16rem)] overflow-auto rounded-lg border bg-card">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <SortableHead label="ID" column="id" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="w-[100px]" />
+            <SortableHead label="ID" column="id" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="w-[6.25rem]" />
             <SortableHead label="Name" column="name" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Email" column="email" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="max-w-[200px]" />
+            <SortableHead label="Email" column="email" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="max-w-[12.5rem]" />
             <SortableHead label="Location" column="location" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Approved level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[200px]" />
+            <SortableHead label="Approved level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[12.5rem]" />
             <SortableHead label="Experience" column="experience" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Services" column="services" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[130px]" />
+            <SortableHead label="Services" column="services" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[8.125rem]" />
             <SortableHead label="Verification" column="verification" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
             <SortableHead label="Account" column="account" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <StaticHead label="Actions" className="text-right min-w-[160px]" />
+            <StaticHead label="Actions" className="text-right min-w-[10rem]" />
           </TableRow>
         </TableHeader>
         <TableBody>

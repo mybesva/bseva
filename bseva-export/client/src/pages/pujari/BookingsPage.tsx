@@ -265,14 +265,14 @@ export default function PujariBookingsPage() {
                         <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
                           <PujaTitle name={row.pujaType.name} className="min-w-0" nameClassName="truncate" />
                           {row.booking.offerInvited ? (
-                            <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-[10px] uppercase tracking-wide">
+                            <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-[0.625rem] uppercase tracking-wide">
                               {row.booking.offerDistanceKm != null
                                 ? t("web.pujariBookings.openDistance", { distance: row.booking.offerDistanceKm })
                                 : t("web.pujariBookings.openRequest")}
                             </Badge>
                           ) : null}
                           {row.booking.samagriRequested ? (
-                            <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[10px] uppercase tracking-wide">
+                            <Badge className="bg-orange-100 text-orange-900 border-orange-200 text-[0.625rem] uppercase tracking-wide">
                               {t("web.pujariBookings.samagriSelected")}
                             </Badge>
                           ) : null}
@@ -280,17 +280,17 @@ export default function PujariBookingsPage() {
                         <p className="text-xs text-muted-foreground mt-0.5">#{row.booking.bookingNumber}</p>
                         <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
                           <span className="flex items-center gap-1">
-                            <CalendarIcon size={14} />
+                            <CalendarIcon size="0.875rem" />
                             {row.booking.bookingDate
                               ? formatDisplayDate(row.booking.bookingDate)
                               : "—"}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Clock size={14} />
+                            <Clock size="0.875rem" />
                             {row.booking.indiaLocal || row.booking.bookingTime || "—"}
                           </span>
                           <span className="flex items-center gap-1">
-                            <MapPin size={14} />
+                            <MapPin size="0.875rem" />
                             {row.booking.city || "—"}
                           </span>
                         </div>

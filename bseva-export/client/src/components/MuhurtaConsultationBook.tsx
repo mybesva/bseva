@@ -99,7 +99,7 @@ export default function MuhurtaConsultationBook({
     <div className="mt-6 rounded-lg border border-primary/30 bg-orange-50/60 p-4 space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
-          <Sparkles className="text-primary mt-0.5 shrink-0" size={20} />
+          <Sparkles className="text-primary mt-0.5 shrink-0" size="1.25rem" />
           <div className="min-w-0">
             <p className="font-semibold text-foreground">
               {requiresMuhurtham

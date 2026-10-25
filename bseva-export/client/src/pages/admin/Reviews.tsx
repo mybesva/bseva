@@ -117,7 +117,7 @@ export default function Reviews() {
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          size={14}
+          size="0.875rem"
           className={star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
         />
       ))}
@@ -131,7 +131,7 @@ export default function Reviews() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <MessageSquare size={16} /> Total Reviews
+                <MessageSquare size="1rem" /> Total Reviews
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -141,7 +141,7 @@ export default function Reviews() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Star size={16} /> Average Rating
+                <Star size="1rem" /> Average Rating
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -151,7 +151,7 @@ export default function Reviews() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <ThumbsUp size={16} /> Pending
+                <ThumbsUp size="1rem" /> Pending
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -163,7 +163,7 @@ export default function Reviews() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <CheckCircle size={16} /> Approved
+                <CheckCircle size="1rem" /> Approved
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -178,7 +178,7 @@ export default function Reviews() {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size="1.125rem" />
                 <Input
                   placeholder="Search by customer, priest, or puja type..."
                   className="pl-10"
@@ -187,7 +187,7 @@ export default function Reviews() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[9.375rem]">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -198,7 +198,7 @@ export default function Reviews() {
                 </SelectContent>
               </Select>
               <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[9.375rem]">
                   <SelectValue placeholder="All Ratings" />
                 </SelectTrigger>
                 <SelectContent>
@@ -270,7 +270,7 @@ export default function Reviews() {
                       <TableCell>{review.priest_name || "—"}</TableCell>
                       <TableCell>{review.puja_type || "—"}</TableCell>
                       <TableCell>{renderStars(Number(review.stars || 0))}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{review.comment || "—"}</TableCell>
+                      <TableCell className="max-w-[12.5rem] truncate">{review.comment || "—"}</TableCell>
                       <TableCell>
                         {formatDisplayDate(review.booking_date || review.created_at || "")}
                       </TableCell>
@@ -290,7 +290,7 @@ export default function Reviews() {
                               setIsViewDialogOpen(true);
                             }}
                           >
-                            <Eye size={16} />
+                            <Eye size="1rem" />
                           </Button>
                           {canManage && review.status === "pending" && (
                             <>
@@ -301,7 +301,7 @@ export default function Reviews() {
                                 disabled={busyId === review.id}
                                 onClick={() => void setStatus(review, "approve")}
                               >
-                                <CheckCircle size={16} />
+                                <CheckCircle size="1rem" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -310,7 +310,7 @@ export default function Reviews() {
                                 disabled={busyId === review.id}
                                 onClick={() => void setStatus(review, "reject")}
                               >
-                                <XCircle size={16} />
+                                <XCircle size="1rem" />
                               </Button>
                             </>
                           )}
@@ -368,7 +368,7 @@ export default function Reviews() {
                       disabled={busyId === selectedReview.id}
                       onClick={() => void setStatus(selectedReview, "approve")}
                     >
-                      <CheckCircle size={16} className="mr-2" />
+                      <CheckCircle size="1rem" className="mr-2" />
                       Approve
                     </Button>
                     <Button
@@ -377,7 +377,7 @@ export default function Reviews() {
                       disabled={busyId === selectedReview.id}
                       onClick={() => void setStatus(selectedReview, "reject")}
                     >
-                      <XCircle size={16} className="mr-2" />
+                      <XCircle size="1rem" className="mr-2" />
                       Reject
                     </Button>
                   </div>

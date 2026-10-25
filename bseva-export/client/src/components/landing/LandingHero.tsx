@@ -49,7 +49,7 @@ export default function LandingHero() {
         <div className="w-full py-10 sm:py-12 lg:-translate-y-[4.5svh] lg:py-8 pl-[clamp(1.25rem,5.55vw,12rem)] pr-[clamp(1.25rem,4vw,4rem)]">
           <div className="max-w-[37.5rem] lg:max-w-none">
             <p className="flex items-center gap-3 text-[0.7rem] font-semibold uppercase leading-snug tracking-[0.18em] text-white sm:text-xs lg:text-[clamp(12px,0.84vw,19px)]">
-              <span aria-hidden className="h-[2px] w-7 shrink-0 bg-[#FF7A00] lg:w-[clamp(28px,1.95vw,44px)]" />
+              <span aria-hidden className="h-[0.125rem] w-7 shrink-0 bg-[#FF7A00] lg:w-[clamp(28px,1.95vw,44px)]" />
               <span>{t("lp.hero.eyebrow")}</span>
             </p>
 
@@ -68,13 +68,13 @@ export default function LandingHero() {
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center lg:mt-[clamp(26px,1.8vw,44px)] lg:gap-[clamp(14px,0.97vw,24px)]">
               <Link href="/services?focus=pujas">
-                <a className="inline-flex h-12 min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[#FF7A00] px-6 text-base font-bold lg:h-[clamp(53px,3.68vw,84px)] lg:px-[clamp(40px,2.78vw,64px)] lg:text-[clamp(17px,1.18vw,27px)] text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
+                <a className="inline-flex h-12 min-h-11 items-center justify-center gap-2 rounded-[0.625rem] bg-[#FF7A00] px-6 text-base font-bold lg:h-[clamp(53px,3.68vw,84px)] lg:px-[clamp(40px,2.78vw,64px)] lg:text-[clamp(17px,1.18vw,27px)] text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
                   {t("lp.cta.book")}
-                  <ArrowRight size={18} aria-hidden className="lp-arrow lg:h-[1.06em] lg:w-[1.06em]" />
+                  <ArrowRight size="1.125rem" aria-hidden className="lp-arrow lg:h-[1.06em] lg:w-[1.06em]" />
                 </a>
               </Link>
               <Link href="/services">
-                <a className="inline-flex h-12 min-h-11 items-center justify-center rounded-[10px] border-2 border-white bg-transparent px-6 text-base font-bold lg:h-[clamp(53px,3.68vw,84px)] lg:px-[clamp(32px,2.22vw,52px)] lg:text-[clamp(17px,1.18vw,27px)] text-white transition-colors hover:bg-white hover:text-[#071A33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
+                <a className="inline-flex h-12 min-h-11 items-center justify-center rounded-[0.625rem] border-2 border-white bg-transparent px-6 text-base font-bold lg:h-[clamp(53px,3.68vw,84px)] lg:px-[clamp(32px,2.22vw,52px)] lg:text-[clamp(17px,1.18vw,27px)] text-white transition-colors hover:bg-white hover:text-[#071A33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071A33]">
                   {t("lp.cta.explore")}
                 </a>
               </Link>
@@ -126,11 +126,11 @@ function TrustRow({
             )}
           >
             {item.icon === "shield" ? (
-              <ShieldCheck size={18} aria-hidden strokeWidth={1.75} className={cn(large && "h-[43%] w-[43%]")} />
+              <ShieldCheck size="1.125rem" aria-hidden strokeWidth={1.75} className={cn(large && "h-[43%] w-[43%]")} />
             ) : item.icon === "lotus" ? (
-              <LotusMark className={large ? "h-[43%] w-[43%]" : "h-[18px] w-[18px]"} />
+              <LotusMark className={large ? "h-[43%] w-[43%]" : "h-[1.125rem] w-[1.125rem]"} />
             ) : (
-              <Users size={18} aria-hidden strokeWidth={1.75} className={cn(large && "h-[43%] w-[43%]")} />
+              <Users size="1.125rem" aria-hidden strokeWidth={1.75} className={cn(large && "h-[43%] w-[43%]")} />
             )}
           </span>
           <TrustLabel text={item.label} />

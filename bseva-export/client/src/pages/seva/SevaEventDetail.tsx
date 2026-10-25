@@ -146,7 +146,7 @@ export default function SevaEventDetail() {
     <Layout>
       <div className="container max-w-3xl py-8 md:py-12 space-y-6">
         <Button type="button" variant="ghost" className="gap-2 px-0" onClick={() => window.history.back()}>
-          <ArrowLeft size={16} />
+          <ArrowLeft size="1rem" />
           {t("common.back")}
         </Button>
 
@@ -189,7 +189,7 @@ export default function SevaEventDetail() {
               <p className="text-sm text-muted-foreground">{formatDisplayDateTime(event.start_at)}</p>
               {[event.temple_name, event.temple_city].filter(Boolean).length ? (
                 <p className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <MapPin size={16} className="shrink-0 mt-0.5 text-primary" />
+                  <MapPin size="1rem" className="shrink-0 mt-0.5 text-primary" />
                   {[event.temple_name, event.temple_address, event.temple_city].filter(Boolean).join(", ")}
                 </p>
               ) : null}

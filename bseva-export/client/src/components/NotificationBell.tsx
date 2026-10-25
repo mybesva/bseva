@@ -92,9 +92,9 @@ export default function NotificationBell({ inboxHref }: { inboxHref: string }) {
         aria-label="Notifications"
         onClick={() => void toggle()}
       >
-        <Bell size={20} />
+        <Bell size="1.25rem" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-destructive text-white text-[10px] font-semibold flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-destructive text-white text-[0.625rem] font-semibold flex items-center justify-center">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -128,7 +128,7 @@ export default function NotificationBell({ inboxHref }: { inboxHref: string }) {
                   >
                     <p className="text-sm font-medium">{n.title}</p>
                     <p className="text-xs text-muted-foreground line-clamp-2">{n.body}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
+                    <p className="text-[0.625rem] text-muted-foreground mt-1">
                       {n.created_at ? formatDisplayDateTime(n.created_at) : ""}
                     </p>
                   </button>
@@ -147,7 +147,7 @@ export function CountBadge({ count, tooltip }: { count?: number; tooltip?: strin
   const label = count > 99 ? "99+" : String(count);
   const badge = (
     <span
-      className="ml-auto shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-destructive text-white text-[10px] font-semibold flex items-center justify-center cursor-help"
+      className="ml-auto shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-destructive text-white text-[0.625rem] font-semibold flex items-center justify-center cursor-help"
       aria-label={tooltip || `${label} requiring action`}
       tabIndex={0}
     >

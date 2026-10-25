@@ -146,7 +146,7 @@ export default function Muhurtham() {
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row">
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-full sm:w-[210px]">
+          <SelectTrigger className="w-full sm:w-[13.125rem]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

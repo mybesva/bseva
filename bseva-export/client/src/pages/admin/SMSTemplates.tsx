@@ -307,7 +307,7 @@ export default function SMSTemplates() {
                         {templateTypes.find(t => t.value === template.type)?.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[250px] truncate text-sm text-muted-foreground">
+                    <TableCell className="max-w-[15.625rem] truncate text-sm text-muted-foreground">
                       {template.content}
                     </TableCell>
                     <TableCell>

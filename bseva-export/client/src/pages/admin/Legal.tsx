@@ -21,7 +21,7 @@ type LegalPolicy = {
   points: LegalPoint[];
 };
 
-const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number | string; className?: string }>> = {
   platform_terms: Scale,
   booking_terms: FileText,
   cancellation_policy: Ban,
@@ -121,7 +121,7 @@ function PolicyEditor({
                 className="text-destructive gap-1"
                 onClick={() => removePoint(index)}
               >
-                <Trash2 size={14} />
+                <Trash2 size="0.875rem" />
                 Remove
               </Button>
             </div>
@@ -147,7 +147,7 @@ function PolicyEditor({
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" className="gap-2" onClick={addPoint}>
-            <Plus size={16} />
+            <Plus size="1rem" />
             Add point
           </Button>
           {dirty && (
@@ -233,7 +233,7 @@ export default function AdminLegalPage() {
                       active ? "bg-primary text-white" : "bg-secondary text-foreground"
                     )}
                   >
-                    <Icon size={20} />
+                    <Icon size="1.25rem" />
                   </span>
                   <span className={cn("text-sm font-medium leading-snug", active ?"text-foreground" :"text-muted-foreground")}>
                     {policy.title}

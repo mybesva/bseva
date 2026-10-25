@@ -18,11 +18,11 @@ export default function LandingHeroAppPreview() {
   const { t } = useI18n();
 
   const tiles = [
-    { key: "pujas", label: t("services.pujas"), icon: <LotusMark className="h-[26px] w-[26px] text-[#1B2B44]" /> },
+    { key: "pujas", label: t("services.pujas"), icon: <LotusMark className="h-[1.625rem] w-[1.625rem] text-[#1B2B44]" /> },
     {
       key: "havans",
       label: t("services.havans"),
-      icon: <Flame aria-hidden className="h-[26px] w-[26px] fill-[#FF8A1E] text-[#E86A00]" strokeWidth={1.6} />,
+      icon: <Flame aria-hidden className="h-[1.625rem] w-[1.625rem] fill-[#FF8A1E] text-[#E86A00]" strokeWidth={1.6} />,
     },
     { key: "ceremonies", label: t("services.ceremonies"), icon: <TempleGlyph /> },
   ];
@@ -36,28 +36,28 @@ export default function LandingHeroAppPreview() {
   return (
     <div
       aria-hidden
-      className="absolute left-0 top-0 h-[470px] w-[230px] select-none"
+      className="absolute left-0 top-0 h-[29.375rem] w-[14.375rem] select-none"
       style={{ transform: PHONE_MATRIX, transformOrigin: "0 0" }}
     >
       {/* Bezel */}
-      <div className="absolute inset-0 rounded-[32px] bg-[#0A0B0E] p-[7px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14),inset_0_0_0_2.5px_#1d1f24]">
+      <div className="absolute inset-0 rounded-[2rem] bg-[#0A0B0E] p-[0.4375rem] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14),inset_0_0_0_2.5px_#1d1f24]">
         {/* Screen */}
-        <div className="relative h-full w-full overflow-hidden rounded-[25px] bg-[#FFFDFB] font-sans text-[#1B2B44] antialiased">
+        <div className="relative h-full w-full overflow-hidden rounded-[1.5625rem] bg-[#FFFDFB] font-sans text-[#1B2B44] antialiased">
           <MandalaOutline className="absolute -right-12 -top-10 h-36 w-36 text-[#E8B15A] opacity-[0.22]" />
-          <MandalaOutline className="absolute -left-16 top-[248px] h-40 w-40 text-[#E8B15A] opacity-[0.12]" />
+          <MandalaOutline className="absolute -left-16 top-[15.5rem] h-40 w-40 text-[#E8B15A] opacity-[0.12]" />
 
           {/* Notch + status bar */}
-          <span className="absolute left-1/2 top-0 h-[17px] w-[78px] -translate-x-1/2 rounded-b-[12px] bg-[#0A0B0E]" />
-          <span className="absolute left-[20px] top-[6px] text-[9.5px] font-bold tracking-tight">9:41</span>
-          <span className="absolute right-[16px] top-[8px] flex items-end gap-[3px]">
-            <span className="flex items-end gap-[1px]">
+          <span className="absolute left-1/2 top-0 h-[1.0625rem] w-[4.875rem] -translate-x-1/2 rounded-b-[0.75rem] bg-[#0A0B0E]" />
+          <span className="absolute left-[1.25rem] top-[0.375rem] text-[0.5938rem] font-bold tracking-tight">9:41</span>
+          <span className="absolute right-[1rem] top-[0.5rem] flex items-end gap-[0.1875rem]">
+            <span className="flex items-end gap-[0.0625rem]">
               {[3, 4.5, 6, 7.5].map((h) => (
-                <span key={h} className="w-[2px] rounded-[1px] bg-[#1B2B44]" style={{ height: h }} />
+                <span key={h} className="w-[0.125rem] rounded-[0.0625rem] bg-[#1B2B44]" style={{ height: h }} />
               ))}
             </span>
-            <Wifi aria-hidden className="h-[10px] w-[10px] text-[#1B2B44]" strokeWidth={3} />
-            <span className="relative h-[8px] w-[16px] rounded-[2.5px] border border-[#1B2B44]/70 p-[1px]">
-              <span className="block h-full w-[80%] rounded-[1px] bg-[#1B2B44]" />
+            <Wifi aria-hidden className="h-[0.625rem] w-[0.625rem] text-[#1B2B44]" strokeWidth={3} />
+            <span className="relative h-[0.5rem] w-[1rem] rounded-[0.1562rem] border border-[#1B2B44]/70 p-[0.0625rem]">
+              <span className="block h-full w-[80%] rounded-[0.0625rem] bg-[#1B2B44]" />
             </span>
           </span>
 
@@ -67,41 +67,41 @@ export default function LandingHeroAppPreview() {
             alt=""
             width={590}
             height={590}
-            className="absolute left-1/2 top-[44px] h-[86px] w-[86px] -translate-x-1/2 object-contain"
+            className="absolute left-1/2 top-[2.75rem] h-[5.375rem] w-[5.375rem] -translate-x-1/2 object-contain"
           />
-          <p className="absolute inset-x-0 top-[131px] text-center text-[23px] font-extrabold leading-none tracking-[-0.01em]">
+          <p className="absolute inset-x-0 top-[8.1875rem] text-center text-[1.4375rem] font-extrabold leading-none tracking-[-0.01em]">
             <span style={{ color: NAVY }}>B-</span>
             <span className="text-[#F07A12]">SEVA</span>
           </p>
-          <p className="absolute inset-x-0 top-[157px] text-center text-[9.5px] font-semibold leading-none" style={{ color: NAVY }}>
+          <p className="absolute inset-x-0 top-[9.8125rem] text-center text-[0.5938rem] font-semibold leading-none" style={{ color: NAVY }}>
             Book. Believe. Bless
           </p>
 
           {/* Primary action */}
-          <div className="absolute inset-x-[14px] top-[192px] flex h-[44px] items-center justify-center rounded-[11px] bg-gradient-to-b from-[#FF8A1A] to-[#F47100] text-[16px] font-semibold text-white shadow-[0_6px_12px_-6px_rgba(232,106,0,0.7)]">
+          <div className="absolute inset-x-[0.875rem] top-[12rem] flex h-[2.75rem] items-center justify-center rounded-[0.6875rem] bg-gradient-to-b from-[#FF8A1A] to-[#F47100] text-[1rem] font-semibold text-white shadow-[0_6px_12px_-6px_rgba(232,106,0,0.7)]">
             {t("lp.cta.book")}
           </div>
 
           {/* Categories */}
-          <div className="absolute inset-x-[12px] top-[264px] grid grid-cols-3 gap-[9px]">
+          <div className="absolute inset-x-[0.75rem] top-[16.5rem] grid grid-cols-3 gap-[0.5625rem]">
             {tiles.map(({ key, label, icon }) => (
               <div key={key} className="flex flex-col items-center">
-                <span className="flex h-[54px] w-full items-center justify-center rounded-[11px] bg-[#F9ECDD]">{icon}</span>
-                <span className="mt-[8px] whitespace-nowrap text-[10px] font-bold leading-none">{label}</span>
+                <span className="flex h-[3.375rem] w-full items-center justify-center rounded-[0.6875rem] bg-[#F9ECDD]">{icon}</span>
+                <span className="mt-[0.5rem] whitespace-nowrap text-[0.625rem] font-bold leading-none">{label}</span>
               </div>
             ))}
           </div>
 
           {/* Tab bar */}
-          <div className="absolute inset-x-0 bottom-0 flex h-[58px] items-start justify-around border-t border-[#F1E6DA] bg-white/95 px-[10px] pt-[9px]">
+          <div className="absolute inset-x-0 bottom-0 flex h-[3.625rem] items-start justify-around border-t border-[#F1E6DA] bg-white/95 px-[0.625rem] pt-[0.5625rem]">
             {tabs.map(({ key, icon: Icon, label, active }) => (
-              <span key={key} className="flex flex-col items-center gap-[4px]">
+              <span key={key} className="flex flex-col items-center gap-[0.25rem]">
                 <Icon
                   aria-hidden
                   strokeWidth={1.9}
-                  className={active ? "h-[19px] w-[19px] fill-[#8A4B22] text-[#6E3A18]" : "h-[19px] w-[19px] text-[#1B2B44]"}
+                  className={active ? "h-[1.1875rem] w-[1.1875rem] fill-[#8A4B22] text-[#6E3A18]" : "h-[1.1875rem] w-[1.1875rem] text-[#1B2B44]"}
                 />
-                <span className="text-[8px] font-semibold leading-none">{label}</span>
+                <span className="text-[0.5rem] font-semibold leading-none">{label}</span>
               </span>
             ))}
           </div>
@@ -122,7 +122,7 @@ export default function LandingHeroAppPreview() {
 
 function TempleGlyph() {
   return (
-    <svg viewBox="0 0 24 24" className="h-[28px] w-[28px]" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-[1.75rem] w-[1.75rem]" aria-hidden>
       <path d="M12 1.5 13 4h-2l1-2.5Z" fill="#E86A00" />
       <path d="M9.5 4h5l.8 3h-6.6l.8-3Z" fill="#2A3A55" />
       <path d="M8 7.5h8l1 3.5H7l1-3.5Z" fill="#33445F" />

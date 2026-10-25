@@ -49,7 +49,7 @@ function AudienceCard({ eyebrow, title, bullets, cta, href, image, imageAlt, ton
                   customer ? "bg-[#E26A00]" : "bg-[#1F4E8C] dark:bg-[#4C86D6]",
                 )}
               >
-                <Check size={12} strokeWidth={3.5} />
+                <Check size="0.75rem" strokeWidth={3.5} />
               </span>
               {b}
             </li>
@@ -66,7 +66,7 @@ function AudienceCard({ eyebrow, title, bullets, cta, href, image, imageAlt, ton
               )}
             >
               {cta}
-              <ArrowRight size={18} aria-hidden className="lp-arrow" />
+              <ArrowRight size="1.125rem" aria-hidden className="lp-arrow" />
             </a>
           </Link>
         </div>

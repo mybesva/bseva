@@ -247,7 +247,7 @@ export default function OpsDashboard() {
     <div className="soften-brand-mark space-y-6">
       {loadError && (
         <p className="flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-          <AlertTriangle size={16} /> {loadError}
+          <AlertTriangle size="1rem" /> {loadError}
         </p>
       )}
 
@@ -258,7 +258,7 @@ export default function OpsDashboard() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-[#E8C46A]">
-              <LayoutGrid size={13} /> Operations console
+              <LayoutGrid size="0.8125rem" /> Operations console
             </p>
             <h1 className="mt-3 text-[1.75rem] font-bold leading-tight sm:text-[2rem]">
               {greeting()}, <span className="text-[#FF9A2E]">{firstName}</span>
@@ -281,7 +281,7 @@ export default function OpsDashboard() {
             <div className={cn("grid gap-2.5 sm:gap-3 lg:min-w-[27rem]", bannerStats.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
               {bannerStats.map((st) => (
                 <div key={st.label} className="rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm sm:p-4">
-                  <st.icon size={16} className="text-[#FF9A2E]" />
+                  <st.icon size="1rem" className="text-[#FF9A2E]" />
                   <p className="mt-2 text-xl font-bold sm:text-2xl">{st.value}</p>
                   <p className="text-[0.7rem] text-white/65 sm:text-xs">{st.label}</p>
                 </div>
@@ -297,14 +297,14 @@ export default function OpsDashboard() {
           aria-label="Refresh dashboard"
           title="Refresh"
         >
-          <RefreshCw size={16} className={cn(loading && "animate-spin")} />
+          <RefreshCw size="1rem" className={cn(loading && "animate-spin")} />
         </button>
       </section>
 
       {noModules && (
         <section className={cn(CARD, "p-8 text-center")}>
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFF1E4] text-[#E86A00] dark:bg-[#FF7A00]/15">
-            <ShieldCheck size={22} />
+            <ShieldCheck size="1.375rem" />
           </span>
           <h2 className="mt-3 text-lg font-bold text-[#0E1830] dark:text-white">No modules assigned yet</h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-[#5B6478] dark:text-white/60">
@@ -336,14 +336,14 @@ export default function OpsDashboard() {
                         )}
                       >
                         <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", TONE[it.tone])}>
-                          <it.icon size={17} />
+                          <it.icon size="1.0625rem" />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-[#0E1830] dark:text-white">{it.label}</span>
                           {it.sub && <span className="block text-xs font-semibold text-rose-600 dark:text-rose-300">{it.sub}</span>}
                         </span>
                         <span className="text-lg font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(it.value)}</span>
-                        <ArrowRight size={15} className="shrink-0 text-[#B9A58A]" />
+                        <ArrowRight size="0.9375rem" className="shrink-0 text-[#B9A58A]" />
                       </a>
                     </Link>
                   </li>
@@ -373,7 +373,7 @@ export default function OpsDashboard() {
                             <span className="ml-1.5 font-normal text-[#5B6478] dark:text-white/50">· {row.customer_name || "Customer"}</span>
                           </p>
                           <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-[#5B6478] dark:text-white/55">
-                            {row.mode === "virtual" ? <Video size={12} /> : <MapPin size={12} />}
+                            {row.mode === "virtual" ? <Video size="0.75rem" /> : <MapPin size="0.75rem" />}
                             <span className="truncate">{row.mode === "virtual" ? "Virtual" : row.location_label || "On-site"}</span>
                             <span>·</span>
                             {row.pujari_name ? (

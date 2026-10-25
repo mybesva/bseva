@@ -421,7 +421,7 @@ export default function ServicesAdmin() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="gap-2" onClick={() => setCategoriesOpen(true)}>
-            <FolderTree size={16} />
+            <FolderTree size="1rem" />
             Categories
           </Button>
           <Button variant="outline" onClick={() => setLocation(adminPath("/pricing"))}>
@@ -429,7 +429,7 @@ export default function ServicesAdmin() {
           </Button>
           {canServices && (
             <Button onClick={openAdd} className="gap-2">
-              <Plus size={16} />
+              <Plus size="1rem" />
               Add service
             </Button>
           )}
@@ -679,7 +679,7 @@ export default function ServicesAdmin() {
             <div className="space-y-2">
               <Label>Spiritual meaning / purpose</Label>
               <textarea
-                className="w-full min-h-[70px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="w-full min-h-[4.375rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.spiritual_meaning}
                 onChange={(e) => setForm({ ...form, spiritual_meaning: e.target.value })}
               />
@@ -687,7 +687,7 @@ export default function ServicesAdmin() {
             <div className="space-y-2">
               <Label>Common occasions</Label>
               <textarea
-                className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="w-full min-h-[3.75rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.common_occasions}
                 onChange={(e) => setForm({ ...form, common_occasions: e.target.value })}
               />
@@ -741,7 +741,7 @@ export default function ServicesAdmin() {
             <div className="space-y-2">
               <Label>Process steps (one per line)</Label>
               <textarea
-                className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="w-full min-h-[6.25rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.process_steps_text}
                 onChange={(e) => setForm({ ...form, process_steps_text: e.target.value })}
               />
@@ -1101,7 +1101,7 @@ export default function ServicesAdmin() {
                     value={form.pujaris_required}
                     onChange={(e) => setForm({ ...form, pujaris_required: Number(e.target.value) || 1 })}
                   />
-                  <p className="text-[11px] text-muted-foreground">Used when Standard or Premium is left blank below.</p>
+                  <p className="text-[0.6875rem] text-muted-foreground">Used when Standard or Premium is left blank below.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="puj-standard">Standard package</Label>
@@ -1813,7 +1813,7 @@ export default function ServicesAdmin() {
                       <div className="flex gap-2 justify-end">
                         {(canServices || canSamagri) && (
                         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(s)}>
-                          <Pencil size={14} />
+                          <Pencil size="0.875rem" />
                           Edit
                         </Button>
                         )}
@@ -1826,7 +1826,7 @@ export default function ServicesAdmin() {
                           onClick={() => openEdit(s)}
                           title="Replace image"
                         >
-                          <ImageIcon size={14} />
+                          <ImageIcon size="0.875rem" />
                           Image
                         </Button>
                         <span

@@ -166,7 +166,7 @@ export default function ServiceCard({
     >
       {comingSoon && (
         <div className="absolute top-0 right-0 z-30 max-w-[calc(100%-0.5rem)]">
-          <div className="bg-amber-500 text-white font-extrabold text-[11px] sm:text-xs uppercase tracking-wider shadow-lg px-3 py-1.5 rounded-bl-lg">
+          <div className="bg-amber-500 text-white font-extrabold text-[0.6875rem] sm:text-xs uppercase tracking-wider shadow-lg px-3 py-1.5 rounded-bl-lg">
             {t("services.comingSoonLabel")}
           </div>
         </div>

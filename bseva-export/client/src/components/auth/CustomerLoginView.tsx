@@ -13,7 +13,7 @@ const CUSTOMER_SCENE = "/images/customer-login-scene-clean.webp";
 const PUJARI_SCENE = "/images/pujari-login-scene-clean.webp";
 
 const fieldClass =
-  "h-11 rounded-lg border-[#E4D5C3] bg-white pl-10 text-[15px] font-medium text-[#0E1830] shadow-none placeholder:text-[#5C6578] focus-visible:border-[#FF7A00] focus-visible:ring-[#FF7A00]/35 dark:border-[#2F4568] dark:bg-[#0E1A2E] dark:text-white dark:placeholder:text-[#C5D0DE]";
+  "h-11 rounded-lg border-[#E4D5C3] bg-white pl-10 text-[0.9375rem] font-medium text-[#0E1830] shadow-none placeholder:text-[#5C6578] focus-visible:border-[#FF7A00] focus-visible:ring-[#FF7A00]/35 dark:border-[#2F4568] dark:bg-[#0E1A2E] dark:text-white dark:placeholder:text-[#C5D0DE]";
 
 type BenefitIconName = "calendar" | "heart" | "bell" | "lotus" | "users" | "star";
 
@@ -30,7 +30,7 @@ function BenefitIcon({ icon }: { icon: BenefitIconName }) {
   if (icon === "bell") return <Bell {...common} />;
   if (icon === "users") return <Users {...common} />;
   if (icon === "star") return <Star {...common} />;
-  return <LotusMark className="h-[18px] w-[18px]" />;
+  return <LotusMark className="h-[1.125rem] w-[1.125rem]" />;
 }
 
 function BenefitList({ items, className }: { items: Benefit[]; className?: string }) {
@@ -42,7 +42,7 @@ function BenefitList({ items, className }: { items: Benefit[]; className?: strin
             <BenefitIcon icon={item.icon} />
           </span>
           <span className="min-w-0 pt-0.5">
-            <span className="block text-[15px] font-bold leading-tight text-[#0E1830] dark:text-white">{item.title}</span>
+            <span className="block text-[0.9375rem] font-bold leading-tight text-[#0E1830] dark:text-white">{item.title}</span>
             <span className="mt-0.5 block text-sm font-medium leading-snug text-[#1A2B4A] dark:text-[#E8ECF0]">{item.body}</span>
           </span>
         </li>
@@ -103,7 +103,10 @@ export default function CustomerLoginView({
       <HangingDiya className={cn("absolute right-20 top-0 z-20 hidden h-36 w-11 text-[#E0A04A] dark:text-[#FF7A00]/75", pujari ? "xl:block" : "lg:block")} />
 
       <div className="relative z-10 mx-auto my-auto flex w-full max-w-[100rem] flex-col px-5 py-6 sm:px-6 xl:px-14">
-        <div className="mb-6 flex justify-center xl:hidden">
+        {/* Stacked phone/tablet layout only. Customer switches to side-by-side at lg, so the image
+            must disappear there too — otherwise 1024–1279px screens (e.g. Windows laptops at 125–150%
+            scaling) show it on top, splitting the page. */}
+        <div className="mb-6 flex justify-center lg:hidden">
           <DevotionalImageFrame
             src={scene}
             alt={t(pujari ? "pl.imgAlt" : "cl.imgAlt")}
@@ -111,15 +114,13 @@ export default function CustomerLoginView({
             height={pujari ? 1284 : 1278}
             objectPosition={pujari ? "30% 0%" : "50% 72%"}
             priority
-            className="aspect-[25/36] w-[220px] sm:w-[250px]"
+            className="aspect-[25/36] w-[13.75rem] sm:w-[15.625rem]"
           />
         </div>
 
       <div className={cn(
         "flex w-full flex-col gap-8",
-        pujari
-          ? "xl:flex-row xl:items-center xl:gap-8"
-          : "lg:flex-row lg:items-center lg:gap-8 xl:gap-10",
+        "lg:flex-row lg:items-center lg:gap-8 xl:gap-10",
       )}>
         <div className="relative hidden shrink-0 self-center xl:block">
           <MandalaOutline className="pointer-events-none absolute -inset-10 text-[#E8B15A] opacity-[0.14] dark:opacity-[0.08]" />
@@ -130,11 +131,11 @@ export default function CustomerLoginView({
             height={pujari ? 1284 : 1278}
             objectPosition={pujari ? "30% 0%" : "50% 72%"}
             priority
-            className="aspect-[25/36] w-[300px] 2xl:w-[330px]"
+            className="aspect-[25/36] w-[18.75rem] 2xl:w-[20.625rem]"
           />
         </div>
         <div className="min-w-0 flex-1 lg:max-w-[34rem]">
-          <p className="flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs">
+          <p className="flex items-center gap-2.5 text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs">
             <span aria-hidden className="text-[#FF7A00]/80">—</span>
             <span>{t("cl.eyebrow")}</span>
             <span aria-hidden className="text-[#FF7A00]/80">—</span>
@@ -148,19 +149,19 @@ export default function CustomerLoginView({
             <span className="block text-[#FF7A00]">{t(pujari ? "pl.title2" : "cl.title2")}</span>
           </h1>
 
-          <p className={cn("mt-3 text-[15px] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0] sm:text-base", pujari ? "max-w-[26rem]" : "max-w-[28rem]")}>
+          <p className={cn("mt-3 text-[0.9375rem] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0] sm:text-base", pujari ? "max-w-[26rem]" : "max-w-[28rem]")}>
             {pujari ? <span className="font-bold text-[#0E1830] dark:text-white">{t("pl.lead")}</span> : null}
             {t(pujari ? "pl.desc" : "cl.desc")}
           </p>
 
-          <BenefitList items={benefits} className={pujari ? "mt-6 hidden xl:flex" : "mt-6 hidden lg:flex"} />
+          <BenefitList items={benefits} className="mt-6 hidden lg:flex" />
         </div>
 
-        <div className={cn("w-full shrink-0", pujari ? "xl:w-[clamp(26.5rem,34vw,30rem)]" : "lg:w-[min(100%,30rem)]")}>
+        <div className={cn("w-full shrink-0", pujari ? "lg:w-[clamp(26.5rem,34vw,30rem)]" : "lg:w-[min(100%,30rem)]")}>
           <div className="rounded-2xl border border-[#F0CBA8] bg-white px-5 py-6 shadow-[0_10px_32px_-22px_rgba(160,90,30,0.45)] sm:px-7 sm:py-7 dark:border-[#FF7A00]/35 dark:bg-[#152238] dark:shadow-none">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-                {pujari ? <Sparkles size={20} strokeWidth={1.75} aria-hidden /> : <Users size={20} strokeWidth={1.75} aria-hidden />}
+                {pujari ? <Sparkles size="1.25rem" strokeWidth={1.75} aria-hidden /> : <Users size="1.25rem" strokeWidth={1.75} aria-hidden />}
               </span>
               <div className="min-w-0 pt-0.5">
                 <h2 className="text-xl font-bold leading-tight text-[#0E1830] dark:text-white">
@@ -214,7 +215,7 @@ export default function CustomerLoginView({
               <Button
                 type="submit"
                 disabled={pending}
-                className="h-11 w-full rounded-lg bg-[#FF7A00] text-[15px] font-bold text-white hover:bg-[#F07400]"
+                className="h-11 w-full rounded-lg bg-[#FF7A00] text-[0.9375rem] font-bold text-white hover:bg-[#F07400]"
               >
                 {pending ? t("auth.loggingIn") : t(pujari ? "auth.loginAsPujari" : "auth.loginAsCustomer")}
               </Button>
@@ -227,8 +228,8 @@ export default function CustomerLoginView({
             </div>
 
             <Link href={registerHref}>
-              <a className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border-2 border-[#FF7A00] bg-white text-[15px] font-bold text-[#FF7A00] transition-colors hover:bg-[#FFF4EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] focus-visible:ring-offset-2 dark:bg-transparent dark:hover:bg-[#FF7A00]/10">
-                <UserPlus size={18} strokeWidth={1.75} aria-hidden />
+              <a className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border-2 border-[#FF7A00] bg-white text-[0.9375rem] font-bold text-[#FF7A00] transition-colors hover:bg-[#FFF4EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] focus-visible:ring-offset-2 dark:bg-transparent dark:hover:bg-[#FF7A00]/10">
+                <UserPlus size="1.125rem" strokeWidth={1.75} aria-hidden />
                 {t(pujari ? "pl.createNew" : "cl.createNew")}
               </a>
             </Link>
@@ -237,7 +238,7 @@ export default function CustomerLoginView({
 
         <BenefitList
           items={benefits}
-          className={pujari ? "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-8 xl:hidden" : "hidden sm:grid sm:grid-cols-2 sm:gap-x-8 sm:gap-y-4 lg:hidden"}
+          className={pujari ? "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-8 lg:hidden" : "hidden sm:grid sm:grid-cols-2 sm:gap-x-8 sm:gap-y-4 lg:hidden"}
         />
       </div>
       </div>

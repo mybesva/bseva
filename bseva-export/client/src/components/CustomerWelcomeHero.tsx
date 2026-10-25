@@ -47,8 +47,8 @@ export default function CustomerWelcomeHero({
 
         <div className="relative grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr] lg:items-end lg:p-9">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#FF7A00]">
-              <Flower2 size={15} aria-hidden />
+            <p className="flex items-center gap-2 text-[0.6875rem] font-extrabold uppercase tracking-[0.18em] text-[#FF7A00]">
+              <Flower2 size="0.9375rem" aria-hidden />
               {t("customer.hero.tagline")}
             </p>
             <h1 className="mt-3 break-words font-display text-[clamp(1.75rem,1.2rem+2vw,2.6rem)] font-semibold leading-[1.15]">
@@ -56,7 +56,7 @@ export default function CustomerWelcomeHero({
               {g.name ? <span className="text-[#FF7A00]">{g.name}</span> : null}
               {g.after}
             </h1>
-            <p className="mt-3 max-w-[36rem] text-[15px] font-medium leading-relaxed text-white/85">
+            <p className="mt-3 max-w-[36rem] text-[0.9375rem] font-medium leading-relaxed text-white/85">
               {t("customer.hero.welcome")} {t("customer.hero.blessing")} {t("customer.hero.support")}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
@@ -64,7 +64,7 @@ export default function CustomerWelcomeHero({
                 href="/services?focus=pujas"
                 className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#FF7A00] px-5 text-sm font-bold text-[#0E1830] shadow-[0_10px_18px_-10px_rgba(255,122,0,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
-                {t("nav.bookPuja")} <ArrowRight size={16} aria-hidden />
+                {t("nav.bookPuja")} <ArrowRight size="1rem" aria-hidden />
               </Link>
               <Link
                 href="/customer/bookings"
@@ -79,7 +79,7 @@ export default function CustomerWelcomeHero({
             <span className="absolute -top-5 left-4 font-display text-5xl leading-none text-[#D4AF37]" aria-hidden>
               “
             </span>
-            <p className="font-display text-[17px] font-semibold leading-snug">{t("customer.hero.quote")}</p>
+            <p className="font-display text-[1.0625rem] font-semibold leading-snug">{t("customer.hero.quote")}</p>
             <footer className="mt-1.5 text-xs font-bold uppercase tracking-[0.1em] text-[#D4AF37]">
               — {t("customer.hero.quoteBy")}
             </footer>
@@ -98,7 +98,7 @@ export default function CustomerWelcomeHero({
             }`}
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFF1E2] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-              <Icon size={18} strokeWidth={1.8} aria-hidden />
+              <Icon size="1.125rem" strokeWidth={1.8} aria-hidden />
             </span>
             <span className="min-w-0 leading-tight">{t(key)}</span>
           </li>

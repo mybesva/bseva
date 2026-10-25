@@ -68,7 +68,7 @@ export default function ServicesNavMenu({ active, variant = "desktop", onNavigat
                 className="flex items-center gap-2 text-base font-semibold text-foreground hover:text-primary"
                 onClick={onNavigate}
               >
-                <Icon size={16} aria-hidden />
+                <Icon size="1rem" aria-hidden />
                 {t(labelKey)}
               </a>
             </Link>
@@ -112,12 +112,12 @@ export default function ServicesNavMenu({ active, variant = "desktop", onNavigat
           }
         }}
         className={cn(
-          "inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[15px] font-semibold leading-none transition-colors hover:text-primary",
+          "inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[0.9375rem] font-semibold leading-none transition-colors hover:text-primary",
           active || open ? "text-primary" : "text-foreground",
         )}
       >
         {t("nav.services")}
-        <ChevronDown size={14} aria-hidden className={cn("transition-transform", open && "rotate-180")} />
+        <ChevronDown size="0.875rem" aria-hidden className={cn("transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
         <div
@@ -137,7 +137,7 @@ export default function ServicesNavMenu({ active, variant = "desktop", onNavigat
                     onNavigate?.();
                   }}
                 >
-                  <Icon size={16} aria-hidden />
+                  <Icon size="1rem" aria-hidden />
                   {t(labelKey)}
                 </a>
               </Link>

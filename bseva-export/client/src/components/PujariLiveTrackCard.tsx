@@ -189,7 +189,7 @@ export default function PujariLiveTrackCard({
     return (
       <div className={cn("rounded-lg border border-dashed border-border bg-muted/10 p-4 text-sm text-muted-foreground", className)}>
         <p className="font-medium text-foreground flex items-center gap-2 mb-1">
-          <Navigation size={16} className="text-primary" />
+          <Navigation size="1rem" className="text-primary" />
           {t("track.title")}
         </p>
         <p>{ping?.message || t("track.notAvailable")}</p>
@@ -211,7 +211,7 @@ export default function PujariLiveTrackCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-foreground flex items-center gap-2">
-            <Navigation size={16} className="text-primary" />
+            <Navigation size="1rem" className="text-primary" />
             {t("track.title")}
             {hasCoords ? (
               <span

@@ -48,7 +48,7 @@ export default function SevaTypeTabs({ value, types, onChange, children }: SevaT
                 "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg",
               )}
             >
-              <Icon size={18} aria-hidden />
+              <Icon size="1.125rem" aria-hidden />
               {t(TAB_LABEL_KEYS[type])}
             </TabsTrigger>
           );

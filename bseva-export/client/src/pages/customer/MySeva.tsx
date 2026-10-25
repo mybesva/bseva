@@ -183,13 +183,13 @@ export default function MySevaPage() {
 
                       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1.5">
-                          <Calendar size={14} />
+                          <Calendar size="0.875rem" />
                           {formatDisplayDateTime(reg.event_start_at)}
                         </span>
                         {reg.temple_name ? <span>{reg.temple_name}</span> : null}
                         {reg.package_name ? (
                           <span className="flex items-center gap-1.5">
-                            <Package size={14} />
+                            <Package size="0.875rem" />
                             {reg.package_name}
                           </span>
                         ) : null}
@@ -228,13 +228,13 @@ export default function MySevaPage() {
                         ) : null}
                         {reg.proof_released && reg.proof_image_path ? (
                           <Button type="button" size="sm" variant="secondary" onClick={() => openProof(reg)}>
-                            <FileImage size={14} />
+                            <FileImage size="0.875rem" />
                             {t("seva.proof")}
                           </Button>
                         ) : null}
                         {reg.prasad_tracking ? (
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground self-center">
-                            <ExternalLink size={12} />
+                            <ExternalLink size="0.75rem" />
                             {reg.prasad_courier}: {reg.prasad_tracking}
                           </span>
                         ) : null}

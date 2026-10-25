@@ -47,7 +47,7 @@ export default function WalletPanel({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wallet size={20} className="text-primary" />
+          <Wallet size="1.25rem" className="text-primary" />
           {variant === "priest" ? t("web.wallet.pujari") : t("web.wallet.customer")}
         </CardTitle>
       </CardHeader>

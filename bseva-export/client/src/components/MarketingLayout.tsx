@@ -28,13 +28,13 @@ const SOCIAL_BRAND = {
 const INSTAGRAM_GRADIENT =
   "radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285AEB 90%)";
 
-const InstagramIcon = ({ size = 16 }: { size?: number }) => (
+const InstagramIcon = ({ size = 16 }: { size?: number | string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z" />
   </svg>
 );
 
-const WhatsAppIcon = ({ size = 16 }: { size?: number }) => (
+const WhatsAppIcon = ({ size = 16 }: { size?: number | string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
   </svg>
@@ -83,7 +83,7 @@ function HeaderContact({
         className="inline-flex items-center gap-1.5 min-h-8 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
         aria-label={`Call ${phoneDisplay}`}
       >
-        <Phone size={13} className="shrink-0" aria-hidden />
+        <Phone size="0.8125rem" className="shrink-0" aria-hidden />
         <span>{phoneDisplay}</span>
       </a>
       <a
@@ -91,7 +91,7 @@ function HeaderContact({
         className="inline-flex items-center gap-1.5 min-h-8 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
         aria-label={`Email ${email}`}
       >
-        <Mail size={13} className="shrink-0" aria-hidden />
+        <Mail size="0.8125rem" className="shrink-0" aria-hidden />
         <span>{email}</span>
       </a>
     </div>
@@ -168,7 +168,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
   const navLinkClass = (path: string) =>
     cn(
-      "shrink-0 whitespace-nowrap rounded-sm text-[15px] font-semibold leading-none transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4",
+      "shrink-0 whitespace-nowrap rounded-sm text-[0.9375rem] font-semibold leading-none transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4",
       isNavItemActive(path, location, search) ? "text-primary" : "text-foreground",
     );
 
@@ -216,7 +216,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </a>
             </Link>
             <div className="hidden md:block">
-              <LanguageSelect triggerClassName="h-10 w-[7.5rem] text-[13px] font-semibold xl:w-[8.5rem]" />
+              <LanguageSelect triggerClassName="h-10 w-[7.5rem] text-[0.8125rem] font-semibold xl:w-[8.5rem]" />
             </div>
             <ThemeToggle className="h-10 w-10 shrink-0" />
             {user && (
@@ -319,13 +319,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <p className="mt-4 max-w-sm text-sm font-medium leading-relaxed text-white">{t("footer.tagline")}</p>
             <ul className="mt-4 space-y-1 text-sm font-medium text-white">
               <li className="flex items-center gap-2">
-                <Phone size={14} className="shrink-0 text-brand-orange" aria-hidden />
+                <Phone size="0.875rem" className="shrink-0 text-brand-orange" aria-hidden />
                 <a href={phoneHref} className="rounded-sm hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
                   {phoneDisplay}
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={14} className="shrink-0 text-brand-orange" aria-hidden />
+                <Mail size="0.875rem" className="shrink-0 text-brand-orange" aria-hidden />
                 <a href={`mailto:${supportEmail}`} className="break-all rounded-sm hover:text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
                   {supportEmail}
                 </a>
@@ -369,7 +369,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                     className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-[transform,filter] hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
                     style={social.gradient ? { backgroundImage: social.gradient } : { backgroundColor: social.color ?? undefined }}
                   >
-                    <social.icon size={17} />
+                    <social.icon size="1.0625rem" />
                   </a>
                 </li>
               ))}
@@ -383,14 +383,14 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 {APP_STORE_URL ? (
                   <li>
                     <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/40 bg-black px-3 text-sm font-semibold text-white hover:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
-                      <Download size={16} aria-hidden /> {t("lp.app.appStore")}
+                      <Download size="1rem" aria-hidden /> {t("lp.app.appStore")}
                     </a>
                   </li>
                 ) : null}
                 {PLAY_STORE_URL ? (
                   <li>
                     <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/40 bg-black px-3 text-sm font-semibold text-white hover:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
-                      <Download size={16} aria-hidden /> {t("lp.app.googlePlay")}
+                      <Download size="1rem" aria-hidden /> {t("lp.app.googlePlay")}
                     </a>
                   </li>
                 ) : null}
@@ -417,7 +417,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 title={t("lp.footer.backToTop")}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FF7A00] text-white shadow-[0_8px_18px_-10px_rgba(255,122,0,0.9)] transition hover:bg-[#FF8A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
-                <ArrowUp size={17} aria-hidden />
+                <ArrowUp size="1.0625rem" aria-hidden />
               </button>
             </div>
           </div>

@@ -32,7 +32,7 @@ export default function ThemeToggle({
       aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
       title={isDark ? t("theme.toLight") : t("theme.toDark")}
     >
-      {isDark ? <Sun size={18} className="text-primary" /> : <Moon size={18} />}
+      {isDark ? <Sun size="1.125rem" className="text-primary" /> : <Moon size="1.125rem" />}
       {size !== "icon" && <span className="ml-1.5">{isDark ? "Light" : "Dark"}</span>}
     </Button>
   );

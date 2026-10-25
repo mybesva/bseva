@@ -31,7 +31,7 @@ export default function ServicesWhyChoose() {
             />
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#FF7A00]">
-                <ShieldCheck size={15} aria-hidden />
+                <ShieldCheck size="0.9375rem" aria-hidden />
                 {t("sv.why.eyebrow")}
               </p>
               <h2
@@ -52,7 +52,7 @@ export default function ServicesWhyChoose() {
           >
             <MandalaOutline className="pointer-events-none absolute -bottom-20 -right-20 h-64 w-64 text-[#E8B15A] opacity-[0.14]" />
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FF7A00]/15 text-[#FF7A00]">
-              <MessageCircleHeart size={22} aria-hidden />
+              <MessageCircleHeart size="1.375rem" aria-hidden />
             </span>
             <h2 id="services-custom-title" className="relative mt-4 font-display text-[1.45rem] font-semibold leading-[1.2] lg:text-[1.6rem]">
               {t("sv.custom.title1")} <span className="text-[#FF9A2E]">{t("sv.custom.title2")}</span>
@@ -66,7 +66,7 @@ export default function ServicesWhyChoose() {
               }}
             >
               {t("services.requestCustom")}
-              <ArrowRight size={17} aria-hidden />
+              <ArrowRight size="1.0625rem" aria-hidden />
             </button>
           </article>
         </div>

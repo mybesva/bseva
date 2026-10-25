@@ -29,7 +29,7 @@ export default function PujariOverflowMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Pujari menu">
-          <MoreVertical size={20} />
+          <MoreVertical size="1.25rem" />
           {incomplete && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />}
         </Button>
       </DropdownMenuTrigger>

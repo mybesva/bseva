@@ -67,18 +67,18 @@ export default function SevaEventCard({ event, onOpen, actionLabel }: SevaEventC
       </CardHeader>
       <CardContent className="space-y-2 text-sm text-muted-foreground flex-1">
         <p className="flex items-center gap-2">
-          <Calendar size={15} className="shrink-0 text-primary" />
+          <Calendar size="0.9375rem" className="shrink-0 text-primary" />
           {formatDisplayDateTime(event.start_at)}
         </p>
         {templeLine ? (
           <p className="flex items-start gap-2">
-            <MapPin size={15} className="shrink-0 text-primary mt-0.5" />
+            <MapPin size="0.9375rem" className="shrink-0 text-primary mt-0.5" />
             <span>{templeLine}</span>
           </p>
         ) : null}
         {event.online_enabled ? (
           <p className="flex items-center gap-2">
-            <Video size={15} className="shrink-0 text-primary" />
+            <Video size="0.9375rem" className="shrink-0 text-primary" />
             {t("seva.online")}
           </p>
         ) : null}
@@ -96,7 +96,7 @@ export default function SevaEventCard({ event, onOpen, actionLabel }: SevaEventC
           <p className="font-medium">{t("seva.registrationClosed")}</p>
         ) : seats ? (
           <p className="flex items-center gap-2">
-            <Users size={15} className="shrink-0" />
+            <Users size="0.9375rem" className="shrink-0" />
             {seats}
           </p>
         ) : null}

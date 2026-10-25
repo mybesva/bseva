@@ -22,7 +22,7 @@ export function LanguageSelector({
   return (
     <Select value={lang} onValueChange={(v) => void changeLanguage(v as Lang)}>
       <SelectTrigger
-        className={cn("w-[168px] h-8 text-xs whitespace-nowrap gap-1", triggerClassName)}
+        className={cn("w-[10.5rem] h-8 text-xs whitespace-nowrap gap-1", triggerClassName)}
         aria-label={t("nav.appLanguage")}
       >
         <SelectValue />

@@ -40,7 +40,7 @@ export function PujariOnboardingProgress({ step }: { step: number }) {
         {Array.from({ length: ONBOARDING_STEPS }, (_, i) => i + 1).map((n) => (
           <span
             key={n}
-            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+            className={`text-[0.6875rem] font-semibold px-2 py-0.5 rounded-full border ${
               n === step
                 ? "bg-primary text-white border-primary"
                 : n < step

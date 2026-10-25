@@ -45,7 +45,7 @@ export default function LandingFinalCta() {
           <Link href="/services?focus=pujas">
             <a className="group mt-7 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#0A1630] px-7 text-base font-bold text-white shadow-lg transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A1630] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFC46B] sm:w-auto">
               {t("lp.cta.bookToday")}
-              <ArrowRight size={18} aria-hidden className="lp-arrow" />
+              <ArrowRight size="1.125rem" aria-hidden className="lp-arrow" />
             </a>
           </Link>
         </div>
@@ -57,7 +57,7 @@ export default function LandingFinalCta() {
                 aria-hidden
                 className="flex h-14 w-14 items-center justify-center rounded-full border border-white/80 bg-[#0A1630]/45 text-white backdrop-blur-sm"
               >
-                <Icon size={24} strokeWidth={1.5} />
+                <Icon size="1.5rem" strokeWidth={1.5} />
               </span>
               <span className="text-sm font-bold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.55)]">{label}</span>
             </li>

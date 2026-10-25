@@ -221,13 +221,13 @@ export default function BookingReceipt() {
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
-                  <Calendar size={14} /> {t("web.booking.date")}
+                  <Calendar size="0.875rem" /> {t("web.booking.date")}
                 </p>
                 <p className="font-medium">{formatDisplayDate(booking.booking_date)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
-                  <Clock size={14} /> {t("web.booking.time")}
+                  <Clock size="0.875rem" /> {t("web.booking.time")}
                 </p>
                 <p className="font-medium">{booking.start_time ||"—"}</p>
               </div>
@@ -250,7 +250,7 @@ export default function BookingReceipt() {
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">
-                  <MapPin size={14} /> {t("service.location")}
+                  <MapPin size="0.875rem" /> {t("service.location")}
                 </p>
                 <p className="font-medium">{booking.location_label || booking.address ||"—"}</p>
               </div>

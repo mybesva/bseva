@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Ban, FileText, Scale } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 
-const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number | string; className?: string }>> = {
   platform_terms: Scale,
   booking_terms: FileText,
   cancellation_policy: Ban,
@@ -61,7 +61,7 @@ export function PortalTermsContent() {
                   active ? "bg-primary text-white" : "bg-secondary text-foreground"
                 )}
               >
-                <Icon size={20} />
+                <Icon size="1.25rem" />
               </span>
               <span
                 className={cn(

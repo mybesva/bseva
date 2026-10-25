@@ -92,7 +92,7 @@ function PanchangInfoCard({
     >
       <p
         className={cn(
-          "text-[11px] font-semibold uppercase tracking-wide",
+          "text-[0.6875rem] font-semibold uppercase tracking-wide",
           highlight ? "text-primary" : "text-muted-foreground",
         )}
       >
@@ -169,7 +169,7 @@ export default function PanchangCard({ className }: { className?: string }) {
     >
       <CardHeader className="space-y-4 pb-0">
         <div className="flex items-center gap-2">
-          <CalendarIcon className="text-primary shrink-0" size={22} strokeWidth={2.25} />
+          <CalendarIcon className="text-primary shrink-0" size="1.375rem" strokeWidth={2.25} />
           <h2 className="text-xl font-bold text-sidebar tracking-tight">{t("calendar.panchangam")}</h2>
         </div>
 
@@ -190,7 +190,7 @@ export default function PanchangCard({ className }: { className?: string }) {
               aria-label={t("calendar.previousDay")}
               onClick={() => setSelectedDate((d) => addDaysToIsoDate(d, -1))}
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size="1.125rem" />
             </Button>
 
             <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
@@ -200,13 +200,13 @@ export default function PanchangCard({ className }: { className?: string }) {
                   className="flex min-h-11 min-w-0 flex-1 flex-col justify-center rounded-lg border border-primary/25 bg-white px-3 py-2 text-left transition-colors hover:bg-white/90"
                 >
                   <span className="flex items-start gap-2">
-                    <CalendarIcon size={15} className="mt-0.5 shrink-0 text-primary" />
+                    <CalendarIcon size="0.9375rem" className="mt-0.5 shrink-0 text-primary" />
                     <span className="min-w-0 text-sm font-semibold leading-snug text-sidebar line-clamp-2">
                       {dateLabel}
                     </span>
                   </span>
                   {dateSubtitle && !loading ? (
-                    <span className="mt-1 pl-[23px] text-xs text-muted-foreground">{dateSubtitle}</span>
+                    <span className="mt-1 pl-[1.4375rem] text-xs text-muted-foreground">{dateSubtitle}</span>
                   ) : null}
                 </button>
               </PopoverTrigger>
@@ -232,7 +232,7 @@ export default function PanchangCard({ className }: { className?: string }) {
               aria-label={t("calendar.nextDay")}
               onClick={() => setSelectedDate((d) => addDaysToIsoDate(d, 1))}
             >
-              <ChevronRight size={18} />
+              <ChevronRight size="1.125rem" />
             </Button>
 
             <Button

@@ -110,7 +110,7 @@ export default function PriestOnboardingPanel() {
         </div>
         {uploaded ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2">
-            <span className="text-xs text-muted-foreground truncate max-w-[220px]">
+            <span className="text-xs text-muted-foreground truncate max-w-[13.75rem]">
               {fileLabel(uploaded.storage_path)}
             </span>
             <div className="flex gap-2">
@@ -154,7 +154,7 @@ export default function PriestOnboardingPanel() {
             />
             <Button type="button" size="sm" disabled={busy} asChild>
               <span className="gap-2">
-                <Upload size={14} />
+                <Upload size="0.875rem" />
                 {busy ? "Uploading…" : "Upload file"}
               </span>
             </Button>
@@ -173,7 +173,7 @@ export default function PriestOnboardingPanel() {
     <Card className="border-border mb-8">
       <CardHeader>
         <CardTitle className="text-xl flex items-center gap-2">
-          <FileText size={18} /> Certificates & Aadhaar
+          <FileText size="1.125rem" /> Certificates & Aadhaar
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">

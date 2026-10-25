@@ -42,7 +42,7 @@ export default function PujariEarningsPage() {
         <Card>
           <CardContent className="p-4 flex items-start gap-3">
             <div className="rounded-md bg-primary/10 p-2 text-primary">
-              <TrendingUp size={18} />
+              <TrendingUp size="1.125rem" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.thisMonth")}</p>
@@ -53,7 +53,7 @@ export default function PujariEarningsPage() {
         <Card>
           <CardContent className="p-4 flex items-start gap-3">
             <div className="rounded-md bg-emerald-500/10 p-2 text-emerald-700">
-              <CheckCircle2 size={18} />
+              <CheckCircle2 size="1.125rem" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.completed")}</p>
@@ -64,7 +64,7 @@ export default function PujariEarningsPage() {
         <Card>
           <CardContent className="p-4 flex items-start gap-3">
             <div className="rounded-md bg-amber-500/10 p-2 text-amber-700">
-              <Clock size={18} />
+              <Clock size="1.125rem" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.inProgress")}</p>
@@ -75,7 +75,7 @@ export default function PujariEarningsPage() {
         <Card>
           <CardContent className="p-4 flex items-start gap-3">
             <div className="rounded-md bg-blue-500/10 p-2 text-blue-700">
-              <Wallet size={18} />
+              <Wallet size="1.125rem" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("web.earnings.settlementPending")}</p>

@@ -120,7 +120,7 @@ export default function LandingTestimonials({ items }: { items: LandingTestimoni
                     {Array.from({ length: 5 }, (_, s) => (
                       <Star
                         key={s}
-                        size={18}
+                        size="1.125rem"
                         aria-hidden
                         className={s < item.rating ? "fill-brand-orange text-brand-orange" : "text-border"}
                       />
@@ -141,7 +141,7 @@ export default function LandingTestimonials({ items }: { items: LandingTestimoni
             aria-label={t("lp.test.prev")}
             className="absolute -left-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40 md:flex xl:-left-6"
           >
-            <ChevronLeft size={22} aria-hidden />
+            <ChevronLeft size="1.375rem" aria-hidden />
           </button>
           <button
             type="button"
@@ -150,7 +150,7 @@ export default function LandingTestimonials({ items }: { items: LandingTestimoni
             aria-label={t("lp.test.next")}
             className="absolute -right-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40 md:flex xl:-right-6"
           >
-            <ChevronRight size={22} aria-hidden />
+            <ChevronRight size="1.375rem" aria-hidden />
           </button>
         </div>
 

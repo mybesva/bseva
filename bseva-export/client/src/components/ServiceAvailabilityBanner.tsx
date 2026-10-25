@@ -43,7 +43,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true, virtual
             <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
               {config.service_area_unavailable_heading?.trim() || t("web.availability.comingSoonTitle")}
             </h2>
-            <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
+            <p className="text-sm md:text-[0.9375rem] text-muted-foreground leading-relaxed">
               {config.service_area_unavailable_description?.trim() || t("web.availability.comingSoonBody")}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -88,7 +88,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true, virtual
               <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
                 {t("web.availability.addressTitle")}
               </h2>
-              <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">{t("web.availability.addressBody")}</p>
+              <p className="text-sm md:text-[0.9375rem] text-muted-foreground leading-relaxed">{t("web.availability.addressBody")}</p>
             </div>
           </div>
           <Link href="/customer/profile?tab=address">
@@ -113,7 +113,7 @@ export default function ServiceAvailabilityBanner({ showChecking = true, virtual
               <h2 className="text-lg md:text-xl font-bold text-[#1A2B4A] dark:text-primary leading-snug">
                 {t("web.availability.enableTitle")}
               </h2>
-              <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
+              <p className="text-sm md:text-[0.9375rem] text-muted-foreground leading-relaxed">
                 {status === "unsupported"
                   ? t("web.availability.unsupported")
                   : t("web.availability.enableBody")}

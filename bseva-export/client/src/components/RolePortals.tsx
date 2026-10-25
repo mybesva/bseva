@@ -37,7 +37,7 @@ import NotificationBell, { CountBadge } from "@/components/NotificationBell";
 import { useI18n } from "@/i18n/I18nProvider";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
-type NavItem = { labelKey: string; href: string; icon: React.ComponentType<{ size?: number }> };
+type NavItem = { labelKey: string; href: string; icon: React.ComponentType<{ size?: number | string }> };
 
 /** Persist sidebar scroll across SPA navigations (nav remounts on route change). */
 const sidebarScrollY: Record<string, number> = {};
@@ -162,8 +162,8 @@ function PortalShell({
             </Avatar>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold" title={user?.name || undefined}>{user?.name}</p>
-              {user?.public_id ? <p className="truncate font-mono text-[11px] text-white/60">{user.public_id}</p> : null}
-              <p className="mt-1 text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-[#FF7A00]">
+              {user?.public_id ? <p className="truncate font-mono text-[0.6875rem] text-white/60">{user.public_id}</p> : null}
+              <p className="mt-1 text-[0.6562rem] font-extrabold uppercase tracking-[0.14em] text-[#FF7A00]">
                 {role === "pujari" ? t("auth.pujari") : t("auth.customer")}
               </p>
             </div>
@@ -222,7 +222,7 @@ function PortalShell({
                   setOpen(false);
                 }}
               >
-                <item.icon size={18} />
+                <item.icon size="1.125rem" />
                 {t(item.labelKey)}
                 <CountBadge
                   count={
@@ -260,7 +260,7 @@ function PortalShell({
       <div className="flex-1 flex flex-col min-w-0">
         <header className="sticky top-0 z-40 flex h-16 items-center gap-2 sm:gap-3 border-b bg-background px-3 sm:px-4 lg:px-6 print:hidden">
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setOpen(true)} aria-label={t("nav.openMenu")}>
-            <Menu size={22} />
+            <Menu size="1.375rem" />
           </Button>
           <Link href={role === "pujari" ? "/pujari" : "/customer"} className="flex shrink-0 items-center">
             <BSevaLogo variant="full" size="portal" />
@@ -287,7 +287,7 @@ function PortalShell({
               className="shrink-0"
               onClick={() => void handleLogout()}
             >
-              <LogOut size={16} className="mr-1.5 hidden sm:inline" />
+              <LogOut size="1rem" className="mr-1.5 hidden sm:inline" />
               {t("nav.logout")}
             </Button>
           </div>
@@ -393,7 +393,7 @@ function PujariShell({ children }: { children: ReactNode }) {
     return (
       <div className="mt-2 w-full space-y-2 border-t border-sidebar-border/50 pt-2">
         <div
-          className={`mx-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+          className={`mx-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold ${
             verified
               ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
               : underReview

@@ -19,10 +19,10 @@ export default function ServicesCustomCta() {
           {t("sv.custom.title1")}{" "}
           <span className="text-[#FF7A00]">{t("sv.custom.title2")}</span>
         </h2>
-        <span aria-hidden className="mx-auto mt-3 block h-[2px] w-[5.25rem] rounded-full bg-[#FF7A00]" />
+        <span aria-hidden className="mx-auto mt-3 block h-[0.125rem] w-[5.25rem] rounded-full bg-[#FF7A00]" />
         <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-[#1A2B4A] dark:text-foreground/90">{t("sv.custom.desc")}</p>
         <Button
-          className="mt-5 h-11 rounded-[10px] bg-[#FF7A00] px-6 text-[0.95rem] font-bold text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.65)] hover:bg-[#FF7A00]/90"
+          className="mt-5 h-11 rounded-[0.625rem] bg-[#FF7A00] px-6 text-[0.95rem] font-bold text-[#0E1830] shadow-[0_6px_14px_-8px_rgba(255,122,0,0.65)] hover:bg-[#FF7A00]/90"
           onClick={() => {
             setLocation("/contact?subject=custom_puja");
           }}

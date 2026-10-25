@@ -37,9 +37,9 @@ export default function GrihaPraveshPuja() {
             Sanctify your new home with divine blessings. Perform the traditional house warming ceremony to invite positive energy and prosperity.
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-[#FFFFFF] text-sm font-medium">
-            <span className="flex items-center gap-2"><Clock size={18} className="text-primary" /> 3 - 4 Hours</span>
-            <span className="flex items-center gap-2"><Users size={18} className="text-primary" /> 2 Priests</span>
-            <span className="flex items-center gap-2"><Star size={18} className="text-primary" /> 5.0/5 (85+ Reviews)</span>
+            <span className="flex items-center gap-2"><Clock size="1.125rem" className="text-primary" /> 3 - 4 Hours</span>
+            <span className="flex items-center gap-2"><Users size="1.125rem" className="text-primary" /> 2 Priests</span>
+            <span className="flex items-center gap-2"><Star size="1.125rem" className="text-primary" /> 5.0/5 (85+ Reviews)</span>
           </div>
         </div>
       </section>
@@ -154,7 +154,7 @@ export default function GrihaPraveshPuja() {
                     "No Havan"
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-foreground">
-                      <Check size={16} className="text-primary mt-1 shrink-0" />
+                      <Check size="1rem" className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -195,7 +195,7 @@ export default function GrihaPraveshPuja() {
                     "Flower Decoration (Entrance)"
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-foreground font-medium">
-                      <Check size={16} className="text-primary mt-1 shrink-0" />
+                      <Check size="1rem" className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -233,7 +233,7 @@ export default function GrihaPraveshPuja() {
                     "Gau Puja with Live Cow (if permitted)"
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-foreground">
-                      <Check size={16} className="text-primary mt-1 shrink-0" />
+                      <Check size="1rem" className="text-primary mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -265,7 +265,7 @@ export default function GrihaPraveshPuja() {
           <div className="bg-card rounded-xl shadow-sm p-6 md:p-8">
             <div className="flex justify-end mb-6">
               <Button variant="outline" size="sm" className="gap-2 text-primary border-primary hover:bg-primary/5">
-                <Download size={16} /> Download PDF Checklist
+                <Download size="1rem" /> Download PDF Checklist
               </Button>
             </div>
             

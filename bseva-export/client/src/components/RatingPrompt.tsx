@@ -119,7 +119,7 @@ export default function RatingPrompt() {
               className="rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]"
             >
               <Star
-                size={30}
+                size="1.875rem"
                 className={cn(n <= stars ? "fill-[#FF7A00] text-[#FF7A00]" : "text-muted-foreground/40")}
               />
             </button>

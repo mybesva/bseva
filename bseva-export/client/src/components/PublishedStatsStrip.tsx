@@ -36,9 +36,9 @@ export function PublishedStatsStrip() {
       <ul className="container relative grid grid-cols-2 gap-y-8 py-10 sm:py-12 lg:grid-cols-4 lg:divide-x lg:divide-white/15 lg:py-14">
         {PUBLISHED_STATS.map(({ icon: Icon, value, label }) => (
           <li key={label} className="flex flex-col items-center px-3 text-center">
-            <Icon size={22} strokeWidth={1.75} className="text-[#FF7A00]" aria-hidden />
+            <Icon size="1.375rem" strokeWidth={1.75} className="text-[#FF7A00]" aria-hidden />
             <p className="mt-2 text-3xl font-bold tracking-tight text-[#FF7A00] sm:text-4xl">{value}</p>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white sm:text-xs">{t(label)}</p>
+            <p className="mt-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-white sm:text-xs">{t(label)}</p>
           </li>
         ))}
       </ul>

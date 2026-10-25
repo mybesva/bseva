@@ -164,6 +164,20 @@
   }
 }
 
+/* Large-display scaling (2K / ultrawide / 4K / TV at 100% OS zoom).
+   Everything sized in rem (Tailwind spacing, type, containers, controls, icons) grows with the
+   root font size, so the whole UI scales proportionally. Unchanged at <=1920px (16px).
+   Scale = effective width / 1920, where effective width is the smaller of the viewport width and
+   1.9x its height, so ultrawide (3440x1440) scales by its height and is not over-enlarged.
+   Results: 2560x1440 ~1.3x, 3440x1440 ~1.3x, 3840x2160 ~2x (the same proportions as the 1920
+   design, matching 4K/TV 200% scaling). Capped at 2x. Tailwind breakpoints are em/rem media
+   queries, which use the browser default (16px), so layout breakpoints do not shift. */
+@media (min-width: 1921px) {
+  html {
+    font-size: clamp(16px, calc(min(100vw, 190vh) / 120), 32px);
+  }
+}
+
 /* Beats Tailwind's built-in `.container`, which freezes the column at 96rem from 1536px up.
    Sections that set their own max-w-* keep that narrower measure. */
 html body .container:not([class*="max-w-"]) {

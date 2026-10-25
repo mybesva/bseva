@@ -131,7 +131,7 @@ export function ContactPortalContent() {
             <Card className="border-none shadow-sm bg-secondary/20">
               <CardContent className="flex items-start gap-4 p-5">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <Phone size={20} />
+                  <Phone size="1.25rem" />
                 </div>
                 <div>
                   <h4 className="font-bold text-foreground mb-1">{t("contact.phone")}</h4>
@@ -155,7 +155,7 @@ export function ContactPortalContent() {
             <Card className="border-none shadow-sm bg-secondary/20">
               <CardContent className="flex items-start gap-4 p-5">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <Mail size={20} />
+                  <Mail size="1.25rem" />
                 </div>
                 <div>
                   <h4 className="font-bold text-foreground mb-1">{t("contact.email")}</h4>
@@ -183,7 +183,7 @@ export function ContactPortalContent() {
               {submitted ? (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-6 space-y-4">
                   <div className="flex items-start gap-3">
-                    <CheckCircle2 className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" size={28} />
+                    <CheckCircle2 className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" size="1.75rem" />
                     <div>
                       <h4 className="font-bold text-lg text-foreground">{t("contact.successTitle")}</h4>
                       <p className="text-muted-foreground mt-1">{t("contact.success")}</p>
@@ -286,7 +286,7 @@ export function ContactPortalContent() {
                       value={form.message}
                       onChange={(e) => setForm({ ...form, message: e.target.value })}
                       placeholder={t("contact.messagePh")}
-                      className="min-h-[140px]"
+                      className="min-h-[8.75rem]"
                       aria-invalid={!!errors.message}
                     />
                     {errors.message && <p className="text-xs text-destructive">{errors.message}</p>}

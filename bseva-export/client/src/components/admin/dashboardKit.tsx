@@ -83,7 +83,7 @@ export function Panel({
   className,
 }: {
   title: string;
-  icon: ComponentType<{ size?: number; className?: string }>;
+  icon: ComponentType<{ size?: number | string; className?: string }>;
   action?: { label: string; href: string };
   children: ReactNode;
   className?: string;
@@ -93,14 +93,14 @@ export function Panel({
       <header className="mb-4 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2.5 text-base font-bold text-[#0E1830] dark:text-white">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-            <Icon size={16} />
+            <Icon size="1rem" />
           </span>
           {title}
         </h2>
         {action && (
           <Link href={action.href}>
             <a className="inline-flex items-center gap-1 text-xs font-semibold text-[#E86A00] hover:underline">
-              {action.label} <ArrowRight size={13} />
+              {action.label} <ArrowRight size="0.8125rem" />
             </a>
           </Link>
         )}
@@ -122,7 +122,7 @@ export function Kpi({
   value: string;
   sub?: string;
   trend?: number | null;
-  icon: ComponentType<{ size?: number; className?: string }>;
+  icon: ComponentType<{ size?: number | string; className?: string }>;
   href: string;
 }) {
   return (
@@ -131,7 +131,7 @@ export function Kpi({
         <div className="flex items-start justify-between gap-3">
           <p className="text-[0.8rem] font-semibold text-[#5B6478] dark:text-white/60">{label}</p>
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF8A1F] to-[#E86A00] text-white shadow-[0_8px_18px_-10px_rgba(255,122,0,0.9)]">
-            <Icon size={19} />
+            <Icon size="1.1875rem" />
           </span>
         </div>
         <p className="mt-1 text-[1.7rem] font-bold leading-none tracking-tight text-[#0E1830] dark:text-white">{value}</p>
@@ -145,7 +145,7 @@ export function Kpi({
                   : "bg-rose-50 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300"
               )}
             >
-              {trend >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+              {trend >= 0 ? <ArrowUpRight size="0.75rem" /> : <ArrowDownRight size="0.75rem" />}
               {Math.abs(trend)}%
             </span>
           )}

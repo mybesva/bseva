@@ -93,7 +93,7 @@ function ArrowLink({ href, label, external }: { href: string; label: string; ext
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#FF7A00] text-[#FF7A00] hover:bg-[#FFF4EA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00]"
     >
-      <ChevronRight size={16} aria-hidden />
+      <ChevronRight size="1rem" aria-hidden />
     </a>
   );
 }
@@ -115,12 +115,12 @@ function InfoCard({
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <h3 className="text-[15px] font-bold text-[#0E1830] dark:text-white">{title}</h3>
+        <h3 className="text-[0.9375rem] font-bold text-[#0E1830] dark:text-white">{title}</h3>
         <div className="mt-0.5 text-sm font-medium leading-snug text-[#1A2B4A] dark:text-[#E8ECF0]">{children}</div>
       </div>
       {action ?? (
         <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#FF7A00]/70 text-[#FF7A00]">
-          <ChevronRight size={16} />
+          <ChevronRight size="1rem" />
         </span>
       )}
     </article>
@@ -258,9 +258,9 @@ export default function Contact() {
               "linear-gradient(90deg, rgba(5,24,49,0.97) 0%, rgba(5,24,49,0.88) 50%, rgba(5,24,49,0.35) 100%)",
           }}
         />
-        <div className="relative z-10 mx-auto flex h-[430px] w-full max-w-[1920px] items-center px-[7%] sm:h-[450px] lg:h-[clamp(330px,22.5vw,440px)]">
+        <div className="relative z-10 mx-auto flex h-[26.875rem] w-full max-w-[120rem] items-center px-[7%] sm:h-[28.125rem] lg:h-[clamp(330px,22.5vw,440px)]">
           <div className="max-w-[40rem] lg:max-w-[46%]">
-            <p className="inline-flex rounded-full border-[1.5px] border-[#FF7A00] px-5 py-1.5 text-[13px] font-bold uppercase tracking-[0.16em] text-[#FF7A00] lg:px-[1.6em] lg:py-[0.45em] lg:text-[clamp(14px,0.95vw,17px)]">
+            <p className="inline-flex rounded-full border-[1.5px] border-[#FF7A00] px-5 py-1.5 text-[0.8125rem] font-bold uppercase tracking-[0.16em] text-[#FF7A00] lg:px-[1.6em] lg:py-[0.45em] lg:text-[clamp(14px,0.95vw,17px)]">
               {t("ct.eyebrow")}
             </p>
             <h1
@@ -270,7 +270,7 @@ export default function Contact() {
               <span className="text-white">{t("ct.hero1")} </span>
               <span className="text-[#FF7A00]">{t("ct.hero2")}</span>
             </h1>
-            <p className="mt-4 max-w-[34rem] text-[17px] font-medium leading-[1.55] text-white/90 antialiased lg:mt-[1.6vw] lg:max-w-none lg:whitespace-pre-line lg:text-[clamp(18px,1.17vw,22px)] lg:leading-[1.6]">
+            <p className="mt-4 max-w-[34rem] text-[1.0625rem] font-medium leading-[1.55] text-white/90 antialiased lg:mt-[1.6vw] lg:max-w-none lg:whitespace-pre-line lg:text-[clamp(18px,1.17vw,22px)] lg:leading-[1.6]">
               {t("ct.heroDesc")}
             </p>
           </div>
@@ -283,10 +283,10 @@ export default function Contact() {
         <div className="container relative grid items-start gap-8 py-10 md:py-12 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] xl:gap-10 xl:py-14">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[#0E1830] dark:text-white md:text-[1.7rem]">{t("contact.title")}</h2>
-            <p className="mt-2 max-w-md text-[15px] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{t("contact.infoDesc")}</p>
+            <p className="mt-2 max-w-md text-[0.9375rem] font-medium leading-relaxed text-[#1A2B4A] dark:text-[#E8ECF0]">{t("contact.infoDesc")}</p>
             <div className="mt-5 space-y-3">
               <InfoCard
-                icon={<Phone size={18} strokeWidth={1.75} aria-hidden />}
+                icon={<Phone size="1.125rem" strokeWidth={1.75} aria-hidden />}
                 title={t("contact.phone")}
                 action={<ArrowLink href={whatsappHref(config.bseva_whatsapp_number)} label="WhatsApp" external />}
               >
@@ -294,12 +294,12 @@ export default function Contact() {
                   {phoneDisplay}
                 </a>
                 <br />
-                <a href={whatsappHref(config.bseva_whatsapp_number)} target="_blank" rel="noopener noreferrer" className="text-[13px] hover:text-[#FF7A00]">
+                <a href={whatsappHref(config.bseva_whatsapp_number)} target="_blank" rel="noopener noreferrer" className="text-[0.8125rem] hover:text-[#FF7A00]">
                   {t("ct.phoneHint")}
                 </a>
               </InfoCard>
               <InfoCard
-                icon={<Mail size={18} strokeWidth={1.75} aria-hidden />}
+                icon={<Mail size="1.125rem" strokeWidth={1.75} aria-hidden />}
                 title={t("contact.email")}
                 action={<ArrowLink href={`mailto:${supportEmail}`} label={supportEmail} />}
               >
@@ -311,7 +311,7 @@ export default function Contact() {
                   {contactEmail}
                 </a>
                 <br />
-                <span className="text-[13px]">{t("ct.emailHint")}</span>
+                <span className="text-[0.8125rem]">{t("ct.emailHint")}</span>
               </InfoCard>
             </div>
           </div>
@@ -326,7 +326,7 @@ export default function Contact() {
             <MandalaOutline className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 text-[#E8B15A] opacity-25 dark:opacity-[0.12]" />
             <div className="relative flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-                <MessageCircle size={18} strokeWidth={1.75} aria-hidden />
+                <MessageCircle size="1.125rem" strokeWidth={1.75} aria-hidden />
               </span>
               <div>
                 <h2 className="text-xl font-bold text-[#0E1830] dark:text-white">{t("contact.sendMessage")}</h2>
@@ -337,7 +337,7 @@ export default function Contact() {
             {submitted ? (
               <div className="relative mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/30">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" size={26} aria-hidden />
+                  <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" size="1.625rem" aria-hidden />
                   <div>
                     <h3 className="font-bold text-[#0E1830] dark:text-white">{t("contact.successTitle")}</h3>
                     <p className="mt-1 text-sm font-medium text-[#1A2B4A] dark:text-[#E8ECF0]">{t("contact.success")}</p>
@@ -360,7 +360,7 @@ export default function Contact() {
                       <RequiredMark />
                     </label>
                     <div className="relative mt-1.5">
-                      <User size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
+                      <User size="1rem" aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
                       <input
                         id={`${formId}-name`}
                         name="name"
@@ -385,7 +385,7 @@ export default function Contact() {
                       <RequiredMark />
                     </label>
                     <div className="relative mt-1.5">
-                      <Mail size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
+                      <Mail size="1rem" aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
                       <input
                         id={`${formId}-email`}
                         name="email"
@@ -428,7 +428,7 @@ export default function Contact() {
                       ))}
                     </select>
                     <div className="relative min-w-0 flex-1">
-                      <Phone size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
+                      <Phone size="1rem" aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
                       <input
                         id={`${formId}-phone`}
                         name="phone"
@@ -457,7 +457,7 @@ export default function Contact() {
                     <RequiredMark />
                   </label>
                   <div className="relative mt-1.5">
-                    <MessageSquare size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
+                    <MessageSquare size="1rem" aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
                     <select
                       id={`${formId}-subject`}
                       name="subject"
@@ -474,7 +474,7 @@ export default function Contact() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown size={16} aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
+                    <ChevronDown size="1rem" aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#1A2B4A] dark:text-[#C9D2DE]" />
                   </div>
                   {errors.subject ? (
                     <p id={`${formId}-subject-err`} className="mt-1 text-xs font-medium text-red-600" role="alert">
@@ -489,7 +489,7 @@ export default function Contact() {
                     <RequiredMark />
                   </label>
                   <div className="relative mt-1.5">
-                    <MessageCircle size={16} aria-hidden className="pointer-events-none absolute left-3 top-3 text-[#1A2B4A] dark:text-[#C9D2DE]" />
+                    <MessageCircle size="1rem" aria-hidden className="pointer-events-none absolute left-3 top-3 text-[#1A2B4A] dark:text-[#C9D2DE]" />
                     <textarea
                       id={`${formId}-message`}
                       name="message"
@@ -511,13 +511,13 @@ export default function Contact() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#FF7A00] text-[15px] font-bold text-white hover:bg-[#F07400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] focus-visible:ring-offset-2 disabled:opacity-70"
+                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#FF7A00] text-[0.9375rem] font-bold text-white hover:bg-[#F07400] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A00] focus-visible:ring-offset-2 disabled:opacity-70"
                 >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send size={16} aria-hidden />}
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send size="1rem" aria-hidden />}
                   {submitting ? t("contact.sending") : t("contact.send")}
                 </button>
                 <p className="flex items-center justify-center gap-1.5 text-center text-xs font-medium text-[#1A2B4A] dark:text-[#C9D2DE]">
-                  <Lock size={13} aria-hidden className="shrink-0 text-[#1A2B4A] dark:text-[#C9D2DE]" />
+                  <Lock size="0.8125rem" aria-hidden className="shrink-0 text-[#1A2B4A] dark:text-[#C9D2DE]" />
                   {t("ct.privacy")}
                 </p>
               </form>
@@ -529,7 +529,7 @@ export default function Contact() {
           <article className="rounded-2xl border border-[#F0E2D2] bg-white p-5 shadow-[0_10px_24px_-18px_rgba(120,70,20,0.45)] sm:p-6 dark:border-white/10 dark:bg-[#152238]">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-                <CircleHelp size={18} strokeWidth={1.75} aria-hidden />
+                <CircleHelp size="1.125rem" strokeWidth={1.75} aria-hidden />
               </span>
               <div>
                 <h2 className="text-xl font-bold text-[#0E1830] dark:text-white">{t("ct.faqTitle")}</h2>

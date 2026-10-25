@@ -55,7 +55,7 @@ export default function LandingImpact({ categoryCount, sevaTypeCount }: Props) {
                 aria-hidden
                 className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/60 text-brand-orange"
               >
-                <Icon size={26} strokeWidth={1.5} />
+                <Icon size="1.625rem" strokeWidth={1.5} />
               </span>
               <p className="mt-4 font-display text-4xl font-bold leading-none text-foreground md:text-5xl">{value}</p>
               <p className="mt-2 max-w-[11rem] text-sm font-bold leading-snug text-foreground">{label}</p>

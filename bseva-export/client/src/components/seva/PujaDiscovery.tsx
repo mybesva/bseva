@@ -205,7 +205,7 @@ export default function PujaDiscovery() {
               description={desc}
               startingFrom={starting}
               image={serviceImageUrl(s)}
-              icon={<Icon size={20} />}
+              icon={<Icon size="1.25rem" />}
               comingSoon={!s.bookable}
               bookingDisabled={Boolean(s.bookable && bookingBlocked)}
               bookingDisabledLabel={blockedCta.label}

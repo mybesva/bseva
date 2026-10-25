@@ -154,7 +154,7 @@ export default function RecommendationsAdmin() {
         </div>
         {canManage && (
           <Button onClick={openAdd} className="gap-2">
-            <Plus size={16} />
+            <Plus size="1rem" />
             Add recommendation
           </Button>
         )}
@@ -290,7 +290,7 @@ export default function RecommendationsAdmin() {
                 {canManage && (
                 <div className="flex gap-2 justify-end">
                   <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(r)}>
-                    <Pencil size={14} />
+                    <Pencil size="0.875rem" />
                     Edit
                   </Button>
                   <Button size="sm" variant="destructive" onClick={() => void remove(r)}>

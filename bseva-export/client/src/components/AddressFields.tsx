@@ -335,13 +335,13 @@ export function MapLocationPicker({ value, onChange }: { value: AddressValue; on
           {t("common.search")}
         </Button>
         <Button type="button" variant="outline" onClick={useCurrentLocation} className="gap-1">
-          <Navigation size={16} /> {t("web.address.currentLocation")}
+          <Navigation size="1rem" /> {t("web.address.currentLocation")}
         </Button>
       </div>
       {mapError && <p className="text-sm text-destructive">{mapError}</p>}
       {!MAPS_KEY && (
         <p className="text-sm text-muted-foreground flex items-center gap-1">
-          <MapPin size={14} /> Set GOOGLE_MAPS_API_KEY / VITE_GOOGLE_MAPS_API_KEY in the repo root `.env`, then
+          <MapPin size="0.875rem" /> Set GOOGLE_MAPS_API_KEY / VITE_GOOGLE_MAPS_API_KEY in the repo root `.env`, then
           restart the frontend. Enter coordinates manually below.
         </p>
       )}

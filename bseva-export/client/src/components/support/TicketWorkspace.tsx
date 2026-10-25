@@ -112,7 +112,7 @@ export default function TicketWorkspace({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Button variant="ghost" size="sm" className="mb-1 -ml-2" onClick={onBack}>
-            <ArrowLeft size={16} className="mr-1" /> All tickets
+            <ArrowLeft size="1rem" className="mr-1" /> All tickets
           </Button>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-semibold">{ticket.ticket_number}</h2>

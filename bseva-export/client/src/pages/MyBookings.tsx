@@ -72,10 +72,10 @@ export default function MyBookings() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4 text-sm items-center" onClick={(e) => e.stopPropagation()}>
               <span className="flex items-center gap-1">
-                <Calendar size={14} /> {formatDisplayDate(b.booking_date)} {b.start_time}
+                <Calendar size="0.875rem" /> {formatDisplayDate(b.booking_date)} {b.start_time}
               </span>
               <span className="flex items-center gap-1">
-                <MapPin size={14} /> {b.location_label || b.mode}
+                <MapPin size="0.875rem" /> {b.location_label || b.mode}
               </span>
               <span>{rupees(b.total_paise)}</span>
               <Button size="sm" variant="secondary" onClick={() => setLocation(`/booking/${b.id}`)}>

@@ -52,7 +52,7 @@ interface NavItem {
   suffix?: string;
   /** Public site route outside the admin console (e.g. About Us). */
   externalHref?: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<{ size?: number | string; className?: string }>;
 }
 
 type NavBadges = {
@@ -194,7 +194,7 @@ function AdminShell({ children }: AdminLayoutProps) {
               className="absolute right-1 top-1 lg:hidden text-sidebar-foreground"
               onClick={() => setSidebarOpen(false)}
             >
-              <X size={20} />
+              <X size="1.25rem" />
             </Button>
             <Link href={adminPath("/profile")}>
               <a
@@ -234,7 +234,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                       )}
                       onClick={() => setSidebarOpen(false)}
                     >
-                      <item.icon size={18} className="shrink-0" />
+                      <item.icon size="1.125rem" className="shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{t(item.nameKey)}</span>
                       {badgeKey ? (
                         <CountBadge count={badges[badgeKey]} tooltip={badges.tooltips?.[badgeKey]} />
@@ -252,7 +252,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <LifeBuoy size={18} className="shrink-0" />
+                    <LifeBuoy size="1.125rem" className="shrink-0" />
                     <span className="min-w-0 flex-1 truncate">Support</span>
                     <CountBadge count={badges.support} tooltip={badges.tooltips?.support} />
                   </a>
@@ -267,7 +267,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <Star size={18} />
+                    <Star size="1.125rem" />
                     {t("nav.headRatings")}
                   </a>
                 </Link>
@@ -281,7 +281,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <FileText size={18} />
+                    <FileText size="1.125rem" />
                     Terms & Conditions
                   </a>
                 </Link>
@@ -293,7 +293,7 @@ function AdminShell({ children }: AdminLayoutProps) {
       <div className="min-w-0 lg:pl-64 print:pl-0">
         <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur border-b border-border flex items-center px-3 sm:px-4 lg:px-6 gap-2 sm:gap-3 print:hidden">
           <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
-            <Menu size={20} />
+            <Menu size="1.25rem" />
           </Button>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <Link href={adminPath("")}>
@@ -310,7 +310,7 @@ function AdminShell({ children }: AdminLayoutProps) {
             className="shrink-0"
             onClick={() => void handleLogout()}
           >
-            <LogOut size={16} className="mr-1.5" />
+            <LogOut size="1rem" className="mr-1.5" />
             Logout
           </Button>
         </header>
@@ -337,7 +337,7 @@ function AccessDenied() {
   return (
     <div className="mx-auto mt-10 max-w-lg rounded-3xl border border-[#EFE2CF] bg-white p-8 text-center shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10 dark:bg-[#152238]">
       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF1E4] text-[#E86A00] dark:bg-[#FF7A00]/15">
-        <ShieldAlert size={26} />
+        <ShieldAlert size="1.625rem" />
       </span>
       <h1 className="mt-4 text-xl font-bold text-[#0E1830] dark:text-white">You don&apos;t have access to this page</h1>
       <p className="mt-2 text-sm text-[#5B6478] dark:text-white/60">

@@ -876,7 +876,7 @@ export default function Settings() {
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
             <CardTitle className="">Pujari roles</CardTitle>
             <Button size="sm" className="gap-2" onClick={openAddRole}>
-              <Plus size={16} />
+              <Plus size="1rem" />
               Add role
             </Button>
           </CardHeader>
@@ -918,7 +918,7 @@ export default function Settings() {
                       </div>
                       <div className="flex shrink-0 flex-wrap gap-2">
                         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEditRole(role)}>
-                          <Pencil size={14} />
+                          <Pencil size="0.875rem" />
                           Edit
                         </Button>
                         <span
@@ -936,7 +936,7 @@ export default function Settings() {
                           disabled={role.can_delete === false}
                           onClick={() => deleteRole(role)}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size="0.875rem" />
                           Delete
                         </Button>
                         </span>

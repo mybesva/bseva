@@ -44,7 +44,7 @@ export function PromoBannerCard({
           <p className="text-xs text-muted-foreground line-clamp-2">{banner.subtitle}</p>
         ) : null}
         {banner.is_third_party && (
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t("web.promo.sponsored")}</span>
+          <span className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">{t("web.promo.sponsored")}</span>
         )}
       </div>
     </div>

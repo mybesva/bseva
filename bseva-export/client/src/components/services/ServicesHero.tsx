@@ -54,7 +54,7 @@ export default function ServicesHero() {
       </div>
 
       <div className="relative z-10 -mt-10 px-5 pb-8 sm:-mt-14 sm:px-8 sm:pb-10 lg:mt-0 lg:flex lg:h-full lg:flex-col lg:px-[6.5%] lg:pb-0 lg:pt-[4.3vw]">
-        <p className="text-[11px] font-extrabold uppercase leading-[1.5] tracking-[0.22em] text-white/95 lg:leading-none lg:text-[clamp(12px,1.02vw,18px)] lg:tracking-[0.23em]">
+        <p className="text-[0.6875rem] font-extrabold uppercase leading-[1.5] tracking-[0.22em] text-white/95 lg:leading-none lg:text-[clamp(12px,1.02vw,18px)] lg:tracking-[0.23em]">
           {t("sv.hero.eyebrow")}
         </p>
 
@@ -70,7 +70,7 @@ export default function ServicesHero() {
           </span>
         </h1>
 
-        <p className="mt-4 max-w-[34rem] text-[15px] font-medium leading-[1.6] text-white/90 sm:text-base lg:mt-[1.85vw] lg:max-w-[29.8em] lg:text-[clamp(17px,1.4vw,26px)] lg:leading-[1.58]">
+        <p className="mt-4 max-w-[34rem] text-[0.9375rem] font-medium leading-[1.6] text-white/90 sm:text-base lg:mt-[1.85vw] lg:max-w-[29.8em] lg:text-[clamp(17px,1.4vw,26px)] lg:leading-[1.58]">
           {t("sv.hero.desc")}
         </p>
 

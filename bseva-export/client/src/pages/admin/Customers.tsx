@@ -138,7 +138,7 @@ export default function CustomersPage() {
           />
           {canCreate && (
             <Button onClick={() => setOpen(true)} className="gap-2">
-              <Plus size={16} />
+              <Plus size="1rem" />
               Add customer
             </Button>
           )}
@@ -219,7 +219,7 @@ export default function CustomersPage() {
         <div className="space-y-1">
           <Label className="text-xs">Status filter</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[11.25rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -229,7 +229,7 @@ export default function CustomersPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2 flex-1 min-w-[200px]">
+        <div className="flex gap-2 flex-1 min-w-[12.5rem]">
           <Input
             placeholder="Search ID, name, email, phone, location"
             value={q}
@@ -273,7 +273,7 @@ export default function CustomersPage() {
               <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>{u.phone}</TableCell>
-              <TableCell className="max-w-[220px] truncate" title={personLocation(u)}>
+              <TableCell className="max-w-[13.75rem] truncate" title={personLocation(u)}>
                 {personLocation(u)}
               </TableCell>
               <TableCell>

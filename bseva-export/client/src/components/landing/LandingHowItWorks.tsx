@@ -55,14 +55,14 @@ export default function LandingHowItWorks() {
                   aria-hidden
                   className="hidden h-20 w-20 items-center justify-center rounded-full border border-brand-orange/70 text-white lg:flex"
                 >
-                  <Icon size={32} strokeWidth={1.5} />
+                  <Icon size="2rem" strokeWidth={1.5} />
                 </span>
                 <div className="flex items-center gap-3 lg:mt-5 lg:block">
                   <span
                     aria-hidden
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brand-orange/70 text-white lg:hidden"
                   >
-                    <Icon size={22} strokeWidth={1.5} />
+                    <Icon size="1.375rem" strokeWidth={1.5} />
                   </span>
                   <h3 className="text-lg font-bold leading-snug text-white">{title}</h3>
                 </div>

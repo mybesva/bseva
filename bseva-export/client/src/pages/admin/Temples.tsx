@@ -286,13 +286,13 @@ export default function TemplesPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={exportCsv} disabled={!temples.length}>
-              <Download size={16} className="mr-2" />
+              <Download size="1rem" className="mr-2" />
               Export
             </Button>
             {canManage && (
             <>
             <Button variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}>
-              <Upload size={16} className="mr-2" />
+              <Upload size="1rem" className="mr-2" />
               {importing ? "Importing…" : "Bulk Import"}
             </Button>
             <input
@@ -306,7 +306,7 @@ export default function TemplesPage() {
               }}
             />
             <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
-              <Plus size={16} className="mr-2" />
+              <Plus size="1rem" className="mr-2" />
               Add Temple
             </Button>
             </>
@@ -355,7 +355,7 @@ export default function TemplesPage() {
 
         <div className="flex gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size="1.125rem" />
             <Input
               placeholder="Search by name, deity, city, or pujari..."
               value={searchTerm}
@@ -364,7 +364,7 @@ export default function TemplesPage() {
             />
           </div>
           <Select value={cityFilter} onValueChange={setCityFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[11.25rem]">
               <SelectValue placeholder="Filter by city" />
             </SelectTrigger>
             <SelectContent>
@@ -448,16 +448,16 @@ export default function TemplesPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
-                            <MoreHorizontal size={16} />
+                            <MoreHorizontal size="1rem" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleOpenDialog(temple)}>
-                            <Edit size={14} className="mr-2" />
+                            <Edit size="0.875rem" className="mr-2" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => void handleDelete(temple.id)} className="text-destructive">
-                            <Trash2 size={14} className="mr-2" />
+                            <Trash2 size="0.875rem" className="mr-2" />
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>

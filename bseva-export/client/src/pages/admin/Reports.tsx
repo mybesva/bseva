@@ -161,7 +161,7 @@ export default function Reports() {
                   setRange(next);
                 }}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[11.25rem]">
                   <SelectValue placeholder="Select period" />
                 </SelectTrigger>
                 <SelectContent>

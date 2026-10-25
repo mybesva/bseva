@@ -238,7 +238,7 @@ export default function AdminSupport() {
               />
             )}
             <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-              <Plus size={16} /> Create Ticket
+              <Plus size="1rem" /> Create Ticket
             </Button>
           </div>
         }
@@ -298,7 +298,7 @@ export default function AdminSupport() {
               </div>
               <div className="grid lg:grid-cols-6 md:grid-cols-3 gap-2">
                 <div className="lg:col-span-2 relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Search size="0.875rem" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     className="pl-8"
                     value={q}
@@ -367,7 +367,7 @@ export default function AdminSupport() {
             </CardHeader>
             {chatOpen && (
               <CardContent className="grid lg:grid-cols-2 gap-4">
-                <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                <div className="space-y-2 max-h-[17.5rem] overflow-y-auto">
                   {conversations.length === 0 && <p className="text-sm text-muted-foreground">No chats.</p>}
                   {conversations.map((c) => (
                     <button
@@ -387,11 +387,11 @@ export default function AdminSupport() {
                     </button>
                   ))}
                 </div>
-                <div className="rounded-md border p-3 space-y-3 min-h-[200px]">
+                <div className="rounded-md border p-3 space-y-3 min-h-[12.5rem]">
                   {!activeConv && <p className="text-sm text-muted-foreground">Select a conversation</p>}
                   {activeConv && (
                     <>
-                      <div className="space-y-2 max-h-[160px] overflow-y-auto">
+                      <div className="space-y-2 max-h-[10rem] overflow-y-auto">
                         {messages.map((m) => (
                           <div key={m.id} className="text-sm">
                             <span className="font-medium">{displayTokenLabel(m.sender_role, "")}: </span>
@@ -457,7 +457,7 @@ export default function AdminSupport() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="max-w-[220px] truncate">{t.subject}</div>
+                          <div className="max-w-[13.75rem] truncate">{t.subject}</div>
                           <div className="text-xs text-muted-foreground">{t.category_label || CATEGORY_LABELS[t.category] || t.category}</div>
                         </TableCell>
                         <TableCell className="text-xs">

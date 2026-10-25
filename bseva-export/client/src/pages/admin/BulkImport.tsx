@@ -287,7 +287,7 @@ export default function BulkImportPage() {
                     </CardDescription>
                   </div>
                   <Button variant="outline" onClick={downloadTemplate}>
-                    <Download size={16} className="mr-2" />
+                    <Download size="1rem" className="mr-2" />
                     Download Template
                   </Button>
                 </div>
@@ -396,7 +396,7 @@ export default function BulkImportPage() {
                         {previewData.slice(0, 5).map((row, i) => (
                           <TableRow key={i}>
                             {config.fields.slice(0, 5).map(field => (
-                              <TableCell key={field} className="max-w-[200px] truncate">
+                              <TableCell key={field} className="max-w-[12.5rem] truncate">
                                 {row[field] || '-'}
                               </TableCell>
                             ))}
@@ -472,7 +472,7 @@ export default function BulkImportPage() {
                   title={canManage ? undefined : "You don't have permission"}
                   className="bg-saffron-500 hover:bg-saffron-600"
                 >
-                  <Upload size={16} className="mr-2" />
+                  <Upload size="1rem" className="mr-2" />
                   Import {previewData.length} Records
                 </Button>
               </div>

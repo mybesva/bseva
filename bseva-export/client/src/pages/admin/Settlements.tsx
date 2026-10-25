@@ -240,7 +240,7 @@ export default function AdminSettlements() {
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[11.25rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -261,7 +261,7 @@ export default function AdminSettlements() {
               updateFilters({ range: v, from: v === "custom" ? dateFrom : "", to: v === "custom" ? dateTo : "" })
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[11.25rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -275,15 +275,15 @@ export default function AdminSettlements() {
           <>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
-              <Input type="date" className="h-9 w-[150px]" value={dateFrom} onChange={(e) => updateFilters({ from: e.target.value })} />
+              <Input type="date" className="h-9 w-[9.375rem]" value={dateFrom} onChange={(e) => updateFilters({ from: e.target.value })} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">To</Label>
-              <Input type="date" className="h-9 w-[150px]" value={dateTo} onChange={(e) => updateFilters({ to: e.target.value })} />
+              <Input type="date" className="h-9 w-[9.375rem]" value={dateTo} onChange={(e) => updateFilters({ to: e.target.value })} />
             </div>
           </>
         )}
-        <div className="flex gap-2 flex-1 min-w-[220px] items-end">
+        <div className="flex gap-2 flex-1 min-w-[13.75rem] items-end">
           <Input
             placeholder="Search booking, pujari, customer"
             value={q}

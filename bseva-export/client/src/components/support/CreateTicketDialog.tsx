@@ -360,7 +360,7 @@ export default function CreateTicketDialog({
               <Textarea rows={2} value={form.additional_info} onChange={(e) => setForm({ ...form, additional_info: e.target.value })} />
             </div>
           </div>
-          <div className="space-y-1 max-w-[160px]">
+          <div className="space-y-1 max-w-[10rem]">
             <Label>SLA hours</Label>
             <Input type="number" min={1} max={720} value={form.sla_hours} onChange={(e) => setForm({ ...form, sla_hours: e.target.value })} placeholder="Auto" />
           </div>

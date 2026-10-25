@@ -257,7 +257,7 @@ export default function PujariServicesPage() {
                         variant={s.applied ? "secondary" : "default"}
                         disabled={s.applied || applyingId === s.id}
                         className={cn(
-                          "shrink-0 w-full sm:w-auto min-w-[100px]",
+                          "shrink-0 w-full sm:w-auto min-w-[6.25rem]",
                           s.applied && "bg-muted text-muted-foreground border border-border",
                         )}
                         onClick={() => void applyForService(s.id)}

@@ -298,7 +298,7 @@ export default function EmailTemplates() {
                       {templateTypes.find(t => t.value === template.type)?.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                  <TableCell className="max-w-[12.5rem] truncate text-sm text-muted-foreground">
                     {template.subject}
                   </TableCell>
                   <TableCell>
