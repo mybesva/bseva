@@ -69,4 +69,5 @@ export const mlCustomer: Record<string, string> = {
   "booking.cancel": "റദ്ദാക്കുക",
   "wallet.balance": "ലഭ്യമായ ബാലൻസ്",
   "wallet.load": "പണം ചേർക്കുക",
+  "wallet.topupUnavailable": "ഓൺലൈനായി പണം ചേർക്കാനുള്ള സൗകര്യം ഇപ്പോൾ ലഭ്യമല്ല. വാലറ്റിൽ പണം ചേർക്കാൻ ദയവായി BSeva സഹായവുമായി ബന്ധപ്പെടുക.",
 };

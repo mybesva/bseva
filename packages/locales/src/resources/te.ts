@@ -591,6 +591,7 @@ const te: Record<string, string> = {
   "wallet.history": "లావాదేవీలు",
   "wallet.empty": "ఇంకా వాలెట్ లావాదేవీలు లేవు.",
   "wallet.loaded": "వాలెట్‌లో డబ్బు జోడించబడింది",
+  "wallet.topupUnavailable": "ఆన్‌లైన్‌లో డబ్బు జోడించే సౌకర్యం ఇంకా అందుబాటులో లేదు. వాలెట్‌లో డబ్బు జోడించడానికి దయచేసి BSeva సహాయాన్ని సంప్రదించండి.",
   "wallet.insufficient": "ఈ చెల్లింపుకు వాలెట్ బ్యాలెన్స్ సరిపోదు.",
   "rewards.title": "రివార్డ్స్ & రెఫరల్",
   "rewards.yourCode": "మీ రెఫరల్ కోడ్",

@@ -106,12 +106,26 @@ def _storage_error_detail(res: httpx.Response) -> str:
     return text[:240]
 
 
+_UNSAFE_KEY = re.compile(r"[\\?#\x00-\x1f]|%2e|%2f|%5c", re.I)
+
+
+def clean_object_path(object_path: str | None) -> str:
+    """Bucket-relative key with no traversal: rejects `..`/`.`/empty segments, backslashes,
+    encoded separators, query/fragment characters and control characters."""
+    path = str(object_path or "").strip().lstrip("/")
+    if not path or len(path) > 512 or _UNSAFE_KEY.search(path):
+        raise HTTPException(400, "Invalid file path")
+    if any(part in ("", ".", "..") for part in path.split("/")):
+        raise HTTPException(400, "Invalid file path")
+    return path
+
+
 def upload_bytes(object_path: str, data: bytes, content_type: str | None = None) -> str:
     """
     Store bytes at object_path (e.g. `{user_id}/profile.jpg`).
     Returns the same relative path for DB storage_path columns.
     """
-    object_path = object_path.lstrip("/")
+    object_path = clean_object_path(object_path)
     ct = content_type or content_type_for(object_path)
 
     if storage_configured():
@@ -154,7 +168,7 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
 
 
 def fetch_bytes(object_path: str) -> tuple[bytes, str]:
-    object_path = object_path.lstrip("/")
+    object_path = clean_object_path(object_path)
     ct = content_type_for(object_path)
 
     if storage_configured():
@@ -186,7 +200,7 @@ def file_response(object_path: str, filename: str | None = None):
 
 
 def delete_object(object_path: str) -> None:
-    object_path = object_path.lstrip("/")
+    object_path = clean_object_path(object_path)
     if storage_configured():
         url = (
             f"{settings.supabase_url.rstrip('/')}/storage/v1/object/"

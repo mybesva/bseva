@@ -574,6 +574,7 @@ const mr: Record<string, string> = {
   "wallet.history": "व्यवहार",
   "wallet.empty": "अजून वॉलेट व्यवहार नाहीत.",
   "wallet.loaded": "वॉलेटमध्ये पैसे जोडले",
+  "wallet.topupUnavailable": "ऑनलाइन पैसे जोडण्याची सुविधा अद्याप उपलब्ध नाही. वॉलेटमध्ये पैसे जोडण्यासाठी कृपया BSeva सहाय्याशी संपर्क साधा.",
   "wallet.insufficient": "या देयकासाठी वॉलेट शिल्लक पुरेशी नाही.",
   "rewards.title": "रिवॉर्ड्स व रेफरल",
   "rewards.yourCode": "तुमचा रेफरल कोड",
