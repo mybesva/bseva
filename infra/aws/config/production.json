@@ -1,0 +1,55 @@
+{
+  "environment": "production",
+  "account_id": "PENDING-new-production-account",
+  "region": "ap-south-1",
+  "project": "bseva",
+  "domain": "app.b-seva.com",
+  "github_repo": "mybesva/bseva",
+  "github_environment": "production",
+  "alert_emails": [
+    "mybseva@gmail.com"
+  ],
+  "budget_usd": 80,
+  "anomaly_threshold_usd": 15,
+  "network": {
+    "vpc_cidr": "10.30.0.0/16",
+    "public_subnets": {
+      "ap-south-1a": "10.30.0.0/24",
+      "ap-south-1b": "10.30.1.0/24"
+    },
+    "private_subnets": {
+      "ap-south-1a": "10.30.10.0/24",
+      "ap-south-1b": "10.30.11.0/24"
+    }
+  },
+  "ec2": {
+    "instance_type": "t4g.medium",
+    "root_volume_gb": 30,
+    "ami_parameter": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64",
+    "availability_zone": "ap-south-1a"
+  },
+  "rds": {
+    "instance_class": "db.t4g.small",
+    "engine_major": "17",
+    "storage_gb": 20,
+    "max_storage_gb": 100,
+    "backup_retention_days": 14,
+    "multi_az": false,
+    "performance_insights": true,
+    "cost_note": "≈$30.7 + $2.6/month",
+    "db_name": "bseva",
+    "master_username": "bseva_admin"
+  },
+  "log_retention_days": 30,
+  "ecr_keep_images": 30,
+  "app_parameters": {
+    "ENVIRONMENT": "production",
+    "PUBLIC_APP_URL": "https://app.b-seva.com",
+    "CORS_ORIGINS": "https://app.b-seva.com,https://bseva.vercel.app",
+    "GOOGLE_MEET_ENABLED": "1",
+    "LOG_LEVEL": "INFO",
+    "WORKER_ENABLED": "0",
+    "DB_SSLMODE": "verify-full",
+    "DB_SSLROOTCERT": "/etc/ssl/rds/rds-ca.pem"
+  }
+}

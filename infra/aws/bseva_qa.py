@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""B-Seva QA infrastructure on AWS (Mumbai) — idempotent boto3 automation.
+"""B-Seva QA and Production infrastructure on AWS (Mumbai) — idempotent boto3 automation (--env qa|production, default qa).
 
     python3 infra/aws/bseva_qa.py plan                  # read-only: what would be created / kept
     python3 infra/aws/bseva_qa.py apply --yes           # create only what is missing (billable)
@@ -32,8 +32,26 @@ from botocore.exceptions import ClientError
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-CFG = json.loads((HERE / "config" / "qa.json").read_text(encoding="utf-8"))
+ENVIRONMENTS = ("qa", "production")
+
+
+def _selected_env() -> str:
+    # Read before argparse: the config decides every resource name below.
+    for i, a in enumerate(sys.argv):
+        if a == "--env" and i + 1 < len(sys.argv):
+            return sys.argv[i + 1]
+        if a.startswith("--env="):
+            return a.split("=", 1)[1]
+    return "qa"
+
+
+ENV_NAME = _selected_env()
+if ENV_NAME not in ENVIRONMENTS:
+    sys.exit(f"--env must be one of {', '.join(ENVIRONMENTS)}")
+CFG = json.loads((HERE / "config" / f"{ENV_NAME}.json").read_text(encoding="utf-8"))
+QA_ACCOUNT = json.loads((HERE / "config" / "qa.json").read_text(encoding="utf-8"))["account_id"]
 ENV = CFG["environment"]
+LABEL = {"qa": "QA", "production": "Production"}[ENV]  # QA wording is unchanged for existing resources
 ACCOUNT = CFG["account_id"]
 REGION = CFG["region"]
 P = f"{CFG['project']}-{ENV}"  # name prefix: bseva-qa
@@ -79,10 +97,14 @@ class Ctx:
 
     def guard(self) -> str:
         ident = self.c("sts").get_caller_identity()
+        if ENV != ENV_NAME or REGION != "ap-south-1":
+            sys.exit(f"Refusing: config/{ENV_NAME}.json must describe the {ENV_NAME} environment in ap-south-1")
+        if not ACCOUNT.isdigit():
+            sys.exit(f"Refusing: set account_id in config/{ENV_NAME}.json first")
+        if ENV == "production" and ACCOUNT == QA_ACCOUNT:
+            sys.exit("Refusing: production must live in its own AWS account, not the QA account")
         if ident["Account"] != ACCOUNT:
-            sys.exit(f"Refusing: caller account {ident['Account']} is not the QA account {ACCOUNT}")
-        if REGION != "ap-south-1" or ENV != "qa":
-            sys.exit("Refusing: this tool only manages the qa environment in ap-south-1")
+            sys.exit(f"Refusing: caller account {ident['Account']} is not the {ENV} account {ACCOUNT}")
         return ident["Arn"]
 
 
@@ -181,7 +203,7 @@ ACCOUNT_GUARDRAILS = False  # account-wide settings need separate approval (--ac
 
 def step_guardrails(ctx, apply: bool):
     if not ACCOUNT_GUARDRAILS:
-        out("skip", "account setting", "EBS default encryption / account S3 BPA", "needs separate approval; set per QA resource instead")
+        out("skip", "account setting", "EBS default encryption / account S3 BPA", f"needs separate approval; set per {LABEL} resource instead")
         return
     ec2 = ctx.c("ec2")
     if ec2.get_ebs_encryption_by_default()["EbsEncryptionByDefault"]:
@@ -324,7 +346,7 @@ def step_network(ctx, apply: bool) -> dict:
     web = find_by_name(ctx, "describe_security_groups", "SecurityGroups", f"{P}-web", vpc, "GroupId") if vpc else None
     out("keep" if web else "create", "security group", f"{P}-web", "inbound 80, 443 only; no SSH")
     if not web and apply:
-        web = ec2.create_security_group(GroupName=f"{P}-web", Description="B-Seva QA web host: HTTP/HTTPS only",
+        web = ec2.create_security_group(GroupName=f"{P}-web", Description=f"B-Seva {LABEL} web host: HTTP/HTTPS only",
                                         VpcId=vpc, TagSpecifications=tag_spec("security-group", f"{P}-web"))["GroupId"]
         ec2.authorize_security_group_ingress(GroupId=web, IpPermissions=[
             {"IpProtocol": "tcp", "FromPort": p, "ToPort": p, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": d}]}
@@ -334,7 +356,7 @@ def step_network(ctx, apply: bool) -> dict:
     db = find_by_name(ctx, "describe_security_groups", "SecurityGroups", f"{P}-db", vpc, "GroupId") if vpc else None
     out("keep" if db else "create", "security group", f"{P}-db", f"5432 from {P}-web only; no egress")
     if not db and apply:
-        db = ec2.create_security_group(GroupName=f"{P}-db", Description="B-Seva QA PostgreSQL: app host only",
+        db = ec2.create_security_group(GroupName=f"{P}-db", Description=f"B-Seva {LABEL} PostgreSQL: app host only",
                                        VpcId=vpc, TagSpecifications=tag_spec("security-group", f"{P}-db"))["GroupId"]
         ec2.authorize_security_group_ingress(GroupId=db, IpPermissions=[
             {"IpProtocol": "tcp", "FromPort": 5432, "ToPort": 5432,
@@ -407,11 +429,11 @@ def step_iam(ctx, apply: bool):
     else:
         out("create", "iam role + profile", EC2_ROLE, "SSM core, ECR pull (2 repos), own SSM path, own bucket, own log group")
         if apply:
-            iam.create_role(RoleName=EC2_ROLE, Tags=tag_list(), Description="B-Seva QA app host",
+            iam.create_role(RoleName=EC2_ROLE, Tags=tag_list(), Description=f"B-Seva {ENV} app host",
                             AssumeRolePolicyDocument=json.dumps({"Version": "2012-10-17", "Statement": [
                                 {"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}]}))
             iam.attach_role_policy(RoleName=EC2_ROLE, PolicyArn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore")
-            iam.put_role_policy(RoleName=EC2_ROLE, PolicyName="bseva-qa-app", PolicyDocument=json.dumps(ec2_policy))
+            iam.put_role_policy(RoleName=EC2_ROLE, PolicyName=f"{P}-app", PolicyDocument=json.dumps(ec2_policy))
             iam.create_instance_profile(InstanceProfileName=EC2_ROLE, Tags=tag_list())
             iam.add_role_to_instance_profile(InstanceProfileName=EC2_ROLE, RoleName=EC2_ROLE)
 
@@ -427,22 +449,22 @@ def step_iam(ctx, apply: bool):
         {"Sid": "EcrAuth", "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*"},
         {"Sid": "EcrPush", "Effect": "Allow", "Action": ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart",
                                                         "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:BatchGetImage", "ecr:DescribeImages"], "Resource": repo_arns},
-        {"Sid": "RunDeployOnQaHostOnly", "Effect": "Allow", "Action": "ssm:SendCommand",
+        {"Sid": "RunDeployOnOwnHostOnly", "Effect": "Allow", "Action": "ssm:SendCommand",
          "Resource": f"arn:aws:ec2:{REGION}:{ACCOUNT}:instance/*",
-         "Condition": {"StringEquals": {"ssm:resourceTag/Project": "bseva", "ssm:resourceTag/Environment": "qa"}}},
+         "Condition": {"StringEquals": {"ssm:resourceTag/Project": "bseva", "ssm:resourceTag/Environment": ENV}}},
         {"Sid": "ShellDocument", "Effect": "Allow", "Action": "ssm:SendCommand", "Resource": f"arn:aws:ssm:{REGION}::document/AWS-RunShellScript"},
         {"Sid": "ReadResults", "Effect": "Allow", "Action": ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations", "ec2:DescribeInstances"], "Resource": "*"},
     ]}
     if role_exists(ctx, DEPLOY_ROLE):
         out("keep", "iam role", DEPLOY_ROLE)
     else:
-        out("create", "iam role", DEPLOY_ROLE, f"OIDC trust only for {sub}; ECR push + SSM deploy to QA host")
+        out("create", "iam role", DEPLOY_ROLE, f"OIDC trust only for {sub}; ECR push + SSM deploy to the {ENV} host")
         if apply:
-            iam.create_role(RoleName=DEPLOY_ROLE, Tags=tag_list(), MaxSessionDuration=3600, Description="GitHub Actions QA deploy (OIDC)",
+            iam.create_role(RoleName=DEPLOY_ROLE, Tags=tag_list(), MaxSessionDuration=3600, Description=f"GitHub Actions {ENV} deploy (OIDC)",
                             AssumeRolePolicyDocument=json.dumps({"Version": "2012-10-17", "Statement": [{
                                 "Effect": "Allow", "Principal": {"Federated": oidc_arn()}, "Action": "sts:AssumeRoleWithWebIdentity",
                                 "Condition": {"StringEquals": {f"{OIDC_URL}:aud": "sts.amazonaws.com", f"{OIDC_URL}:sub": sub}}}]}))
-            iam.put_role_policy(RoleName=DEPLOY_ROLE, PolicyName="bseva-qa-deploy", PolicyDocument=json.dumps(deploy_policy))
+            iam.put_role_policy(RoleName=DEPLOY_ROLE, PolicyName=f"{P}-deploy", PolicyDocument=json.dumps(deploy_policy))
 
 
 def step_database(ctx, apply: bool, ids: dict):
@@ -452,7 +474,7 @@ def step_database(ctx, apply: bool, ids: dict):
     exists = ignore(("DBSubnetGroupNotFoundFault",))(lambda: rds.describe_db_subnet_groups(DBSubnetGroupName=sng))
     out("keep" if exists else "create", "rds subnet group", sng, "private subnets a/b")
     if not exists and apply:
-        rds.create_db_subnet_group(DBSubnetGroupName=sng, DBSubnetGroupDescription="B-Seva QA private DB subnets",
+        rds.create_db_subnet_group(DBSubnetGroupName=sng, DBSubnetGroupDescription=f"B-Seva {LABEL} private DB subnets",
                                    SubnetIds=[ids[f"private-{az}"] for az in CFG["network"]["private_subnets"]], Tags=tag_list())
     pg = f"{P}-pg{r['engine_major']}"
     exists = ignore(("DBParameterGroupNotFound",))(lambda: rds.describe_db_parameter_groups(DBParameterGroupName=pg))
@@ -473,23 +495,25 @@ def step_database(ctx, apply: bool, ids: dict):
          if v["EngineVersion"].split(".")[0] == r["engine_major"]),
         key=lambda s: [int(x) for x in s.split(".")])
     version = versions[-1] if versions else r["engine_major"]
-    out("create", "rds instance", DB_ID, f"{r['instance_class']} PostgreSQL {version}, {r['storage_gb']} GB gp3 encrypted, Single-AZ, "
-        f"private, {r['backup_retention_days']}-day backups, deletion protection; ≈$15.3 + $2.6/month")
+    multi_az = bool(r.get("multi_az", False))
+    out("create", "rds instance", DB_ID, f"{r['instance_class']} PostgreSQL {version}, {r['storage_gb']} GB gp3 encrypted, "
+        f"{'Multi-AZ' if multi_az else 'Single-AZ'}, private, {r['backup_retention_days']}-day backups, deletion protection; {r.get('cost_note', '')}")
     if not apply:
         return
     master_param = f"{PARAM_PREFIX}/admin/DB_MASTER_PASSWORD"
     if not param_exists(ctx, master_param):
         ctx.c("ssm").put_parameter(Name=master_param, Value=random_secret(40), Type="SecureString", Tier="Standard",
-                                   Description="B-Seva QA RDS master password", Tags=tag_list())
+                                   Description=f"B-Seva {ENV} RDS master password", Tags=tag_list())
     password = ctx.c("ssm").get_parameter(Name=master_param, WithDecryption=True)["Parameter"]["Value"]
     rds.create_db_instance(
         DBInstanceIdentifier=DB_ID, DBInstanceClass=r["instance_class"], Engine="postgres", EngineVersion=version,
         DBName=r["db_name"], MasterUsername=r["master_username"], MasterUserPassword=password,
         AllocatedStorage=r["storage_gb"], MaxAllocatedStorage=r["max_storage_gb"], StorageType="gp3", StorageEncrypted=True,
         DBSubnetGroupName=sng, VpcSecurityGroupIds=[ids["sg-db"]], DBParameterGroupName=pg, PubliclyAccessible=False,
-        MultiAZ=False, AvailabilityZone=CFG["ec2"]["availability_zone"], BackupRetentionPeriod=r["backup_retention_days"],
+        MultiAZ=multi_az, **({} if multi_az else {"AvailabilityZone": CFG["ec2"]["availability_zone"]}),
+        BackupRetentionPeriod=r["backup_retention_days"],
         PreferredBackupWindow="20:30-21:00", PreferredMaintenanceWindow="sun:21:30-sun:22:00", AutoMinorVersionUpgrade=True,
-        CopyTagsToSnapshot=True, DeletionProtection=True, EnablePerformanceInsights=False, Tags=tag_list({"Name": DB_ID}))
+        CopyTagsToSnapshot=True, DeletionProtection=True, EnablePerformanceInsights=bool(r.get("performance_insights", False)), Tags=tag_list({"Name": DB_ID}))
     print("    waiting for RDS to become available (typically 5–10 minutes)…")
     rds.get_waiter("db_instance_available").wait(DBInstanceIdentifier=DB_ID, WaiterConfig={"Delay": 30, "MaxAttempts": 60})
 
@@ -586,7 +610,8 @@ def step_parameters(ctx, apply: bool):
     base = f"{PARAM_PREFIX}/app"
     wanted = dict(CFG["app_parameters"])
     wanted.update({"S3_BUCKET": BUCKET, "AWS_REGION": REGION})
-    generated = ("JWT_SECRET", "SEED_PASSWORD")
+    # Production never seeds demo data; its JWT_SECRET may later be replaced by the Vercel one to keep sessions.
+    generated = ("JWT_SECRET",) if ENV == "production" else ("JWT_SECRET", "SEED_PASSWORD")
     missing = [k for k in list(wanted) + list(generated) + ["DATABASE_URL"] if not param_exists(ctx, f"{base}/{k}")]
     out("keep" if not missing else "create", "ssm parameters", f"{base}/*",
         f"{len(missing)} to create (JWT_SECRET/SEED_PASSWORD generated, DATABASE_URL from RDS); Standard tier, free" if missing else "")
@@ -694,7 +719,7 @@ def cmd_health(ctx, _args):
 def cmd_backup_check(ctx, _args):
     db = find_db(ctx)
     if not db:
-        sys.exit("no QA database")
+        sys.exit(f"no {LABEL} database")
     snaps = ctx.c("rds").describe_db_snapshots(DBInstanceIdentifier=DB_ID, SnapshotType="automated")["DBSnapshots"]
     latest = max((s["SnapshotCreateTime"] for s in snaps), default=None)
     print(json.dumps({"backup_retention_days": db["BackupRetentionPeriod"], "latest_restorable_time": db.get("LatestRestorableTime"),
@@ -702,6 +727,8 @@ def cmd_backup_check(ctx, _args):
 
 
 def cmd_teardown(ctx, args):
+    if ENV != "qa":
+        sys.exit("Refusing: teardown is only supported for QA. Production resources are removed by hand after separate approval.")
     expected = f"qa-{ACCOUNT}"
     if args.confirm != expected:
         sys.exit(f"teardown deletes the QA environment; pass --confirm {expected}")
@@ -726,7 +753,8 @@ def cmd_teardown(ctx, args):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="B-Seva QA infrastructure (ap-south-1)")
+    parser = argparse.ArgumentParser(description="B-Seva AWS infrastructure (ap-south-1)")
+    parser.add_argument("--env", choices=ENVIRONMENTS, default="qa", help="environment config to manage (default qa)")
     parser.add_argument("--env-file", help="credentials file (e.g. aws-script/aws.env); default boto3 chain otherwise")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("plan")
