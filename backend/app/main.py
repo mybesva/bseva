@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -90,6 +91,25 @@ try:
         app.mount("/images", StaticFiles(directory=str(_images)), name="catalog-images")
 except Exception:
     pass
+
+
+def _read_only_mode() -> bool:
+    return os.environ.get("READ_ONLY_MODE", "").strip().lower() in ("1", "true", "yes")
+
+
+@app.middleware("http")
+async def read_only_freeze(request: Request, call_next):
+    # Cutover write freeze: reads keep working, every write (and the cron endpoints, which mutate on GET) gets 503.
+    path = request.url.path
+    if _read_only_mode() and path.startswith("/api/") and (
+        request.method not in ("GET", "HEAD", "OPTIONS") or path.startswith("/api/v1/ops/cron/")
+    ):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "B-Seva is being upgraded. Please try again in a few minutes.", "code": "MAINTENANCE"},
+            headers={"Retry-After": "600"},
+        )
+    return await call_next(request)
 
 
 @app.exception_handler(OperationalError)
