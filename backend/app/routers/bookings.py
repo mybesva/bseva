@@ -1710,7 +1710,7 @@ def _cancel_actor(user: dict, booking: dict) -> str:
         return "customer"  # admin cancel uses customer fee schedule for refund math
     if str(booking.get("customer_id")) == str(user.get("id")):
         return "customer"
-    if role == "pujari" and str(booking.get("pujari_id")) == str(user.get("id")):
+    if role in ("pujari", "head_pujari") and str(booking.get("pujari_id")) == str(user.get("id")):
         return "pujari"
     raise HTTPException(403, "Not allowed")
 

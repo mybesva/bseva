@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -29,6 +30,8 @@ from app.routers import (
     wallet,
 )
 
+
+logger = logging.getLogger("bseva.api")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -102,19 +105,23 @@ async def database_unavailable(_request: Request, _exc: OperationalError):
     )
 
 
-@app.exception_handler(ProgrammingError)
-async def database_schema_error(_request: Request, exc: ProgrammingError):
+def _database_error_response(request: Request, exc: SQLAlchemyError, label: str) -> JSONResponse:
+    # Driver messages name tables, columns and constraints; only local development shows them to the client.
     msg = str(getattr(exc, "orig", None) or exc).split("\n")[0][:240]
-    return JSONResponse(
-        status_code=500,
-        content={"detail": f"Database schema error: {msg}"},
-    )
+    logger.error("%s on %s %s: %s", label, request.method, request.url.path, msg)
+    if (settings.environment or "").strip().lower() == "development":
+        return JSONResponse(status_code=500, content={"detail": f"{label}: {msg}"})
+    return JSONResponse(status_code=500, content={"detail": "Something went wrong. Please try again."})
+
+
+@app.exception_handler(ProgrammingError)
+async def database_schema_error(request: Request, exc: ProgrammingError):
+    return _database_error_response(request, exc, "Database schema error")
 
 
 @app.exception_handler(SQLAlchemyError)
-async def database_error(_request: Request, exc: SQLAlchemyError):
-    msg = str(getattr(exc, "orig", None) or exc).split("\n")[0][:240]
-    return JSONResponse(status_code=500, content={"detail": f"Database error: {msg}"})
+async def database_error(request: Request, exc: SQLAlchemyError):
+    return _database_error_response(request, exc, "Database error")
 
 
 @app.get("/health")

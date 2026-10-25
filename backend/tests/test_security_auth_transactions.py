@@ -452,3 +452,34 @@ def test_cron_rejects_wrong_secret(monkeypatch):
         ops._require_cron_auth(SimpleNamespace(headers={"authorization": "Bearer wrong"}))
     assert exc.value.status_code == 401
     ops._require_cron_auth(SimpleNamespace(headers={"authorization": "Bearer " + "s" * 40}))
+
+
+def test_pujari_ownership_checks_include_head_pujari():
+    # require_roles("pujari") also admits head_pujari, so hand-written role checks must name both.
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "app/routers"
+    src = (root / "lifecycle.py").read_text() + (root / "bookings.py").read_text()
+    assert 'user["role"] == "pujari"' not in src
+    assert 'role == "pujari" and' not in src
+
+
+def test_cancel_actor_treats_head_pujari_as_assigned_pujari():
+    from app.routers.bookings import _cancel_actor
+
+    booking = {"customer_id": "c1", "pujari_id": "p1"}
+    assert _cancel_actor({"id": "p1", "role": "head_pujari"}, booking) == "pujari"
+    with pytest.raises(Exception):
+        _cancel_actor({"id": "p2", "role": "head_pujari"}, booking)
+
+
+def test_database_errors_are_generic_outside_development(monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+    from starlette.requests import Request
+    from app import main
+
+    req = Request({"type": "http", "method": "POST", "path": "/api/v1/bookings", "headers": [], "query_string": b""})
+    exc = IntegrityError("INSERT", {}, Exception('violates check constraint "bookings_package_type_check"'))
+    monkeypatch.setattr(main.settings, "environment", "production")
+    body = main._database_error_response(req, exc, "Database error").body
+    assert b"constraint" not in body and b"bookings" not in body
