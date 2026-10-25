@@ -493,7 +493,8 @@ def step_iam(ctx, apply: bool):
     deploy_policy = {"Version": "2012-10-17", "Statement": [
         {"Sid": "EcrAuth", "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*"},
         {"Sid": "EcrPush", "Effect": "Allow", "Action": ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart",
-                                                        "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:BatchGetImage", "ecr:DescribeImages"], "Resource": repo_arns},
+                                                        "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:BatchGetImage", "ecr:DescribeImages",
+                                                        "ecr:GetDownloadUrlForLayer"], "Resource": repo_arns},
         {"Sid": "RunDeployOnOwnHostOnly", "Effect": "Allow", "Action": "ssm:SendCommand",
          "Resource": f"arn:aws:ec2:{REGION}:{ACCOUNT}:instance/*",
          "Condition": {"StringEquals": {"ssm:resourceTag/Project": "bseva", "ssm:resourceTag/Environment": ENV}}},
@@ -502,12 +503,14 @@ def step_iam(ctx, apply: bool):
     ]}
     if role_exists(ctx, DEPLOY_ROLE):
         current = iam.get_role(RoleName=DEPLOY_ROLE)["Role"]["AssumeRolePolicyDocument"]
-        if current.get("Statement") == trust["Statement"]:
+        policy = ignore(("NoSuchEntity",))(lambda: iam.get_role_policy(RoleName=DEPLOY_ROLE, PolicyName=f"{P}-deploy"))
+        if current.get("Statement") == trust["Statement"] and policy and policy["PolicyDocument"]["Statement"] == deploy_policy["Statement"]:
             out("keep", "iam role", DEPLOY_ROLE)
         else:
-            out("update", "iam role trust", DEPLOY_ROLE, f"OIDC subject {sub}")
+            out("update", "iam role", DEPLOY_ROLE, f"OIDC subject {sub}; ECR push/pull + SSM deploy")
             if apply:
                 iam.update_assume_role_policy(RoleName=DEPLOY_ROLE, PolicyDocument=json.dumps(trust))
+                iam.put_role_policy(RoleName=DEPLOY_ROLE, PolicyName=f"{P}-deploy", PolicyDocument=json.dumps(deploy_policy))
     else:
         out("create", "iam role", DEPLOY_ROLE, f"OIDC trust only for {sub}; ECR push + SSM deploy to the {ENV} host")
         if apply:

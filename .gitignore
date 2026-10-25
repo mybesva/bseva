@@ -98,3 +98,6 @@ aws.env
 # Infrastructure automation runtime output (may contain resource IDs and secrets)
 infra/aws/state/
 infra/aws/reports/
+
+# Local Claude Code configuration
+.claude/
