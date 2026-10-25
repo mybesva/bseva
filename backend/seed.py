@@ -5,13 +5,14 @@ Adds Super Admin + Head Pujari elevation when missing.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+_DEV_DEFAULT_PASSWORD = "TestPass123!"
 
-PASSWORD = "TestPass123!"
+# Hosted (QA) seeds must use SEED_PASSWORD from the secret store; the default is for local dev only.
+PASSWORD = (os.environ.get("SEED_PASSWORD") or "").strip() or _DEV_DEFAULT_PASSWORD
 
 # Stable demo roster (do not change existing emails/phones)
 USERS = [
@@ -68,7 +69,7 @@ USERS = [
         "cal": "solar",
     },
     {
-        "name": "Pandit",
+        "name": "Pandit Reddy",
         "email": "pujari2@bseva.test",
         "phone": "9000000006",
         "role": "pujari",
@@ -79,6 +80,9 @@ USERS = [
 
 
 def _database_url() -> str:
+    env_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if env_url:
+        return env_url.replace("postgresql+psycopg://", "postgresql://", 1)
     for candidate in (Path(__file__).resolve().parents[1] / ".env", Path(__file__).resolve().parent / ".env"):
         if not candidate.exists():
             continue
@@ -87,6 +91,23 @@ def _database_url() -> str:
             if s.startswith("DATABASE_URL=") and not s.startswith("#"):
                 return s.split("=", 1)[1].strip().strip('"').strip("'")
     raise SystemExit("DATABASE_URL missing from .env")
+
+
+def _connect(url: str):
+    """psycopg2 when installed (local dev), otherwise psycopg 3 (the API's driver)."""
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect(url)
+        conn.autocommit = False
+        return conn, conn.cursor(cursor_factory=RealDictCursor)
+    except ImportError:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        conn = psycopg.connect(url, autocommit=False)
+        return conn, conn.cursor(row_factory=dict_row)
 
 
 def _hash_password(plain: str) -> str:
@@ -100,24 +121,50 @@ def _hash_password(plain: str) -> str:
         return CryptContext(schemes=["bcrypt"], deprecated="auto").hash(plain)
 
 
+# Main's admin@bseva.test permission set (RBAC v2), so the demo Admin works without a Super Admin granting it.
+ADMIN_SEED_PERMISSIONS = [
+    "create_customers", "create_pujaris", "edit_customers", "manage_bookings", "manage_invoices", "manage_muhurtham",
+    "manage_promotions", "manage_recommendations", "manage_reviews", "manage_samagri", "manage_services",
+    "manage_seva_events", "manage_support", "manage_temples", "manage_virtual_puja", "view_bookings", "view_customers",
+    "view_invoices", "view_muhurtham", "view_payments", "view_promotions", "view_pujaris", "view_recommendations",
+    "view_reviews", "view_samagri", "view_services", "view_seva_events", "view_temples", "view_virtual_puja",
+]
+
+
+def _password_matches(plain: str, hashed: str | None) -> bool:
+    try:
+        import bcrypt
+
+        return bool(hashed) and bcrypt.checkpw(plain.encode(), hashed.encode())
+    except Exception:
+        return False
+
+
 def _ensure_user(cur, pw: str, u: dict) -> bool:
-    """Insert user if missing. Returns True if inserted."""
-    cur.execute("SELECT id, role FROM users WHERE email = %s OR phone = %s", (u["email"], u["phone"]))
+    """Insert the demo user, or bring an existing one (matched by email) back to the roster. True if inserted."""
+    cur.execute("SELECT id, role, password_hash FROM users WHERE email = %s", (u["email"],))
     row = cur.fetchone()
     if row:
-        # Keep existing row; gently upgrade role only for known elevators
-        if u["email"] == "pujari1@bseva.test" and row["role"] == "pujari":
-            cur.execute(
-                "UPDATE users SET role = 'head_pujari' WHERE id = %s AND role = 'pujari'",
-                (row["id"],),
-            )
-        if u["email"] == "super@bseva.test" and row["role"] != "super_admin":
-            cur.execute("UPDATE users SET role = 'super_admin' WHERE id = %s", (row["id"],))
+        # Sync the roster fields; the password hash changes only when it no longer matches SEED_PASSWORD.
+        cur.execute(
+            """
+            UPDATE users SET name = %s, phone = %s, role = %s, email_verified = TRUE, phone_verified = TRUE,
+                   blocked = FALSE, updated_at = NOW()
+            WHERE id = %s
+            """,
+            (u["name"], u["phone"], u["role"], row["id"]),
+        )
+        if not _password_matches(PASSWORD, row.get("password_hash")):
+            cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (pw, row["id"]))
         return False
+    cur.execute("SELECT 1 FROM users WHERE phone = %s", (u["phone"],))
+    if cur.fetchone():
+        raise SystemExit(f"Phone {u['phone']} belongs to another account; refusing to create {u['email']}")
     cur.execute(
         """
-        INSERT INTO users (name, email, phone, password_hash, role, preferred_language, calendar_preference, phone_verified)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        INSERT INTO users (name, email, phone, password_hash, role, preferred_language, calendar_preference,
+                           phone_verified, email_verified)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, TRUE)
         """,
         (u["name"], u["email"], u["phone"], pw, u["role"], u["lang"], u["cal"]),
     )
@@ -125,10 +172,13 @@ def _ensure_user(cur, pw: str, u: dict) -> bool:
 
 
 def run() -> None:
+    environment = (os.environ.get("ENVIRONMENT") or "development").strip().lower()
+    if environment == "production":
+        raise SystemExit("Refusing to seed demo data into production")
+    if environment != "development" and not (os.environ.get("SEED_PASSWORD") or "").strip():
+        raise SystemExit("Set SEED_PASSWORD (from the environment's secret store) to seed a hosted environment")
     url = _database_url()
-    conn = psycopg2.connect(url)
-    conn.autocommit = False
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    conn, cur = _connect(url)
     try:
         pw = _hash_password(PASSWORD)
         inserted = 0
@@ -137,6 +187,16 @@ def run() -> None:
                 inserted += 1
 
         cur.execute("INSERT INTO wallets (user_id) SELECT id FROM users ON CONFLICT (user_id) DO NOTHING")
+
+        cur.execute(
+            """
+            INSERT INTO admin_permissions (user_id, permission)
+            SELECT u.id, p FROM users u, unnest(%s::text[]) AS p
+            WHERE u.email = 'admin@bseva.test' AND u.role = 'admin'
+            ON CONFLICT (user_id, permission) DO NOTHING
+            """,
+            (ADMIN_SEED_PERMISSIONS,),
+        )
 
         # Customer profiles for any customer missing one
         cur.execute(
@@ -329,9 +389,9 @@ def run() -> None:
                 SELECT
                   'BSV-SEED-001', c.id, p.id, s.id, 'standard', 'in_person',
                   CURRENT_DATE + 7, '09:00', '10:30', 'Koramangala, Bengaluru', 'confirmed', 'paid',
-                  s.standard_price_paise, 0, 18,
-                  ROUND(s.standard_price_paise * 0.18),
-                  s.standard_price_paise + ROUND(s.standard_price_paise * 0.18),
+                  COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0), 0, 18,
+                  ROUND(COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
+                  COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) + ROUND(COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
                   TRUE
                 FROM users c
                 JOIN users p ON p.email = 'pujari1@bseva.test'
@@ -351,9 +411,9 @@ def run() -> None:
                 SELECT
                   'BSV-SEED-002', c.id, p.id, s.id, 'premium', 'virtual',
                   CURRENT_DATE + 10, '11:00', '13:00', 'Virtual', 'confirmed', 'paid',
-                  s.premium_price_paise, 0, 18,
-                  ROUND(s.premium_price_paise * 0.18),
-                  s.premium_price_paise + ROUND(s.premium_price_paise * 0.18),
+                  COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0), 0, 18,
+                  ROUND(COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
+                  COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) + ROUND(COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
                   TRUE
                 FROM users c
                 JOIN users p ON p.email = 'pujari2@bseva.test'
@@ -367,7 +427,7 @@ def run() -> None:
         users = cur.fetchall()
         print("Seed complete (idempotent).")
         print(f"Inserted new users this run: {inserted}")
-        print(f"Password for all test accounts: {PASSWORD}")
+        print("Password for all test accounts: SEED_PASSWORD (not printed)")
         print("")
         print(f"{'Role':14} {'Name':22} {'Email':24} Phone")
         print("-" * 78)

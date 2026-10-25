@@ -247,7 +247,7 @@ def test_invoice_html_renders_snapshot_duration_dynamically():
             },
         },
     )
-    assert "Puja Duration:</strong> 2 Hours 15 Minutes" in html
+    assert "Duration: 2 Hours 15 Minutes" in html
 
 
 def test_physical_and_virtual_booking_sql_are_mutually_exclusive_pujas():

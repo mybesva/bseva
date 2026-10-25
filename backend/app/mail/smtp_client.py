@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import smtplib
 import time
 from email.message import EmailMessage
@@ -24,6 +25,21 @@ def smtp_status() -> dict[str, Any]:
     return _smtp_status()
 
 
+def recipient_allowed(to_addr: str) -> bool:
+    """EMAIL_ALLOWLIST (comma-separated addresses or @domains) limits who non-production
+    environments may email. Unset = no restriction (current behaviour)."""
+    raw = (os.environ.get("EMAIL_ALLOWLIST") or "").strip()
+    if not raw:
+        return True
+    addr = to_addr.strip().lower()
+    for entry in (e.strip().lower() for e in raw.split(",") if e.strip()):
+        if entry.startswith("@") and addr.endswith(entry):
+            return True
+        if addr == entry:
+            return True
+    return False
+
+
 def send_email(
     *,
     to: str,
@@ -36,11 +52,15 @@ def send_email(
     attachments: list[tuple[str, bytes, str]] | None = None,
 ) -> dict[str, Any]:
     """Send email via Zoho SMTP or return queued stub when not configured."""
-    cfg = load_smtp_config()
     to_addr = (to or "").strip()
     if not to_addr or "@" not in to_addr:
         return {"ok": False, "status": "failed", "error": "invalid_recipient", "to": to, "subject": subject}
 
+    if not recipient_allowed(to_addr):
+        logger.info("EMAIL_SUPPRESSED (not in EMAIL_ALLOWLIST) subject=%s", subject)
+        return {"ok": True, "status": "suppressed", "to": to_addr, "subject": subject}
+
+    cfg = load_smtp_config()
     if not cfg:
         logger.info("EMAIL_QUEUED (SMTP not configured) to=%s subject=%s", to_addr, subject)
         return {

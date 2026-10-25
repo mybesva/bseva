@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://bseva.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://qa.b-seva.com"
       }
     },
     "production": {
@@ -25,7 +25,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://bseva.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://b-seva.com"
       }
     }
   }

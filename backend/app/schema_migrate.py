@@ -15,6 +15,15 @@ _SECURITY_STMTS = [
     """,
     "CREATE INDEX IF NOT EXISTS idx_security_rate_limits_window ON security_rate_limits (window_start)",
     "ALTER TABLE security_rate_limits ENABLE ROW LEVEL SECURITY",
+    # Mirrors supabase/migrations/025_job_dedupe.sql
+    """
+    CREATE TABLE IF NOT EXISTS job_dedupe (
+      key TEXT PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_job_dedupe_created ON job_dedupe (created_at)",
+    "ALTER TABLE job_dedupe ENABLE ROW LEVEL SECURITY",
 ]
 
 _STMTS = [

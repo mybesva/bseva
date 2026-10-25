@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     # "" = automatic (allowed only in development/qa/test), "off" = always refused,
     # "unverified" = always allowed (explicit risk acceptance until a gateway exists).
     wallet_self_topup: str = ""
+    # QA-only OTP test delivery: addresses in these domains (e.g. "@bseva.test", non-routable) receive no email;
+    # their OTP is the secret OTP_TEST_CODE instead. Ignored outside qa/test; refused at startup in production.
+    otp_test_email_domains: str = ""
+    otp_test_code: str = ""
 
     @property
     def wallet_self_topup_allowed(self) -> bool:
@@ -46,6 +50,17 @@ class Settings(BaseSettings):
         if mode == "off":
             return False
         return (self.environment or "").strip().lower() in ("development", "qa", "test")
+
+    def otp_test_code_for(self, email: str) -> str | None:
+        """The QA test code when this address is a configured test address on a QA/test deployment, else None."""
+        if (self.environment or "").strip().lower() not in ("qa", "test"):
+            return None
+        code = (self.otp_test_code or "").strip()
+        domains = [d.strip().lower() for d in self.otp_test_email_domains.split(",") if d.strip().startswith("@")]
+        addr = (email or "").strip().lower()
+        if not (len(code) == 6 and code.isdigit() and domains and any(addr.endswith(d) for d in domains)):
+            return None
+        return code
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -66,6 +81,8 @@ def insecure_settings_problems(s: Settings, env: Mapping[str, str] | None = None
             problems.append(
                 f"JWT_SECRET must be set to a random value of at least {MIN_JWT_SECRET_LENGTH} characters"
             )
+    if environment == "production" and (s.otp_test_email_domains or s.otp_test_code):
+        problems.append("OTP_TEST_EMAIL_DOMAINS / OTP_TEST_CODE are QA-only and must not be set in production")
     return problems
 
 

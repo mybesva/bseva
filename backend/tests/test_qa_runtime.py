@@ -1,0 +1,278 @@
+"""AWS runtime support: S3 storage adapter, QA email allowlist, job dedupe fallback, DB pool options,
+reminder SQL time zone, and demo-seed refusal in production."""
+from __future__ import annotations
+
+import inspect
+import os
+from pathlib import Path
+from contextlib import contextmanager
+
+import pytest
+from fastapi import HTTPException
+
+from app import db as app_db
+from app import storage
+from app.jobs import booking_reminders, dedupe
+from app.mail import smtp_client
+
+
+class FakeS3:
+    def __init__(self):
+        self.objects: dict[str, tuple[bytes, str]] = {}
+
+    def put_object(self, Bucket, Key, Body, ContentType):
+        self.objects[Key] = (Body, ContentType)
+
+    def get_object(self, Bucket, Key):
+        if Key not in self.objects:
+            err = Exception("missing")
+            err.response = {"Error": {"Code": "NoSuchKey"}}
+            raise err
+        body, ct = self.objects[Key]
+        return {"Body": type("B", (), {"read": lambda self: body})(), "ContentType": ct}
+
+    def delete_object(self, Bucket, Key):
+        self.objects.pop(Key, None)
+
+
+@pytest.fixture
+def s3(monkeypatch):
+    fake = FakeS3()
+    monkeypatch.setenv("S3_BUCKET", "bseva-qa-files-test")
+    monkeypatch.setattr(storage, "_s3_client", lambda: fake)
+    return fake
+
+
+def test_s3_upload_download_delete_roundtrip(s3):
+    key = storage.upload_bytes("00000000-0000-0000-0000-0000000000a1/profile.jpg", b"jpeg-bytes", "image/jpeg")
+    assert key in s3.objects
+    data, ct = storage.fetch_bytes(key)
+    assert data == b"jpeg-bytes" and ct == "image/jpeg"
+    storage.delete_object(key)
+    with pytest.raises(HTTPException) as exc:
+        storage.fetch_bytes(key)
+    assert exc.value.status_code == 404
+
+
+def test_s3_is_preferred_over_supabase_and_counts_as_configured(s3, monkeypatch):
+    monkeypatch.setattr(storage, "_supabase_configured", lambda: True)
+    assert storage.storage_configured() is True
+    storage.upload_bytes("services/x/cover.webp", b"x")
+    assert "services/x/cover.webp" in s3.objects
+
+
+def test_s3_still_rejects_traversal_keys(s3):
+    with pytest.raises(HTTPException):
+        storage.upload_bytes("a1/../a2/signature.png", b"x")
+    assert s3.objects == {}
+
+
+def test_file_response_from_s3_is_not_cached(s3):
+    storage.upload_bytes("promos/1.png", b"png", "image/png")
+    resp = storage.file_response("promos/1.png", filename="1.png")
+    assert resp.headers["cache-control"].startswith("no-store")
+
+
+@pytest.mark.parametrize(
+    "allowlist,to,allowed",
+    [
+        ("", "anyone@example.com", True),
+        ("@b-seva.com,qa.tester@gmail.com", "ops@b-seva.com", True),
+        ("@b-seva.com,qa.tester@gmail.com", "QA.Tester@gmail.com", True),
+        ("@b-seva.com,qa.tester@gmail.com", "real.customer@gmail.com", False),
+    ],
+)
+def test_email_allowlist(monkeypatch, allowlist, to, allowed):
+    monkeypatch.setenv("EMAIL_ALLOWLIST", allowlist)
+    assert smtp_client.recipient_allowed(to) is allowed
+
+
+def test_email_outside_allowlist_is_suppressed_before_smtp(monkeypatch):
+    monkeypatch.setenv("EMAIL_ALLOWLIST", "@b-seva.com")
+    monkeypatch.setattr(smtp_client, "load_smtp_config", lambda: (_ for _ in ()).throw(AssertionError("SMTP touched")))
+    out = smtp_client.send_email(to="customer@gmail.com", subject="Reminder", text_body="x")
+    assert out["status"] == "suppressed"
+
+
+def test_dedupe_falls_back_to_sending_when_table_missing():
+    from sqlalchemy.exc import ProgrammingError
+
+    class Broken:
+        @contextmanager
+        def begin_nested(self):
+            yield
+
+        def execute(self, *a, **k):
+            raise ProgrammingError("INSERT", {}, Exception("relation job_dedupe does not exist"))
+
+    assert dedupe.claim_once(Broken(), "reminder_email:24h:x") is True
+
+
+def test_dedupe_second_claim_is_refused():
+    claimed = set()
+
+    class Fake:
+        @contextmanager
+        def begin_nested(self):
+            yield
+
+        def execute(self, stmt, params):
+            k = params["k"]
+            fresh = k not in claimed
+            claimed.add(k)
+            return type("R", (), {"first": lambda self: (k,) if fresh else None})()
+
+    db = Fake()
+    assert dedupe.claim_once(db, "reminder_email:24h:b1") is True
+    assert dedupe.claim_once(db, "reminder_email:24h:b1") is False
+
+
+def test_reminder_windows_are_evaluated_in_ist():
+    src = inspect.getsource(booking_reminders)
+    assert src.count("AT TIME ZONE 'Asia/Kolkata'") >= 2
+    assert "claim_once(session, f\"reminder_email:" in src
+
+
+def test_engine_pool_defaults_to_nullpool_and_queue_is_opt_in(monkeypatch):
+    from sqlalchemy.pool import NullPool
+
+    monkeypatch.delenv("DB_POOL", raising=False)
+    assert app_db._engine_kwargs() == {"poolclass": NullPool}
+    monkeypatch.setenv("DB_POOL", "queue")
+    monkeypatch.setenv("DB_POOL_SIZE", "4")
+    kwargs = app_db._engine_kwargs()
+    assert kwargs["pool_size"] == 4 and "poolclass" not in kwargs
+
+
+def test_rds_ssl_settings_come_from_environment(monkeypatch):
+    monkeypatch.setenv("DB_SSLMODE", "verify-full")
+    monkeypatch.setenv("DB_SSLROOTCERT", "/etc/ssl/rds/global-bundle.pem")
+    args = app_db._connect_args("postgresql://u@bseva-qa.abc.ap-south-1.rds.amazonaws.com/bseva")
+    assert args["sslmode"] == "verify-full" and args["sslrootcert"].endswith("global-bundle.pem")
+
+
+def test_demo_seed_refused_in_production(monkeypatch):
+    from app import db_bootstrap
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "environment", "production")
+    assert db_bootstrap.seed_demo() == 2
+
+
+def test_migration_order_runs_foundation_files_first():
+    from app import db_bootstrap
+
+    files = [p.name for p in db_bootstrap._files()]
+    assert files[0].startswith("001_") and "025_job_dedupe.sql" in files
+    assert all(db_bootstrap._number(db_bootstrap.MIGRATIONS_DIR / f) <= 12 for f in files[: files.index("013_i18n_six_languages.sql")])
+
+
+def test_database_errors_are_generic_outside_development(monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+    from starlette.requests import Request
+    from app import main
+
+    req = Request({"type": "http", "method": "POST", "path": "/api/v1/bookings", "headers": [], "query_string": b""})
+    exc = IntegrityError("INSERT", {}, Exception('violates check constraint "bookings_package_type_check"'))
+    monkeypatch.setattr(main.settings, "environment", "qa")
+    body = main._database_error_response(req, exc, "Database error").body
+    assert b"constraint" not in body and b"bookings" not in body
+    monkeypatch.setattr(main.settings, "environment", "development")
+    assert b"bookings_package_type_check" in main._database_error_response(req, exc, "Database error").body
+
+
+def test_enum_drift_migration_allows_values_the_api_writes():
+    sql = (Path(__file__).resolve().parents[2] / "supabase/migrations/026_enum_check_drift.sql").read_text()
+    for value in ("'basic'", "'temple'", "'driving_licence'"):
+        assert value in sql
+
+
+def test_pujari_ownership_checks_include_head_pujari():
+    # require_roles("pujari") also admits head_pujari, so hand-written role checks must name both.
+    src = (Path(__file__).resolve().parents[1] / "app/routers/lifecycle.py").read_text()
+    src += (Path(__file__).resolve().parents[1] / "app/routers/bookings.py").read_text()
+    assert 'user["role"] == "pujari"' not in src
+    assert 'role == "pujari" and' not in src
+    assert 'not in ("super_admin", "pujari"):' not in src
+
+
+def test_cancel_actor_treats_head_pujari_as_assigned_pujari():
+    from app.routers.bookings import _cancel_actor
+
+    booking = {"customer_id": "c1", "pujari_id": "p1"}
+    assert _cancel_actor({"id": "p1", "role": "head_pujari"}, booking) == "pujari"
+    with pytest.raises(Exception):
+        _cancel_actor({"id": "p2", "role": "head_pujari"}, booking)
+
+
+def test_unpaid_bookings_cannot_start_or_earn_settlement():
+    from fastapi import HTTPException
+    from app.routers import lifecycle
+
+    with pytest.raises(HTTPException) as e:
+        lifecycle._require_paid({"payment_status": "pending"})
+    assert e.value.status_code == 409
+    lifecycle._require_paid({"payment_status": "paid"})
+    src = inspect.getsource(lifecycle._run_completion_pipeline)
+    assert "and paid:" in src and "if paid:" in src
+    for fn in (lifecycle.request_start_otp, lifecycle.verify_start_otp):
+        assert "_require_paid(b)" in inspect.getsource(fn)
+
+
+def test_seva_cancel_refused_after_event_start():
+    from app.seva import registrations
+
+    src = inspect.getsource(registrations.cancel_registration)
+    assert "EVENT_STARTED" in src and "start_at <= NOW()" in src
+
+
+def test_settlement_override_locks_row():
+    from app.routers import lifecycle
+
+    assert "FOR UPDATE" in inspect.getsource(lifecycle.override_settlement)
+
+
+def test_read_only_mode_blocks_writes_and_cron(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    monkeypatch.setenv("READ_ONLY_MODE", "1")
+    client = TestClient(app)
+    r = client.post("/api/v1/auth/login", json={"identifier": "x@bseva.test", "password": "x"})
+    assert r.status_code == 503 and r.json()["code"] == "MAINTENANCE"
+    assert client.get("/api/v1/ops/cron/puja-lifecycle").status_code == 503
+    assert client.get("/api/health").status_code == 200
+
+
+def test_otp_test_code_only_for_test_domains_on_qa(monkeypatch):
+    from app.config import Settings, insecure_settings_problems
+
+    base = dict(database_url="postgresql://x@/y", jwt_secret="s" * 40, otp_test_email_domains="@bseva.test", otp_test_code="482913")
+    qa = Settings(environment="qa", **base)
+    assert qa.otp_test_code_for("New.User@BSEVA.test") == "482913"
+    assert qa.otp_test_code_for("someone@gmail.com") is None
+    assert Settings(environment="qa", **dict(base, otp_test_code="12ab")).otp_test_code_for("a@bseva.test") is None
+    assert Settings(environment="development", **base).otp_test_code_for("a@bseva.test") is None
+    prod = Settings(environment="production", **base)
+    assert prod.otp_test_code_for("a@bseva.test") is None
+    assert any("QA-only" in p for p in insecure_settings_problems(prod, env={}))
+
+
+def test_reference_import_on_production_needs_catalog_flag_and_skips_capabilities(monkeypatch, tmp_path):
+    import importlib.util, json as _json
+    spec = importlib.util.spec_from_file_location("reference_data", Path(__file__).resolve().parents[1] / "scripts/reference_data.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    f = tmp_path / "ref.json"; f.write_text(_json.dumps({}))
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with pytest.raises(SystemExit):
+        mod.import_(str(f), apply=False)
+    assert "capability:" in inspect.getsource(mod.import_) and "production_catalog" in inspect.getsource(mod.import_)
+
+
+def test_bootstrap_admin_refuses_qa_domains_and_weak_passwords(monkeypatch):
+    import subprocess, sys as _sys
+    script = Path(__file__).resolve().parents[1] / "scripts/bootstrap_admin.py"
+    for email, pw in (("x@bseva.test", "s" * 20), ("x@qa.b-seva.com", "s" * 20), ("owner@example.com", "short")):
+        r = subprocess.run([_sys.executable, str(script), "--email", email, "--name", "Owner"], env={**os.environ, "BOOTSTRAP_PASSWORD": pw},
+                           capture_output=True, text=True)
+        assert r.returncode != 0 and "Refusing" in (r.stderr + r.stdout)

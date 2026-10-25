@@ -117,10 +117,7 @@ async def database_unavailable(_request: Request, _exc: OperationalError):
     return JSONResponse(
         status_code=503,
         content={
-            "detail": (
-                "Cannot reach Supabase Postgres. Use the Session pooler URI from "
-                "Supabase Dashboard → Connect → Session pooler as DATABASE_URL."
-            ),
+            "detail": "The database is temporarily unavailable. Please try again shortly.",
         },
     )
 
@@ -148,3 +145,25 @@ async def database_error(request: Request, exc: SQLAlchemyError):
 @app.get("/api/health")
 def health():
     return {"ok": True, "service": "bseva-api"}
+
+
+@app.get("/api/ready")
+def ready():
+    """Readiness for deploy health gates: the database answers and the app version is known."""
+    import os
+
+    from sqlalchemy import text as _text
+
+    from app.db import engine
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(_text("SELECT 1"))
+    except Exception:
+        return JSONResponse(status_code=503, content={"ok": False, "database": "unavailable"})
+    return {
+        "ok": True,
+        "database": "ok",
+        "environment": settings.environment,
+        "version": os.environ.get("APP_VERSION", "unknown"),
+    }

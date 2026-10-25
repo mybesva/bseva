@@ -26,7 +26,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                 JOIN services s ON s.id = b.service_id
                 WHERE b.status IN ('confirmed', 'pending_acceptance')
                   AND b.pujari_id IS NOT NULL
-                  AND (b.booking_date + COALESCE(b.start_time, TIME '00:00'))
+                  AND ((b.booking_date + COALESCE(b.start_time, TIME '00:00')) AT TIME ZONE 'Asia/Kolkata')
                       BETWEEN NOW() AND NOW() + make_interval(hours => :hrs)
                 """
             ),
@@ -165,8 +165,11 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                 from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context
                 from app.mail.senders import send_booking_reminder_email
 
+                from app.jobs.dedupe import claim_once
+
                 cust_id = b.get("customer_id")
-                if cust_id:
+                # One reminder email per booking per window, however often the job runs.
+                if cust_id and claim_once(session, f"reminder_email:{hours_ahead}h:{b['id']}"):
                     ctx = load_customer_email_context(session, str(cust_id))
                     brow = session.execute(
                         text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
@@ -208,7 +211,7 @@ def issue_start_otps_nearing_start(db: Session | None = None) -> dict:
                 JOIN services s ON s.id = b.service_id
                 WHERE b.status = 'confirmed'
                   AND b.customer_id IS NOT NULL
-                  AND (b.booking_date + COALESCE(b.start_time, TIME '00:00'))
+                  AND ((b.booking_date + COALESCE(b.start_time, TIME '00:00')) AT TIME ZONE 'Asia/Kolkata')
                       BETWEEN NOW() - INTERVAL '30 minutes'
                           AND NOW() + make_interval(secs => :secs)
                 """
@@ -294,7 +297,9 @@ def notify_location_unlocked(db: Session | None = None) -> dict:
             )
         ).mappings().all()
         for b in rows:
-            if hours_until(b["booking_date"], b["start_time"]) > hours:
+            remaining = hours_until(b["booking_date"], b["start_time"])
+            # Only upcoming pujas: stale confirmed bookings in the past are not re-notified.
+            if remaining > hours or remaining < 0:
                 skipped += 1
                 continue
             exists = session.execute(

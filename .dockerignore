@@ -1,0 +1,25 @@
+# Keep build contexts small and free of secrets.
+**/.env
+**/.env.*
+!**/.env.example
+aws-script/
+**/secrets/
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/dist/
+.git/
+.github/
+apps/
+mobile/
+docs/
+signage/
+landingpage_gifs/
+*.tar.gz
+*.zip
+*.png
+!bseva-export/client/public/**/*.png
+!backend/app/static/**
+.runtime-qa/
+.vercel/

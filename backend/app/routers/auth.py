@@ -164,6 +164,8 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
     if not result.get("ok"):
         if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
             raise HTTPException(429, "Please wait before requesting another OTP")
+        if result.get("error") == "recipient_not_allowed":
+            raise HTTPException(403, result["message"])
         raise HTTPException(
             502,
             result.get("message")
