@@ -5,13 +5,14 @@ Adds Super Admin + Head Pujari elevation when missing.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+_DEV_DEFAULT_PASSWORD = "TestPass123!"
 
-PASSWORD = "TestPass123!"
+# Hosted (QA) seeds must use SEED_PASSWORD from the secret store; the default is for local dev only.
+PASSWORD = (os.environ.get("SEED_PASSWORD") or "").strip() or _DEV_DEFAULT_PASSWORD
 
 # Stable demo roster (do not change existing emails/phones)
 USERS = [
@@ -79,6 +80,9 @@ USERS = [
 
 
 def _database_url() -> str:
+    env_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if env_url:
+        return env_url.replace("postgresql+psycopg://", "postgresql://", 1)
     for candidate in (Path(__file__).resolve().parents[1] / ".env", Path(__file__).resolve().parent / ".env"):
         if not candidate.exists():
             continue
@@ -87,6 +91,23 @@ def _database_url() -> str:
             if s.startswith("DATABASE_URL=") and not s.startswith("#"):
                 return s.split("=", 1)[1].strip().strip('"').strip("'")
     raise SystemExit("DATABASE_URL missing from .env")
+
+
+def _connect(url: str):
+    """psycopg2 when installed (local dev), otherwise psycopg 3 (the API's driver)."""
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect(url)
+        conn.autocommit = False
+        return conn, conn.cursor(cursor_factory=RealDictCursor)
+    except ImportError:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        conn = psycopg.connect(url, autocommit=False)
+        return conn, conn.cursor(row_factory=dict_row)
 
 
 def _hash_password(plain: str) -> str:
@@ -125,10 +146,13 @@ def _ensure_user(cur, pw: str, u: dict) -> bool:
 
 
 def run() -> None:
+    environment = (os.environ.get("ENVIRONMENT") or "development").strip().lower()
+    if environment == "production":
+        raise SystemExit("Refusing to seed demo data into production")
+    if environment != "development" and not (os.environ.get("SEED_PASSWORD") or "").strip():
+        raise SystemExit("Set SEED_PASSWORD (from the environment's secret store) to seed a hosted environment")
     url = _database_url()
-    conn = psycopg2.connect(url)
-    conn.autocommit = False
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    conn, cur = _connect(url)
     try:
         pw = _hash_password(PASSWORD)
         inserted = 0
@@ -329,9 +353,9 @@ def run() -> None:
                 SELECT
                   'BSV-SEED-001', c.id, p.id, s.id, 'standard', 'in_person',
                   CURRENT_DATE + 7, '09:00', '10:30', 'Koramangala, Bengaluru', 'confirmed', 'paid',
-                  s.standard_price_paise, 0, 18,
-                  ROUND(s.standard_price_paise * 0.18),
-                  s.standard_price_paise + ROUND(s.standard_price_paise * 0.18),
+                  COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0), 0, 18,
+                  ROUND(COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
+                  COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) + ROUND(COALESCE(s.standard_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
                   TRUE
                 FROM users c
                 JOIN users p ON p.email = 'pujari1@bseva.test'
@@ -351,9 +375,9 @@ def run() -> None:
                 SELECT
                   'BSV-SEED-002', c.id, p.id, s.id, 'premium', 'virtual',
                   CURRENT_DATE + 10, '11:00', '13:00', 'Virtual', 'confirmed', 'paid',
-                  s.premium_price_paise, 0, 18,
-                  ROUND(s.premium_price_paise * 0.18),
-                  s.premium_price_paise + ROUND(s.premium_price_paise * 0.18),
+                  COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0), 0, 18,
+                  ROUND(COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
+                  COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) + ROUND(COALESCE(s.premium_price_paise, s.standard_price_paise, s.main_puja_price_paise, 0) * 0.18),
                   TRUE
                 FROM users c
                 JOIN users p ON p.email = 'pujari2@bseva.test'
@@ -367,7 +391,7 @@ def run() -> None:
         users = cur.fetchall()
         print("Seed complete (idempotent).")
         print(f"Inserted new users this run: {inserted}")
-        print(f"Password for all test accounts: {PASSWORD}")
+        print("Password for all test accounts: SEED_PASSWORD (not printed)")
         print("")
         print(f"{'Role':14} {'Name':22} {'Email':24} Phone")
         print("-" * 78)

@@ -142,11 +142,11 @@ def download_document(doc_id: str, user=Depends(require_roles("pujari", "admin")
 @router.get("/storage-info")
 def storage_info(user=Depends(require_roles("pujari", "admin"))):
     from app.config import settings
-    from app.storage import storage_configured
+    from app.storage import _s3_bucket, storage_configured
 
     return {
-        "bucket": settings.storage_bucket or "bseva",
-        "backend": "supabase" if storage_configured() else "local",
+        "bucket": _s3_bucket() or settings.storage_bucket or "bseva",
+        "backend": "s3" if _s3_bucket() else ("supabase" if storage_configured() else "local"),
         "upload_prefix": f"{user['id']}/",
     }
 

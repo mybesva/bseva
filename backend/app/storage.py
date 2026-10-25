@@ -1,11 +1,14 @@
-"""Object storage helper — Supabase Storage when configured, else local disk (dev)."""
+"""Object storage helper — Amazon S3 when S3_BUCKET is set (AWS), else Supabase Storage when
+configured (Vercel), else local disk (dev). Object keys are identical across backends."""
 
 from __future__ import annotations
 
 import json
+import logging
 import mimetypes
 import os
 import re
+from functools import lru_cache
 from pathlib import Path
 
 import httpx
@@ -34,11 +37,28 @@ _JWT_HINT = (
 )
 
 
+logger = logging.getLogger("bseva.storage")
+
+
 def _service_role_key() -> str:
     return (settings.supabase_service_role_key or "").strip()
 
 
-def storage_configured() -> bool:
+def _s3_bucket() -> str:
+    return (os.environ.get("S3_BUCKET") or "").strip()
+
+
+@lru_cache(maxsize=1)
+def _s3_client():
+    import boto3
+    from botocore.config import Config
+
+    # Credentials come from the instance role (no access keys in the environment).
+    region = (os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "ap-south-1").strip()
+    return boto3.client("s3", region_name=region, config=Config(retries={"max_attempts": 3, "mode": "standard"}))
+
+
+def _supabase_configured() -> bool:
     key = _service_role_key()
     return bool(
         settings.supabase_url
@@ -46,6 +66,18 @@ def storage_configured() -> bool:
         and key.lower() not in _PLACEHOLDER_KEYS
         and settings.storage_bucket
     )
+
+
+def storage_configured() -> bool:
+    return bool(_s3_bucket()) or _supabase_configured()
+
+
+def _s3_error(exc: Exception, action: str) -> HTTPException:
+    code = getattr(exc, "response", {}).get("Error", {}).get("Code", "") if hasattr(exc, "response") else ""
+    if code in ("NoSuchKey", "404", "NotFound"):
+        return HTTPException(404, "File missing")
+    logger.error("S3_%s_FAILED code=%s", action.upper(), code or type(exc).__name__)
+    return HTTPException(502, f"Storage {action} failed")
 
 
 def _safe_segment(name: str) -> str:
@@ -128,7 +160,15 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
     object_path = clean_object_path(object_path)
     ct = content_type or content_type_for(object_path)
 
-    if storage_configured():
+    bucket = _s3_bucket()
+    if bucket:
+        try:
+            _s3_client().put_object(Bucket=bucket, Key=object_path, Body=data, ContentType=ct)
+        except Exception as exc:  # botocore ClientError / connection errors
+            raise _s3_error(exc, "upload") from exc
+        return object_path
+
+    if _supabase_configured():
         # Fail fast with a clear message if the key cannot authorize Storage
         _require_storage_jwt()
         url = (
@@ -149,8 +189,8 @@ def upload_bytes(object_path: str, data: bytes, content_type: str | None = None)
     if os.environ.get("VERCEL") == "1" or (settings.environment or "").lower() == "production":
         raise HTTPException(
             503,
-            "Object storage is not configured on the server. Set SUPABASE_URL, "
-            "SUPABASE_SERVICE_ROLE_KEY (eyJ… JWT), and STORAGE_BUCKET, then redeploy.",
+            "Object storage is not configured on the server. Set S3_BUCKET (AWS) or SUPABASE_URL, "
+            "SUPABASE_SERVICE_ROLE_KEY (eyJ… JWT) and STORAGE_BUCKET (Vercel), then redeploy.",
         )
 
     # Local fallback for uvicorn/dev without Supabase Storage
@@ -171,7 +211,15 @@ def fetch_bytes(object_path: str) -> tuple[bytes, str]:
     object_path = clean_object_path(object_path)
     ct = content_type_for(object_path)
 
-    if storage_configured():
+    bucket = _s3_bucket()
+    if bucket:
+        try:
+            obj = _s3_client().get_object(Bucket=bucket, Key=object_path)
+        except Exception as exc:
+            raise _s3_error(exc, "download") from exc
+        return obj["Body"].read(), obj.get("ContentType") or ct
+
+    if _supabase_configured():
         url = (
             f"{settings.supabase_url.rstrip('/')}/storage/v1/object/"
             f"{settings.storage_bucket}/{object_path}"
@@ -201,7 +249,14 @@ def file_response(object_path: str, filename: str | None = None):
 
 def delete_object(object_path: str) -> None:
     object_path = clean_object_path(object_path)
-    if storage_configured():
+    bucket = _s3_bucket()
+    if bucket:
+        try:
+            _s3_client().delete_object(Bucket=bucket, Key=object_path)
+        except Exception as exc:
+            raise _s3_error(exc, "delete") from exc
+        return
+    if _supabase_configured():
         url = (
             f"{settings.supabase_url.rstrip('/')}/storage/v1/object/"
             f"{settings.storage_bucket}/{object_path}"
