@@ -6,7 +6,7 @@ set -euo pipefail
 SRC="${1:?usage: build-on-host.sh s3://bucket/key.tar.gz sha-<git sha>}"
 TAG="${2:?usage: build-on-host.sh s3://bucket/key.tar.gz sha-<git sha>}"
 [[ "$TAG" =~ ^sha-[0-9a-f]{7,40}$ ]] || { echo "invalid tag: $TAG" >&2; exit 1; }
-source /opt/bseva/.env
+set -a; source /opt/bseva/.env; set +a
 WORK="/opt/bseva/build/${TAG}"
 rm -rf "$WORK" && install -d -m 0755 "$WORK"
 aws s3 cp --only-show-errors --region "$AWS_REGION" "$SRC" "$WORK/src.tar.gz"

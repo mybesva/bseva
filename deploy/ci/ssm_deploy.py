@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Ship the compose file + host scripts to the QA host and run deploy.sh through SSM Run Command.
+"""Ship the compose file + host scripts to the QA or Production host and run deploy.sh through SSM Run Command.
 
-Env: TAG (sha-…), REGISTRY (ECR registry host), AWS_REGION, QA_DOMAIN. Credentials: the OIDC role.
-The instance is found by tags (Project=bseva, Environment=qa, Name=bseva-qa-app). Exits non-zero
+Env: TAG (sha-…), REGISTRY (ECR registry host), AWS_REGION, DEPLOY_ENV (qa|production), DOMAIN. Credentials: the OIDC role.
+The instance is found by tags (Project=bseva, Environment=<env>, Name=bseva-<env>-app). Exits non-zero
 if the remote deploy (including its automatic rollback) fails.
 """
 from __future__ import annotations
@@ -19,10 +19,13 @@ REPO = Path(__file__).resolve().parents[2]
 TAG = os.environ["TAG"]
 REGISTRY = os.environ["REGISTRY"]
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-DOMAIN = os.environ.get("QA_DOMAIN", "qa.b-seva.com")
+ENV_NAME = os.environ.get("DEPLOY_ENV", "qa")
+if ENV_NAME not in ("qa", "production"):
+    sys.exit(f"DEPLOY_ENV must be qa or production, not {ENV_NAME!r}")
+DOMAIN = os.environ.get("DOMAIN") or os.environ.get("QA_DOMAIN", "qa.b-seva.com")
 
 FILES = {
-    "/opt/bseva/compose/compose.qa.yml": REPO / "deploy/compose/compose.qa.yml",
+    "/opt/bseva/compose/compose.yml": REPO / "deploy/compose/compose.yml",
     "/opt/bseva/bin/deploy.sh": REPO / "deploy/host/deploy.sh",
     "/opt/bseva/bin/render-env.sh": REPO / "deploy/host/render-env.sh",
     "/opt/bseva/bin/issue-cert.sh": REPO / "deploy/host/issue-cert.sh",
@@ -32,14 +35,14 @@ ec2 = boto3.client("ec2", region_name=REGION)
 ssm = boto3.client("ssm", region_name=REGION)
 
 reservations = ec2.describe_instances(Filters=[
-    {"Name": "tag:Name", "Values": ["bseva-qa-app"]},
+    {"Name": "tag:Name", "Values": [f"bseva-{ENV_NAME}-app"]},
     {"Name": "tag:Project", "Values": ["bseva"]},
-    {"Name": "tag:Environment", "Values": ["qa"]},
+    {"Name": "tag:Environment", "Values": [ENV_NAME]},
     {"Name": "instance-state-name", "Values": ["running"]},
 ])["Reservations"]
 instances = [i["InstanceId"] for r in reservations for i in r["Instances"]]
 if len(instances) != 1:
-    sys.exit(f"expected exactly one running QA host, found {instances}")
+    sys.exit(f"expected exactly one running {ENV_NAME} host, found {instances}")
 instance_id = instances[0]
 
 commands = ["set -euo pipefail", "install -d -m 0755 /opt/bseva/bin /opt/bseva/compose"]
@@ -48,15 +51,15 @@ for dest, src in FILES.items():
     mode = "0755" if dest.endswith(".sh") else "0644"
     commands.append(f"echo '{payload}' | base64 -d > '{dest}.new' && chmod {mode} '{dest}.new' && mv '{dest}.new' '{dest}'")
 commands.append(
-    "printf 'REGISTRY=%s\\nDOMAIN=%s\\nAWS_REGION=%s\\n' "
-    f"'{REGISTRY}' '{DOMAIN}' '{REGION}' > /opt/bseva/.env && chmod 0644 /opt/bseva/.env"
+    "printf 'ENV_NAME=%s\\nREGISTRY=%s\\nDOMAIN=%s\\nAWS_REGION=%s\\n' "
+    f"'{ENV_NAME}' '{REGISTRY}' '{DOMAIN}' '{REGION}' > /opt/bseva/.env && chmod 0644 /opt/bseva/.env"
 )
 commands.append(f"/opt/bseva/bin/deploy.sh '{TAG}'")
 
 cmd = ssm.send_command(
     InstanceIds=[instance_id],
     DocumentName="AWS-RunShellScript",
-    Comment=f"bseva qa deploy {TAG}"[:100],
+    Comment=f"bseva {ENV_NAME} deploy {TAG}"[:100],
     Parameters={"commands": commands, "executionTimeout": ["1500"]},
     TimeoutSeconds=600,
 )["Command"]["CommandId"]

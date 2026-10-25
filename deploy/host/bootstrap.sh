@@ -1,5 +1,5 @@
 #!/bin/bash
-# EC2 user-data for the B-Seva QA host (Amazon Linux 2023, arm64). Idempotent; safe to re-run.
+# EC2 user-data for a B-Seva host (QA or Production) (Amazon Linux 2023, arm64). Idempotent; safe to re-run.
 # Installs Docker + the Compose plugin, adds 2 GB swap, creates /opt/bseva and the deploy tooling.
 set -euo pipefail
 exec > >(tee -a /var/log/bseva-bootstrap.log) 2>&1

@@ -1,14 +1,14 @@
 #!/bin/bash
-# Health-gated deploy of one immutable image tag on the QA host. Run via SSM Run Command:
+# Health-gated deploy of one immutable image tag on this host (QA or Production, per ENV_NAME in /opt/bseva/.env). Run via SSM Run Command:
 #   /opt/bseva/bin/deploy.sh sha-<git sha>      deploy that tag (migrations first)
 #   /opt/bseva/bin/deploy.sh --rollback         redeploy the previous good tag
 # On a failed health check the previous good tag is restored automatically and the script exits 1.
 set -euo pipefail
 cd /opt/bseva
 # shellcheck disable=SC1091
-source /opt/bseva/.env   # REGISTRY, DOMAIN, AWS_REGION (no secrets)
+set -a; source /opt/bseva/.env; set +a   # ENV_NAME, REGISTRY, DOMAIN, AWS_REGION (no secrets)
 STATE=/opt/bseva/state
-COMPOSE=(docker compose --env-file /opt/bseva/.env -f /opt/bseva/compose/compose.qa.yml)
+COMPOSE=(docker compose --env-file /opt/bseva/.env -f /opt/bseva/compose/compose.yml)
 
 log() { echo "{\"event\":\"$1\",\"tag\":\"${2:-}\",\"ts\":\"$(date -Is)\"}"; }
 

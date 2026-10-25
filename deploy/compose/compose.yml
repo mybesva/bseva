@@ -1,13 +1,13 @@
-# B-Seva QA on a single EC2 host. Driven by deploy/host/deploy.sh; values come from /opt/bseva/.env:
+# B-Seva (QA or Production, per ENV_NAME) on a single EC2 host. Driven by deploy/host/deploy.sh; values come from /opt/bseva/.env:
 #   REGISTRY (ECR registry host), IMAGE_TAG (sha-<git sha>), DOMAIN, AWS_REGION
 # App configuration and secrets are rendered from SSM Parameter Store into /opt/bseva/env/app.env.
-name: bseva-qa
+name: bseva-${ENV_NAME:-qa}
 
 x-logging: &logging
   driver: awslogs
   options:
     awslogs-region: ${AWS_REGION:-ap-south-1}
-    awslogs-group: /bseva/qa/app
+    awslogs-group: /bseva/${ENV_NAME:-qa}/app
     tag: "{{.Name}}"
 
 x-app: &app

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Render runtime configuration from SSM Parameter Store (instance-role credentials; values never printed).
-#   /bseva/qa/app/<NAME>    -> /opt/bseva/env/app.env      (NAME=value, mode 600)
-#   /bseva/qa/files/<NAME>  -> /opt/bseva/secrets/<NAME>   (JSON credentials as files, mode 640)
+#   /bseva/<env>/app/<NAME>    -> /opt/bseva/env/app.env      (NAME=value, mode 600)
+#   /bseva/<env>/files/<NAME>  -> /opt/bseva/secrets/<NAME>   (JSON credentials as files, mode 640)
 set -euo pipefail
 ENV_NAME="${ENV_NAME:-qa}"
 REGION="${AWS_REGION:-ap-south-1}"
