@@ -64,5 +64,6 @@
   "redirect_domains": [
     "www.b-seva.com",
     "app.b-seva.com"
-  ]
+  ],
+  "github_oidc_subject_prefix": "repo:mybesva@317075826/bseva@1334798281"
 }

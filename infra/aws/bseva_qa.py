@@ -484,7 +484,12 @@ def step_iam(ctx, apply: bool):
         if apply:
             iam.create_open_id_connect_provider(Url=f"https://{OIDC_URL}", ClientIDList=["sts.amazonaws.com"], Tags=tag_list())
 
-    sub = f"repo:{CFG['github_repo']}:environment:{CFG['github_environment']}"
+    # GitHub issues immutable subjects for this repository (owner and repo IDs), e.g.
+    # repo:mybesva@317075826/bseva@1334798281:environment:qa; see GET /repos/{repo}/actions/oidc/customization/sub.
+    sub = f"{CFG.get('github_oidc_subject_prefix') or 'repo:' + CFG['github_repo']}:environment:{CFG['github_environment']}"
+    trust = {"Version": "2012-10-17", "Statement": [{
+        "Effect": "Allow", "Principal": {"Federated": oidc_arn()}, "Action": "sts:AssumeRoleWithWebIdentity",
+        "Condition": {"StringEquals": {f"{OIDC_URL}:aud": "sts.amazonaws.com", f"{OIDC_URL}:sub": sub}}}]}
     deploy_policy = {"Version": "2012-10-17", "Statement": [
         {"Sid": "EcrAuth", "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*"},
         {"Sid": "EcrPush", "Effect": "Allow", "Action": ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart",
@@ -496,14 +501,18 @@ def step_iam(ctx, apply: bool):
         {"Sid": "ReadResults", "Effect": "Allow", "Action": ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations", "ec2:DescribeInstances"], "Resource": "*"},
     ]}
     if role_exists(ctx, DEPLOY_ROLE):
-        out("keep", "iam role", DEPLOY_ROLE)
+        current = iam.get_role(RoleName=DEPLOY_ROLE)["Role"]["AssumeRolePolicyDocument"]
+        if current.get("Statement") == trust["Statement"]:
+            out("keep", "iam role", DEPLOY_ROLE)
+        else:
+            out("update", "iam role trust", DEPLOY_ROLE, f"OIDC subject {sub}")
+            if apply:
+                iam.update_assume_role_policy(RoleName=DEPLOY_ROLE, PolicyDocument=json.dumps(trust))
     else:
         out("create", "iam role", DEPLOY_ROLE, f"OIDC trust only for {sub}; ECR push + SSM deploy to the {ENV} host")
         if apply:
             iam.create_role(RoleName=DEPLOY_ROLE, Tags=tag_list(), MaxSessionDuration=3600, Description=f"GitHub Actions {ENV} deploy (OIDC)",
-                            AssumeRolePolicyDocument=json.dumps({"Version": "2012-10-17", "Statement": [{
-                                "Effect": "Allow", "Principal": {"Federated": oidc_arn()}, "Action": "sts:AssumeRoleWithWebIdentity",
-                                "Condition": {"StringEquals": {f"{OIDC_URL}:aud": "sts.amazonaws.com", f"{OIDC_URL}:sub": sub}}}]}))
+                            AssumeRolePolicyDocument=json.dumps(trust))
             iam.put_role_policy(RoleName=DEPLOY_ROLE, PolicyName=f"{P}-deploy", PolicyDocument=json.dumps(deploy_policy))
 
 

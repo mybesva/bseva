@@ -46,5 +46,6 @@
     "EMAIL_ALLOWLIST": "@bseva.test",
     "GOOGLE_MEET_ENABLED": "0",
     "LOG_LEVEL": "INFO"
-  }
+  },
+  "github_oidc_subject_prefix": "repo:mybesva@317075826/bseva@1334798281"
 }
