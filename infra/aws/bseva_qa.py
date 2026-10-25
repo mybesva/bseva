@@ -608,6 +608,9 @@ def step_alarms(ctx, apply: bool):
         (f"{P}-rds-free-storage", "free storage < 2 GB"),
         (f"{P}-rds-cpu", "CPU > 80% for 15 min"),
     ]
+    if CFG.get("capacity_alarms"):
+        alarms += [(f"{P}-ec2-cpu-credits", "burst credits < 30 for 15 min (host would slow to baseline)"),
+                   (f"{P}-rds-free-memory", "freeable memory < 64 MB for 15 min")]
     for name, note in alarms:
         out("keep" if name in existing else "create", "cloudwatch alarm", name, note + ("" if name in existing else "; free tier"))
     if not apply:
@@ -627,7 +630,14 @@ def step_alarms(ctx, apply: bool):
         f"{P}-rds-cpu": dict(Namespace="AWS/RDS", MetricName="CPUUtilization", Dimensions=[{"Name": "DBInstanceIdentifier", "Value": DB_ID}],
                              Statistic="Average", Period=300, EvaluationPeriods=3, Threshold=80, ComparisonOperator="GreaterThanThreshold",
                              AlarmActions=[topic]),
+        f"{P}-ec2-cpu-credits": dict(Namespace="AWS/EC2", MetricName="CPUCreditBalance", Dimensions=[{"Name": "InstanceId", "Value": iid}],
+                                     Statistic="Minimum", Period=300, EvaluationPeriods=3, Threshold=30, ComparisonOperator="LessThanThreshold",
+                                     AlarmActions=[topic]),
+        f"{P}-rds-free-memory": dict(Namespace="AWS/RDS", MetricName="FreeableMemory", Dimensions=[{"Name": "DBInstanceIdentifier", "Value": DB_ID}],
+                                     Statistic="Minimum", Period=300, EvaluationPeriods=3, Threshold=64 * 1024 ** 2, ComparisonOperator="LessThanThreshold",
+                                     AlarmActions=[topic]),
     }
+    specs = {k: v for k, v in specs.items() if k in dict(alarms)}
     for name, spec in specs.items():
         if name not in existing and (iid or "rds" in name):
             cw.put_metric_alarm(AlarmName=name, TreatMissingData="notBreaching", Tags=tag_list(), **spec)

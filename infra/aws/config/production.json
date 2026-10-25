@@ -14,7 +14,10 @@
   "budget_tag_filter": true,
   "anomaly_monitor": false,
   "anomaly_threshold_usd": 10,
-  "ecr_repositories": ["bseva-prod-api", "bseva-prod-web"],
+  "ecr_repositories": [
+    "bseva-prod-api",
+    "bseva-prod-web"
+  ],
   "network": {
     "vpc_cidr": "10.30.0.0/16",
     "public_subnets": {
@@ -56,5 +59,6 @@
     "WALLET_SELF_TOPUP": "off",
     "DB_SSLMODE": "verify-full",
     "DB_SSLROOTCERT": "/etc/ssl/rds/rds-ca.pem"
-  }
+  },
+  "capacity_alarms": true
 }
