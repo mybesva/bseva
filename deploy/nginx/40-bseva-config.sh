@@ -17,9 +17,12 @@ else
 fi
 envsubst '${DOMAIN}' < "$template" > /etc/nginx/conf.d/default.conf
 covered=""
-if [ -f "$cert" ] && [ -f "$renewal" ]; then
+names="/etc/letsencrypt/bseva-names/${DOMAIN}"  # written by issue-cert*.sh: every name the certificate covers
+if [ -f "$cert" ]; then
   for host in $EXTRA_DOMAINS; do
-    if grep -q "^${host} = " "$renewal"; then covered="$covered $host"; fi
+    if { [ -f "$names" ] && grep -qx "$host" "$names"; } || { [ -f "$renewal" ] && grep -q "^${host} = " "$renewal"; }; then
+      covered="$covered $host"
+    fi
   done
 fi
 if [ -n "$covered" ]; then

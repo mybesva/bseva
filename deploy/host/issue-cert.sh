@@ -11,7 +11,10 @@ for host in ${EXTRA_DOMAINS:-}; do NAMES+=("$host"); done
 renewal="/opt/bseva/letsencrypt/renewal/${DOMAIN}.conf"
 missing=0
 for host in "${NAMES[@]}"; do grep -q "^${host} = " "$renewal" 2>/dev/null || missing=1; done
-if [ -f "/opt/bseva/letsencrypt/live/${DOMAIN}/fullchain.pem" ] && [ "$missing" = 0 ]; then
+force=()
+if grep -q "^authenticator = manual" "$renewal" 2>/dev/null; then
+  force=(--force-renewal)  # pre-issued via DNS-01: re-issue over HTTP-01 so automatic renewal works
+elif [ -f "/opt/bseva/letsencrypt/live/${DOMAIN}/fullchain.pem" ] && [ "$missing" = 0 ]; then
   echo "certificate for ${NAMES[*]} already present"; exit 0
 fi
 args=()
@@ -20,6 +23,8 @@ docker run --rm \
   -v /opt/bseva/letsencrypt:/etc/letsencrypt \
   -v /opt/bseva/certbot-www:/var/www/certbot \
   certbot/certbot:v3.3.0 certonly --webroot -w /var/www/certbot --cert-name "$DOMAIN" --expand \
-  "${args[@]}" --email "$EMAIL" --agree-tos --no-eff-email --non-interactive
+  "${args[@]}" "${force[@]}" --email "$EMAIL" --agree-tos --no-eff-email --non-interactive
+install -d -m 0755 /opt/bseva/letsencrypt/bseva-names
+printf '%s\n' "${NAMES[@]}" > "/opt/bseva/letsencrypt/bseva-names/${DOMAIN}"
 docker compose --env-file /opt/bseva/.env -f /opt/bseva/compose/compose.yml restart web
 echo "certificate issued for ${NAMES[*]}; nginx restarted with HTTPS"
