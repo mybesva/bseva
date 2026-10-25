@@ -8,7 +8,8 @@ location = /nginx-health { access_log off; default_type text/plain; return 200 "
 # Scheduled jobs run inside the worker container; the HTTP cron endpoints are never public here.
 location ^~ /api/v1/ops/cron/ { return 404; }
 
-location ^~ /api/v1/auth/ {
+# Credential endpoints only: /auth/me is read on every page load and stays in the general API zone.
+location ~ ^/api/v1/auth/(login|login/otp|otp/request|otp/verify|register|change-password)$ {
     limit_req zone=bseva_auth burst=20 nodelay;
     include /etc/nginx/bseva-templates/proxy.inc;
 }
