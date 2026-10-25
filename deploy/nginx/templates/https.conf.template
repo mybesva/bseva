@@ -10,7 +10,7 @@ server {
     server_name ${DOMAIN};
     location ^~ /.well-known/acme-challenge/ { root /var/www/certbot; }
     location = /nginx-health { access_log off; default_type text/plain; return 200 "ok\n"; }
-    location / { return 301 https://$host$request_uri; }
+    location / { return 301 https://${DOMAIN}$request_uri; }  # never echo the client Host header
 }
 
 server {
