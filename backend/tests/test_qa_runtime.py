@@ -241,3 +241,17 @@ def test_read_only_mode_blocks_writes_and_cron(monkeypatch):
     assert r.status_code == 503 and r.json()["code"] == "MAINTENANCE"
     assert client.get("/api/v1/ops/cron/puja-lifecycle").status_code == 503
     assert client.get("/api/health").status_code == 200
+
+
+def test_otp_test_code_only_for_test_domains_on_qa(monkeypatch):
+    from app.config import Settings, insecure_settings_problems
+
+    base = dict(database_url="postgresql://x@/y", jwt_secret="s" * 40, otp_test_email_domains="@bseva.test", otp_test_code="482913")
+    qa = Settings(environment="qa", **base)
+    assert qa.otp_test_code_for("New.User@BSEVA.test") == "482913"
+    assert qa.otp_test_code_for("someone@gmail.com") is None
+    assert Settings(environment="qa", **dict(base, otp_test_code="12ab")).otp_test_code_for("a@bseva.test") is None
+    assert Settings(environment="development", **base).otp_test_code_for("a@bseva.test") is None
+    prod = Settings(environment="production", **base)
+    assert prod.otp_test_code_for("a@bseva.test") is None
+    assert any("QA-only" in p for p in insecure_settings_problems(prod, env={}))

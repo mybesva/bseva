@@ -123,10 +123,14 @@ def issue_email_otp(
             "retry_after_seconds": rate.get("retry_after_seconds"),
         }
 
-    # Random OTP everywhere; the fixed OTP_DEV_CODE is honoured only for local development without SMTP.
+    # Random OTP everywhere; the fixed OTP_DEV_CODE is honoured only for local development without SMTP,
+    # and the secret OTP_TEST_CODE only for configured synthetic test domains on QA (no email is sent).
     from app.mail.smtp_client import smtp_configured
 
-    if smtp_configured() or not _is_development():
+    test_code = settings.otp_test_code_for(email_n)
+    if test_code:
+        code = test_code
+    elif smtp_configured() or not _is_development():
         code = generate_otp_code()
     else:
         code = (settings.otp_dev_code or generate_otp_code()).strip() or generate_otp_code()
@@ -149,7 +153,10 @@ def issue_email_otp(
     db.commit()
 
     delivery: dict[str, Any] = {"ok": True, "status": "skipped", "channel": "none"}
-    if deliver:
+    if test_code:
+        logger.info("OTP_ISSUED purpose=%s to=%s channel=qa_test_code", purpose_n, email_n)
+        delivery = {"ok": True, "status": "qa_test_code", "channel": "none"}
+    elif deliver:
         provider = get_otp_delivery_provider("email")
         try:
             delivery = provider.send_otp(
@@ -173,6 +180,17 @@ def issue_email_otp(
 
         delivery_status = str(delivery.get("status") or "")
         delivery_ok = bool(delivery.get("ok"))
+        if delivery_status == "suppressed":
+            # EMAIL_ALLOWLIST (QA): this address is not an approved recipient, so nothing was sent.
+            invalidate_prior_otps(db, email=email_n, purpose=purpose_n)
+            db.commit()
+            return {
+                "ok": False,
+                "error": "recipient_not_allowed",
+                "message": "This test environment only sends email to approved team addresses. Use an approved address or an @bseva.test test account.",
+                "expires_in_minutes": OTP_TTL_MINUTES,
+                "delivery": {"status": "suppressed", "channel": "email"},
+            }
         if smtp_configured():
             # Must be accepted by SMTP for the visitor to receive mail
             delivery_ok = delivery_ok and delivery_status == "sent"

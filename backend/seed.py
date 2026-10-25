@@ -69,7 +69,7 @@ USERS = [
         "cal": "solar",
     },
     {
-        "name": "Pandit",
+        "name": "Pandit Reddy",
         "email": "pujari2@bseva.test",
         "phone": "9000000006",
         "role": "pujari",
@@ -121,24 +121,50 @@ def _hash_password(plain: str) -> str:
         return CryptContext(schemes=["bcrypt"], deprecated="auto").hash(plain)
 
 
+# Main's admin@bseva.test permission set (RBAC v2), so the demo Admin works without a Super Admin granting it.
+ADMIN_SEED_PERMISSIONS = [
+    "create_customers", "create_pujaris", "edit_customers", "manage_bookings", "manage_invoices", "manage_muhurtham",
+    "manage_promotions", "manage_recommendations", "manage_reviews", "manage_samagri", "manage_services",
+    "manage_seva_events", "manage_support", "manage_temples", "manage_virtual_puja", "view_bookings", "view_customers",
+    "view_invoices", "view_muhurtham", "view_payments", "view_promotions", "view_pujaris", "view_recommendations",
+    "view_reviews", "view_samagri", "view_services", "view_seva_events", "view_temples", "view_virtual_puja",
+]
+
+
+def _password_matches(plain: str, hashed: str | None) -> bool:
+    try:
+        import bcrypt
+
+        return bool(hashed) and bcrypt.checkpw(plain.encode(), hashed.encode())
+    except Exception:
+        return False
+
+
 def _ensure_user(cur, pw: str, u: dict) -> bool:
-    """Insert user if missing. Returns True if inserted."""
-    cur.execute("SELECT id, role FROM users WHERE email = %s OR phone = %s", (u["email"], u["phone"]))
+    """Insert the demo user, or bring an existing one (matched by email) back to the roster. True if inserted."""
+    cur.execute("SELECT id, role, password_hash FROM users WHERE email = %s", (u["email"],))
     row = cur.fetchone()
     if row:
-        # Keep existing row; gently upgrade role only for known elevators
-        if u["email"] == "pujari1@bseva.test" and row["role"] == "pujari":
-            cur.execute(
-                "UPDATE users SET role = 'head_pujari' WHERE id = %s AND role = 'pujari'",
-                (row["id"],),
-            )
-        if u["email"] == "super@bseva.test" and row["role"] != "super_admin":
-            cur.execute("UPDATE users SET role = 'super_admin' WHERE id = %s", (row["id"],))
+        # Sync the roster fields; the password hash changes only when it no longer matches SEED_PASSWORD.
+        cur.execute(
+            """
+            UPDATE users SET name = %s, phone = %s, role = %s, email_verified = TRUE, phone_verified = TRUE,
+                   blocked = FALSE, updated_at = NOW()
+            WHERE id = %s
+            """,
+            (u["name"], u["phone"], u["role"], row["id"]),
+        )
+        if not _password_matches(PASSWORD, row.get("password_hash")):
+            cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (pw, row["id"]))
         return False
+    cur.execute("SELECT 1 FROM users WHERE phone = %s", (u["phone"],))
+    if cur.fetchone():
+        raise SystemExit(f"Phone {u['phone']} belongs to another account; refusing to create {u['email']}")
     cur.execute(
         """
-        INSERT INTO users (name, email, phone, password_hash, role, preferred_language, calendar_preference, phone_verified)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        INSERT INTO users (name, email, phone, password_hash, role, preferred_language, calendar_preference,
+                           phone_verified, email_verified)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, TRUE)
         """,
         (u["name"], u["email"], u["phone"], pw, u["role"], u["lang"], u["cal"]),
     )
@@ -161,6 +187,16 @@ def run() -> None:
                 inserted += 1
 
         cur.execute("INSERT INTO wallets (user_id) SELECT id FROM users ON CONFLICT (user_id) DO NOTHING")
+
+        cur.execute(
+            """
+            INSERT INTO admin_permissions (user_id, permission)
+            SELECT u.id, p FROM users u, unnest(%s::text[]) AS p
+            WHERE u.email = 'admin@bseva.test' AND u.role = 'admin'
+            ON CONFLICT (user_id, permission) DO NOTHING
+            """,
+            (ADMIN_SEED_PERMISSIONS,),
+        )
 
         # Customer profiles for any customer missing one
         cur.execute(
