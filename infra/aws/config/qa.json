@@ -1,0 +1,42 @@
+{
+  "environment": "qa",
+  "account_id": "472238087252",
+  "region": "ap-south-1",
+  "project": "bseva",
+  "domain": "qa.b-seva.com",
+  "github_repo": "mybesva/bseva",
+  "github_environment": "qa",
+  "alert_emails": [],
+  "budget_usd": 40,
+  "anomaly_threshold_usd": 10,
+  "network": {
+    "vpc_cidr": "10.20.0.0/16",
+    "public_subnets": {"ap-south-1a": "10.20.0.0/24", "ap-south-1b": "10.20.1.0/24"},
+    "private_subnets": {"ap-south-1a": "10.20.10.0/24", "ap-south-1b": "10.20.11.0/24"}
+  },
+  "ec2": {
+    "instance_type": "t4g.small",
+    "root_volume_gb": 20,
+    "ami_parameter": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64",
+    "availability_zone": "ap-south-1a"
+  },
+  "rds": {
+    "instance_class": "db.t4g.micro",
+    "engine_major": "17",
+    "storage_gb": 20,
+    "max_storage_gb": 40,
+    "backup_retention_days": 7,
+    "db_name": "bseva",
+    "master_username": "bseva_admin"
+  },
+  "log_retention_days": 14,
+  "ecr_keep_images": 20,
+  "app_parameters": {
+    "ENVIRONMENT": "qa",
+    "PUBLIC_APP_URL": "https://qa.b-seva.com",
+    "CORS_ORIGINS": "https://qa.b-seva.com",
+    "EMAIL_ALLOWLIST": "@bseva.test",
+    "GOOGLE_MEET_ENABLED": "0",
+    "LOG_LEVEL": "INFO"
+  }
+}

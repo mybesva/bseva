@@ -90,3 +90,11 @@ data/
 .env*
 !.env.example
 !**/.env.example
+
+# Local AWS scripts and credentials (never commit)
+/aws-script/
+aws-scripts/
+aws.env
+# Infrastructure automation runtime output (may contain resource IDs and secrets)
+infra/aws/state/
+infra/aws/reports/
