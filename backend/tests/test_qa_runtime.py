@@ -202,3 +202,30 @@ def test_cancel_actor_treats_head_pujari_as_assigned_pujari():
     assert _cancel_actor({"id": "p1", "role": "head_pujari"}, booking) == "pujari"
     with pytest.raises(Exception):
         _cancel_actor({"id": "p2", "role": "head_pujari"}, booking)
+
+
+def test_unpaid_bookings_cannot_start_or_earn_settlement():
+    from fastapi import HTTPException
+    from app.routers import lifecycle
+
+    with pytest.raises(HTTPException) as e:
+        lifecycle._require_paid({"payment_status": "pending"})
+    assert e.value.status_code == 409
+    lifecycle._require_paid({"payment_status": "paid"})
+    src = inspect.getsource(lifecycle._run_completion_pipeline)
+    assert "and paid:" in src and "if paid:" in src
+    for fn in (lifecycle.request_start_otp, lifecycle.verify_start_otp):
+        assert "_require_paid(b)" in inspect.getsource(fn)
+
+
+def test_seva_cancel_refused_after_event_start():
+    from app.seva import registrations
+
+    src = inspect.getsource(registrations.cancel_registration)
+    assert "EVENT_STARTED" in src and "start_at <= NOW()" in src
+
+
+def test_settlement_override_locks_row():
+    from app.routers import lifecycle
+
+    assert "FOR UPDATE" in inspect.getsource(lifecycle.override_settlement)

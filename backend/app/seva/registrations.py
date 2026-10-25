@@ -253,6 +253,13 @@ def cancel_registration(db: Session, *, registration_id: str, customer_id: str) 
     event = get_event(db, str(row["event_id"]), published_only=False)
     if event:
         _validate_participation(event, str(row.get("participation_mode") or "offline"))
+    # No refund once the event has started (or is live/completed): the seva has been delivered.
+    started = db.execute(
+        text("SELECT start_at <= NOW() OR status IN ('live', 'completed') FROM seva_events WHERE id = CAST(:id AS uuid)"),
+        {"id": str(row["event_id"])},
+    ).scalar()
+    if started:
+        raise RegistrationError("EVENT_STARTED", "This seva has already started, so the registration can no longer be cancelled", 409)
 
     amount = int(row.get("total_amount_paise") or 0)
     if amount > 0 and row.get("payment_status") == "paid":
