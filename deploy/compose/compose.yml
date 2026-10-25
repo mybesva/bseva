@@ -11,7 +11,7 @@ x-logging: &logging
     tag: "{{.Name}}"
 
 x-app: &app
-  image: ${REGISTRY}/bseva-api:${IMAGE_TAG}
+  image: ${REGISTRY}/${IMAGE_PREFIX:-bseva}-api:${IMAGE_TAG}
   env_file: /opt/bseva/env/app.env
   environment:
     APP_VERSION: ${IMAGE_TAG}
@@ -55,7 +55,7 @@ services:
       retries: 3
 
   web:
-    image: ${REGISTRY}/bseva-web:${IMAGE_TAG}
+    image: ${REGISTRY}/${IMAGE_PREFIX:-bseva}-web:${IMAGE_TAG}
     environment:
       DOMAIN: ${DOMAIN}
     ports: ["80:80", "443:443"]

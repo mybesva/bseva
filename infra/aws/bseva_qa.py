@@ -49,24 +49,25 @@ ENV_NAME = _selected_env()
 if ENV_NAME not in ENVIRONMENTS:
     sys.exit(f"--env must be one of {', '.join(ENVIRONMENTS)}")
 CFG = json.loads((HERE / "config" / f"{ENV_NAME}.json").read_text(encoding="utf-8"))
-QA_ACCOUNT = json.loads((HERE / "config" / "qa.json").read_text(encoding="utf-8"))["account_id"]
+QA_CFG = json.loads((HERE / "config" / "qa.json").read_text(encoding="utf-8"))
 ENV = CFG["environment"]
 LABEL = {"qa": "QA", "production": "Production"}[ENV]  # QA wording is unchanged for existing resources
 ACCOUNT = CFG["account_id"]
 REGION = CFG["region"]
-P = f"{CFG['project']}-{ENV}"  # name prefix: bseva-qa
+NAME_ENV = CFG.get("name_env", ENV)  # short name used in resource names and paths: qa | prod
+P = f"{CFG['project']}-{NAME_ENV}"  # name prefix: bseva-qa | bseva-prod
 TAGS = {"Project": CFG["project"], "Environment": ENV, "ManagedBy": "bseva-infra"}
 BOTO = Config(retries={"max_attempts": 5, "mode": "standard"}, connect_timeout=15, read_timeout=60)
 
 BUCKET = f"{P}-files-{ACCOUNT}"
 TRAIL_BUCKET = f"{CFG['project']}-audit-{ACCOUNT}"
-LOG_GROUP = f"/bseva/{ENV}/app"
-REPOS = ("bseva-api", "bseva-web")
+LOG_GROUP = f"/bseva/{NAME_ENV}/app"
+REPOS = tuple(CFG.get("ecr_repositories", ["bseva-api", "bseva-web"]))
 EC2_ROLE = f"{P}-ec2"
 DEPLOY_ROLE = f"{P}-github-deploy"
 OIDC_URL = "token.actions.githubusercontent.com"
 DB_ID = f"{P}-db"
-PARAM_PREFIX = f"/bseva/{ENV}"
+PARAM_PREFIX = f"/bseva/{NAME_ENV}"
 
 
 # ------------------------------------------------------------------ session and guards
@@ -101,11 +102,31 @@ class Ctx:
             sys.exit(f"Refusing: config/{ENV_NAME}.json must describe the {ENV_NAME} environment in ap-south-1")
         if not ACCOUNT.isdigit():
             sys.exit(f"Refusing: set account_id in config/{ENV_NAME}.json first")
-        if ENV == "production" and ACCOUNT == QA_ACCOUNT:
-            sys.exit("Refusing: production must live in its own AWS account, not the QA account")
+        problems = isolation_problems()
+        if problems:
+            sys.exit("Refusing: " + "; ".join(problems))
         if ident["Account"] != ACCOUNT:
             sys.exit(f"Refusing: caller account {ident['Account']} is not the {ENV} account {ACCOUNT}")
         return ident["Arn"]
+
+
+def isolation_problems() -> list[str]:
+    """Production may share QA's AWS account only with fully separate identifiers and network ranges."""
+    if ENV != "production":
+        return []
+    qa_prefix = f"{QA_CFG['project']}-{QA_CFG.get('name_env', QA_CFG['environment'])}"
+    qa_repos = set(QA_CFG.get("ecr_repositories", ["bseva-api", "bseva-web"]))
+    checks = [
+        (NAME_ENV != QA_CFG.get("name_env", QA_CFG["environment"]), "production name_env must differ from QA's"),
+        (P != qa_prefix, f"resource prefix {P} collides with QA"),
+        (not set(REPOS) & qa_repos, "production ECR repositories must differ from QA's"),
+        (CFG["network"]["vpc_cidr"] != QA_CFG["network"]["vpc_cidr"], "production VPC CIDR must differ from QA's"),
+        (CFG["domain"] != QA_CFG["domain"], "production domain must differ from QA's"),
+        (CFG["github_environment"] != QA_CFG["github_environment"], "production GitHub environment must differ from QA's"),
+        (not any(k.startswith("OTP_TEST") or k in ("EMAIL_ALLOWLIST", "SEED_PASSWORD") for k in CFG["app_parameters"]),
+         "QA-only settings (OTP_TEST_*, EMAIL_ALLOWLIST, SEED_PASSWORD) must not be in production app_parameters"),
+    ]
+    return [msg for ok, msg in checks if not ok]
 
 
 def tag_list(extra: dict | None = None) -> list[dict]:
@@ -232,18 +253,25 @@ def step_budget(ctx, apply: bool):
         out("create", "budget", name, f"${CFG['budget_usd']}/month; actual 50/80/100%, forecast 100%; free")
         if apply:
             if not emails:
-                sys.exit("Set alert_emails in infra/aws/config/qa.json before apply (budget/alarm recipients)")
+                sys.exit(f"Set alert_emails in infra/aws/config/{ENV_NAME}.json before apply (budget/alarm recipients)")
             subs = [{"SubscriptionType": "EMAIL", "Address": e} for e in emails]
             notes = [("ACTUAL", 50), ("ACTUAL", 80), ("ACTUAL", 100), ("FORECASTED", 100)]
+            budget = {"BudgetName": name, "BudgetType": "COST", "TimeUnit": "MONTHLY",
+                      "BudgetLimit": {"Amount": str(CFG["budget_usd"]), "Unit": "USD"}}
+            if CFG.get("budget_tag_filter"):
+                # Counts only resources tagged Environment=<env>; needs the Environment cost-allocation tag activated.
+                budget["CostFilters"] = {"TagKeyValue": [f"user:Environment${ENV}"]}
             bud.create_budget(
                 AccountId=ACCOUNT,
-                Budget={"BudgetName": name, "BudgetType": "COST", "TimeUnit": "MONTHLY",
-                        "BudgetLimit": {"Amount": str(CFG["budget_usd"]), "Unit": "USD"}},
+                Budget=budget,
                 NotificationsWithSubscribers=[
                     {"Notification": {"NotificationType": t, "ComparisonOperator": "GREATER_THAN",
                                       "Threshold": th, "ThresholdType": "PERCENTAGE"}, "Subscribers": subs}
                     for t, th in notes],
             )
+    if not CFG.get("anomaly_monitor", True):
+        out("skip", "cost anomaly monitor", f"{P}-services", "the account-wide monitor already covers every service")
+        return
     ce = ctx.c("ce", "us-east-1")
     monitors = [m for m in ce.get_anomaly_monitors().get("AnomalyMonitors", []) if m["MonitorName"] == f"{P}-services"]
     if monitors:
@@ -614,7 +642,7 @@ def step_parameters(ctx, apply: bool):
     generated = ("JWT_SECRET",) if ENV == "production" else ("JWT_SECRET", "SEED_PASSWORD")
     missing = [k for k in list(wanted) + list(generated) + ["DATABASE_URL"] if not param_exists(ctx, f"{base}/{k}")]
     out("keep" if not missing else "create", "ssm parameters", f"{base}/*",
-        f"{len(missing)} to create (JWT_SECRET/SEED_PASSWORD generated, DATABASE_URL from RDS); Standard tier, free" if missing else "")
+        f"{len(missing)} to create (secrets generated, DATABASE_URL from RDS); Standard tier, free" if missing else "")
     if not apply:
         return
     for k, v in wanted.items():

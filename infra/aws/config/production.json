@@ -1,6 +1,7 @@
 {
   "environment": "production",
-  "account_id": "PENDING-new-production-account",
+  "name_env": "prod",
+  "account_id": "472238087252",
   "region": "ap-south-1",
   "project": "bseva",
   "domain": "app.b-seva.com",
@@ -9,8 +10,11 @@
   "alert_emails": [
     "mybseva@gmail.com"
   ],
-  "budget_usd": 80,
-  "anomaly_threshold_usd": 15,
+  "budget_usd": 50,
+  "budget_tag_filter": true,
+  "anomaly_monitor": false,
+  "anomaly_threshold_usd": 10,
+  "ecr_repositories": ["bseva-prod-api", "bseva-prod-web"],
   "network": {
     "vpc_cidr": "10.30.0.0/16",
     "public_subnets": {
@@ -23,32 +27,33 @@
     }
   },
   "ec2": {
-    "instance_type": "t4g.medium",
-    "root_volume_gb": 30,
+    "instance_type": "t4g.small",
+    "root_volume_gb": 20,
     "ami_parameter": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64",
     "availability_zone": "ap-south-1a"
   },
   "rds": {
-    "instance_class": "db.t4g.small",
+    "instance_class": "db.t4g.micro",
     "engine_major": "17",
     "storage_gb": 20,
-    "max_storage_gb": 100,
+    "max_storage_gb": 60,
     "backup_retention_days": 14,
     "multi_az": false,
-    "performance_insights": true,
-    "cost_note": "≈$30.7 + $2.6/month",
+    "performance_insights": false,
+    "cost_note": "≈$15.3 + $2.6/month",
     "db_name": "bseva",
     "master_username": "bseva_admin"
   },
   "log_retention_days": 30,
-  "ecr_keep_images": 30,
+  "ecr_keep_images": 20,
   "app_parameters": {
     "ENVIRONMENT": "production",
     "PUBLIC_APP_URL": "https://app.b-seva.com",
-    "CORS_ORIGINS": "https://app.b-seva.com,https://bseva.vercel.app",
-    "GOOGLE_MEET_ENABLED": "1",
+    "CORS_ORIGINS": "https://app.b-seva.com",
+    "GOOGLE_MEET_ENABLED": "0",
     "LOG_LEVEL": "INFO",
     "WORKER_ENABLED": "0",
+    "WALLET_SELF_TOPUP": "off",
     "DB_SSLMODE": "verify-full",
     "DB_SSLROOTCERT": "/etc/ssl/rds/rds-ca.pem"
   }
