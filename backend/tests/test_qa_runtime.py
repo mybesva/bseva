@@ -184,3 +184,21 @@ def test_enum_drift_migration_allows_values_the_api_writes():
     sql = (Path(__file__).resolve().parents[2] / "supabase/migrations/026_enum_check_drift.sql").read_text()
     for value in ("'basic'", "'temple'", "'driving_licence'"):
         assert value in sql
+
+
+def test_pujari_ownership_checks_include_head_pujari():
+    # require_roles("pujari") also admits head_pujari, so hand-written role checks must name both.
+    src = (Path(__file__).resolve().parents[1] / "app/routers/lifecycle.py").read_text()
+    src += (Path(__file__).resolve().parents[1] / "app/routers/bookings.py").read_text()
+    assert 'user["role"] == "pujari"' not in src
+    assert 'role == "pujari" and' not in src
+    assert 'not in ("super_admin", "pujari"):' not in src
+
+
+def test_cancel_actor_treats_head_pujari_as_assigned_pujari():
+    from app.routers.bookings import _cancel_actor
+
+    booking = {"customer_id": "c1", "pujari_id": "p1"}
+    assert _cancel_actor({"id": "p1", "role": "head_pujari"}, booking) == "pujari"
+    with pytest.raises(Exception):
+        _cancel_actor({"id": "p2", "role": "head_pujari"}, booking)

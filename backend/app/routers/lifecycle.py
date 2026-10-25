@@ -553,7 +553,7 @@ def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "adm
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    if user["role"] == "pujari" and str(b["pujari_id"]) != str(user["id"]):
+    if user["role"] in ("pujari", "head_pujari") and str(b["pujari_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
     if b["status"] != "confirmed":
         raise HTTPException(400, "Booking must be confirmed to start")
@@ -779,7 +779,7 @@ def complete_booking(booking_id: str, user=Depends(require_roles("pujari", "admi
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    if user["role"] == "pujari":
+    if user["role"] in ("pujari", "head_pujari"):
         raise HTTPException(
             400,
             "Waiting for customer completion verification. Ask the customer to enter the Completion OTP in their BSeva app.",
@@ -802,7 +802,7 @@ def request_complete_otp(booking_id: str, user=Depends(require_roles("pujari", "
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
-    if user["role"] == "pujari" and str(b["pujari_id"]) != str(user["id"]):
+    if user["role"] in ("pujari", "head_pujari") and str(b["pujari_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
     if b["status"] != "in_progress":
         raise HTTPException(400, "Booking must be in progress")
@@ -1345,7 +1345,7 @@ def list_settlements(
     user=Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    if user["role"] not in ("super_admin", "pujari"):
+    if user["role"] not in ("super_admin", "pujari", "head_pujari"):
         # Settlements are Super Admin only on the back office (pujaris see their own below).
         raise HTTPException(403, "Not allowed")
 
