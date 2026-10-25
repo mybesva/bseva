@@ -35,7 +35,11 @@ Records that must stay exactly as they are: MX (`mx.zoho.in`, `mx2.zoho.in`, `mx
 
 1. A day before: screenshot the DNS page. Lower the TTL of the two `@` A records to 600 s and wait one old TTL.
 2. In GoDaddy, disconnect the Airo/Website Builder site from the domain, otherwise GoDaddy may re-create its `@` records.
-3. Freeze writes on the old system (`READ_ONLY_MODE=1` on Vercel), copy and reconcile approved data.
+3. Freeze writes on the old system (`READ_ONLY_MODE=1` on Vercel), then re-sync the catalog (the live admin console
+   keeps editing it until the freeze): `reference_data.py export` locally (read-only), then on Production
+   `reference_data.py import --apply --production-catalog`, and compare fingerprints (0 missing, 0 different).
+   Data policy: catalog and non-personal configuration only. No accounts, profiles, KYC, wallets, bookings,
+   payments, refunds, settlements, OTPs or sessions are migrated; Production starts with its bootstrap Super Admin.
 4. Production host first (the certificate already exists, so HTTPS is valid immediately):
    `DOMAIN=b-seva.com`, `EXTRA_DOMAINS="www.b-seva.com app.b-seva.com"` in `/opt/bseva/.env`, SSM
    `PUBLIC_APP_URL=https://b-seva.com`, then `/opt/bseva/bin/deploy.sh <current tag>`. `app.b-seva.com` now redirects to
