@@ -3,3 +3,4 @@
 gunicorn==23.0.0
 boto3==1.42.64
 weasyprint==62.3
+pydyf==0.10.0  # weasyprint 62.x calls Stream.transform, removed in pydyf 0.11
