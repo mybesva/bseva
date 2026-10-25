@@ -81,8 +81,8 @@ def smtp_status() -> dict[str, Any]:
 
 def app_base_url() -> str:
     return (
-        _first("PUBLIC_APP_URL", "VITE_APP_URL", default="https://bseva.vercel.app").rstrip("/")
-        or "https://bseva.vercel.app"
+        _first("PUBLIC_APP_URL", "VITE_APP_URL", default="https://b-seva.com").rstrip("/")
+        or "https://b-seva.com"
     )
 
 

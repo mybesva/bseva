@@ -58,6 +58,7 @@ services:
     image: ${REGISTRY}/${IMAGE_PREFIX:-bseva}-web:${IMAGE_TAG}
     environment:
       DOMAIN: ${DOMAIN}
+      EXTRA_DOMAINS: ${EXTRA_DOMAINS:-}
     ports: ["80:80", "443:443"]
     volumes:
       - /opt/bseva/letsencrypt:/etc/letsencrypt:ro

@@ -25,6 +25,7 @@ if ENV_NAME not in ("qa", "production"):
 SHORT = {"qa": "qa", "production": "prod"}[ENV_NAME]  # resource names and paths use the short form
 IMAGE_PREFIX = {"qa": "bseva", "production": "bseva-prod"}[ENV_NAME]
 DOMAIN = os.environ.get("DOMAIN") or os.environ.get("QA_DOMAIN", "qa.b-seva.com")
+EXTRA_DOMAINS = os.environ.get("EXTRA_DOMAINS", "").strip()  # e.g. "www.b-seva.com app.b-seva.com" (redirect to DOMAIN)
 
 FILES = {
     "/opt/bseva/compose/compose.yml": REPO / "deploy/compose/compose.yml",
@@ -53,8 +54,8 @@ for dest, src in FILES.items():
     mode = "0755" if dest.endswith(".sh") else "0644"
     commands.append(f"echo '{payload}' | base64 -d > '{dest}.new' && chmod {mode} '{dest}.new' && mv '{dest}.new' '{dest}'")
 commands.append(
-    "printf 'ENV_NAME=%s\\nIMAGE_PREFIX=%s\\nREGISTRY=%s\\nDOMAIN=%s\\nAWS_REGION=%s\\n' "
-    f"'{SHORT}' '{IMAGE_PREFIX}' '{REGISTRY}' '{DOMAIN}' '{REGION}' > /opt/bseva/.env && chmod 0644 /opt/bseva/.env"
+    "printf 'ENV_NAME=%s\\nIMAGE_PREFIX=%s\\nREGISTRY=%s\\nDOMAIN=%s\\nEXTRA_DOMAINS=\"%s\"\\nAWS_REGION=%s\\n' "
+    f"'{SHORT}' '{IMAGE_PREFIX}' '{REGISTRY}' '{DOMAIN}' '{EXTRA_DOMAINS}' '{REGION}' > /opt/bseva/.env && chmod 0644 /opt/bseva/.env"
 )
 commands.append(f"/opt/bseva/bin/deploy.sh '{TAG}'")
 
