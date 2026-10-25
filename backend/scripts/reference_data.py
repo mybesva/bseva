@@ -40,6 +40,15 @@ TABLES: list[tuple[str, tuple[str, ...], dict[str, str]]] = [
     ("temples", ("id",), {}),
     ("promo_banners", ("id",), {}),
 ]
+# Service capabilities of the synthetic demo pujaris only (matched by @bseva.test email and service slug). Their
+# profiles and onboarding forms are never copied: in the source those can hold a team member's real details.
+TEST_PUJARIS = ("pujari1@bseva.test", "pujari2@bseva.test")
+CAPABILITY_TABLES: dict[str, tuple[tuple[str, ...], dict]] = {
+    "pujari_verified_services": (("pujari_id", "service_id"), {"verified_by": None}),
+    "pujari_service_offers": (("pujari_id", "service_id"), {"reviewed_by": None}),
+    "pujari_service_applications": (("pujari_id", "service_id"), {}),
+    "pujari_blocked_dates": (("pujari_id", "blocked_date"), {"reason": "QA availability block"}),
+}
 # Columns that may hold personal or internal data in the source: replaced on export.
 SCRUB = {
     "services": {"admin_notes": None},
@@ -70,6 +79,15 @@ def export(source_env: str, out: str) -> None:
             for r in rows:
                 r.update(SCRUB.get(table, {}))
             data[table] = rows
+        for table, (_key, scrub) in CAPABILITY_TABLES.items():
+            rows = [r[0] for r in c.execute(
+                f"""SELECT to_jsonb(x) || jsonb_build_object('_pujari_email', u.email, '_service_slug', s.slug)
+                    FROM public."{table}" x JOIN users u ON u.id = x.pujari_id
+                    LEFT JOIN services s ON s.id = (to_jsonb(x)->>'service_id')::uuid
+                    WHERE u.email = ANY(%s)""", (list(TEST_PUJARIS),))]
+            for r in rows:
+                r.update(scrub)
+            data[f"capability:{table}"] = rows
     Path(out).write_text(json.dumps(data, default=str), encoding="utf-8")
     os.chmod(out, 0o600)
     print(json.dumps({t: len(v) for t, v in data.items()}))
@@ -134,6 +152,34 @@ def import_(path: str, apply: bool) -> None:
                 else:
                     ins += 1
             report[table] = {"source": len(rows), "inserted": ins, "updated": upd, "skipped": skipped}
+        for table, (key, _scrub) in CAPABILITY_TABLES.items():
+            rows = data.get(f"capability:{table}") or []
+            cols = _columns(cur, table)
+            ins = skipped = 0
+            for src in rows:
+                cur.execute("SELECT id FROM users WHERE email = %s AND email = ANY(%s)", (src["_pujari_email"], list(TEST_PUJARIS)))
+                pujari = cur.fetchone()
+                svc = None
+                if src.get("_service_slug"):
+                    cur.execute("SELECT id FROM services WHERE slug = %s", (src["_service_slug"],))
+                    svc = cur.fetchone()
+                if not pujari or ("service_id" in cols and not svc):
+                    skipped += 1
+                    continue
+                rec = {k: v for k, v in src.items() if k in cols}
+                rec["pujari_id"] = str(pujari[0])
+                if svc:
+                    rec["service_id"] = str(svc[0])
+                names = list(rec)
+                cur.execute(
+                    f'INSERT INTO public."{table}" ({", ".join(chr(34) + n + chr(34) for n in names)}) '
+                    f'SELECT {", ".join("r." + chr(34) + n + chr(34) for n in names)} '
+                    f'FROM jsonb_populate_record(NULL::public."{table}", %s::jsonb) r '
+                    f'ON CONFLICT ({", ".join(key)}) DO NOTHING',
+                    [json.dumps(rec, default=str)],
+                )
+                ins += cur.rowcount
+            report[table] = {"source": len(rows), "inserted": ins, "skipped": skipped}
         if apply:
             conn.commit()
         else:
