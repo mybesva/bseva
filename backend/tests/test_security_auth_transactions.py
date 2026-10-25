@@ -483,3 +483,24 @@ def test_database_errors_are_generic_outside_development(monkeypatch):
     monkeypatch.setattr(main.settings, "environment", "production")
     body = main._database_error_response(req, exc, "Database error").body
     assert b"constraint" not in body and b"bookings" not in body
+
+
+def test_unpaid_bookings_cannot_start_or_earn_settlement():
+    import inspect
+    from fastapi import HTTPException
+    from app.routers import lifecycle
+
+    with pytest.raises(HTTPException):
+        lifecycle._require_paid({"payment_status": "pending"})
+    lifecycle._require_paid({"payment_status": "paid"})
+    src = inspect.getsource(lifecycle._run_completion_pipeline)
+    assert "and paid:" in src and "if paid:" in src
+
+
+def test_seva_cancel_refused_after_event_start_and_override_locks():
+    import inspect
+    from app.routers import lifecycle
+    from app.seva import registrations
+
+    assert "EVENT_STARTED" in inspect.getsource(registrations.cancel_registration)
+    assert "FOR UPDATE" in inspect.getsource(lifecycle.override_settlement)

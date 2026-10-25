@@ -557,6 +557,7 @@ def request_start_otp(booking_id: str, user=Depends(require_roles("pujari", "adm
         raise HTTPException(403, "Not allowed")
     if b["status"] != "confirmed":
         raise HTTPException(400, "Booking must be confirmed to start")
+    _require_paid(b)
     mins = otp_window_minutes(db)
     if not within_start_window(db, b["booking_date"], b["start_time"]):
         raise HTTPException(400, f"OTP is available only from {mins} minutes before the scheduled start")
@@ -624,6 +625,7 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
         raise HTTPException(403, "Not allowed")
     if b["status"] != "confirmed":
         raise HTTPException(400, "Booking must be confirmed")
+    _require_paid(b)
     try:
         verify_puja_otp(db, dict(b), PURPOSE_START, body.code, actor_id=str(user["id"]))
     except PujaOtpError as e:
@@ -677,9 +679,16 @@ def admin_start_booking(booking_id: str, body: AdminOverrideIn, user=Depends(req
     return {"ok": True, "status": "in_progress", "override": True}
 
 
+def _require_paid(b) -> None:
+    if b.get("payment_status") != "paid":
+        raise HTTPException(409, "Waiting for the customer's payment. The puja can start once the booking is paid.")
+
+
 def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> None:
     """Existing completion side effects — call exactly once after status → completed."""
     no_show_blocked = bool(b.get("no_show_marked_at")) and int(b.get("no_show_penalty_paise") or 0) > 0
+    # Unpaid bookings (e.g. recurring children never paid) earn no settlement or rewards.
+    paid = b.get("payment_status") == "paid"
     svc = db.execute(
         text("SELECT * FROM services WHERE id = CAST(:id AS uuid)"),
         {"id": str(b["service_id"])},
@@ -694,7 +703,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
     due = date.today() + timedelta(days=days)
     try:
         st = b.get("settlement_status") or "not_applicable"
-        if st != "legacy" and not no_show_blocked:
+        if st != "legacy" and not no_show_blocked and paid:
             db.execute(
                 text(
                     """
@@ -727,8 +736,9 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
             )
     except Exception:
         pass
-    _maybe_loyalty(db, str(b["pujari_id"]), booking_id)
-    _maybe_referral_reward(db, str(b["customer_id"]), booking_id)
+    if paid:
+        _maybe_loyalty(db, str(b["pujari_id"]), booking_id)
+        _maybe_referral_reward(db, str(b["customer_id"]), booking_id)
     try:
         from app.invoice_docs import create_settlement_invoice
 
@@ -1494,7 +1504,10 @@ def override_settlement(
     user=Depends(require_super_admin),
     db: Session = Depends(get_db),
 ):
-    s = db.execute(text("SELECT * FROM settlements WHERE id = CAST(:id AS uuid)"), {"id": settlement_id}).mappings().first()
+    # Row lock: a concurrent override or the auto-settle sweep waits here, then sees status='settled'.
+    s = db.execute(
+        text("SELECT * FROM settlements WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": settlement_id}
+    ).mappings().first()
     if not s:
         raise HTTPException(404, "Settlement not found")
     if s["status"] == "settled":
