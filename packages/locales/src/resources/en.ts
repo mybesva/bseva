@@ -698,6 +698,7 @@ const en: Record<string, string> = {
   "wallet.history": "Transactions",
   "wallet.empty": "No wallet transactions yet.",
   "wallet.loaded": "Money added to wallet",
+  "wallet.topupUnavailable": "Adding money online is not available yet. Please contact BSeva support to add funds to your wallet.",
   "wallet.insufficient": "Wallet balance is not enough for this payment.",
 
   "rewards.title": "Rewards & Referral",

@@ -14,6 +14,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 type WalletResp = {
   wallet: { balance_paise: number };
   transactions: { id: string; amount_paise: number; type: string; description: string; created_at: string }[];
+  self_topup_enabled?: boolean;
 };
 
 export default function WalletPanel({
@@ -66,7 +67,10 @@ export default function WalletPanel({
             <p className="whitespace-nowrap tabular-nums tracking-tight leading-tight text-[clamp(0.95rem,11cqi,1.375rem)] font-semibold text-blue-700">{rupees(debits)}</p>
           </div>
         </div>
-        {variant === "customer" && (
+        {variant === "customer" && data.self_topup_enabled === false && (
+          <p className="text-sm text-muted-foreground">{t("wallet.topupUnavailable")}</p>
+        )}
+        {variant === "customer" && data.self_topup_enabled !== false && (
           <div className="flex gap-2 items-end">
             <div className="space-y-1">
               <Label>{t("wallet.amount")}</Label>

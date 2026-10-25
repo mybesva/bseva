@@ -574,6 +574,7 @@ const kn: Record<string, string> = {
   "wallet.history": "ವಹಿವಾಟುಗಳು",
   "wallet.empty": "ಇನ್ನೂ ವಾಲೆಟ್ ವಹಿವಾಟುಗಳಿಲ್ಲ.",
   "wallet.loaded": "ವಾಲೆಟ್‌ಗೆ ಹಣ ಸೇರಿದೆ",
+  "wallet.topupUnavailable": "ಆನ್‌ಲೈನ್‌ನಲ್ಲಿ ಹಣ ಸೇರಿಸುವ ಸೌಲಭ್ಯ ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ. ವಾಲೆಟ್‌ಗೆ ಹಣ ಸೇರಿಸಲು ದಯವಿಟ್ಟು BSeva ಸಹಾಯವನ್ನು ಸಂಪರ್ಕಿಸಿ.",
   "wallet.insufficient": "ಈ ಪಾವತಿಗೆ ವಾಲೆಟ್ ಬ್ಯಾಲೆನ್ಸ್ ಸಾಕಾಗುವುದಿಲ್ಲ.",
   "rewards.title": "ಬಹುಮಾನಗಳು ಮತ್ತು ರೆಫರಲ್",
   "rewards.yourCode": "ನಿಮ್ಮ ರೆಫರಲ್ ಕೋಡ್",

@@ -12,7 +12,7 @@ import psycopg
 ROOT = Path(__file__).resolve().parents[2]
 
 OLD = {
-    "url": os.environ.get("OLD_SUPABASE_URL", "https://upyumpuwjzzrkuovkxqe.supabase.co"),
+    "url": os.environ.get("OLD_SUPABASE_URL", ""),
     "key": os.environ.get("OLD_SUPABASE_SERVICE_ROLE_KEY", ""),
     "bucket": os.environ.get("OLD_STORAGE_BUCKET", "bseva"),
 }
@@ -89,11 +89,12 @@ def main() -> None:
     NEW["url"] = os.environ.get("SUPABASE_URL", NEW["url"])
     NEW["key"] = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", NEW["key"])
     NEW["bucket"] = os.environ.get("STORAGE_BUCKET", NEW["bucket"])
+    OLD["url"] = os.environ.get("OLD_SUPABASE_URL", OLD["url"])
     OLD["key"] = os.environ.get("OLD_SUPABASE_SERVICE_ROLE_KEY", OLD["key"])
 
-    if not OLD["key"] or not NEW["key"]:
+    if not OLD["url"] or not OLD["key"] or not NEW["key"]:
         raise SystemExit(
-            "Set OLD_SUPABASE_SERVICE_ROLE_KEY and SUPABASE_SERVICE_ROLE_KEY in .env "
+            "Set OLD_SUPABASE_URL, OLD_SUPABASE_SERVICE_ROLE_KEY and SUPABASE_SERVICE_ROLE_KEY in .env "
             "(old project: Settings → API → service_role; new project: same)."
         )
 

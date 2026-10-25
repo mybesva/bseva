@@ -27,6 +27,19 @@ class Settings(BaseSettings):
     firebase_web_messaging_sender_id: str = ""
     firebase_web_app_id: str = ""
     firebase_web_vapid_key: str = ""
+    # Customer self top-up via POST /wallet/load credits money without a payment gateway.
+    # "" = automatic (allowed only in development/qa/test), "off" = always refused,
+    # "unverified" = always allowed (explicit risk acceptance until a gateway exists).
+    wallet_self_topup: str = ""
+
+    @property
+    def wallet_self_topup_allowed(self) -> bool:
+        mode = (self.wallet_self_topup or "").strip().lower()
+        if mode == "unverified":
+            return True
+        if mode == "off":
+            return False
+        return (self.environment or "").strip().lower() in ("development", "qa", "test")
 
     @property
     def cors_origin_list(self) -> list[str]:

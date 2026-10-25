@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,10 +15,15 @@ from psycopg.types.json import Jsonb
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATIONS = ROOT / "supabase" / "migrations"
 
-OLD_DATABASE_URL = (
-    "postgresql://postgres.upyumpuwjzzrkuovkxqe:Grind%2A%400015"
-    "@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
-)
+# Source database URL is supplied at run time only; never commit credentials.
+OLD_DATABASE_URL_ENV = "OLD_DATABASE_URL"
+
+
+def load_old_database_url() -> str:
+    url = (os.environ.get(OLD_DATABASE_URL_ENV) or "").strip()
+    if not url:
+        raise SystemExit(f"Set {OLD_DATABASE_URL_ENV} to the source database URL (not stored in the repo).")
+    return url
 
 COPY_ORDER = [
     "users",
@@ -203,7 +209,7 @@ def counts(url: str) -> dict[str, int]:
 
 def main() -> None:
     new_url = load_new_database_url()
-    old_url = OLD_DATABASE_URL
+    old_url = load_old_database_url()
 
     print("OLD counts:", counts(old_url))
     apply_schema(new_url)

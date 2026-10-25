@@ -36,6 +36,22 @@ ALLOWED_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".webp"}
 DOC_TYPES = {"certificate", "identity", "supporting", "driving_licence"}
 
 
+def _owned_document_path(user_id: str, storage_path: str | None) -> str:
+    """Object key a pujari may register or read: only files under their own `{user_id}/` folder."""
+    path = str(storage_path or "").strip()
+    prefix = f"{user_id}/"
+    if (
+        not path.startswith(prefix)
+        or len(path) > 300
+        or "\\" in path
+        or "//" in path
+        or any(part in ("", ".", "..") for part in path.split("/"))
+        or Path(path).suffix.lower() not in ALLOWED_EXT
+    ):
+        raise HTTPException(400, "Invalid document path")
+    return path
+
+
 def _safe_name(name: str) -> str:
     base = Path(name).name
     return re.sub(r"[^A-Za-z0-9._-]", "_", base)[:80] or "document"
@@ -78,6 +94,7 @@ async def upload_document(
 
 @router.post("/documents")
 def register_document(body: DocumentMetaIn, user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
+    path = _owned_document_path(str(user["id"]), body.storage_path)
     db.execute(
         text(
             """
@@ -85,7 +102,7 @@ def register_document(body: DocumentMetaIn, user=Depends(require_roles("pujari")
             VALUES (:pid, :typ, :path, 'uploaded')
             """
         ),
-        {"pid": user["id"], "typ": body.document_type, "path": body.storage_path},
+        {"pid": user["id"], "typ": body.document_type, "path": path},
     )
     db.commit()
     return {"ok": True}
@@ -114,7 +131,12 @@ def download_document(doc_id: str, user=Depends(require_roles("pujari", "admin")
         ensure_admin_permission(db, user, "view_pujaris", "verify_pujaris", "edit_pujaris")
     elif str(row["pujari_id"]) != str(user["id"]):
         raise HTTPException(403, "Not allowed")
-    return file_response(str(row["storage_path"]), filename=Path(str(row["storage_path"])).name)
+    # Rows registered before path validation existed may point at another user's object.
+    try:
+        path = _owned_document_path(str(row["pujari_id"]), row["storage_path"])
+    except HTTPException:
+        raise HTTPException(404, "Document file not available")
+    return file_response(path, filename=Path(path).name)
 
 
 @router.get("/storage-info")

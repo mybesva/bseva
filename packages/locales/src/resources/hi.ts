@@ -591,6 +591,7 @@ const hi: Record<string, string> = {
   "wallet.history": "लेनदेन",
   "wallet.empty": "अभी कोई वॉलेट लेनदेन नहीं।",
   "wallet.loaded": "वॉलेट में राशि जुड़ गई",
+  "wallet.topupUnavailable": "ऑनलाइन राशि जोड़ने की सुविधा अभी उपलब्ध नहीं है। वॉलेट में राशि जुड़वाने के लिए कृपया BSeva सहायता से संपर्क करें।",
   "wallet.insufficient": "इस भुगतान के लिए वॉलेट शेष पर्याप्त नहीं है।",
   "rewards.title": "रिवॉर्ड्स और रेफ़रल",
   "rewards.yourCode": "आपका रेफ़रल कोड",

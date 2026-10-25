@@ -35,24 +35,6 @@ def oauth_client_secret() -> str:
     return _env("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET")
 
 
-def oauth_redirect_uri() -> str:
-    """Callback URL registered in Google Cloud OAuth client.
-
-    Local:  http://localhost:8000/api/v1/auth/google/callback
-    Vercel: https://bseva.vercel.app/api/v1/auth/google/callback
-    """
-    explicit = _env("GOOGLE_OAUTH_REDIRECT_URI", "GOOGLE_REDIRECT_URI")
-    if explicit:
-        return explicit
-    public = _env("PUBLIC_APP_URL", "VERCEL_URL").rstrip("/")
-    if public:
-        if public.startswith("http"):
-            return f"{public}/api/v1/auth/google/callback"
-        return f"https://{public}/api/v1/auth/google/callback"
-    return "http://localhost:8000/api/v1/auth/google/callback"
-
-
-
 def oauth_refresh_token() -> str:
     return _env("GOOGLE_REFRESH_TOKEN")
 
@@ -139,8 +121,8 @@ def create_google_meet_event(
     """Create a Calendar event with a Meet conference. Returns hangoutLink + event id."""
     if not google_meet_configured():
         raise RuntimeError(
-            "Google Meet is not configured. Set GOOGLE_REFRESH_TOKEN (via /api/v1/auth/google) "
-            "or a Workspace service account."
+            "Google Meet is not configured. Set GOOGLE_REFRESH_TOKEN (obtain it with "
+            "backend/scripts/google_oauth_setup.py) or a Workspace service account."
         )
 
     timezone = _env("GOOGLE_MEET_TIMEZONE", default="Asia/Kolkata") or "Asia/Kolkata"
