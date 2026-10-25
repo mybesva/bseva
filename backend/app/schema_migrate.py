@@ -2,6 +2,21 @@ from sqlalchemy import text
 
 from app.db import engine
 
+# Mirrors supabase/migrations/024_security_rate_limits.sql
+_SECURITY_STMTS = [
+    """
+    CREATE TABLE IF NOT EXISTS security_rate_limits (
+      bucket TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      window_start TIMESTAMPTZ NOT NULL,
+      hits INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (bucket, key_hash, window_start)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_security_rate_limits_window ON security_rate_limits (window_start)",
+    "ALTER TABLE security_rate_limits ENABLE ROW LEVEL SECURITY",
+]
+
 _STMTS = [
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS profile_photo_path TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS full_name TEXT",
@@ -1451,6 +1466,7 @@ def ensure_schema(*, quiet: bool = False) -> None:
         log("Connected. Applying schema updates (this can take 1–2 minutes)…")
         run_batch("core", list(_STMTS))
         run_batch("foundation", list(_FOUNDATION_STMTS))
+        run_batch("security", list(_SECURITY_STMTS))
         try:
             from app.phase2_migrate import _PHASE2_STMTS
 

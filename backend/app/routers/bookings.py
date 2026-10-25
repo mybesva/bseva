@@ -1679,19 +1679,26 @@ def list_bookings(
     return out
 
 
+# Statuses the admin rescue endpoint may set. Everything with money or lifecycle side effects goes
+# through its own endpoint: cancel (refund + penalty), reject, start/complete OTP (settlement).
+ADMIN_RESCUE_STATUSES = {"pending_acceptance", "confirmed"}
+
+
 @router.patch("/bookings/{booking_id}/status")
-def update_status(booking_id: str, status: str = Query(...), user=Depends(require_roles("pujari", "admin")), db: Session = Depends(get_db)):
-    """Deprecated for start/complete — prefer /start-otp and /complete. Kept for admin rescue."""
+def update_status(booking_id: str, status: str = Query(...), user=Depends(require_roles("admin")), db: Session = Depends(get_db)):
+    """Admin rescue only (re-open for reassignment / re-confirm). Pujaris use accept, reject and cancel."""
     from app.booking_state import set_booking_status
 
     b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
     ensure_booking_access(db, user, booking_id, "manage")
-    if user["role"] == "pujari" and str(b["pujari_id"]) != str(user["id"]):
-        raise HTTPException(403, "Not allowed")
-    if user["role"] == "pujari" and status in ("in_progress", "completed"):
-        raise HTTPException(400, "Use OTP start and End Puja endpoints")
+    if status not in ADMIN_RESCUE_STATUSES:
+        raise HTTPException(
+            400,
+            "Use the cancel endpoint to cancel (applies refunds), and the start / complete OTP flow or admin "
+            "override to start or complete a puja.",
+        )
     set_booking_status(db, booking_id, status, actor_id=str(user["id"]))
     db.commit()
     return {"ok": True}
@@ -1760,7 +1767,10 @@ def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = De
 def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(current_user), db: Session = Depends(get_db)):
     from app.validation_rules import validate_cancel_reason
 
-    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    # Row lock: a concurrent second cancel waits here, then sees status='cancelled' (no double refund).
+    b = db.execute(
+        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": booking_id}
+    ).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
     ensure_booking_access(db, user, booking_id, "manage")
@@ -1778,16 +1788,20 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
     reason_full = reason_clean
     if actor == "pujari":
         reason_full = f"[pujari] {reason_full}"
-    db.execute(
+    updated = db.execute(
         text(
             """
             UPDATE bookings SET status = 'cancelled', cancelled_at = NOW(), cancel_policy = :p,
               cancel_fee_paise = :fee, refund_paise = :ref, cancel_reason = :reason
-            WHERE id = CAST(:id AS uuid)
+            WHERE id = CAST(:id AS uuid) AND status IN ('pending', 'pending_acceptance', 'confirmed')
+            RETURNING id
             """
         ),
         {"p": f"{actor}:{policy['policy']}", "fee": fee, "ref": refund, "reason": reason_full, "id": booking_id},
-    )
+    ).first()
+    if not updated:
+        db.rollback()
+        raise HTTPException(409, "Booking was already cancelled or changed. Please refresh.")
     db.execute(
         text(
             """
@@ -1958,7 +1972,10 @@ def cancel_recurring_series(series_id: str, reason: str | None = None, user=Depe
 
 @router.post("/bookings/{booking_id}/pay")
 def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
-    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    # Row lock so two concurrent pay requests cannot both debit the wallet.
+    b = db.execute(
+        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": booking_id}
+    ).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
     if str(b["customer_id"]) != str(user["id"]):

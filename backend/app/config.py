@@ -1,11 +1,17 @@
+import os
+from collections.abc import Mapping
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+INSECURE_JWT_DEFAULT = "change-me-in-production-min-32-chars!!"
+MIN_JWT_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=(".env", "../.env"), extra="ignore")
 
     database_url: str
-    jwt_secret: str = "change-me-in-production-min-32-chars!!"
+    jwt_secret: str = INSECURE_JWT_DEFAULT
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7
     supabase_url: str = ""
@@ -46,4 +52,26 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
+def insecure_settings_problems(s: Settings, env: Mapping[str, str] | None = None) -> list[str]:
+    """Configuration that must never reach a hosted deployment. Messages never include secret values."""
+    env = os.environ if env is None else env
+    problems: list[str] = []
+    environment = (s.environment or "").strip().lower()
+    hosted = env.get("VERCEL") == "1" or bool(env.get("BSEVA_HOSTED"))
+    if hosted and environment == "development":
+        problems.append("ENVIRONMENT must be set (e.g. qa or production) on hosted deployments")
+    if environment != "development":
+        secret = s.jwt_secret or ""
+        if secret == INSECURE_JWT_DEFAULT or len(secret) < MIN_JWT_SECRET_LENGTH:
+            problems.append(
+                f"JWT_SECRET must be set to a random value of at least {MIN_JWT_SECRET_LENGTH} characters"
+            )
+    return problems
+
+
 settings = Settings()
+
+_problems = insecure_settings_problems(settings)
+if _problems:
+    # Refuse to serve with forgeable tokens or development behaviour on a real deployment.
+    raise RuntimeError("Insecure configuration: " + "; ".join(_problems))

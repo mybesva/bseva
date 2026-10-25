@@ -345,7 +345,7 @@ def list_muhurta_consultations(user=Depends(current_user), db: Session = Depends
                 FROM muhurta_consultations m
                 JOIN services s ON s.id = m.service_id
                 JOIN users u ON u.id = m.customer_id
-                WHERE m.pujari_id = CAST(:id AS uuid) OR m.status = 'requested'
+                WHERE m.pujari_id = CAST(:id AS uuid)
                 ORDER BY m.created_at DESC LIMIT 100
                 """
             ),
@@ -389,11 +389,29 @@ def update_muhurta_consultation(
     if not m:
         raise HTTPException(404, "Consultation not found")
     ensure_admin_permission(db, user, "manage_muhurtham")
-    if user["role"] == "customer" and str(m["customer_id"]) != str(user["id"]):
-        raise HTTPException(403, "Not allowed")
-    if user["role"] not in ("admin", "super_admin", "pujari", "head_pujari") and linked_booking_id is None:
-        if status or guidance_notes or pujari_id:
+    role = user["role"]
+    is_admin = role in ("admin", "super_admin")
+    if role in ("pujari", "head_pujari"):
+        # Only the pujari assigned to this consultation may update it, and only its guidance/status.
+        if str(m.get("pujari_id") or "") != str(user["id"]):
             raise HTTPException(403, "Not allowed")
+        if linked_booking_id is not None or pujari_id is not None:
+            raise HTTPException(403, "Not allowed")
+    elif not is_admin:
+        # Customers may only link one of their own bookings to their own consultation.
+        if str(m["customer_id"]) != str(user["id"]):
+            raise HTTPException(403, "Not allowed")
+        if status is not None or guidance_notes is not None or pujari_id is not None:
+            raise HTTPException(403, "Not allowed")
+    if linked_booking_id is not None:
+        booking = db.execute(
+            text("SELECT customer_id FROM bookings WHERE id = CAST(:bid AS uuid)"),
+            {"bid": linked_booking_id},
+        ).mappings().first()
+        if not booking:
+            raise HTTPException(404, "Booking not found")
+        if str(booking["customer_id"]) != str(m["customer_id"]):
+            raise HTTPException(400, "Booking belongs to a different customer")
     sets = ["updated_at = NOW()"]
     params: dict = {"id": consultation_id}
     if guidance_notes is not None:

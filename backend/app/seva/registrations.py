@@ -234,11 +234,13 @@ def create_registration(
 
 
 def cancel_registration(db: Session, *, registration_id: str, customer_id: str) -> dict[str, Any]:
+    # Row lock: a concurrent second cancel waits, then sees status='cancelled' (no double refund).
     row = db.execute(
         text(
             """
             SELECT * FROM seva_event_registrations
             WHERE id = CAST(:id AS uuid) AND customer_id = CAST(:cid AS uuid)
+            FOR UPDATE
             """
         ),
         {"id": registration_id, "cid": customer_id},
