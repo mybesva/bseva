@@ -4,10 +4,12 @@ import os
 import urllib.parse
 import urllib.request
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import rate_limit
+from app.config import settings
 from app.db import get_db
 from app.deps import ACCOUNT_BLOCKED, current_user
 from app.domain import row_dict
@@ -28,8 +30,8 @@ def _verify_registration_captcha(db: Session, token: str | None) -> None:
         raise HTTPException(503, "CAPTCHA is enabled but RECAPTCHA_SECRET_KEY is not configured")
     if not token or not str(token).strip():
         raise HTTPException(400, "CAPTCHA verification is required")
-    # Dev/test bypass when secret is explicitly set to this value
-    if secret == "dev-bypass" and token == "dev-bypass":
+    # Local development bypass only — never honoured in qa/production even if the secret is set to it
+    if secret == "dev-bypass" and token == "dev-bypass" and settings.environment == "development":
         return
     data = urllib.parse.urlencode({"secret": secret, "response": token}).encode()
     try:
@@ -45,9 +47,26 @@ def _verify_registration_captcha(db: Session, token: str | None) -> None:
         raise HTTPException(400, "CAPTCHA verification failed")
 
 
-def _verify_registration_otp(db: Session, body: RegisterIn) -> None:
+OTP_ATTEMPTS_MESSAGE = "Too many incorrect codes. Please request a new OTP."
+
+
+def _check_otp_verify_ip(db: Session, ip: str) -> None:
+    if rate_limit.is_blocked(db, rate_limit.OTP_VERIFY_FAIL_IP, ip):
+        raise rate_limit.too_many()
+
+
+def _raise_otp_failure(db: Session, ip: str, result: dict, status_code: int) -> None:
+    rate_limit.record(db, rate_limit.OTP_VERIFY_FAIL_IP, ip)
+    db.commit()
+    if result.get("error") == "too_many_attempts":
+        raise coded_http(429, "OTP_ATTEMPTS_EXCEEDED", OTP_ATTEMPTS_MESSAGE)
+    raise coded_http(status_code, "INVALID_OTP", "Invalid or expired OTP")
+
+
+def _verify_registration_otp(db: Session, body: RegisterIn, ip: str = "unknown") -> None:
     from app.otp_service import verify_email_otp
 
+    _check_otp_verify_ip(db, ip)
     result = verify_email_otp(
         db,
         email=str(body.email),
@@ -56,7 +75,7 @@ def _verify_registration_otp(db: Session, body: RegisterIn) -> None:
         consume=True,
     )
     if not result.get("ok"):
-        raise coded_http(400, "INVALID_OTP", "Invalid or expired OTP")
+        _raise_otp_failure(db, ip, result, 400)
 
 
 def _public(row: dict) -> dict:
@@ -84,7 +103,7 @@ def _public(row: dict) -> dict:
 
 
 @router.post("/otp/request")
-def request_otp(body: OtpRequestIn, db: Session = Depends(get_db)):
+def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_db)):
     """Issue email OTP (10 minutes). Delivery via email provider; SMS reserved for later."""
     from app.otp_service import issue_email_otp
 
@@ -92,6 +111,8 @@ def request_otp(body: OtpRequestIn, db: Session = Depends(get_db)):
     if not email:
         # Prefer email OTP; do not fall back to SMS for now
         raise HTTPException(400, "Email is required for OTP")
+    # Per-email limits live in issue_email_otp; this caps one client spraying many addresses.
+    rate_limit.enforce(db, rate_limit.OTP_REQUEST_IP, rate_limit.client_ip(request))
 
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else "login"
     # Generic response — do not reveal whether the account exists for login
@@ -160,30 +181,34 @@ def request_otp(body: OtpRequestIn, db: Session = Depends(get_db)):
 
 
 @router.post("/otp/verify")
-def verify_otp_ep(body: OtpVerifyIn, db: Session = Depends(get_db)):
+def verify_otp_ep(body: OtpVerifyIn, request: Request, db: Session = Depends(get_db)):
     from app.otp_service import verify_email_otp
 
     email = str(body.email).strip().lower() if body.email else None
     if not email:
         raise HTTPException(400, "Email is required")
+    ip = rate_limit.client_ip(request)
+    _check_otp_verify_ip(db, ip)
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else None
     result = verify_email_otp(db, email=email, code=body.code, purpose=purpose, consume=True)
     if not result.get("ok"):
-        raise coded_http(400, "INVALID_OTP", "Invalid or expired OTP")
+        _raise_otp_failure(db, ip, result, 400)
     return {"ok": True}
 
 
 @router.post("/login/otp", response_model=TokenOut)
-def login_with_otp(body: OtpVerifyIn, db: Session = Depends(get_db)):
+def login_with_otp(body: OtpVerifyIn, request: Request, db: Session = Depends(get_db)):
     """Email OTP login — replaces SMS OTP login delivery for now."""
     from app.otp_service import verify_email_otp
 
     email = str(body.email).strip().lower() if body.email else None
     if not email:
         raise HTTPException(400, "Email is required")
+    ip = rate_limit.client_ip(request)
+    _check_otp_verify_ip(db, ip)
     verified = verify_email_otp(db, email=email, code=body.code, purpose="login", consume=True)
     if not verified.get("ok"):
-        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
+        _raise_otp_failure(db, ip, verified, status.HTTP_401_UNAUTHORIZED)
     row = db.execute(
         text("SELECT * FROM users WHERE lower(email) = :e LIMIT 1"),
         {"e": email},
@@ -196,7 +221,7 @@ def login_with_otp(body: OtpVerifyIn, db: Session = Depends(get_db)):
 
 
 @router.post("/register", response_model=TokenOut)
-def register(body: RegisterIn, db: Session = Depends(get_db)):
+def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     if not body.registration_consent:
         raise HTTPException(400, "You must accept the Terms & Conditions and Privacy Policy")
     if body.account_type not in ("customer", "pujari"):
@@ -245,7 +270,7 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
     from app.schema_migrate import ensure_calendar_preference_schema
 
     ensure_calendar_preference_schema()
-    _verify_registration_otp(db, body)
+    _verify_registration_otp(db, body, rate_limit.client_ip(request))
 
     user_id = str(uuid4())
     db.execute(
@@ -397,13 +422,25 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenOut)
-def login(body: LoginIn, db: Session = Depends(get_db)):
+def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
+    identifier = body.identifier.strip()
+    ip = rate_limit.client_ip(request)
+    # Lock out repeated failures per account and per client before checking the password.
+    if rate_limit.is_blocked(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier) or rate_limit.is_blocked(
+        db, rate_limit.LOGIN_FAIL_IP, ip
+    ):
+        raise rate_limit.too_many("Too many failed sign-in attempts. Please wait 15 minutes or sign in with an email OTP.")
     row = db.execute(
         text("SELECT * FROM users WHERE email = :id OR phone = :id"),
-        {"id": body.identifier.strip()},
+        {"id": identifier},
     ).mappings().first()
     if not row or not verify_password(body.password, row["password_hash"]):
+        rate_limit.record(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier)
+        rate_limit.record(db, rate_limit.LOGIN_FAIL_IP, ip)
+        db.commit()
         raise coded_http(status.HTTP_401_UNAUTHORIZED, "LOGIN_FAILED", "Invalid email/phone or password")
+    rate_limit.reset(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier)
+    db.commit()
     if row["blocked"]:
         raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
     if row["role"] in ("customer", "pujari", "head_pujari") and not (row.get("public_id") or "").strip():

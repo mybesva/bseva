@@ -1011,21 +1011,21 @@ def cron_daily(request: Request, db: Session = Depends(get_db)):
 
 def _require_cron_auth(request: Request) -> None:
     """Vercel Cron sends Authorization: Bearer $CRON_SECRET automatically when CRON_SECRET is set."""
+    import hmac
     import os
+
+    from app.config import settings
 
     secret = (os.environ.get("CRON_SECRET") or os.environ.get("VERCEL_CRON_SECRET") or "").strip()
     auth = (request.headers.get("authorization") or "").strip()
     token = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
     if secret:
-        if token == secret:
+        if hmac.compare_digest(token.encode(), secret.encode()):
             return
         raise HTTPException(401, "Unauthorized cron call")
-    env = (os.environ.get("ENVIRONMENT") or os.environ.get("VERCEL_ENV") or "").lower()
-    if env in ("production", "preview"):
-        raise HTTPException(
-            503,
-            "Set CRON_SECRET in Vercel env — Vercel Cron sends it as Bearer automatically (no manual calls)",
-        )
+    # No secret configured: only local development may call jobs unauthenticated.
+    if (settings.environment or "").strip().lower() != "development":
+        raise HTTPException(503, "CRON_SECRET is not configured for this environment")
 
 
 @router.get("/admin/reviews")

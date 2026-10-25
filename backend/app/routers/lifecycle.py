@@ -511,7 +511,10 @@ def mark_no_show_penalty(
     ensure_booking_access(db, admin, booking_id, "manage")
     waive = bool(body.waive)
     reason = body.reason
-    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    # Row lock so a double-clicked / concurrent request cannot deduct the penalty twice.
+    b = db.execute(
+        text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": booking_id}
+    ).mappings().first()
     if not b:
         raise HTTPException(404, "Booking not found")
     if not b.get("pujari_id"):
