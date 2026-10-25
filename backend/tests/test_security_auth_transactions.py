@@ -504,3 +504,15 @@ def test_seva_cancel_refused_after_event_start_and_override_locks():
 
     assert "EVENT_STARTED" in inspect.getsource(registrations.cancel_registration)
     assert "FOR UPDATE" in inspect.getsource(lifecycle.override_settlement)
+
+
+def test_read_only_mode_blocks_writes_and_cron(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    monkeypatch.setenv("READ_ONLY_MODE", "1")
+    client = TestClient(app)
+    r = client.post("/api/v1/auth/login", json={"identifier": "x@bseva.test", "password": "x"})
+    assert r.status_code == 503 and r.json()["code"] == "MAINTENANCE"
+    assert client.get("/api/v1/ops/cron/puja-lifecycle").status_code == 503
+    assert client.get("/api/health").status_code == 200
