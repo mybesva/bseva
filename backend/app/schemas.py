@@ -173,6 +173,13 @@ class WalletLoadIn(BaseModel):
     amount_paise: int = Field(gt=0, le=500_000_00)
 
 
+class WalletAdminCreditIn(BaseModel):
+    amount_paise: int = Field(gt=0, le=500_000_00)
+    # Offline payment proof (UPI ref / bank UTR / receipt no.) — unique per wallet.
+    reference: str = Field(min_length=4, max_length=80)
+    note: Optional[str] = Field(default=None, max_length=200)
+
+
 class BlockIn(BaseModel):
     blocked: bool
     reason: Optional[str] = None

@@ -342,7 +342,14 @@ def admin_document_file(
     ).mappings().first()
     if not row:
         raise HTTPException(404, "Document not found")
-    return file_response(str(row["storage_path"]), filename=Path(str(row["storage_path"])).name)
+    from app.routers.pujari import _owned_document_path
+
+    # Rows registered before path validation existed may point at another user's object.
+    try:
+        path = _owned_document_path(str(row["pujari_id"]), row["storage_path"])
+    except HTTPException:
+        raise HTTPException(404, "Document file not available")
+    return file_response(path, filename=Path(path).name)
 
 
 @router.get("/bookings/{booking_id}/available-pujaris")

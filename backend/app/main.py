@@ -15,7 +15,6 @@ from app.routers import (
     bookings,
     consultations,
     customer,
-    google_oauth,
     lifecycle,
     meetings,
     notifications,
@@ -59,10 +58,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth.router, prefix="/api/v1")
-app.include_router(google_oauth.router, prefix="/api/v1")
 app.include_router(bookings.router, prefix="/api/v1")
 app.include_router(meetings.router, prefix="/api/v1")
 app.include_router(wallet.router, prefix="/api/v1")
+app.include_router(wallet.admin_router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(temples.router, prefix="/api/v1")
 app.include_router(admin_pujari.router, prefix="/api/v1")

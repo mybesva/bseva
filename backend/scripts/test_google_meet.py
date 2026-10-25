@@ -1,9 +1,8 @@
 """Smoke-test Google Meet creation (OAuth refresh token or service account).
 
-1) One-time auth (browser):
-     uvicorn app.main:app --reload --port 8000
-     open http://localhost:8000/api/v1/auth/google
-     Sign in as mybseva@gmail.com → Allow
+1) One-time auth (operator machine, never on a server):
+     python3 scripts/google_oauth_setup.py
+     Sign in as mybseva@gmail.com → Allow, then store the saved token as GOOGLE_REFRESH_TOKEN
 2) Then:
      python3 -m scripts.test_google_meet
 """
@@ -47,9 +46,9 @@ def main() -> int:
 
     if not oauth_refresh_token():
         print("\nNo GOOGLE_REFRESH_TOKEN yet.")
-        print("1) Start API:  cd backend && uvicorn app.main:app --reload --port 8000")
-        print("2) Browser:    http://localhost:8000/api/v1/auth/google")
-        print("3) Sign in as mybseva@gmail.com and Allow")
+        print("1) Run:        cd backend && python3 scripts/google_oauth_setup.py")
+        print("2) Sign in as mybseva@gmail.com and Allow")
+        print("3) Store the saved token as GOOGLE_REFRESH_TOKEN in your environment")
         print("4) Re-run this script")
         if not google_meet_configured():
             return 1

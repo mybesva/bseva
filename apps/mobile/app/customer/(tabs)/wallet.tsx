@@ -36,6 +36,7 @@ type WalletPayload = {
     description?: string;
     created_at?: string;
   }[];
+  self_topup_enabled?: boolean;
 };
 
 export default function WalletScreen() {
@@ -81,13 +82,21 @@ export default function WalletScreen() {
         </Card>
         <Card>
           <AppText variant="h3">{tr("mobile.loadWallet")}</AppText>
-          <AppText variant="small" color={colors.mutedForeground} style={{ marginVertical: 8 }}>
-            {tr("mobile.walletHelp")}
-          </AppText>
-          <ErrorBanner message={error} />
-          <Field label={tr("mobile.amount")} value={rupee} onChangeText={setRupee} keyboardType="numeric" />
-          <View style={{ height: 10 }} />
-          <PrimaryButton title={load.isPending ? tr("mobile.loading") : tr("mobile.addMoney")} loading={load.isPending} onPress={() => load.mutate()} />
+          {q.data?.self_topup_enabled === false ? (
+            <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 8 }}>
+              {tr("wallet.topupUnavailable")}
+            </AppText>
+          ) : (
+            <>
+              <AppText variant="small" color={colors.mutedForeground} style={{ marginVertical: 8 }}>
+                {tr("mobile.walletHelp")}
+              </AppText>
+              <ErrorBanner message={error} />
+              <Field label={tr("mobile.amount")} value={rupee} onChangeText={setRupee} keyboardType="numeric" />
+              <View style={{ height: 10 }} />
+              <PrimaryButton title={load.isPending ? tr("mobile.loading") : tr("mobile.addMoney")} loading={load.isPending} onPress={() => load.mutate()} />
+            </>
+          )}
         </Card>
         <AppText variant="h3">{tr("mobile.transactions")}</AppText>
         {txns.map((t) => (
