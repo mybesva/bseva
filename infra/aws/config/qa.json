@@ -6,13 +6,21 @@
   "domain": "qa.b-seva.com",
   "github_repo": "mybesva/bseva",
   "github_environment": "qa",
-  "alert_emails": [],
+  "alert_emails": [
+    "mybseva@gmail.com"
+  ],
   "budget_usd": 40,
   "anomaly_threshold_usd": 10,
   "network": {
     "vpc_cidr": "10.20.0.0/16",
-    "public_subnets": {"ap-south-1a": "10.20.0.0/24", "ap-south-1b": "10.20.1.0/24"},
-    "private_subnets": {"ap-south-1a": "10.20.10.0/24", "ap-south-1b": "10.20.11.0/24"}
+    "public_subnets": {
+      "ap-south-1a": "10.20.0.0/24",
+      "ap-south-1b": "10.20.1.0/24"
+    },
+    "private_subnets": {
+      "ap-south-1a": "10.20.10.0/24",
+      "ap-south-1b": "10.20.11.0/24"
+    }
   },
   "ec2": {
     "instance_type": "t4g.small",

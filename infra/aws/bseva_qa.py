@@ -176,7 +176,13 @@ def random_secret(n: int = 48) -> str:
 
 # ------------------------------------------------------------------ steps (each: plan + apply)
 
+ACCOUNT_GUARDRAILS = False  # account-wide settings need separate approval (--account-guardrails)
+
+
 def step_guardrails(ctx, apply: bool):
+    if not ACCOUNT_GUARDRAILS:
+        out("skip", "account setting", "EBS default encryption / account S3 BPA", "needs separate approval; set per QA resource instead")
+        return
     ec2 = ctx.c("ec2")
     if ec2.get_ebs_encryption_by_default()["EbsEncryptionByDefault"]:
         out("keep", "account setting", "EBS encryption by default (ap-south-1)")
@@ -503,17 +509,24 @@ def step_compute(ctx, apply: bool, ids: dict):
             "CPU credits standard, no SSH key; ≈$8.2/month")
         if apply:
             ami = ctx.c("ssm").get_parameter(Name=e["ami_parameter"])["Parameter"]["Value"]
-            inst = ec2.run_instances(
-                ImageId=ami, InstanceType=e["instance_type"], MinCount=1, MaxCount=1,
-                SubnetId=ids[f"public-{e['availability_zone']}"], SecurityGroupIds=[ids["sg-web"]],
-                IamInstanceProfile={"Name": EC2_ROLE}, UserData=user_data(),
-                CreditSpecification={"CpuCredits": "standard"},
-                MetadataOptions={"HttpTokens": "required", "HttpPutResponseHopLimit": 2, "HttpEndpoint": "enabled"},
-                BlockDeviceMappings=[{"DeviceName": "/dev/xvda", "Ebs": {"VolumeSize": e["root_volume_gb"], "VolumeType": "gp3",
-                                                                         "Encrypted": True, "DeleteOnTermination": True}}],
-                DisableApiTermination=True,
-                TagSpecifications=tag_spec("instance", f"{P}-app") + tag_spec("volume", f"{P}-app-root"),
-            )["Instances"][0]
+            for attempt in range(12):  # a newly created instance profile takes a few seconds to propagate
+                try:
+                    inst = ec2.run_instances(
+                        ImageId=ami, InstanceType=e["instance_type"], MinCount=1, MaxCount=1,
+                        SubnetId=ids[f"public-{e['availability_zone']}"], SecurityGroupIds=[ids["sg-web"]],
+                        IamInstanceProfile={"Name": EC2_ROLE}, UserData=user_data(),
+                        CreditSpecification={"CpuCredits": "standard"},
+                        MetadataOptions={"HttpTokens": "required", "HttpPutResponseHopLimit": 2, "HttpEndpoint": "enabled"},
+                        BlockDeviceMappings=[{"DeviceName": "/dev/xvda", "Ebs": {"VolumeSize": e["root_volume_gb"], "VolumeType": "gp3",
+                                                                                 "Encrypted": True, "DeleteOnTermination": True}}],
+                        DisableApiTermination=True,
+                        TagSpecifications=tag_spec("instance", f"{P}-app") + tag_spec("volume", f"{P}-app-root"),
+                    )["Instances"][0]
+                    break
+                except ClientError as exc:
+                    if exc.response["Error"]["Code"] != "InvalidParameterValue" or attempt == 11:
+                        raise
+                    time.sleep(10)
             ec2.get_waiter("instance_running").wait(InstanceIds=[inst["InstanceId"]])
 
     addrs = ec2.describe_addresses(Filters=[{"Name": "tag:Name", "Values": [f"{P}-eip"]}])["Addresses"]
@@ -726,7 +739,11 @@ def main() -> int:
     sub.add_parser("backup-check")
     p_down = sub.add_parser("teardown")
     p_down.add_argument("--confirm", default="")
+    parser.add_argument("--account-guardrails", action="store_true",
+                        help="also enable account-wide EBS default encryption and S3 Block Public Access (separately approved)")
     args = parser.parse_args()
+    global ACCOUNT_GUARDRAILS
+    ACCOUNT_GUARDRAILS = args.account_guardrails
     ctx = Ctx(args.env_file)
     caller = ctx.guard()
     print(f"caller: {caller}  account: {ACCOUNT}  region: {REGION}  env: {ENV}")

@@ -22,10 +22,19 @@ fi
 
 CURRENT="$(cat "$STATE/current_tag" 2>/dev/null || true)"
 
+pull() {
+  # REGISTRY=local: images were built on this host (build-on-host.sh); only third-party images are pulled.
+  if [ "$REGISTRY" = "local" ]; then
+    "${COMPOSE[@]}" pull --quiet certbot
+    return
+  fi
+  aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
+  "${COMPOSE[@]}" pull --quiet "$@"
+}
+
 up_tag() {
   export IMAGE_TAG="$1"
-  aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
-  "${COMPOSE[@]}" pull --quiet api worker web certbot
+  pull api worker web certbot
   "${COMPOSE[@]}" up -d --remove-orphans api worker web certbot
 }
 
@@ -55,8 +64,7 @@ healthy() {
 log deploy_start "$TAG"
 /opt/bseva/bin/render-env.sh
 export IMAGE_TAG="$TAG"
-aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
-"${COMPOSE[@]}" pull --quiet api
+pull api
 "${COMPOSE[@]}" run --rm migrate
 up_tag "$TAG"
 
