@@ -51,7 +51,7 @@
   "ecr_keep_images": 20,
   "app_parameters": {
     "ENVIRONMENT": "production",
-    "PUBLIC_APP_URL": "https://app.b-seva.com",
+    "PUBLIC_APP_URL": "https://b-seva.com",
     "CORS_ORIGINS": "https://b-seva.com,https://app.b-seva.com",
     "GOOGLE_MEET_ENABLED": "0",
     "LOG_LEVEL": "INFO",
@@ -64,6 +64,5 @@
   "redirect_domains": [
     "www.b-seva.com",
     "app.b-seva.com"
-  ],
-  "staging_domain": "app.b-seva.com"
+  ]
 }
