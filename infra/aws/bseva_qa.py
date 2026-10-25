@@ -451,9 +451,21 @@ def step_iam(ctx, apply: bool):
         {"Sid": "OwnBucketObjects", "Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": f"arn:aws:s3:::{BUCKET}/*"},
         {"Sid": "OwnBucketList", "Effect": "Allow", "Action": "s3:ListBucket", "Resource": f"arn:aws:s3:::{BUCKET}"},
         {"Sid": "OwnLogs", "Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"], "Resource": f"arn:aws:logs:{REGION}:{ACCOUNT}:log-group:{LOG_GROUP}:*"},
+        # AmazonSSMManagedInstanceCore allows ssm:GetParameter on every parameter; QA and Production share the
+        # account, so each host is explicitly denied every parameter outside its own path.
+        {"Sid": "DenyOtherEnvironmentParameters", "Effect": "Deny",
+         "Action": ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:GetParameterHistory"],
+         "NotResource": [param_arn, f"arn:aws:ssm:{REGION}:{ACCOUNT}:parameter{PARAM_PREFIX}"]},
     ]}
     if role_exists(ctx, EC2_ROLE):
-        out("keep", "iam role", EC2_ROLE)
+        current = iam.get_role_policy(RoleName=EC2_ROLE, PolicyName=f"{P}-app")["PolicyDocument"] if ignore(("NoSuchEntity",))(
+            lambda: iam.get_role_policy(RoleName=EC2_ROLE, PolicyName=f"{P}-app")) else {}
+        if current.get("Statement") == ec2_policy["Statement"]:
+            out("keep", "iam role", EC2_ROLE)
+        else:
+            out("update", "iam role policy", f"{EC2_ROLE}/{P}-app", "deny parameters outside the environment's own path")
+            if apply:
+                iam.put_role_policy(RoleName=EC2_ROLE, PolicyName=f"{P}-app", PolicyDocument=json.dumps(ec2_policy))
     else:
         out("create", "iam role + profile", EC2_ROLE, "SSM core, ECR pull (2 repos), own SSM path, own bucket, own log group")
         if apply:
