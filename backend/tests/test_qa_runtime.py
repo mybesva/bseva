@@ -3,6 +3,7 @@ reminder SQL time zone, and demo-seed refusal in production."""
 from __future__ import annotations
 
 import inspect
+from pathlib import Path
 from contextlib import contextmanager
 
 import pytest
@@ -163,3 +164,23 @@ def test_migration_order_runs_foundation_files_first():
     files = [p.name for p in db_bootstrap._files()]
     assert files[0].startswith("001_") and "025_job_dedupe.sql" in files
     assert all(db_bootstrap._number(db_bootstrap.MIGRATIONS_DIR / f) <= 12 for f in files[: files.index("013_i18n_six_languages.sql")])
+
+
+def test_database_errors_are_generic_outside_development(monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+    from starlette.requests import Request
+    from app import main
+
+    req = Request({"type": "http", "method": "POST", "path": "/api/v1/bookings", "headers": [], "query_string": b""})
+    exc = IntegrityError("INSERT", {}, Exception('violates check constraint "bookings_package_type_check"'))
+    monkeypatch.setattr(main.settings, "environment", "qa")
+    body = main._database_error_response(req, exc, "Database error").body
+    assert b"constraint" not in body and b"bookings" not in body
+    monkeypatch.setattr(main.settings, "environment", "development")
+    assert b"bookings_package_type_check" in main._database_error_response(req, exc, "Database error").body
+
+
+def test_enum_drift_migration_allows_values_the_api_writes():
+    sql = (Path(__file__).resolve().parents[2] / "supabase/migrations/026_enum_check_drift.sql").read_text()
+    for value in ("'basic'", "'temple'", "'driving_licence'"):
+        assert value in sql
