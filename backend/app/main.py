@@ -51,7 +51,7 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_origin_regex=(
         r"https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?"
-        if settings.environment != "production"
+        if settings.environment == "development"
         else None
     ),
     allow_credentials=True,

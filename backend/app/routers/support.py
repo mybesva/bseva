@@ -7,11 +7,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import rate_limit
 from app.db import get_db
 from app.deps import current_user, require_roles
 from app.rbac import ensure_admin_permission, require_permission
@@ -238,7 +239,7 @@ def _normalize_contact_phone(country_code: str, phone: str) -> tuple[str, str]:
 
 
 @router.post("/contact")
-def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
+def submit_contact_form(body: ContactFormIn, request: Request, db: Session = Depends(get_db)):
     """Public contact form — emails BSeva inboxes via Zoho SMTP + visitor confirmation."""
     import re
 
@@ -253,6 +254,10 @@ def submit_contact_form(body: ContactFormIn, db: Session = Depends(get_db)):
     message = body.message.strip()
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
         raise HTTPException(400, "Enter a valid email address")
+    # Public endpoint that sends mail (including an acknowledgement to the given address): cap it.
+    busy = "Too many messages sent. Please try again in an hour or email us directly."
+    rate_limit.enforce(db, rate_limit.CONTACT_IP, rate_limit.client_ip(request), busy)
+    rate_limit.enforce(db, rate_limit.CONTACT_EMAIL, email, busy)
     phone_display, phone_e164 = _normalize_contact_phone(body.country_code, body.phone)
 
     cfg = load_smtp_config()

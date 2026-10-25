@@ -17,6 +17,12 @@ logger = logging.getLogger("bseva.otp")
 OTP_TTL_MINUTES = 10
 RESEND_COOLDOWN_SECONDS = 60
 MAX_REQUESTS_PER_HOUR = 5
+# Wrong guesses allowed against one issued code before it is burned (a new OTP must be requested).
+MAX_VERIFY_ATTEMPTS = 5
+
+
+def _is_development() -> bool:
+    return (settings.environment or "").strip().lower() == "development"
 
 
 def generate_otp_code() -> str:
@@ -117,10 +123,10 @@ def issue_email_otp(
             "retry_after_seconds": rate.get("retry_after_seconds"),
         }
 
-    # Prefer real random OTP when SMTP is configured; allow fixed dev code only when not configured
+    # Random OTP everywhere; the fixed OTP_DEV_CODE is honoured only for local development without SMTP.
     from app.mail.smtp_client import smtp_configured
 
-    if smtp_configured():
+    if smtp_configured() or not _is_development():
         code = generate_otp_code()
     else:
         code = (settings.otp_dev_code or generate_otp_code()).strip() or generate_otp_code()
@@ -171,12 +177,8 @@ def issue_email_otp(
             # Must be accepted by SMTP for the visitor to receive mail
             delivery_ok = delivery_ok and delivery_status == "sent"
         else:
-            # Local stub only — never pretend success in production without SMTP
-            delivery_ok = (
-                delivery_ok
-                and delivery_status in ("queued", "sent")
-                and settings.environment != "production"
-            )
+            # Local stub only — never pretend success outside local development without SMTP
+            delivery_ok = delivery_ok and delivery_status in ("queued", "sent") and _is_development()
         if not delivery_ok:
             invalidate_prior_otps(db, email=email_n, purpose=purpose_n)
             db.commit()
@@ -200,7 +202,7 @@ def issue_email_otp(
         "delivery": {"status": delivery.get("status"), "channel": delivery.get("channel", "email")},
     }
     # Local-only hint when SMTP not configured
-    if not smtp_configured() and settings.environment != "production":
+    if not smtp_configured() and _is_development():
         out["dev_hint"] = "SMTP not configured; use OTP_DEV_CODE from environment"
     return out
 
@@ -233,10 +235,15 @@ def verify_email_otp(
               {purpose_sql}
             ORDER BY created_at DESC
             LIMIT 5
+            FOR UPDATE
             """
         ),
         params,
     ).mappings().all()
+
+    if any(int(row.get("attempt_count") or 0) >= MAX_VERIFY_ATTEMPTS for row in rows):
+        _invalidate_rows(db, rows)
+        return {"ok": False, "error": "too_many_attempts"}
 
     for row in rows:
         if verify_otp(code.strip(), row["code_hash"]):
@@ -260,4 +267,32 @@ def verify_email_otp(
                 )
                 db.commit()
             return {"ok": True, "purpose": row["purpose"]}
+
+    if not rows:
+        return {"ok": False, "error": "invalid_or_expired"}
+    # Wrong code: count the attempt on every live code for this email; burn them at the limit.
+    ids = [row["id"] for row in rows]
+    attempts = db.execute(
+        text(
+            """
+            UPDATE otp_codes SET attempt_count = COALESCE(attempt_count, 0) + 1, last_attempt_at = NOW()
+            WHERE id = ANY(:ids)
+            RETURNING attempt_count
+            """
+        ),
+        {"ids": ids},
+    ).scalars().all()
+    if max((int(a or 0) for a in attempts), default=0) >= MAX_VERIFY_ATTEMPTS:
+        _invalidate_rows(db, rows)
+        return {"ok": False, "error": "too_many_attempts"}
+    db.commit()
     return {"ok": False, "error": "invalid_or_expired"}
+
+
+def _invalidate_rows(db: Session, rows) -> None:
+    db.execute(
+        text("UPDATE otp_codes SET consumed = TRUE WHERE id = ANY(:ids)"),
+        {"ids": [row["id"] for row in rows]},
+    )
+    db.commit()
+    logger.warning("OTP_ATTEMPTS_EXCEEDED codes_invalidated=%s", len(rows))
