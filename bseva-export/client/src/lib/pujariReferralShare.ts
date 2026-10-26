@@ -1,14 +1,14 @@
-/** Signup URL with referral code (customer or pujari can use the same link). */
+/** Pujari signup URL with referral code (opens Pujari registration with the field prefilled). */
 export function pujariReferralRegisterUrl(code: string, origin?: string): string {
   const base = (origin || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/$/, "");
-  const qs = new URLSearchParams({ referral_code: code.trim() });
+  const qs = new URLSearchParams({ role: "pujari", referral_code: code.trim() });
   return `${base}/register?${qs.toString()}`;
 }
 
 export function pujariReferralShareText(code: string, origin?: string): string {
   const link = pujariReferralRegisterUrl(code, origin);
   return [
-    "Join BSeva — book trusted pujas or register as a pujari.",
+    "Join BSeva as a Pujari — serve devotees and grow with trusted puja bookings.",
     "",
     link,
     "",
