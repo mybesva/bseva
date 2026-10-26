@@ -69,6 +69,10 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
     setProfile({ ...p, mobile_number: parsed.national || p.mobile_number });
     setSameAddr(!!p.permanent_address && p.permanent_address === p.present_address);
     setSameWa(!!p.mobile_number && p.mobile_number === p.whatsapp_number);
+    await loadMedia(p);
+  }
+
+  async function loadMedia(p: any) {
     if (p.profile_photo_path) {
       const url = await pujariMediaUrl("photo");
       setPhotoUrl(url);
@@ -79,6 +83,13 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
     }
     if (p.signature_path) setSignUrl(await pujariMediaUrl("signature"));
     else setSignUrl(null);
+  }
+
+  /** After a photo/signature change: refresh only the media, keeping unsaved edits in the rest of the form. */
+  async function refreshMedia() {
+    const p = await api<any>("/pujari/profile");
+    setProfile((prev: any) => ({ ...prev, profile_photo_path: p.profile_photo_path, signature_path: p.signature_path }));
+    await loadMedia(p);
   }
 
   useEffect(() => {
@@ -304,7 +315,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
                       delete next.profile_photo_path;
                       return next;
                     });
-                    await load();
+                    await refreshMedia();
                   } catch (err: any) {
                     toast.error(err.message);
                   }
@@ -327,7 +338,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
                 variant="ghost"
                 onClick={async () => {
                   await api("/pujari/profile/photo", { method: "DELETE" });
-                  await load();
+                  await refreshMedia();
                 }}
               >
                 {t("pujari.photo.remove")}
@@ -687,7 +698,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
             try {
               await uploadPujariAsset("signature", file);
               toast.success("Signature saved");
-              await load();
+              await refreshMedia();
             } catch (err: any) {
               toast.error(err.message);
             }
