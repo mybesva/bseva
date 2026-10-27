@@ -18,8 +18,6 @@ PUJARI_REQUIRED = (
     "pincode",
     "latitude",
     "longitude",
-    "qualifications",
-    "qualification_year",
     "sampradaya",
 )
 
@@ -45,6 +43,9 @@ def pujari_profile_missing_required(row: dict) -> list[str]:
         val = quals if key == "qualifications" else row.get(key)
         if val in (None, "", [], False):
             missing.append(key)
+    # Qualifications are optional; the year is only needed once one is ticked.
+    if quals and row.get("qualification_year") in (None, ""):
+        missing.append("qualification_year")
     exp = row.get("experience_years")
     if exp in (None, ""):
         missing.append("experience_years")
@@ -60,7 +61,12 @@ def pujari_completion(row: dict) -> int:
         val = quals if key == "qualifications" else row.get(key)
         if val not in (None, "", [], False):
             filled += 1
-    return round(100 * filled / len(PUJARI_REQUIRED))
+    total = len(PUJARI_REQUIRED)
+    if quals:
+        total += 1
+        if row.get("qualification_year") not in (None, ""):
+            filled += 1
+    return round(100 * filled / total)
 
 
 def pujari_profile_status(row: dict, angikara_status: str | None = None) -> str:

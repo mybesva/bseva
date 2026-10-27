@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { CATEGORY_LABELS, SOURCE_LABELS } from "@/lib/supportTickets";
+import { CATEGORY_LABELS, PRIORITY_LABELS, SOURCE_LABELS, suggestedPriority } from "@/lib/supportTickets";
 import { toast } from "sonner";
 
 type Person = {
@@ -48,7 +48,7 @@ const EMPTY = {
   contact_source: "phone",
   subject: "",
   category: "other",
-  priority: "medium",
+  priority: "auto",
   description: "",
   expected_resolution: "",
   additional_info: "",
@@ -120,6 +120,8 @@ export default function CreateTicketDialog({
     try {
       const payload: Record<string, unknown> = {
         ...form,
+        // "auto" lets the server pick by category (or Urgent for a puja that is about to happen).
+        priority: form.priority === "auto" ? undefined : form.priority,
         sla_hours: form.sla_hours ? Number(form.sla_hours) : undefined,
         assigned_admin_id: form.assigned_admin_id || undefined,
         related_booking_id: bookingId || undefined,
@@ -305,6 +307,7 @@ export default function CreateTicketDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="auto">Auto ({PRIORITY_LABELS[suggestedPriority(form.category)]})</SelectItem>
                   <SelectItem value="urgent">Urgent</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>

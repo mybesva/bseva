@@ -10,10 +10,10 @@ import { formatPujaTitleText } from "@bseva/locales";
 import { PujaTitle } from "@/components/PujaTitle";
 import { useI18n } from "@/providers/I18nProvider";
 
-type Svc = { slug?: string; image_url?: string | null; image_path?: string | null };
+type Svc = { slug?: string; image_url?: string | null; image_path?: string | null; service_type?: string | null };
 
 function useServicePhoto(service: Svc | string) {
-  const key = typeof service === "string" ? service : `${service.slug || ""}|${service.image_url || ""}|${service.image_path || ""}`;
+  const key = typeof service === "string" ? service : `${service.slug || ""}|${service.image_url || ""}|${service.image_path || ""}|${service.service_type || ""}`;
   const candidates = useMemo(() => apiClient.serviceImageCandidates(service), [key]);
   const [index, setIndex] = useState(0);
   useEffect(() => {

@@ -40,6 +40,8 @@ def main() -> int:
 
     customer = login("customer1@bseva.test")
     admin = login("admin@bseva.test")
+    # Platform settings (/admin/config) are Super Admin only.
+    super_admin = login("super@bseva.test")
     pujari = login("pujari1@bseva.test")
     results.append(("auth_customer", customer is not None, "token" if customer else "fail"))
     results.append(("auth_admin", admin is not None, "token" if admin else "fail"))
@@ -69,7 +71,8 @@ def main() -> int:
             code, reg = req(
                 "POST",
                 f"/seva/events/{free_evt['id']}/register",
-                {"participation_mode": "offline", "sankalp_text": "E2E test"},
+                # Gotra (or "I don't know my Gotra") is required for Seva registration.
+                {"participation_mode": "offline", "sankalp_text": "E2E test", "gotra_unknown": True},
                 token=customer,
             )
             results.append(("register_free_event", code in (200, 201, 409), str(code)))
@@ -78,7 +81,7 @@ def main() -> int:
     results.append(("my_seva_list", code == 200 and isinstance(mine, list), str(len(mine) if isinstance(mine, list) else code)))
 
     if admin:
-        code, _ = req("PUT", "/admin/config", {"key": "pravachan_enabled", "value": False}, token=admin)
+        code, _ = req("PUT", "/admin/config", {"key": "pravachan_enabled", "value": False}, token=super_admin)
         code2, filtered = req("GET", "/seva/events?service_type=pravachan")
         results.append(
             (
@@ -87,9 +90,9 @@ def main() -> int:
                 f"settings={code} events={len(filtered or [])}",
             )
         )
-        req("PUT", "/admin/config", {"key": "pravachan_enabled", "value": True}, token=admin)
+        req("PUT", "/admin/config", {"key": "pravachan_enabled", "value": True}, token=super_admin)
 
-        code, _ = req("PUT", "/admin/config", {"key": "seva_events_enabled", "value": False}, token=admin)
+        code, _ = req("PUT", "/admin/config", {"key": "seva_events_enabled", "value": False}, token=super_admin)
         code2, body = req("GET", "/seva/events")
         results.append(
             (
@@ -98,7 +101,7 @@ def main() -> int:
                 f"settings={code} list={code2}",
             )
         )
-        req("PUT", "/admin/config", {"key": "seva_events_enabled", "value": True}, token=admin)
+        req("PUT", "/admin/config", {"key": "seva_events_enabled", "value": True}, token=super_admin)
 
     if pujari:
         code, pe = req("GET", "/pujari/seva-events", token=pujari)

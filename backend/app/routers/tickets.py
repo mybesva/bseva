@@ -32,6 +32,7 @@ from app.support_domain import (
     TICKET_STATUSES,
     can_reopen,
     decorate_ticket,
+    default_priority_for,
     empty_counts,
     event_is_public,
     normalize_category,
@@ -87,7 +88,7 @@ class TicketCreateIn(BaseModel):
     related_booking_id: str | None = None
     related_settlement_id: str | None = None
     related_payment_id: str | None = None
-    priority: str | None = "medium"
+    priority: str | None = None
     user_id: str | None = None
     reporter_type: str | None = None
     contact_source: str | None = None
@@ -446,7 +447,6 @@ def create_ticket(body: TicketCreateIn, user=Depends(current_user), db: Session 
     admin = _admin(user)
     subject, description = validate_support_text(body.subject, body.description)
     category = normalize_category(body.category)
-    priority = normalize_priority(body.priority)
     if admin:
         reporter_type = normalize_reporter_type(body.reporter_type, None)
         target_user_id = _uuid(body.user_id)
@@ -477,8 +477,13 @@ def create_ticket(body: TicketCreateIn, user=Depends(current_user), db: Session 
             raise HTTPException(403, "Not allowed")
 
     booking_id = _uuid(body.related_booking_id)
-    if booking_id:
-        _assert_booking_link(db, booking_id, user, target_user_id)
+    booking = _assert_booking_link(db, booking_id, user, target_user_id) if booking_id else None
+
+    # Customers and pujaris never pick a priority; an admin's explicit choice is kept.
+    if admin and body.priority:
+        priority = normalize_priority(body.priority)
+    else:
+        priority = default_priority_for(category, booking)
 
     sla_h = sla_hours_for(priority, body.sla_hours)
     due = _now() + timedelta(hours=sla_h)
@@ -1194,7 +1199,7 @@ def conversation_to_ticket(
         user_id=str(conv["customer_id"]),
         reporter_type="customer",
         contact_source="in_app_chat",
-        priority=body.priority or "medium",
+        priority=body.priority,
         conversation_id=conversation_id,
     )
     return create_ticket(payload, user, db)

@@ -5,6 +5,7 @@ import {
   User,
   Wallet,
   Calendar,
+  CalendarDays,
   FileText,
   LogOut,
   Menu,
@@ -52,7 +53,7 @@ const customerNav: NavItem[] = [
   { labelKey: "customer.walletPayments", href: "/customer/wallet", icon: Wallet },
   { labelKey: "nav.invoices", href: "/customer/invoices", icon: FileText },
   { labelKey: "nav.rewards", href: "/customer/rewards", icon: Sparkles },
-  { labelKey: "nav.support", href: "/customer/support", icon: FileText },
+  { labelKey: "mobile.supportAndContact", href: "/customer/support", icon: FileText },
   { labelKey: "nav.about", href: "/about", icon: Info },
 ];
 
@@ -62,13 +63,14 @@ const pujariNav: NavItem[] = [
   { labelKey: "nav.availability", href: "/pujari/availability", icon: Clock },
   { labelKey: "pujari.serviceOffers", href: "/pujari/services", icon: ListChecks },
   { labelKey: "nav.earnings", href: "/pujari/earnings", icon: Wallet },
+  { labelKey: "seva.pujari.eventsTitle", href: "/pujari/seva-events", icon: CalendarDays },
   { labelKey: "nav.onboarding", href: "/pujari/onboarding", icon: Sparkles },
   { labelKey: "nav.profile", href: "/pujari/profile", icon: User },
   { labelKey: "nav.documents", href: "/pujari/documents", icon: FolderOpen },
   { labelKey: "nav.bank", href: "/pujari/bank", icon: Landmark },
   { labelKey: "nav.referral", href: "/pujari/referral", icon: Gift },
   { labelKey: "nav.headRatings", href: "/pujari/head-ratings", icon: Star },
-  { labelKey: "nav.support", href: "/pujari/support", icon: FileText },
+  { labelKey: "mobile.supportAndContact", href: "/pujari/support", icon: FileText },
   { labelKey: "nav.about", href: "/about", icon: Info },
 ];
 

@@ -228,7 +228,7 @@ def _mobile_screen_rules(prefix: str = "") -> str:
     flex-wrap: wrap;
     gap: 8px 16px;
     font-size: 12px;
-    color: #64748b;
+    color: #475569;
     margin-bottom: 10px;
   }}
   {p}.bseva-doc-item-amounts {{ border-top: 1px solid #e2e8f0; padding-top: 8px; }}
@@ -240,7 +240,7 @@ def _mobile_screen_rules(prefix: str = "") -> str:
     font-size: 13px;
     padding: 3px 0;
   }}
-  {p}.bseva-doc-item-row .lbl {{ color: #64748b; }}
+  {p}.bseva-doc-item-row .lbl {{ color: #475569; }}
   {p}.bseva-doc-item-row .val {{ font-weight: 600; color: {navy}; white-space: nowrap; }}
   {p}.bseva-doc-item-row.bseva-doc-item-amt .val {{ font-size: 14px; }}
   {p}.bseva-doc-totals-wrap {{ justify-content: stretch; margin-top: 12px; }}
@@ -335,7 +335,7 @@ def document_body_css() -> str:
   margin-top: 8px;
   font-size: 9.5px;
   line-height: 1.55;
-  color: #334155;
+  color: #1e293b;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }}
@@ -351,7 +351,7 @@ def document_body_css() -> str:
   margin-top: 8px;
   font-size: 9.5px;
   line-height: 1.65;
-  color: #334155;
+  color: #1e293b;
 }}
 .bseva-doc-meta div {{ margin: 1px 0; }}
 .bseva-doc-meta strong {{ color: {NAVY_HEX}; font-weight: 600; }}
@@ -380,7 +380,7 @@ def document_body_css() -> str:
   margin: 0;
   font-size: 9.5px;
   line-height: 1.55;
-  color: #334155;
+  color: #1e293b;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }}
@@ -422,7 +422,7 @@ def document_body_css() -> str:
   border: none;
   vertical-align: top;
 }}
-.bseva-doc-totals .label {{ text-align: right; padding-right: 12px; color: #64748b; }}
+.bseva-doc-totals .label {{ text-align: right; padding-right: 12px; color: #475569; }}
 .bseva-doc-totals .value {{ text-align: right; font-weight: 500; white-space: nowrap; color: {NAVY_HEX}; }}
 .bseva-doc-totals .grand td {{
   font-size: 12px;
@@ -435,7 +435,7 @@ def document_body_css() -> str:
   margin-top: 10px;
   font-size: 9.5px;
   line-height: 1.5;
-  color: #334155;
+  color: #1e293b;
 }}
 .bseva-doc-paid {{
   display: inline-block;
@@ -457,7 +457,7 @@ def document_body_css() -> str:
   border-radius: 3px;
   font-size: 9.5px;
   line-height: 1.6;
-  color: #334155;
+  color: #1e293b;
 }}
 .bseva-doc-payment h3 {{
   margin: 0 0 6px;
@@ -480,12 +480,12 @@ def document_body_css() -> str:
   padding-left: 16px;
   font-size: 9.5px;
   line-height: 1.55;
-  color: #334155;
+  color: #1e293b;
 }}
 .bseva-doc-notes {{
   margin-top: 16px;
   font-size: 9.5px;
-  color: #64748b;
+  color: #475569;
   line-height: 1.55;
 }}
 .bseva-doc-notes p {{ margin: 4px 0; }}
@@ -494,7 +494,7 @@ def document_body_css() -> str:
   padding-top: 10px;
   border-top: 2px solid {ORANGE_HEX};
   font-size: 8.5px;
-  color: #64748b;
+  color: #475569;
   line-height: 1.55;
 }}
 .bseva-doc-footer-block strong {{ color: {NAVY_HEX}; font-size: 9px; }}
@@ -797,7 +797,7 @@ def _draw_footer_brand(canv: Any, page_w: float, *, company: dict[str, Any] | No
     canv.setFont("Helvetica-Bold", 8)
     canv.drawString(left, 10.5 * mm, _pdf_safe(FOOTER_LOCKUP))
     canv.setFont("Helvetica", 7)
-    canv.setFillColor(HexColor("#334155"))
+    canv.setFillColor(HexColor("#1e293b"))
     canv.drawString(left, 6.2 * mm, _pdf_safe(contact_line(company))[:110])
     canv.restoreState()
 

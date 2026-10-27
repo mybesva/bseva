@@ -33,6 +33,20 @@ PRIORITY_ALIASES = {
 
 SLA_HOURS = {"urgent": 4, "high": 8, "medium": 24, "low": 48}
 
+# Starting priority for a new ticket by category; admins can still change it on the ticket.
+CATEGORY_DEFAULT_PRIORITY = {
+    "payment": "high",
+    "cancellation_refund": "high",
+    "rescheduling": "high",
+    "pujari": "high",
+    "other": "low",
+}
+# A ticket about a booking whose puja starts within this window (or started up to
+# URGENT_AFTER_START_HOURS ago) starts as urgent, whatever the category.
+URGENT_BEFORE_START_HOURS = 24
+URGENT_AFTER_START_HOURS = 3
+_CLOSED_BOOKING_STATUSES = {"cancelled", "rejected", "completed", "refunded", "no_show", "expired"}
+
 REPORTER_TYPES = ("customer", "pujari", "temple", "other")
 CONTACT_SOURCES = ("phone", "whatsapp", "email", "in_app_chat", "in_app", "other")
 
@@ -206,6 +220,25 @@ LIST_SORT_COLUMNS = {
 def normalize_priority(raw: str | None, default: str = "medium") -> str:
     key = (raw or default or "medium").strip().lower()
     return PRIORITY_ALIASES.get(key, default if default in PRIORITIES else "medium")
+
+
+def default_priority_for(category: str | None, booking: dict | None = None) -> str:
+    """Starting priority for a new ticket: urgent for a puja that is about to happen, else by category."""
+    if booking and str(booking.get("booking_status") or "").lower() not in _CLOSED_BOOKING_STATUSES:
+        try:
+            from datetime import date, time
+
+            from app.domain import hours_until
+
+            day = booking.get("booking_date")
+            start = booking.get("start_time")
+            day = day if isinstance(day, date) else date.fromisoformat(str(day)[:10])
+            start = start if isinstance(start, time) else time.fromisoformat(str(start))
+            if -URGENT_AFTER_START_HOURS <= hours_until(day, start) <= URGENT_BEFORE_START_HOURS:
+                return "urgent"
+        except (TypeError, ValueError):
+            pass
+    return CATEGORY_DEFAULT_PRIORITY.get(normalize_category(category), "medium")
 
 
 def normalize_status(raw: str | None, default: str = "open") -> str:

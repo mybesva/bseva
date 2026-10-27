@@ -133,9 +133,11 @@ export async function validateOnboardingStep(
 
   if (step === 3) {
     const quals: string[] = profile.qualifications || [];
-    miss("qualifications", "web.validation.qualifications", quals.length > 0);
-    const qyErr = validateQualificationYear(profile.qualification_year);
-    if (qyErr) errors.qualification_year = qyErr;
+    // Qualifications are optional; the year is only needed once one is ticked.
+    if (quals.length > 0) {
+      const qyErr = validateQualificationYear(profile.qualification_year);
+      if (qyErr) errors.qualification_year = qyErr;
+    }
     miss("sampradaya", "web.validation.sampradaya", !!String(profile.sampradaya || "").trim());
     const langErr = validatePujariLanguages(profile.languages || []);
     if (langErr) errors.languages = langErr;

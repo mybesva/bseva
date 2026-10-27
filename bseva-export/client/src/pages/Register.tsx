@@ -392,7 +392,8 @@ export default function Register() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Verification code</Label>
+                <Label>{t("auth.emailOtp.label")}</Label>
+                <p className="text-xs text-muted-foreground">{t("auth.emailOtp.help")}</p>
                 <div className="flex gap-2">
                   <Input
                     value={otp}
@@ -400,12 +401,14 @@ export default function Register() {
                       setOtp(e.target.value.replace(/\D/g, "").slice(0, 8));
                       setFieldErrors((prev) => ({ ...prev, otp: undefined }));
                     }}
-                    placeholder="Enter OTP"
+                    placeholder={t("auth.emailOtp.placeholder")}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     required
                     aria-invalid={!!fieldErrors.otp}
                   />
                   <Button type="button" variant="secondary" disabled={!canResendOtp} onClick={() => void sendOtp()}>
-                    {otpSending ? "Sending…" : otpSent ? "Resend" : "Send OTP"}
+                    {otpSending ? "Sending…" : otpSent ? "Resend" : t("auth.emailOtp.send")}
                   </Button>
                 </div>
                 {fieldErrors.otp && <p className="text-xs text-destructive">{fieldErrors.otp}</p>}

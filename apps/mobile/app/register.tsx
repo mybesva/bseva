@@ -218,8 +218,11 @@ export default function RegisterScreen() {
                 ))}
               </View>
               <Field label={t("auth.referralOptional")} value={referralCode} onChangeText={setReferralCode} autoCapitalize="characters" />
+              <AppText variant="small" color={colors.mutedForeground}>
+                {t("auth.emailOtp.help")}
+              </AppText>
               <PrimaryButton
-                title={otpSent ? t("auth.resendOtp") : t("auth.sendOtp")}
+                title={otpSent ? t("auth.resendOtp") : t("auth.emailOtp.send")}
                 variant="outline"
                 loading={otpSending}
                 disabled={!canResendOtp}
@@ -247,7 +250,15 @@ export default function RegisterScreen() {
                   ) : null}
                 </View>
               ) : null}
-              <Field label={t("auth.otp")} value={otp} onChangeText={setOtp} keyboardType="number-pad" />
+              <Field
+                label={t("auth.emailOtp.label")}
+                placeholder={t("auth.emailOtp.placeholder")}
+                value={otp}
+                onChangeText={setOtp}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                maxLength={6}
+              />
               <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                 <Switch value={consent} onValueChange={setConsent} trackColor={{ true: colors.primary }} />
                 <AppText variant="small" style={{ flex: 1, paddingTop: 2 }}>

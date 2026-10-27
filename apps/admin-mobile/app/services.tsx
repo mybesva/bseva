@@ -213,6 +213,12 @@ export default function AdminServices() {
             <Field label="Priests max" value={String(form.priests_max)} onChangeText={(v) => set("priests_max", Number(v) || 1)} keyboardType="number-pad" />
             <Field label="Muhurtham fee ₹" value={rupeesField(form.muhurta_fee_paise)} onChangeText={(v) => set("muhurta_fee_paise", paiseFromRupees(v) ?? 0)} keyboardType="decimal-pad" />
             <Field label="Dakshina share %" value={String(form.dakshina_share_percent)} onChangeText={(v) => set("dakshina_share_percent", Number(v) || 0)} keyboardType="decimal-pad" />
+            <Field
+              label="Dakshina fixed amount ₹ (optional, replaces %)"
+              value={rupeesField(form.dakshina_amount_paise)}
+              onChangeText={(v) => set("dakshina_amount_paise", paiseFromRupees(v))}
+              keyboardType="decimal-pad"
+            />
             <Field label="Languages" value={form.languages_text} onChangeText={(v) => set("languages_text", v)} />
             <Field label="Search aliases" value={form.search_aliases_text} onChangeText={(v) => set("search_aliases_text", v)} />
             <Field label="Process steps (one per line)" value={form.process_steps_text} onChangeText={(v) => set("process_steps_text", v)} />

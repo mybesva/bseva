@@ -64,6 +64,8 @@ export type AdminServiceForm = {
   muhurta_consultation_enabled: boolean;
   muhurta_fee_paise: number;
   dakshina_share_percent: number;
+  /** Fixed pujari dakshina per booking (paise). Set (> 0) = used instead of the %; null/0 = use the %. */
+  dakshina_amount_paise?: number | null;
   requires_muhurta: boolean;
   duration_minutes: number;
   pujaris_required: number;
@@ -130,6 +132,7 @@ export function emptyAdminServiceForm(): AdminServiceForm {
     muhurta_consultation_enabled: false,
     muhurta_fee_paise: 0,
     dakshina_share_percent: 85,
+    dakshina_amount_paise: null,
     requires_muhurta: false,
     duration_minutes: 90,
     pujaris_required: 1,
@@ -201,6 +204,8 @@ export function buildAdminServicePayload(form: AdminServiceForm): Record<string,
       100,
       Math.max(0, Number.isFinite(Number(form.dakshina_share_percent)) ? Number(form.dakshina_share_percent) : 85)
     ),
+    dakshina_amount_paise:
+      Number(form.dakshina_amount_paise) > 0 ? Math.round(Number(form.dakshina_amount_paise)) : null,
     muhurta_fee_paise: muhurtaFee,
     duration_minutes: Math.max(15, Math.round(Number(form.duration_minutes) || 90)),
     required_level: clampServiceRequiredLevel(Number(form.required_level) || 2),

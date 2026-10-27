@@ -541,7 +541,6 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
           )}
         >
           {t("pujari.qualification")}
-          <RequiredMark />
         </h2>
         {QUALS.map((q) => (
           <label key={q.id} className="flex items-center gap-2 text-sm">
@@ -566,19 +565,19 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
         {fieldErrors.qualifications ? (
           <p className="text-xs text-red-600">{t(fieldErrors.qualifications)}</p>
         ) : null}
-        <div className="max-w-xs">
+        <div className="max-w-xs space-y-1.5">
           <Label className={fieldErrors.qualification_year ? "text-red-600" : undefined}>
             {t("pujari.year")}
-            <RequiredMark />
+            {quals.length > 0 ? <RequiredMark /> : null}
           </Label>
           <Input
             type="number"
             min={PUJARI_QUALIFICATION_YEAR_MIN}
             max={yearNow}
-            className={errClass("qualification_year")}
+            className={cn(errClass("qualification_year"), "placeholder:text-muted-foreground/50")}
             value={profile.qualification_year || ""}
             onChange={(e) => setField("qualification_year", e.target.value)}
-            placeholder={String(yearNow)}
+            placeholder="YYYY"
           />
           <p className="text-xs text-muted-foreground">
             Enter a year from {PUJARI_QUALIFICATION_YEAR_MIN} to {yearNow}
@@ -625,7 +624,7 @@ function ProfileForm({ setupBanner }: { setupBanner?: boolean }) {
           Experience &amp; languages
           <RequiredMark />
         </h2>
-        <div className="max-w-xs">
+        <div className="max-w-xs space-y-1.5">
           <Label className={fieldErrors.experience_years ? "text-red-600" : undefined}>
             Years of experience
             <RequiredMark />

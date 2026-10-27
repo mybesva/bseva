@@ -177,7 +177,7 @@ export function AboutEssenceCards() {
   const { colors } = useAppTheme();
 
   return (
-    <View style={{ gap: 16, paddingTop: 40, paddingBottom: 48 }}>
+    <View style={{ gap: 16, paddingBottom: 8 }}>
       <EssenceStatementCard title={aboutText(t, "visionTitle")} align="left">
         <AppText color={colors.mutedForeground} style={{ fontSize: 14, lineHeight: 21 }}>
           {aboutText(t, "visionStatement")}

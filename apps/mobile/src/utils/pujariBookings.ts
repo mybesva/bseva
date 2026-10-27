@@ -14,9 +14,10 @@ export type PujariBookingsDeepLinkStatus =
   | "cancelled"
   | "expired";
 
-/** Deep-link into the Bookings tab with segment + status pre-selected. */
+/** Deep-link into the Bookings tab with segment + status pre-selected.
+ * `nav` makes every tap a new link, so tapping the same dashboard card again re-applies its filters. */
 export function pujariBookingsHref(segment: PujariJobSegment, status: PujariBookingsDeepLinkStatus): Href {
-  return `/pujari/jobs?tab=${segment}&status=${status}` as Href;
+  return `/pujari/jobs?tab=${segment}&status=${status}&nav=${Date.now()}` as Href;
 }
 
 export function compareBookingsBySchedule(a: Booking, b: Booking, direction: "asc" | "desc" = "asc"): number {

@@ -962,6 +962,7 @@ def _ensure_dakshina_column(db: Session) -> None:
                 "ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_share_percent NUMERIC NOT NULL DEFAULT 85"
             )
         )
+        db.execute(text("ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_amount_paise INTEGER"))
     except Exception:
         db.rollback()
 
@@ -991,7 +992,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
               standard_price_paise, premium_price_paise, basic_price_paise, main_puja_price_paise,
               samagri_price_paise, alankaram_price_paise, food_price_paise,
               samagri_provider, alankaram_provider, food_provider,
-              dakshina_share_percent,
+              dakshina_share_percent, dakshina_amount_paise,
               muhurta_consultation_enabled, muhurta_fee_paise, requires_muhurta,
               duration_minutes, pujaris_required,
               basic_pujaris_required, standard_pujaris_required, premium_pujaris_required,
@@ -1008,7 +1009,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
               :std, :prm, :basic, :main,
               :sam, :alan, :food,
               :samp, :alanp, :foodp,
-              :dak,
+              :dak, :dak_amt,
               :muh_en, :muh_fee, :req_muh,
               :dur, :pujn, :pujn_basic, :pujn_std, :pujn_prm, :virt, :act,
               :sam_av, :alan_av, :food_av,
@@ -1055,6 +1056,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             "alanp": body.alankaram_provider or "included",
             "foodp": body.food_provider or "included",
             "dak": 85.0 if body.dakshina_share_percent is None else max(0.0, min(100.0, float(body.dakshina_share_percent))),
+            "dak_amt": int(body.dakshina_amount_paise) if body.dakshina_amount_paise else None,
             "muh_en": bool(body.muhurta_consultation_enabled),
             "muh_fee": int(body.muhurta_fee_paise or 0),
             "req_muh": bool(body.requires_muhurta),
@@ -1148,7 +1150,7 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
               standard_price_paise=:std, premium_price_paise=:prm, basic_price_paise=:basic, main_puja_price_paise=:main,
               samagri_price_paise=:sam, alankaram_price_paise=:alan, food_price_paise=:food,
               samagri_provider=:samp, alankaram_provider=:alanp, food_provider=:foodp,
-              dakshina_share_percent=:dak,
+              dakshina_share_percent=:dak, dakshina_amount_paise=:dak_amt,
               muhurta_consultation_enabled=:muh_en, muhurta_fee_paise=:muh_fee, requires_muhurta=:req_muh,
               duration_minutes=:dur, pujaris_required=:pujn,
               basic_pujaris_required=:pujn_basic, standard_pujaris_required=:pujn_std,
@@ -1200,6 +1202,7 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
             "alanp": body.alankaram_provider or "included",
             "foodp": body.food_provider or "included",
             "dak": 85.0 if body.dakshina_share_percent is None else max(0.0, min(100.0, float(body.dakshina_share_percent))),
+            "dak_amt": int(body.dakshina_amount_paise) if body.dakshina_amount_paise else None,
             "muh_en": bool(body.muhurta_consultation_enabled),
             "muh_fee": int(body.muhurta_fee_paise or 0),
             "req_muh": bool(body.requires_muhurta),

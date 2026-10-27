@@ -2,7 +2,7 @@ import { isExpiredBooking, matchesPujariJobSegment, type PujariJobSegment } from
 import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PujariBookingsFilter, type PujariStatusFilter } from "@/components/PujariBookingsFilter";
@@ -47,6 +47,7 @@ export default function PujariJobs() {
     q?: string | string[];
     from?: string | string[];
     to?: string | string[];
+    nav?: string | string[];
   }>();
 
   const [segment, setSegment] = useState<PujariJobSegment>(() =>
@@ -57,25 +58,29 @@ export default function PujariJobs() {
   const [to, setTo] = useState(() => paramOne(params.to));
   const [qtext, setQtext] = useState(() => paramOne(params.q));
 
-  const syncFromParams = useCallback(() => {
+  // Apply link filters only when a new link opens this tab, so returning from a booking
+  // (or switching tabs) keeps the filters the pujari picked here.
+  const paramsKey = [params.tab, params.segment, params.status, params.from, params.to, params.q, params.nav]
+    .map((v) => paramOne(v))
+    .join("|");
+  const appliedParamsKey = useRef(paramsKey);
+
+  useEffect(() => {
+    if (appliedParamsKey.current === paramsKey) return;
+    appliedParamsKey.current = paramsKey;
     setSegment(parseSegment(paramOne(params.tab) || paramOne(params.segment) || "all"));
     setStatus(parseStatus(paramOne(params.status) || "all"));
     setFrom(paramOne(params.from));
     setTo(paramOne(params.to));
     setQtext(paramOne(params.q));
-  }, [params.tab, params.segment, params.status, params.from, params.to, params.q]);
-
-  useEffect(() => {
-    syncFromParams();
-  }, [syncFromParams]);
+  }, [paramsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const q = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
 
   useFocusEffect(
     useCallback(() => {
-      syncFromParams();
       void q.refetch();
-    }, [syncFromParams, q.refetch]),
+    }, [q.refetch]),
   );
 
   const now = useMemo(() => new Date(), [q.dataUpdatedAt]);

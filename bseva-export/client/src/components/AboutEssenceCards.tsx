@@ -54,7 +54,7 @@ export function AboutEssenceCards() {
 
   return (
     <section className="relative z-10 bg-[#FDF6EC] dark:bg-[#0B1424]" aria-label={t("ab.vision")}>
-      <div className="container grid grid-cols-1 gap-5 py-8 md:grid-cols-2 lg:-mt-10 lg:grid-cols-[1fr_1.15fr_1fr] lg:items-stretch lg:gap-6 lg:pb-6 lg:pt-0">
+      <div className="container grid grid-cols-1 gap-5 py-8 md:grid-cols-2 lg:-mt-10 lg:grid-cols-[1fr_1.15fr_1fr] lg:items-stretch lg:gap-6 lg:pb-2 lg:pt-0">
         <SideCard icon={<Eye size="1.375rem" strokeWidth={1.75} aria-hidden />} title={t("ab.vision")}>
           {t("ab.visionBody")}
         </SideCard>

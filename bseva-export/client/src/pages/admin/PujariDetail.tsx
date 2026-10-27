@@ -643,7 +643,6 @@ export default function PujariDetailPage() {
                 <Field label="Gotra">{p.gotra}</Field>
                 <Field label="Pravara">{p.pravara}</Field>
                 <Field label="Date of birth">{p.date_of_birth ? String(p.date_of_birth).slice(0, 10) : null}</Field>
-                <Field label="Gender">{p.gender}</Field>
                 <Field label="Native place">{p.native_place}</Field>
                 <Field label="Sampradaya">{p.sampradaya}</Field>
                 <Field label="Website consent">{p.website_publication_consent ? "Yes" : "No"}</Field>

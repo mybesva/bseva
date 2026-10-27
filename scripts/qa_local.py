@@ -22,6 +22,9 @@ def environment():
     env.update(
         DATABASE_URL=f"postgresql://localhost/{DATABASE}",
         JWT_SECRET="isolated-local-bseva-qa-only-20260926-secret",
+        # Typed settings cannot be blank (pydantic rejects "" for an int).
+        JWT_ALGORITHM="HS256",
+        JWT_EXPIRE_MINUTES="10080",
         ENVIRONMENT="development",
         OTP_DEV_CODE="123456",
         PUBLIC_APP_URL="http://localhost:5173",

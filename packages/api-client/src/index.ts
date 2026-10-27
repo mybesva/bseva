@@ -75,6 +75,12 @@ export function normalizeUploadFile(file: UploadFile): UploadFile {
   return { uri: file.uri, name, type };
 }
 
+/** Placeholder per seva type when a service has no image of its own (same files as the web). */
+const SEVA_TYPE_DEFAULT_IMAGE: Record<string, string> = {
+  chadhava: "/images/seva/chadhava-offering.webp",
+  pravachan: "/images/seva/pravachan-discourse.webp",
+};
+
 function joinUrl(base: string, path: string) {
   const b = base.replace(/\/$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -283,15 +289,19 @@ export function createApiClient(opts: ApiClientOptions) {
       return resolveServiceImageUrl(opts.getBaseUrl(), svc);
     },
 
-    serviceImageCandidates(svc: { slug?: string; image_url?: string | null; image_path?: string | null } | string) {
+    serviceImageCandidates(
+      svc: { slug?: string; image_url?: string | null; image_path?: string | null; service_type?: string | null } | string
+    ) {
       const base = opts.getBaseUrl();
       const slug = typeof svc === "string" ? svc : svc.slug;
+      const typeDefault = typeof svc === "string" ? undefined : SEVA_TYPE_DEFAULT_IMAGE[svc.service_type || ""];
       const raw = typeof svc === "string" ? "" : String(svc.image_url || svc.image_path || "").trim();
       const out: string[] = [];
       if (slug) out.push(joinUrl(base, `/api/v1/services/${encodeURIComponent(slug)}/image`));
       if (raw.startsWith("http://") || raw.startsWith("https://")) out.push(raw);
       else if (raw.startsWith("/")) out.push(joinUrl(base, raw));
       if (slug) out.push(joinUrl(base, `/images/services/${slug}.jpg`));
+      if (typeDefault) out.push(joinUrl(base, typeDefault));
       return Array.from(new Set(out.filter(Boolean)));
     },
 

@@ -17,7 +17,7 @@ import { sevaErrorMessage } from "@/lib/sevaErrors";
 import { Link, useLocation, useParams } from "wouter";
 import { ArrowLeft, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import type { FamilyMember, SevaEvent, ServicePackage } from "@bseva/types";
+import type { FamilyMember, SevaEvent, SevaRegistration, ServicePackage } from "@bseva/types";
 import { PujaTitle } from "@/components/PujaTitle";
 
 function participationOptions(event: SevaEvent): Array<"offline" | "online"> {
@@ -39,6 +39,7 @@ export default function SevaEventDetail() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const [gotraError, setGotraError] = useState(false);
 
   const [participationMode, setParticipationMode] = useState<"offline" | "online">("offline");
   const [packageId, setPackageId] = useState<string>("");
@@ -77,6 +78,19 @@ export default function SevaEventDetail() {
       .catch(() => setFamilyMembers([]));
   }, [isAuthenticated, user]);
 
+  // Already registered: show that instead of a form that would only fail with "already registered".
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "customer" || !eventId) return;
+    api<SevaRegistration[]>("/seva/my-registrations")
+      .then((rows) => {
+        const mine = (Array.isArray(rows) ? rows : []).some(
+          (r) => String(r.event_id) === eventId && !["cancelled", "refunded"].includes(String(r.status || ""))
+        );
+        if (mine) setRegistered(true);
+      })
+      .catch(() => undefined);
+  }, [isAuthenticated, user, eventId]);
+
   function toggleMember(id: string) {
     setSelectedMemberIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -96,6 +110,11 @@ export default function SevaEventDetail() {
     }
     if (!primaryName.trim()) {
       toast.error(t("auth.name"));
+      return;
+    }
+    if (!gotraUnknown && !gotra.trim()) {
+      setGotraError(true);
+      toast.error(t("seva.gotraRequired"));
       return;
     }
 
@@ -277,23 +296,37 @@ export default function SevaEventDetail() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="gotra">{t("seva.gotra")}</Label>
+                          <Label htmlFor="gotra">
+                            {t("seva.gotra")}
+                            {!gotraUnknown ? <span className="text-destructive"> *</span> : null}
+                          </Label>
                           <Input
                             id="gotra"
                             value={gotra}
-                            onChange={(e) => setGotra(e.target.value)}
+                            onChange={(e) => {
+                              setGotra(e.target.value);
+                              setGotraError(false);
+                            }}
                             disabled={gotraUnknown}
+                            aria-invalid={gotraError}
+                            className={gotraError ? "border-destructive" : undefined}
                           />
                           <label className="flex items-center gap-2 text-sm cursor-pointer">
                             <Checkbox
                               checked={gotraUnknown}
-                              onCheckedChange={(v) => setGotraUnknown(v === true)}
+                              onCheckedChange={(v) => {
+                                setGotraUnknown(v === true);
+                                setGotraError(false);
+                              }}
                             />
                             {t("seva.gotraUnknown")}
                           </label>
+                          {gotraError ? <p className="text-xs text-destructive">{t("seva.gotraRequired")}</p> : null}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="sankalp">{t("seva.sankalp")}</Label>
+                          <Label htmlFor="sankalp">
+                            {t("seva.sankalp")} <span className="text-muted-foreground font-normal">({t("common.optional")})</span>
+                          </Label>
                           <Textarea
                             id="sankalp"
                             value={sankalpText}
@@ -343,6 +376,15 @@ export default function SevaEventDetail() {
                       </Button>
                     </form>
                   )}
+                </CardContent>
+              </Card>
+            ) : registered ? (
+              <Card>
+                <CardContent className="space-y-4 pt-6">
+                  <p>{t("seva.alreadyRegisteredNote")}</p>
+                  <Button type="button" onClick={() => setLocation("/customer/my-seva")}>
+                    {t("seva.mySeva")}
+                  </Button>
                 </CardContent>
               </Card>
             ) : null}

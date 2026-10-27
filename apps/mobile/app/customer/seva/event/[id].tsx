@@ -31,6 +31,7 @@ const SEVA_ERROR_CODES: Record<string, string> = {
   REGISTRATION_CLOSED: "seva.error.cutoff",
   EVENT_SOLD_OUT: "seva.error.soldOut",
   INSUFFICIENT_WALLET: "seva.error.insufficientWallet",
+  GOTRA_REQUIRED: "seva.gotraRequired",
 };
 
 function sevaErrorMessage(t: (key: string) => string, e: unknown): string {
@@ -83,6 +84,19 @@ export default function CustomerSevaEventDetail() {
     queryFn: () => apiClient.listFamilyMembers(),
   });
 
+  // Already registered: show that instead of a form that would only fail with "already registered".
+  const myRegsQ = useQuery({
+    queryKey: ["my-seva-registrations", "event-check"],
+    queryFn: () => apiClient.listMySevaRegistrations(),
+  });
+  const existingRegistration = useMemo(
+    () =>
+      (myRegsQ.data || []).find(
+        (r) => String(r.event_id) === String(id) && !["cancelled", "refunded"].includes(String(r.status || "")),
+      ),
+    [myRegsQ.data, id],
+  );
+
   const event = eventQ.data as SevaEvent | undefined;
   const packages = (event?.packages || []) as ServicePackage[];
   const partOptions = useMemo(() => (event ? participationOptions(t, event) : []), [event, t]);
@@ -117,6 +131,10 @@ export default function CustomerSevaEventDetail() {
 
   async function submitRegistration() {
     if (!event || !id) return;
+    if (!gotraUnknown && !gotra.trim()) {
+      setError(t("seva.gotraRequired"));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -204,7 +222,12 @@ export default function CustomerSevaEventDetail() {
               </View>
             </Card>
 
-            {registrationClosed ? (
+            {existingRegistration ? (
+              <Card style={{ gap: 10 }}>
+                <AppText>{t("seva.alreadyRegisteredNote")}</AppText>
+                <PrimaryButton title={t("seva.mySeva")} onPress={() => router.replace("/customer/my-seva")} />
+              </Card>
+            ) : registrationClosed ? (
               <ErrorBanner message={event.sold_out ? t("seva.soldOut") : t("seva.registrationClosed")} />
             ) : (
               <>
@@ -260,7 +283,7 @@ export default function CustomerSevaEventDetail() {
                 </View>
 
                 {!gotraUnknown ? (
-                  <Field label={t("seva.gotra")} value={gotra} onChangeText={setGotra} />
+                  <Field label={t("seva.gotra")} required value={gotra} onChangeText={setGotra} />
                 ) : null}
 
                 <Field

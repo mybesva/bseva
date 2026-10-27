@@ -259,7 +259,7 @@ def _render_booking_receipt_pdf_reportlab(booking: dict[str, Any], db: Session) 
     styles = getSampleStyleSheet()
     section = ParagraphStyle("section", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=8, textColor=colors.Color(1.0, 0x7A / 255, 0x00 / 255))
     small = ParagraphStyle("small", parent=styles["Normal"], fontSize=8, leading=11)
-    muted = ParagraphStyle("muted", parent=styles["Normal"], fontSize=8, leading=11, textColor=colors.Color(0.35, 0.35, 0.38))
+    muted = ParagraphStyle("muted", parent=styles["Normal"], fontSize=8, leading=11, textColor=colors.Color(0.2, 0.22, 0.26))
 
     status = str(booking.get("customer_display_status") or booking.get("status") or "pending").replace("_", " ").title()
     story: list[Any] = []

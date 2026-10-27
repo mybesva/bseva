@@ -30,6 +30,30 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
 import { FolderTree, ImageIcon, Pencil, Plus } from "lucide-react";
+
+/** Gathering sizes for samagri scale quantities (B-Seva samagri guide): Small is the base. */
+const SAMAGRI_SIZES = [
+  { key: "qty_small", short: "S", label: "Small (1–4 people)", factor: 1 },
+  { key: "qty_medium", short: "M", label: "Medium (5–15)", factor: 1.5 },
+  { key: "qty_large", short: "L", label: "Large (15–50)", factor: 3 },
+  { key: "qty_grand", short: "G", label: "Grand (50+)", factor: 5 },
+] as const;
+type SamagriSizeKey = (typeof SAMAGRI_SIZES)[number]["key"];
+
+/** Suggested size qty from the Small qty: "15" → "22.5"; "15 pcs" keeps its unit text. */
+function scaledQty(small: string, factor: number): string {
+  const m = small.trim().match(/^(\d+(?:\.\d+)?)(.*)$/);
+  if (!m) return small.trim();
+  const n = Math.round(Number(m[1]) * factor * 100) / 100;
+  return `${n}${m[2]}`;
+}
+
+/** "15" + "pcs" → "15 pcs"; "15 pcs" + "pcs" → "15 pcs" (stored values sometimes include the unit). */
+function qtyWithUnit(value: unknown, unit?: string | null): string {
+  const v = String(value ?? "").trim();
+  if (!v || !unit || /[a-z]/i.test(v)) return v;
+  return `${v} ${unit}`;
+}
 import { serviceImageUrl } from "@/lib/serviceImage";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
 
@@ -99,6 +123,7 @@ const emptyForm = {
   muhurta_consultation_enabled: false,
   muhurta_fee_paise: 0,
   dakshina_share_percent: 85,
+  dakshina_amount_paise: null as number | null,
   requires_muhurta: false,
   duration_minutes: 90,
   pujaris_required: 1,
@@ -153,6 +178,8 @@ export default function ServicesAdmin() {
   const [linked, setLinked] = useState<any[]>([]);
   const [linkItemId, setLinkItemId] = useState("");
   const [linkQty, setLinkQty] = useState("");
+  // Medium / Large / Grand qty; empty = follow the Small qty × size factor.
+  const [linkSizes, setLinkSizes] = useState<Partial<Record<SamagriSizeKey, string>>>({});
   const [linkUnit, setLinkUnit] = useState("");
   const [linkCategory, setLinkCategory] = useState("PUJA_SAMAGRI");
   const [linkProvidedBy, setLinkProvidedBy] = useState("CUSTOMER");
@@ -295,6 +322,7 @@ export default function ServicesAdmin() {
       muhurta_fee_paise: Number(s.muhurta_fee_paise) || 0,
       dakshina_share_percent:
         s.dakshina_share_percent != null ? Number(s.dakshina_share_percent) : 85,
+      dakshina_amount_paise: Number(s.dakshina_amount_paise) > 0 ? Number(s.dakshina_amount_paise) : null,
       requires_muhurta: Boolean(s.requires_muhurta),
       duration_minutes: s.duration_minutes || 90,
       pujaris_required: s.pujaris_required || 1,
@@ -323,6 +351,7 @@ export default function ServicesAdmin() {
     });
     setLinkItemId("");
     setLinkQty("");
+    setLinkSizes({});
     setLinkUnit("");
     setLinkCategory("PUJA_SAMAGRI");
     setLinkProvidedBy("CUSTOMER");
@@ -1031,25 +1060,77 @@ export default function ServicesAdmin() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-dakshina">Dakshina % (pujari share)</Label>
-                  <Input
-                    id="service-dakshina"
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={form.dakshina_share_percent}
-                    onChange={(e) =>
+                  <Label htmlFor="service-dakshina-type">Dakshina (pujari share)</Label>
+                  <Select
+                    value={form.dakshina_amount_paise != null ? "amount" : "percent"}
+                    onValueChange={(v) =>
                       setForm({
                         ...form,
-                        dakshina_share_percent: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                        // Switching to amount starts from today's % value so the admin sees a sensible number.
+                        dakshina_amount_paise:
+                          v === "amount"
+                            ? Math.round(
+                                (Number(form.standard_price_paise) || 0) * (Number(form.dakshina_share_percent) || 0) / 100,
+                              )
+                            : null,
                       })
                     }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Default 85%. Admin can override for this puja only. Pujari earns this % of the main puja price.
-                  </p>
+                  >
+                    <SelectTrigger id="service-dakshina-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">Percentage of puja price (%)</SelectItem>
+                      <SelectItem value="amount">Fixed amount (₹)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  {form.dakshina_amount_paise != null ? (
+                    <>
+                      <Label htmlFor="service-dakshina">Dakshina amount (₹)</Label>
+                      <Input
+                        id="service-dakshina"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={Number(form.dakshina_amount_paise) / 100}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            dakshina_amount_paise: Math.max(0, Math.round(Number(e.target.value || 0) * 100)),
+                          })
+                        }
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Label htmlFor="service-dakshina">Dakshina %</Label>
+                      <Input
+                        id="service-dakshina"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={form.dakshina_share_percent}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            dakshina_share_percent: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                          })
+                        }
+                      />
+                    </>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  {form.dakshina_amount_paise != null
+                    ? "Pujari earns this fixed amount per booking, whichever package is booked (never more than the main puja price)."
+                    : "Default 85%. Admin can override for this puja only. Pujari earns this % of the main puja price."}
+                  {form.dakshina_amount_paise != null && Number(form.dakshina_amount_paise) <= 0
+                    ? " Enter an amount above ₹0, or switch back to %."
+                    : ""}
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1558,16 +1639,40 @@ export default function ServicesAdmin() {
                 </p>
                 <ul className="text-sm space-y-1 max-h-36 overflow-y-auto">
                   {linked.map((it) => (
-                    <li key={it.samagri_item_id || it.id}>
-                      {it.name}
-                      {it.qty_small || it.quantity != null
-                        ? ` — S:${it.qty_small || it.quantity}${it.unit ? ` ${it.unit}` : ""}`
-                        : ""}
-                      {it.qty_medium ? ` · M:${it.qty_medium}` : ""}
-                      {it.qty_large ? ` · L:${it.qty_large}` : ""}
-                      {it.qty_grand ? ` · G:${it.qty_grand}` : ""}
-                      {it.provided_by ? ` · ${it.provided_by}` : ""}
-                      {it.optional ? " (optional)" : it.required ? " (required)" : ""}
+                    <li key={it.samagri_item_id || it.id} className="flex items-start justify-between gap-2">
+                      <span>
+                        {it.name}
+                        {it.qty_small || it.quantity != null
+                          ? ` — S:${qtyWithUnit(it.qty_small || it.quantity, it.unit)}`
+                          : ""}
+                        {it.qty_medium ? ` · M:${qtyWithUnit(it.qty_medium, it.unit)}` : ""}
+                        {it.qty_large ? ` · L:${qtyWithUnit(it.qty_large, it.unit)}` : ""}
+                        {it.qty_grand ? ` · G:${qtyWithUnit(it.qty_grand, it.unit)}` : ""}
+                        {it.provided_by ? ` · ${it.provided_by}` : ""}
+                        {it.optional ? " (optional)" : it.required ? " (required)" : ""}
+                      </span>
+                      {canSamagri && it.samagri_item_id ? (
+                        <button
+                          type="button"
+                          className="shrink-0 text-xs font-medium text-primary hover:underline"
+                          onClick={() => {
+                            // Load into the form below; "Link item" saves it again (the API upserts).
+                            setLinkItemId(String(it.samagri_item_id));
+                            setLinkQty(String(it.qty_small ?? it.quantity ?? ""));
+                            setLinkSizes({
+                              qty_medium: it.qty_medium != null ? String(it.qty_medium) : "",
+                              qty_large: it.qty_large != null ? String(it.qty_large) : "",
+                              qty_grand: it.qty_grand != null ? String(it.qty_grand) : "",
+                            });
+                            setLinkUnit(String(it.unit || ""));
+                            if (it.category) setLinkCategory(String(it.category));
+                            if (it.provided_by) setLinkProvidedBy(String(it.provided_by));
+                            setLinkOptional(Boolean(it.optional));
+                          }}
+                        >
+                          Edit
+                        </button>
+                      ) : null}
                     </li>
                   ))}
                   {linked.length === 0 && <li className="text-muted-foreground">None linked yet</li>}
@@ -1587,15 +1692,35 @@ export default function ServicesAdmin() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    placeholder="Qty"
-                    value={linkQty}
-                    onChange={(e) => setLinkQty(e.target.value)}
-                  />
+                  <div className="col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {SAMAGRI_SIZES.map((size) => {
+                      const isSmall = size.key === "qty_small";
+                      const own = linkSizes[size.key];
+                      const value = isSmall ? linkQty : own ? own : linkQty ? scaledQty(linkQty, size.factor) : "";
+                      return (
+                        <div key={size.key} className="space-y-1">
+                          <Label className="text-xs">{size.label}</Label>
+                          <Input
+                            placeholder={isSmall ? "Qty" : `×${size.factor}`}
+                            value={value}
+                            onChange={(e) =>
+                              isSmall
+                                ? setLinkQty(e.target.value)
+                                : setLinkSizes((prev) => ({ ...prev, [size.key]: e.target.value }))
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="col-span-2 text-xs text-muted-foreground">
+                    Medium, Large and Grand fill in from Small (×1.5, ×3, ×5). Change any of them if this item scales differently.
+                  </p>
                   <Input
                     placeholder="Unit"
                     value={linkUnit}
                     onChange={(e) => setLinkUnit(e.target.value)}
+                    className="col-span-2 sm:col-span-1"
                   />
                   <Select value={linkCategory} onValueChange={setLinkCategory}>
                     <SelectTrigger>
@@ -1640,18 +1765,21 @@ export default function ServicesAdmin() {
                           optional: linkOptional,
                           customer_provided: linkProvidedBy === "CUSTOMER",
                           sort_order: linked.length,
-                          quantity: linkQty ? Number(linkQty) : null,
+                          quantity: linkQty && Number.isFinite(parseFloat(linkQty)) ? parseFloat(linkQty) : null,
                           unit: linkUnit || null,
                           category: linkCategory,
                           provided_by: linkProvidedBy,
                           qty_small: linkQty || null,
-                          qty_medium: linkQty || null,
-                          qty_large: linkQty || null,
-                          qty_grand: linkQty || null,
+                          qty_medium: linkSizes.qty_medium || (linkQty ? scaledQty(linkQty, 1.5) : null),
+                          qty_large: linkSizes.qty_large || (linkQty ? scaledQty(linkQty, 3) : null),
+                          qty_grand: linkSizes.qty_grand || (linkQty ? scaledQty(linkQty, 5) : null),
                           scale_override: true,
                         }),
                       });
                       toast.success("Item linked");
+                      setLinkItemId("");
+                      setLinkQty("");
+                      setLinkSizes({});
                       await loadLinked(editId);
                     } catch (e: any) {
                       toast.error(e.message);

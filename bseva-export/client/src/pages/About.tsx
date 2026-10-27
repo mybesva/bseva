@@ -71,7 +71,7 @@ export default function About() {
       <section className="relative overflow-hidden bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-story-title">
         {/* Faint mandala behind the photo's upper-right corner, cropped by the section edge */}
         <MandalaOutline className="pointer-events-none absolute -right-[6vw] top-[2%] hidden h-[clamp(18rem,24vw,30rem)] w-[clamp(18rem,24vw,30rem)] text-[#E8B15A] opacity-[0.16] lg:block dark:opacity-[0.08]" />
-        <div className="relative mx-auto grid w-full max-w-[120rem] items-center gap-10 px-5 py-12 sm:px-8 md:py-14 lg:grid-cols-[minmax(0,515fr)_minmax(0,886fr)] lg:gap-[2.35vw] lg:pl-[3.7vw] lg:pr-[2.75vw] lg:py-[clamp(3rem,4.6vw,6rem)]">
+        <div className="relative mx-auto grid w-full max-w-[120rem] items-center gap-10 px-5 py-8 sm:px-8 md:py-10 lg:grid-cols-[minmax(0,515fr)_minmax(0,886fr)] lg:gap-[2.35vw] lg:pl-[3.7vw] lg:pr-[2.75vw] lg:py-[clamp(1.5rem,2.3vw,3rem)]">
           <div>
             <p className="flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.2em] text-[#FF7A00] lg:text-[clamp(12px,1.04vw,18px)]">
               <span aria-hidden className="h-[0.125rem] w-4 bg-[#FF7A00] lg:w-[1.1em]" />
@@ -113,7 +113,7 @@ export default function About() {
       <section className="relative overflow-hidden bg-[#FDF6EC] dark:bg-[#0B1424]" aria-labelledby="about-principles-title">
         <MandalaOutline className="pointer-events-none absolute -left-28 top-10 h-72 w-72 text-[#E8B15A] opacity-[0.14] dark:opacity-[0.08]" />
         <MandalaOutline className="pointer-events-none absolute -right-24 bottom-0 h-72 w-72 text-[#E8B15A] opacity-[0.12] dark:opacity-[0.08]" />
-        <div className="container relative py-12 md:py-14 lg:py-16">
+        <div className="container relative pt-6 pb-12 md:pt-8 md:pb-14 lg:pt-8 lg:pb-16">
           <div className="mx-auto max-w-2xl text-center">
             <p className="inline-flex items-center gap-2 rounded-full border border-[#FF7A00]/30 bg-white px-4 py-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-[#FF7A00] sm:text-xs dark:bg-transparent">
               <Sparkles size="0.8125rem" aria-hidden />

@@ -23,6 +23,19 @@ export const PRIORITY_LABELS: Record<string, string> = {
   low: "Low",
 };
 
+/** Starting priority by category; mirrors CATEGORY_DEFAULT_PRIORITY in backend/app/support_domain.py. */
+export const CATEGORY_DEFAULT_PRIORITY: Record<string, string> = {
+  payment: "high",
+  cancellation_refund: "high",
+  rescheduling: "high",
+  pujari: "high",
+  other: "low",
+};
+
+export function suggestedPriority(category: string): string {
+  return CATEGORY_DEFAULT_PRIORITY[category] || "medium";
+}
+
 export const CATEGORY_LABELS: Record<string, string> = {
   booking: "Booking",
   payment: "Payment",

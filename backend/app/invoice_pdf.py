@@ -23,12 +23,15 @@ CONTENT_W_MM = 182
 
 
 def render_invoice_pdf(inv: dict[str, Any], *, db: Any) -> bytes:
-    """Generate PDF from the official invoice HTML (matches View / Print)."""
+    """Generate PDF from the official invoice HTML (matches View / Print).
+    Falls back to the ReportLab layout when no HTML-to-PDF engine is available (e.g. Vercel)."""
     from app.html_pdf import html_document_to_pdf
     from app.invoice_docs import render_invoice_html
 
-    html = render_invoice_html(db, inv)
-    return html_document_to_pdf(html)
+    try:
+        return html_document_to_pdf(render_invoice_html(db, inv))
+    except Exception:
+        return render_invoice_pdf_reportlab(inv)
 
 
 def _snap(inv: dict[str, Any]) -> dict[str, Any]:

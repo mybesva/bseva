@@ -27,6 +27,26 @@ def dakshina_share_percent(service: Any | None = None) -> float:
     return value
 
 
+def dakshina_fixed_paise(service: Any | None = None) -> int | None:
+    """Fixed pujari dakshina per booking (paise) when the admin set one, else None (use the %)."""
+    raw = service.get("dakshina_amount_paise") if service is not None and hasattr(service, "get") else None
+    try:
+        value = int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def pujari_dakshina_paise(service: Any | None, base_paise: int) -> int:
+    """Pujari's share of the main puja price: the admin's fixed amount if set, else the %.
+    Never more than the main puja price itself, so the platform share can't go negative."""
+    base = max(0, int(base_paise or 0))
+    fixed = dakshina_fixed_paise(service)
+    if fixed is not None:
+        return min(fixed, base)
+    return int(round(base * dakshina_share_percent(service) / 100))
+
+
 def _weekend_days(db: Session) -> set[int]:
     """ISO weekday: Mon=1 … Sun=7. Default Sat+Sun."""
     raw = get_setting(db, "weekend_days", [6, 7])
@@ -284,9 +304,8 @@ def compute_quote(
         0,
         adjusted_base + peak + components_total - int(discount_paise or 0) - int(wallet_credit_paise or 0),
     )
-    share = dakshina_share_percent(service)
-    platform_fee = int(round(adjusted_base * (100 - share) / 100))
-    pujari_share = adjusted_base - platform_fee
+    pujari_share = pujari_dakshina_paise(service, adjusted_base)
+    platform_fee = adjusted_base - pujari_share
     pricing = db.execute(text("SELECT * FROM pricing_config WHERE id = 1")).mappings().one()
     gst_pct = float(pricing["gst_percent"])
     gst_amt = int(round(subtotal * gst_pct / 100))

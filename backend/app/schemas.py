@@ -271,6 +271,8 @@ class ServiceIn(BaseModel):
     alankaram_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
     food_provider: Optional[Literal["included", "customer", "pujari", "reimbursable"]] = "included"
     dakshina_share_percent: Optional[float] = Field(default=85, ge=0, le=100)
+    # Fixed pujari dakshina per booking (paise). When set (> 0) it replaces the percentage.
+    dakshina_amount_paise: Optional[int] = Field(default=None, ge=0)
     muhurta_consultation_enabled: Optional[bool] = False
     muhurta_fee_paise: Optional[int] = None
     requires_muhurta: Optional[bool] = False

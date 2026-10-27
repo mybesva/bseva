@@ -261,10 +261,11 @@ export function validatePujariProfileForm(
   if (!String(input.pravara || "").trim()) errors.pravara = "web.validation.pravara";
 
   const quals = input.qualifications || [];
-  if (quals.length === 0) errors.qualifications = "web.validation.qualifications";
-
-  const qyErr = validateQualificationYear(input.qualification_year, yearNow);
-  if (qyErr) errors.qualification_year = qyErr;
+  // Qualifications are optional; the year is only needed once one is ticked.
+  if (quals.length > 0) {
+    const qyErr = validateQualificationYear(input.qualification_year, yearNow);
+    if (qyErr) errors.qualification_year = qyErr;
+  }
 
   if (!String(input.sampradaya || "").trim()) errors.sampradaya = "web.validation.sampradaya";
 

@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.platform_config import get_setting
-from app.pricing import DEFAULT_DAKSHINA_SHARE_PERCENT, dakshina_share_percent
+from app.pricing import DEFAULT_DAKSHINA_SHARE_PERCENT, dakshina_fixed_paise, dakshina_share_percent
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +134,9 @@ def catalog_base_price_paise(row: dict) -> int:
 
 def dakshina_paise_for_service(db: Session, row: dict) -> int:
     base = catalog_base_price_paise(row)
+    fixed = dakshina_fixed_paise(row)
+    if fixed is not None:
+        return min(fixed, base) if base > 0 else fixed
     share = dakshina_share_percent(row)
     if base > 0:
         return max(DEFAULT_MIN_DAKSHINA_PAISE, int(round(base * share / 100)))
@@ -150,7 +153,8 @@ def list_catalog_services_for_offers(db: Session) -> list[dict]:
                 SELECT id, name, slug, short_description, description, category, required_level,
                        basic_price_paise, standard_price_paise, premium_price_paise,
                        main_puja_price_paise, duration_minutes, active, pricing_status,
-                       display_order, dakshina_share_percent
+                       display_order, dakshina_share_percent,
+                       (to_jsonb(services) ->> 'dakshina_amount_paise')::int AS dakshina_amount_paise
                 FROM services
                 WHERE active = TRUE
                    OR COALESCE(pricing_status, 'priced') = 'awaiting_pricing'
@@ -291,6 +295,7 @@ def _service_row_payload(db: Session, s: dict, applied_ids: set[str]) -> dict:
         "catalog_price_paise": base if base > 0 else DEFAULT_CATALOG_BASE_PAISE,
         "dakshina_paise": dakshina_paise_for_service(db, s),
         "dakshina_share_percent": dakshina_share_percent(s),
+        "dakshina_amount_paise": dakshina_fixed_paise(s),
         "applied": sid in applied_ids,
         "categories": cats,
         "section_slugs": [c.get("slug") for c in cats if c.get("slug")],

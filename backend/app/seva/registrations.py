@@ -128,6 +128,9 @@ def create_registration(
     if dup:
         raise RegistrationError("DUPLICATE_REGISTRATION", "You are already registered for this event", 409)
 
+    if not gotra_unknown and not (gotra or "").strip():
+        raise RegistrationError("GOTRA_REQUIRED", "Enter your Gotra, or tick \u201cI don't know my Gotra\u201d", 400)
+
     if not seva_enabled(db):
         raise RegistrationError("SEVA_DISABLED", "Seva events are temporarily unavailable", 503)
 

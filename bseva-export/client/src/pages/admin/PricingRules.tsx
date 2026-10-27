@@ -3,6 +3,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, rupees } from "@/lib/api";
@@ -19,6 +20,9 @@ export default function AdminPricingRules() {
   const [surgeLabel, setSurgeLabel] = useState("Surge");
   const [surgePct, setSurgePct] = useState("0");
   const [surgeFixed, setSurgeFixed] = useState("0");
+  // "all" = applies to every puja; otherwise the service id the surge applies to.
+  const [surgeServiceId, setSurgeServiceId] = useState("all");
+  const [services, setServices] = useState<{ id: string; name: string }[]>([]);
 
   async function load() {
     try {
@@ -31,7 +35,22 @@ export default function AdminPricingRules() {
 
   useEffect(() => {
     void load();
+    // Admin list includes inactive / coming-soon pujas; fall back to the public list without that permission.
+    api<any[]>("/admin/services")
+      .catch(() => api<any[]>("/services"))
+      .then((rows) =>
+        setServices(
+          (Array.isArray(rows) ? rows : [])
+            .filter((s) => s?.id && s?.name)
+            .map((s) => ({ id: String(s.id), name: String(s.name) }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        ),
+      )
+      .catch(() => setServices([]));
   }, []);
+
+  const serviceName = (id?: string | null) =>
+    id ? services.find((s) => s.id === String(id))?.name || "Selected puja" : "All pujas";
 
   return (
     <AdminLayout>
@@ -101,6 +120,25 @@ export default function AdminPricingRules() {
           <CardContent className="space-y-3">
             {canManage && (
             <>
+            <div className="space-y-1">
+              <Label>Puja</Label>
+              <Select value={surgeServiceId} onValueChange={setSurgeServiceId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All pujas</SelectItem>
+                  {services.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Pick one puja to add a surge for that puja only, or keep All pujas.
+              </p>
+            </div>
             <div className="grid sm:grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label>Label</Label>
@@ -122,6 +160,7 @@ export default function AdminPricingRules() {
                     method: "POST",
                     body: JSON.stringify({
                       label: surgeLabel,
+                      service_id: surgeServiceId === "all" ? null : surgeServiceId,
                       percent_increase: Number(surgePct),
                       fixed_paise: Math.round(Number(surgeFixed) * 100),
                       active: true,
@@ -143,6 +182,7 @@ export default function AdminPricingRules() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Label</TableHead>
+                  <TableHead>Puja</TableHead>
                   <TableHead>%</TableHead>
                   <TableHead>Fixed</TableHead>
                 </TableRow>
@@ -151,6 +191,7 @@ export default function AdminPricingRules() {
                 {surges.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell>{r.label}</TableCell>
+                    <TableCell>{serviceName(r.service_id)}</TableCell>
                     <TableCell>{r.percent_increase}</TableCell>
                     <TableCell>{rupees(r.fixed_paise)}</TableCell>
                   </TableRow>

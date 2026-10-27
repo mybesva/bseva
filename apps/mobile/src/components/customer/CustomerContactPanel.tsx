@@ -32,15 +32,14 @@ export function CustomerContactPanel() {
       <Card style={{ gap: 10 }}>
         {phone ? (
           <>
-            <AppText variant="small">{t("nav.contact")}</AppText>
-            <AppText variant="h3">{phone}</AppText>
+            <AppText variant="small">{t("contact.phone")}</AppText>
             <PrimaryButton title={phone} onPress={() => void Linking.openURL(`tel:${digits}`)} />
             <PrimaryButton title={t("mobile.whatsapp")} variant="outline" onPress={() => void Linking.openURL(`https://wa.me/${digits.replace(/^\+/, "")}`)} />
           </>
         ) : null}
         {email ? (
           <>
-            <AppText variant="small">{email}</AppText>
+            <AppText variant="small" style={{ marginTop: phone ? 6 : 0 }}>{t("contact.email")}</AppText>
             <PrimaryButton title={email} variant="outline" onPress={() => void Linking.openURL(`mailto:${email}`)} />
           </>
         ) : null}

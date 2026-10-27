@@ -19,7 +19,7 @@ from app.platform_config import get_setting
 from app.rbac import ensure_booking_access, require_admin, require_permission, require_super_admin
 from app.schemas import BookingRejectIn, NoShowPenaltyIn
 from app.no_show import apply_no_show_to_booking
-from app.pricing import dakshina_share_percent
+from app.pricing import pujari_dakshina_paise
 
 router = APIRouter(tags=["lifecycle"])
 
@@ -693,11 +693,10 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
         text("SELECT * FROM services WHERE id = CAST(:id AS uuid)"),
         {"id": str(b["service_id"])},
     ).mappings().first()
-    share = dakshina_share_percent(svc) / 100.0
     days = int(get_setting(db, "pujari_settlement_days", 14))
     base = int(b["base_price_paise"])
-    platform = int(round(base * (1 - share)))
-    payable = int(round(base * share))
+    payable = pujari_dakshina_paise(svc, base)
+    platform = base - payable
     reimbursement = int(b.get("pujari_reimbursement_paise") or 0)
     settlement_total = payable + reimbursement
     due = date.today() + timedelta(days=days)

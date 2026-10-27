@@ -9,6 +9,8 @@ export function sevaErrorMessage(t: (key: string) => string, code?: string, fall
       return t("seva.error.soldOut");
     case "INSUFFICIENT_WALLET":
       return t("seva.error.insufficientWallet");
+    case "GOTRA_REQUIRED":
+      return t("seva.gotraRequired");
     default:
       return fallback || t("errors.generic");
   }

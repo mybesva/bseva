@@ -16,6 +16,8 @@ export function prepareDocumentHtml(html: string, screenWidth: number) {
 })();
 </script>
 <style>
+/* window.print() does nothing inside a WebView; the screen's own Download / Share / Print buttons replace it. */
+.bseva-doc-toolbar { display: none !important; }
 @media screen {
   html.bseva-doc-mobile, html.bseva-doc-mobile body {
     background: #eef2f7 !important;

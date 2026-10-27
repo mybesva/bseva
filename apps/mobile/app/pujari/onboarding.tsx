@@ -47,8 +47,7 @@ function ProfileGaps({ profile }: { profile: Profile }) {
     hasValue(profile.pravara) ? null : t("pujari.pravara"),
     hasValue(profile.profile_photo_path) ? null : t("pujari.photo"),
     addressOk ? null : t("mobile.address"),
-    hasValue(profile.qualifications) ? null : t("mobile.qualifications"),
-    hasValue(profile.qualification_year) ? null : t("mobile.qualificationYear"),
+    !hasValue(profile.qualifications) || hasValue(profile.qualification_year) ? null : t("mobile.qualificationYear"),
     hasValue(profile.sampradaya) ? null : t("pujari.sampradaya"),
   ].filter((label): label is string => Boolean(label));
   if (!gaps.length) return null;
