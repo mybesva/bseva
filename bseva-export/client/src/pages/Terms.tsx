@@ -5,7 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Ban, FileText, Scale } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
+import { goBackOr } from "@/lib/browserActions";
 import { useI18n } from "@/i18n/I18nProvider";
 
 const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number | string; className?: string }>> = {
@@ -16,6 +17,7 @@ const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number | string
 
 export default function TermsPage() {
   const { t } = useI18n();
+  const [, setLocation] = useLocation();
   const { policies, loading } = useLegalPolicies([
     "platform_terms",
     "booking_terms",
@@ -33,11 +35,9 @@ export default function TermsPage() {
   return (
     <Layout>
       <div className="container py-12 max-w-3xl">
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2" asChild>
-          <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t("common.back")}
-          </Link>
+        <Button variant="ghost" size="sm" className="mb-6 -ml-2" onClick={() => goBackOr("/", setLocation)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {t("common.back")}
         </Button>
         <h1 className="text-h1 mb-2">{t("legal.terms")}</h1>
         <p className="text-sm text-muted-foreground mb-6">

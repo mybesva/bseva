@@ -3,22 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { policyBySlug, useLegalPolicies } from "@/hooks/useLegalPolicies";
 import { ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
+import { goBackOr } from "@/lib/browserActions";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export default function PrivacyPage() {
   const { t } = useI18n();
+  const [, setLocation] = useLocation();
   const { policies, loading } = useLegalPolicies(["privacy"]);
   const privacy = policyBySlug(policies, "privacy");
 
   return (
     <Layout>
       <div className="container py-12 max-w-3xl">
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2" asChild>
-          <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t("common.back")}
-          </Link>
+        <Button variant="ghost" size="sm" className="mb-6 -ml-2" onClick={() => goBackOr("/", setLocation)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {t("common.back")}
         </Button>
         <h1 className="text-h1 mb-2">{privacy?.title || t("legal.privacy")}</h1>
         {privacy?.version && (

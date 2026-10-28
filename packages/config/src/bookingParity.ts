@@ -30,6 +30,25 @@ export function composePhysicalServiceAddress(input: {
     .join(", ");
 }
 
+/** Server requires address line 1 to be at least this long. */
+const ADDRESS_LINE1_MIN = 3;
+
+/**
+ * Saved-address lines for a booking's new address. Short door numbers ("7", "12") are real,
+ * so they are kept with the street in line 1 instead of failing the server's length check.
+ */
+export function savedAddressLines(doorNumber?: string, street?: string): {
+  address_line1: string;
+  address_line2?: string;
+} {
+  const door = String(doorNumber || "").trim();
+  const st = String(street || "").trim();
+  if (!door) return { address_line1: st };
+  if (!st) return { address_line1: door };
+  if (door.length < ADDRESS_LINE1_MIN) return { address_line1: `${door}, ${st}` };
+  return { address_line1: door, address_line2: st };
+}
+
 export const RECURRING_OPTIONS = ["none", "weekly", "monthly", "selected_dates"] as const;
 
 export const PHONE_COUNTRY_CODES = [

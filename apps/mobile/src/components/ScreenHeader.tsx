@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useFocusEffect, useRouter } from "expo-router";
+import { router as appRouter, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -136,6 +136,12 @@ function HeaderProfileAvatar({
   );
 }
 
+/** Previous screen, or home when the screen was opened directly (e.g. from a notification). */
+function goBack() {
+  if (appRouter.canGoBack()) appRouter.back();
+  else appRouter.replace("/");
+}
+
 export function ScreenHeader({
   title,
   back,
@@ -168,7 +174,7 @@ export function ScreenHeader({
       >
         {back ? (
           <Pressable
-            onPress={() => (onBack ? onBack() : router.back())}
+            onPress={() => (onBack ? onBack() : goBack())}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={t("mobile.back")}

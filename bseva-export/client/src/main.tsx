@@ -8,6 +8,9 @@ import App from "./App";
 import { getLoginUrl, isAdminUiPath } from "./const";
 import { I18nProvider } from "./i18n/I18nProvider";
 import "./index.css";
+import { trackInAppNavigation } from "./lib/browserActions";
+
+trackInAppNavigation();
 
 const queryClient = new QueryClient();
 

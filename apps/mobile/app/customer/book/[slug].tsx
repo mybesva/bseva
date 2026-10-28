@@ -1,6 +1,7 @@
 import {
   buildCreateBookingPayload,
   composePhysicalServiceAddress,
+  savedAddressLines,
   customerBookablePackages,
   isBookingDateTimeBeforeLead,
   isCalendarDayDisabled,
@@ -518,8 +519,7 @@ export default function BookService() {
         const resolvedCity = city.trim() || String(profile.city || "").trim();
         await apiClient.createCustomerAddress({
           label: newAddressLabel.trim() || null,
-          address_line1: doorNumber.trim() || address.trim(),
-          address_line2: address.trim() && doorNumber.trim() ? address.trim() : undefined,
+          ...savedAddressLines(doorNumber, address),
           city: resolvedCity,
           district: bookingDistrict.trim() || String(profile.district || "").trim() || resolvedCity,
           state: bookingState.trim() || String(profile.state || "").trim() || resolvedCity,

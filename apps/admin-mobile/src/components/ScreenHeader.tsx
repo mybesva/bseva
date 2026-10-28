@@ -88,6 +88,12 @@ function HeaderProfileAvatar({ onPress, label }: { onPress: () => void; label: s
   );
 }
 
+/** Previous screen, or home when the screen was opened directly (e.g. from a notification). */
+function goBack() {
+  if (router.canGoBack()) router.back();
+  else router.replace("/");
+}
+
 export function ScreenHeader({
   title,
   back,
@@ -115,7 +121,7 @@ export function ScreenHeader({
       >
         {back ? (
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={t("mobile.back")}

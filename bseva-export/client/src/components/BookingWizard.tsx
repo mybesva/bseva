@@ -33,6 +33,7 @@ import { formatAddressLines } from "@bseva/validation";
 import { MapLocationPicker, type AddressValue } from "@/components/AddressFields";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { goBackOr } from "@/lib/browserActions";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -73,6 +74,7 @@ import {
 import {
   VIRTUAL_COUNTRIES,
   composePhysicalServiceAddress,
+  savedAddressLines,
   customerBookablePackages,
   normalizeCalendarPref,
   virtualPujaCity,
@@ -971,8 +973,7 @@ export default function BookingWizard({
           method: "POST",
           body: JSON.stringify({
             label: newAddressLabel.trim() || null,
-            address_line1: doorNumber.trim() || locationText.trim(),
-            address_line2: locationText.trim() && doorNumber.trim() ? locationText.trim() : undefined,
+            ...savedAddressLines(doorNumber, locationText),
             city: resolvedCity,
             district: bookingDistrict.trim() || String(profile.district || "").trim() || resolvedCity,
             state: bookingState.trim() || String(profile.state || "").trim() || resolvedCity,
@@ -1762,10 +1763,13 @@ export default function BookingWizard({
         <Button
           variant="outline"
           onClick={() => {
+            if (currentStep === 1) {
+              goBackOr(window.location.pathname.replace(/^\/book\//, "/services/"), setLocation);
+              return;
+            }
             setStep2Errors({});
             setCurrentStep((s) => (s - 1) as BookingStep);
           }}
-          disabled={currentStep === 1}
         >
           <ChevronLeft className="w-4 h-4 mr-1" /> {t("common.back")}
         </Button>

@@ -23,3 +23,24 @@ export async function shareSafely(data: ShareData): Promise<"shared" | "copied">
   await copyTextSafely([data.text, data.url].filter(Boolean).join("\n"));
   return "copied";
 }
+
+// How many pages deep the user has navigated inside this app (not counting pages from other sites).
+let inAppDepth = 0;
+
+/** Call once at startup so `goBackOr` knows whether the previous page belongs to this app. */
+export function trackInAppNavigation(): void {
+  const push = window.history.pushState.bind(window.history);
+  window.history.pushState = (...args: Parameters<History["pushState"]>) => {
+    inAppDepth += 1;
+    push(...args);
+  };
+  window.addEventListener("popstate", () => {
+    inAppDepth = Math.max(0, inAppDepth - 1);
+  });
+}
+
+/** Go to the previous page in the app; when the page was opened directly, go to `fallback`. */
+export function goBackOr(fallback: string, setLocation: (to: string) => void): void {
+  if (inAppDepth > 0) window.history.back();
+  else setLocation(fallback);
+}

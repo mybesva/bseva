@@ -339,6 +339,7 @@ export {
   buildCreateBookingPayload,
   composePhysicalServiceAddress,
   customerBookablePackages,
+  savedAddressLines,
   toE164,
   virtualPujaCity,
   virtualPujaLocationLabel,

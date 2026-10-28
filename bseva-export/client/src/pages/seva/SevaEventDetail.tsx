@@ -14,6 +14,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { api, rupees } from "@/lib/api";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { sevaErrorMessage } from "@/lib/sevaErrors";
+import { goBackOr } from "@/lib/browserActions";
 import { Link, useLocation, useParams } from "wouter";
 import { ArrowLeft, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -164,7 +165,7 @@ export default function SevaEventDetail() {
   return (
     <Layout>
       <div className="container max-w-3xl py-8 md:py-12 space-y-6">
-        <Button type="button" variant="ghost" className="gap-2 px-0" onClick={() => window.history.back()}>
+        <Button type="button" variant="ghost" className="gap-2 px-0" onClick={() => goBackOr("/seva", setLocation)}>
           <ArrowLeft size="1rem" />
           {t("common.back")}
         </Button>
