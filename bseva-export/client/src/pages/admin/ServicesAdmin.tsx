@@ -29,7 +29,7 @@ import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
-import { FolderTree, ImageIcon, Pencil, Plus } from "lucide-react";
+import { FolderTree, ImageIcon, Package, Pencil, Plus } from "lucide-react";
 
 /** Gathering sizes for samagri scale quantities (B-Seva samagri guide): Small is the base. */
 const SAMAGRI_SIZES = [
@@ -589,23 +589,27 @@ export default function ServicesAdmin() {
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="sticky top-0 z-20 bg-background pb-3 border-b border-border/70">
             <p className="text-sm font-semibold text-primary">
-              {editId ? "Edit puja service" : "Add puja service"}
+              {!editId ? "Add puja service" : canServices ? "Edit puja service" : "Puja samagri"}
             </p>
             <DialogTitle className="text-xl font-bold text-foreground pr-8 leading-snug">
               {form.name.trim() || (editId ? "Untitled puja" : "New puja")}
             </DialogTitle>
           </DialogHeader>
           <form id="add-service-form" onSubmit={handleSave} className="space-y-4">
-            <Tabs defaultValue="basic" className="w-full">
+            <Tabs defaultValue={canServices ? "basic" : "samagri"} className="w-full">
               <TabsList className="flex flex-wrap h-auto gap-1 justify-start">
-                <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="process">Process</TabsTrigger>
-                <TabsTrigger value="images">Images</TabsTrigger>
-                <TabsTrigger value="pricing">Pricing</TabsTrigger>
-                <TabsTrigger value="featured">Featured</TabsTrigger>
+                {canServices && (
+                  <>
+                    <TabsTrigger value="basic">Basic</TabsTrigger>
+                    <TabsTrigger value="content">Content</TabsTrigger>
+                    <TabsTrigger value="process">Process</TabsTrigger>
+                    <TabsTrigger value="images">Images</TabsTrigger>
+                    <TabsTrigger value="pricing">Pricing</TabsTrigger>
+                    <TabsTrigger value="featured">Featured</TabsTrigger>
+                  </>
+                )}
                 <TabsTrigger value="samagri">Samagri</TabsTrigger>
-                <TabsTrigger value="advanced">Advanced</TabsTrigger>
+                {canServices && <TabsTrigger value="advanced">Advanced</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
@@ -1852,9 +1856,10 @@ export default function ServicesAdmin() {
                     <TableCell>
                       <button
                         type="button"
-                        className="block w-14 h-10 rounded overflow-hidden border bg-muted shrink-0"
+                        className="block w-14 h-10 rounded overflow-hidden border bg-muted shrink-0 disabled:cursor-default"
                         onClick={() => openEdit(s)}
-                        title="Edit image"
+                        disabled={!canServices}
+                        title={canServices ? "Edit image" : undefined}
                       >
                         <img src={serviceImageUrl(s)} alt="" className="w-full h-full object-cover" />
                       </button>
@@ -1947,12 +1952,17 @@ export default function ServicesAdmin() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-end">
-                        {(canServices || canSamagri) && (
-                        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(s)}>
-                          <Pencil size="0.875rem" />
-                          Edit
-                        </Button>
-                        )}
+                        {canServices ? (
+                          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(s)}>
+                            <Pencil size="0.875rem" />
+                            Edit
+                          </Button>
+                        ) : canSamagri ? (
+                          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openEdit(s)}>
+                            <Package size="0.875rem" />
+                            Samagri
+                          </Button>
+                        ) : null}
                         {canServices && (
                         <>
                         <Button
