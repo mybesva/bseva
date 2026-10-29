@@ -501,6 +501,21 @@ def step_iam(ctx, apply: bool):
         {"Sid": "ShellDocument", "Effect": "Allow", "Action": "ssm:SendCommand", "Resource": f"arn:aws:ssm:{REGION}::document/AWS-RunShellScript"},
         {"Sid": "ReadResults", "Effect": "Allow", "Action": ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations", "ec2:DescribeInstances"], "Resource": "*"},
     ]}
+    if ENV == "production":
+        # Promote the QA-tested API image (read-only on the QA repositories), build the web image from this
+        # environment's public build values, and take a verified RDS snapshot before migrations.
+        qa_repos = [f"arn:aws:ecr:{REGION}:{ACCOUNT}:repository/{r}" for r in ("bseva-api", "bseva-web")]
+        snap = f"arn:aws:rds:{REGION}:{ACCOUNT}:snapshot:{P}-predeploy-*"
+        deploy_policy["Statement"] += [
+            {"Sid": "PullQaImages", "Effect": "Allow", "Action": ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:DescribeImages",
+                                                                 "ecr:BatchCheckLayerAvailability"], "Resource": qa_repos},
+            {"Sid": "ReadBuildValues", "Effect": "Allow", "Action": ["ssm:GetParametersByPath"],
+             "Resource": [f"arn:aws:ssm:{REGION}:{ACCOUNT}:parameter{PARAM_PREFIX}/build", f"arn:aws:ssm:{REGION}:{ACCOUNT}:parameter{PARAM_PREFIX}/build/*"]},
+            {"Sid": "PreDeploySnapshot", "Effect": "Allow", "Action": ["rds:CreateDBSnapshot", "rds:AddTagsToResource"],
+             "Resource": [f"arn:aws:rds:{REGION}:{ACCOUNT}:db:{DB_ID}", snap]},
+            {"Sid": "PruneOwnSnapshots", "Effect": "Allow", "Action": "rds:DeleteDBSnapshot", "Resource": snap},
+            {"Sid": "DescribeSnapshots", "Effect": "Allow", "Action": ["rds:DescribeDBSnapshots", "rds:DescribeDBInstances"], "Resource": "*"},
+        ]
     if role_exists(ctx, DEPLOY_ROLE):
         current = iam.get_role(RoleName=DEPLOY_ROLE)["Role"]["AssumeRolePolicyDocument"]
         policy = ignore(("NoSuchEntity",))(lambda: iam.get_role_policy(RoleName=DEPLOY_ROLE, PolicyName=f"{P}-deploy"))

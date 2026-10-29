@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["bom1"],
+  "git": {
+    "deploymentEnabled": { "main": false, "develop": false }
+  },
   "buildCommand": "cd bseva-export && NODE_ENV=production VITE_API_URL= VITE_ADMIN_PATH=${VITE_ADMIN_PATH:-/bseva-ops-m8k4q} pnpm run build:web",
   "outputDirectory": "bseva-export/dist/public",
   "installCommand": "cd bseva-export && corepack enable && pnpm install --frozen-lockfile",

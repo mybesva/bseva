@@ -1,0 +1,50 @@
+name: CI
+
+# Required checks for every pull request into develop (feature/fix work) and main (releases).
+# Branch rulesets require: "checks / Backend tests", "checks / Migrations (PostgreSQL 17)", "checks / Static checks",
+# "checks / Docker images build" and "Release source".
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+    with:
+      migration_base: ${{ github.base_ref }}
+      build_images: true
+
+  release-source:
+    name: Release source
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Releases to main come from develop
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          EMERGENCY: ${{ contains(github.event.pull_request.labels.*.name, 'emergency-hotfix') }}
+        run: |
+          if [ "$BASE" != main ]; then
+            echo "PR into $BASE: no source restriction."; exit 0
+          fi
+          if [ "$SAME_REPO" != true ]; then
+            echo "::error::Release PRs must come from this repository."; exit 1
+          fi
+          if [ "$HEAD" = develop ]; then
+            echo "Release PR develop → main."; exit 0
+          fi
+          if [[ "$HEAD" == hotfix/* && "$EMERGENCY" == true ]]; then
+            echo "::warning::Emergency hotfix $HEAD → main. It must already be merged into develop and pass QA, or Production will refuse to deploy it without an emergency override (docs/deployment/CI-CD.md)."
+            exit 0
+          fi
+          echo "::error::PRs into main must come from develop (or hotfix/* labelled emergency-hotfix). Got: $HEAD"
+          exit 1
