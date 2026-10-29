@@ -90,6 +90,9 @@ Keep the original instance until the incident is closed. Rehearse this on QA (`b
 - **AWS** (`infra/aws/bseva_qa.py --env production plan` then `apply`): the Production deploy role trusts
   `…:environment:aws-production` only, can read the QA ECR repositories (promotion), read `/bseva/prod/build/*`,
   and create/prune `bseva-prod-predeploy-*` snapshots.
-- **GitHub**: environment `aws-production` (required reviewers, `main` only, admins cannot bypass); rulesets on
-  `main` and `develop`; environment `qa` limited to `develop`.
+- **GitHub** (`.github/rulesets/apply.sh --apply`, as a repository admin; without `--apply` it only shows the
+  current state): environment `aws-production` (required reviewers, `main` only, admins cannot bypass) and the
+  rulesets in `.github/rulesets/` — `main` (PR only, 1 approval, merge commits, CI + `Release source` checks,
+  successful `qa` deployment, no force-push/deletion, no bypass), `develop` (PR only, CI checks), `staging`
+  (no force-push/deletion). Environment `qa` stays limited to `develop`.
 - **Vercel**: Project → Settings → Git → Production Branch = `staging`.
