@@ -603,6 +603,10 @@ def create_user(body: AdminUserIn, admin=Depends(require_any_permission("create_
     from app.public_ids import ensure_public_id
 
     ensure_public_id(db, user_id)
+    if body.role == "pujari":
+        from app.routers.notifications import notify_head_pujaris
+
+        notify_head_pujaris(db, pujari_id=user_id, pujari_name=body.name)
     db.commit()
     return {
         "ok": True,

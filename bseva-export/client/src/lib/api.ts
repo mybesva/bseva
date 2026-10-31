@@ -154,12 +154,12 @@ export async function openPujariDocument(docId: string) {
   window.open(URL.createObjectURL(blob), "_blank");
 }
 
-export async function openAdminPujariDocument(pujariId: string, docId: string) {
+export async function openAdminPujariDocument(pujariId: string, docId: string, base = "/admin/pujaris") {
   const headers = new Headers();
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(
-    `${apiBase()}/api/v1/admin/pujaris/${pujariId}/documents/${docId}/file`,
+    `${apiBase()}/api/v1${base}/${pujariId}/documents/${docId}/file`,
     { headers }
   );
   if (!res.ok) throw new Error("Could not open document");
@@ -232,6 +232,7 @@ export type AuthUser = {
   preferred_language?: string;
   calendar_preference?: string;
   profile?: Record<string, unknown> | null;
+  rating?: { average: number | null; count: number };
 };
 
 export type LoginOut = {

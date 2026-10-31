@@ -2,6 +2,7 @@ import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import { PujariPortal } from "@/components/RolePortals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,17 +125,25 @@ function ServiceBucket({
   );
 }
 
-export default function PujariDetailPage() {
+/** Read-only for Head Pujaris: same page, their GET-only API, and every action hidden. */
+export function HeadPujariDetailPage() {
+  return <PujariDetailPage headView />;
+}
+
+export default function PujariDetailPage({ headView = false }: { headView?: boolean }) {
   const params = useParams<{ id: string }>();
   const id = params.id || "";
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { levels } = usePujariLevels();
   const { can } = useAdminCan();
-  const canEdit = can("edit_pujaris");
-  const canVerify = can("verify_pujaris");
-  const canHead = can("approve_pujaris");
-  const canBlock = can("block_pujaris");
+  const canEdit = !headView && can("edit_pujaris");
+  const canVerify = !headView && can("verify_pujaris");
+  const canHead = !headView && can("approve_pujaris");
+  const canBlock = !headView && can("block_pujaris");
+  const apiBase = headView ? "/head/pujari-directory" : "/admin/pujaris";
+  const listPath = headView ? "/pujari/head/pujaris" : adminPath("/pujaris");
+  const Frame = headView ? PujariPortal : AdminLayout;
 
   const [loading, setLoading] = useState(true);
   const [editingRaw, setEditing] = useState(() => new URLSearchParams(search).get("edit") === "1");
@@ -163,7 +172,7 @@ export default function PujariDetailPage() {
         documents: any[];
         verification_history: any[];
         referral_code: string | null;
-      }>(`/admin/pujaris/${id}`);
+      }>(`${apiBase}/${id}`);
       setProfile(data.profile);
       setDraft({ ...data.profile });
       setDocuments(data.documents || []);
@@ -172,7 +181,7 @@ export default function PujariDetailPage() {
       setVerifyLevel(Number(data.profile?.approved_level || data.profile?.requested_level || 2));
       setRejectionReason(data.profile?.rejection_reason || "");
       try {
-        const offers = await api<any>(`/admin/pujaris/${id}/service-offers`);
+        const offers = await api<any>(`${apiBase}/${id}/service-offers`);
         setServiceOffers(offers);
         setVerifiedDraft(new Set(offers.verified_service_ids || []));
       } catch {
@@ -314,9 +323,9 @@ export default function PujariDetailPage() {
 
   if (loading || !profile) {
     return (
-      <AdminLayout>
+      <Frame>
         <p className="text-muted-foreground">Loading…</p>
-      </AdminLayout>
+      </Frame>
     );
   }
 
@@ -327,10 +336,10 @@ export default function PujariDetailPage() {
   const ratingCount = profile.rating_count ?? profile.ratings_count ?? null;
 
   return (
-    <AdminLayout>
+    <Frame>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <Link href={adminPath("/pujaris")} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link href={listPath} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft size="0.875rem" />
             Back to pujaris
           </Link>
@@ -354,7 +363,11 @@ export default function PujariDetailPage() {
             {editing ? (
               <span className="font-semibold text-primary">Editing — save to update. Completing the profile auto-verifies.</span>
             ) : (
-              <span>Read-only view. Click Edit to change details or upload documents.</span>
+              <span>
+                {headView
+                  ? "Read-only view. Only Admin can verify or change a pujari. Contact Admin for any action."
+                  : "Read-only view. Click Edit to change details or upload documents."}
+              </span>
             )}
           </p>
         </div>
@@ -421,9 +434,11 @@ export default function PujariDetailPage() {
       <div className="space-y-6">
         <Card id="pujari-services">
           <CardHeader>
-            <CardTitle className="text-base">Admin verified services</CardTitle>
+            <CardTitle className="text-base">{headView ? "Services" : "Admin verified services"}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Only services in the Verified column (first) are used for bookings. Review in the three columns, then save.
+              {headView
+                    ? "Only services in the Verified column are used for bookings."
+                    : "Only services in the Verified column (first) are used for bookings. Review in the three columns, then save."}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -472,9 +487,9 @@ export default function PujariDetailPage() {
                 <div className="grid gap-4 lg:grid-cols-3">
                   <ServiceBucket
                     title="Verified"
-                    subtitle="Used for booking assignment — uncheck to remove"
+                    subtitle="Used for booking assignment"
                     accent="border-emerald-500/40 bg-emerald-50/30"
-                    empty="None verified yet — check items in Pending or All applied"
+                    empty={headView ? "None verified yet" : "None verified yet — check items in Pending or All applied"}
                     items={(serviceOffers.services || []).filter((s: any) => verifiedDraft.has(s.id))}
                     verifiedDraft={verifiedDraft}
                     readOnly={!canEdit}
@@ -940,7 +955,7 @@ export default function PujariDetailPage() {
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      void openAdminPujariDocument(id, d.id).catch((e: any) => toast.error(e.message))
+                      void openAdminPujariDocument(id, d.id, apiBase).catch((e: any) => toast.error(e.message))
                     }
                   >
                     View
@@ -1044,6 +1059,6 @@ export default function PujariDetailPage() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </Frame>
   );
 }

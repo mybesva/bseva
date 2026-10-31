@@ -16,7 +16,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminCustomers from "./pages/admin/Customers";
-import AdminPujaris from "./pages/admin/Pujaris";
+import AdminPujaris, { HeadPujarisPage } from "./pages/admin/Pujaris";
 import AdminTemples from "./pages/admin/Temples";
 import AdminServices from "./pages/admin/ServicesAdmin";
 import AdminRecommendations from "./pages/admin/Recommendations";
@@ -90,10 +90,9 @@ import CustomerInvoicesPage from "./pages/customer/InvoicesPage";
 import CustomerRewardsPage from "./pages/customer/RewardsPage";
 import SevaHub from "./pages/seva/SevaHub";
 import SevaEventDetail from "./pages/seva/SevaEventDetail";
-import MySevaPage from "./pages/customer/MySeva";
 import FamilySankalpPage from "./pages/customer/FamilySankalp";
 import PublicPujariProfile from "./pages/PublicPujariProfile";
-import AdminPujariDetail from "./pages/admin/PujariDetail";
+import AdminPujariDetail, { HeadPujariDetailPage } from "./pages/admin/PujariDetail";
 import { adminBasePath } from "./const";
 import { adminRoute } from "./components/AdminRouteGate";
 import { CustomerNotificationsPage, PujariNotificationsPage } from "./pages/NotificationsInbox";
@@ -122,7 +121,7 @@ function Router() {
       <Route path="/customer/support" component={CustomerSupportPage} />
       <Route path="/customer/invoices" component={CustomerInvoicesPage} />
       <Route path="/customer/rewards" component={CustomerRewardsPage} />
-      <Route path="/customer/my-seva" component={MySevaPage} />
+      <Route path="/customer/my-seva">{() => <RedirectTo to="/customer/bookings" />}</Route>
       <Route path="/customer/family-sankalp" component={FamilySankalpPage} />
       <Route path="/customer/terms" component={CustomerTermsPage} />
       <Route path="/pujari-profile/:id" component={PublicPujariProfile} />
@@ -132,6 +131,8 @@ function Router() {
       <Route path="/pujari/notifications" component={PujariNotificationsPage} />
       <Route path="/pujari" component={PujariDashboard} />
       <Route path="/pujari/head-ratings" component={HeadRatingsPage} />
+      <Route path="/pujari/head/pujaris/:id">{() => <HeadPujariDetailPage />}</Route>
+      <Route path="/pujari/head/pujaris">{() => <HeadPujarisPage />}</Route>
       <Route path="/pujari/onboarding" component={PujariOnboarding} />
       <Route path="/pujari/profile" component={PujariProfilePage} />
       <Route path="/pujari/angikara">{() => <RedirectTo to="/pujari/profile" />}</Route>

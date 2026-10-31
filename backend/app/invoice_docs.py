@@ -260,6 +260,10 @@ def _service_snapshot(db: Session, booking: dict) -> tuple[str, int | None]:
     )
 
 
+def gateway_fee_label(name: Any) -> str:
+    return f"{str(name or '').strip() or 'Payment Gateway'} Transaction Fee"
+
+
 def _customer_lines(booking: dict, service_name: str, sac: str, hsn: str) -> list[dict[str, Any]]:
     pkg = str(booking.get("package_type") or "standard").title()
     lines: list[dict[str, Any]] = []
@@ -285,6 +289,8 @@ def _customer_lines(booking: dict, service_name: str, sac: str, hsn: str) -> lis
     add("Alankaram", int(booking.get("alankaram_charge_paise") or 0), sac or hsn)
     add("Food / Prasadam", int(booking.get("food_charge_paise") or 0), sac or hsn)
     add("Weekend / festival surge", int(booking.get("peak_fee_paise") or 0), sac or hsn)
+    add("Platform Fee", int(booking.get("customer_platform_fee_paise") or 0), sac or hsn)
+    add(gateway_fee_label(booking.get("gateway_name")), int(booking.get("gateway_fee_paise") or 0), sac or hsn)
     known = sum(int(x["taxable_paise"]) for x in lines)
     gst_amt = int(booking.get("gst_amount_paise") or 0)
     discount = int(booking.get("discount_paise") or 0)
@@ -427,6 +433,26 @@ def _rate_label(snap: dict[str, Any], divisor: int = 1) -> str:
     return f" @ {rates.pop() / divisor:g}%"
 
 
+def fee_total_rows(snap: dict[str, Any]) -> list[tuple[str, int]]:
+    """Fees as their own rows, so the invoice reconciles against gateway and platform statements."""
+    fees = snap.get("fees") or {}
+    platform = int(fees.get("platform_fee_paise") or 0)
+    gateway = int(fees.get("gateway_fee_paise") or 0)
+    if not platform and not gateway:
+        return []
+    rows = [("Puja & Services", int(snap.get("subtotal_paise") or 0) - platform - gateway)]
+    if platform:
+        rows.append(("Platform Fee", platform))
+    if gateway:
+        percent = fees.get("gateway_fee_percent")
+        rows.append((f"{gateway_fee_label(fees.get('gateway_name'))}{f' ({float(percent):g}%)' if percent else ''}", gateway))
+    return rows
+
+
+def total_label(snap: dict[str, Any]) -> str:
+    return "TOTAL INVOICE AMOUNT" if "fees" in snap else "TOTAL"
+
+
 def gst_total_rows(snap: dict[str, Any]) -> list[tuple[str, int]]:
     """Only the tax components that apply: CGST with SGST/UTGST, or IGST, never both."""
     tax = snap.get("tax") or {}
@@ -523,6 +549,12 @@ def create_customer_invoice(db: Session, *, booking: dict, user_id: str) -> str 
         "taxable_paise": max(0, taxable - discount),
         "tax": tax,
         "gst_version": 1 if booking_tax else 0,
+        "fees": {
+            "platform_fee_paise": int(booking.get("customer_platform_fee_paise") or 0),
+            "gateway_fee_paise": int(booking.get("gateway_fee_paise") or 0),
+            "gateway_fee_percent": float(booking.get("gateway_fee_percent") or 0),
+            "gateway_name": booking.get("gateway_name"),
+        },
         "total_paise": total,
         "amount_in_words": amount_in_words(total),
         "terms": company["terms"],
@@ -811,9 +843,8 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     gst_invoice = bool(snap.get("gst_version"))
     row_html = _render_gst_line_rows(lines) if gst_invoice else _render_invoice_line_rows(lines)
 
-    totals: list[tuple[str, str]] = [
-        ("Subtotal", paise_inr(int(snap.get("subtotal_paise") or 0))),
-    ]
+    totals: list[tuple[str, str]] = [(label, paise_inr(value)) for label, value in fee_total_rows(snap)]
+    totals.append(("Subtotal", paise_inr(int(snap.get("subtotal_paise") or 0))))
     disc = int(snap.get("discount_paise") or 0)
     if disc:
         totals.append(("Discount", f"-{paise_inr(disc)}"))
@@ -827,9 +858,10 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     elif int(tax.get("gst_paise") or snap.get("gst_paise") or 0):
         totals.append(("GST", paise_inr(int(tax.get("gst_paise") or snap.get("gst_paise") or 0))))
     total_paise = int(snap.get("total_paise") or inv.get("total_paise") or 0)
-    totals.append(("TOTAL", paise_inr(total_paise)))
+    grand_label = total_label(snap)
+    totals.append((grand_label, paise_inr(total_paise)))
     totals_html = "".join(
-        f"<tr class='{'grand' if label == 'TOTAL' else ''}'><td class='label'>{html.escape(label)}</td>"
+        f"<tr class='{'grand' if label == grand_label else ''}'><td class='label'>{html.escape(label)}</td>"
         f"<td class='value'>{html.escape(value)}</td></tr>"
         for label, value in totals
     )

@@ -247,6 +247,31 @@ def create_notification(
     return nid
 
 
+def notify_head_pujaris(db: Session, *, pujari_id: str, pujari_name: str) -> int:
+    """Tell every active Head Pujari about a new pujari, linking to their read-only details."""
+    rows = db.execute(
+        text(
+            """
+            SELECT u.id FROM users u
+            JOIN pujari_profiles p ON p.user_id = u.id
+            WHERE u.role = 'head_pujari' AND COALESCE(p.is_head_pujari, FALSE) = TRUE
+              AND COALESCE(u.blocked, FALSE) = FALSE AND u.id <> CAST(:new_id AS uuid)
+            """
+        ),
+        {"new_id": pujari_id},
+    ).mappings().all()
+    for r in rows:
+        create_notification(
+            db,
+            user_id=str(r["id"]),
+            title="New pujari registered",
+            body=f"{pujari_name} registered as a pujari. Tap to view their details.",
+            category="kyc",
+            link=f"/pujari/head/pujaris/{pujari_id}",
+        )
+    return len(rows)
+
+
 def notify_ops_staff(
     db: Session,
     *,

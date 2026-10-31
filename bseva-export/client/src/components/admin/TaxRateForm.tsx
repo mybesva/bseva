@@ -13,6 +13,8 @@ export const TAX_LINE_LABELS: Record<string, string> = {
   samagri: "Samagri kit",
   alankaram: "Alankaram",
   food: "Food / Prasadam",
+  platform_fee: "Platform fee",
+  gateway_fee: "Payment gateway fee",
 };
 const CLASSIFICATION_LABELS: Record<string, string> = {
   taxable: "Taxable",

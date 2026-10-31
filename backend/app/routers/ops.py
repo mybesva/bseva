@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr, Field
@@ -367,6 +367,9 @@ def admin_config(user=Depends(require_permission("manage_config")), db: Session 
 
 @router.put("/admin/config")
 def update_config(body: SettingIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
+    super_only = body.key.startswith("reschedule_") or body.key in ("bseva_whatsapp_number", "support_phone", "support_email")
+    if super_only and not is_super_admin(user):
+        raise HTTPException(403, "Super Admin only")
     set_setting(db, body.key, body.value, str(user["id"]))
     write_audit(db, str(user["id"]), "config_update", "platform_settings", body.key)
     db.commit()
@@ -564,7 +567,8 @@ def admin_list_invoices(
     rows = db.execute(
         text(
             f"""
-            SELECT i.*, b.booking_number, u.name AS customer_name, u.email AS customer_email
+            SELECT i.*, b.booking_number, u.name AS customer_name, u.email AS customer_email,
+                   b.customer_platform_fee_paise, b.gateway_fee_paise, b.gateway_name
             FROM invoices i
             LEFT JOIN bookings b ON b.id = i.booking_id
             LEFT JOIN users u ON u.id = i.user_id
@@ -810,6 +814,69 @@ def _resolve_pujari_user_id(db: Session, raw: str) -> str:
             "Enter the pujari's UUID, email, or phone — numeric IDs like '2' are not supported",
         )
     return str(row["id"])
+
+
+def require_head_pujari(user=Depends(require_roles("head_pujari")), db: Session = Depends(get_db)):
+    active = db.execute(
+        text("SELECT is_head_pujari FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+        {"id": user["id"]},
+    ).scalar()
+    if not active:
+        raise HTTPException(403, "Not a Head Pujari")
+    return user
+
+
+def _without_bank_details(profile: dict) -> dict:
+    """Bank and UPI details stay with Admin; the Head Pujari brief covers everything else."""
+    return {k: v for k, v in profile.items() if not k.startswith(("bank_", "upi_"))}
+
+
+# The directory reuses the Admin read endpoints. These routes are GET only, so a Head Pujari has
+# no way to approve, edit or delete; every /admin write keeps its own permission check.
+@router.get("/head/pujari-directory")
+def head_pujari_directory(
+    status: str | None = None,
+    q: str | None = None,
+    sort_by: str | None = Query(None, alias="sort"),
+    sort_dir: str | None = Query(None, alias="dir"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    user=Depends(require_head_pujari),
+    db: Session = Depends(get_db),
+):
+    from app.routers.admin import list_pujaris
+
+    out = list_pujaris(
+        status=status, blocked=None, q=q, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size, user=user, db=db
+    )
+    return {**out, "items": [_without_bank_details(row) for row in out["items"]]}
+
+
+@router.get("/head/pujari-directory/{pujari_id}")
+def head_pujari_details(pujari_id: UUID, user=Depends(require_head_pujari), db: Session = Depends(get_db)):
+    from app.routers.admin_pujari import get_pujari_detail
+
+    out = get_pujari_detail(str(pujari_id), user=user, db=db)
+    return {**out, "profile": _without_bank_details(out["profile"])}
+
+
+@router.get("/head/pujari-directory/{pujari_id}/service-offers")
+def head_pujari_services(pujari_id: UUID, user=Depends(require_head_pujari), db: Session = Depends(get_db)):
+    from app.routers.admin_pujari import admin_get_service_offers
+
+    return admin_get_service_offers(str(pujari_id), admin=user, db=db)
+
+
+@router.get("/head/pujari-directory/{pujari_id}/documents/{doc_id}/file")
+def head_pujari_document(
+    pujari_id: UUID, doc_id: UUID, user=Depends(require_head_pujari), db: Session = Depends(get_db)
+):
+    from app.routers.admin_pujari import admin_document_file
+
+    response = admin_document_file(str(pujari_id), str(doc_id), user=user, db=db)
+    write_audit(db, str(user["id"]), "head_viewed_pujari_document", "pujari", str(pujari_id))
+    db.commit()
+    return response
 
 
 @router.get("/head/pujaris")

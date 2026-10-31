@@ -13,6 +13,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LegalAcceptRow } from "@/components/LegalAcceptRow";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
+import { BookingContactSupport } from "@/components/customer/BookingContactSupport";
+import { RescheduleSection } from "@/components/customer/RescheduleSection";
 import { TrackingMap } from "@/components/TrackingMap";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -577,6 +579,15 @@ export default function BookingDetail() {
                 showSuccessAlert(t("mobile.paymentSuccess")),
               )
             }
+          />
+        ) : null}
+
+        {!pujari ? <BookingContactSupport bookingNumber={String(b.booking_number || b.id)} /> : null}
+
+        {!pujari ? (
+          <RescheduleSection
+            bookingId={b.id}
+            onChanged={() => void qc.invalidateQueries({ queryKey: ["booking", id] })}
           />
         ) : null}
 

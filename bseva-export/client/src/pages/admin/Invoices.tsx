@@ -21,6 +21,9 @@ import { Link } from "wouter";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type InvoiceRow = {
+  customer_platform_fee_paise?: number | null;
+  gateway_fee_paise?: number | null;
+  gateway_name?: string | null;
   tax_flags?: string[];
   id: string;
   invoice_number: string;
@@ -135,7 +138,9 @@ export default function AdminInvoices() {
               <TableHead className="sticky top-0 z-20 bg-card border-b">Type</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Booking</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Customer</TableHead>
-              <TableHead className="sticky top-0 z-20 bg-card border-b">Amount</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Total invoice</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Platform fee</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Gateway fee</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Payment</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Email</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Issued</TableHead>
@@ -162,6 +167,8 @@ export default function AdminInvoices() {
                     <div className="text-xs text-muted-foreground">{inv.customer_email}</div>
                   </TableCell>
                   <TableCell>{rupees(inv.total_paise)}</TableCell>
+                  <TableCell>{Number(inv.customer_platform_fee_paise || 0) > 0 ? rupees(Number(inv.customer_platform_fee_paise)) : "—"}</TableCell>
+                  <TableCell title={inv.gateway_name || undefined}>{Number(inv.gateway_fee_paise || 0) > 0 ? rupees(Number(inv.gateway_fee_paise)) : "—"}</TableCell>
                   <TableCell>{displayTokenLabel(inv.payment_status || "paid")}</TableCell>
                   <TableCell>{displayTokenLabel(inv.email_status)}</TableCell>
                   <TableCell className="whitespace-nowrap">{formatDisplayDateTime(inv.created_at)}</TableCell>

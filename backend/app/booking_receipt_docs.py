@@ -72,7 +72,8 @@ def _payment_summary_rows(booking: dict[str, Any]) -> list[tuple[str, str]]:
         ("Alankaram", "alankaram_charge_paise"),
         ("Food / Prasadam", "food_charge_paise"),
         ("Weekend / Festival Surcharge", "peak_fee_paise"),
-        ("Platform Fee", "platform_fee_paise"),
+        ("Platform Fee", "customer_platform_fee_paise"),
+        (f"{str(booking.get('gateway_name') or 'Payment Gateway')} Transaction Fee", "gateway_fee_paise"),
     ]:
         amt = int(booking.get(key) or 0)
         if amt:

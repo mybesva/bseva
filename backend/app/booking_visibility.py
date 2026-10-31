@@ -102,7 +102,9 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
 
     if role == "customer":
         paid = str(data.get("payment_status") or "").lower() in ("paid", "successful", "completed")
-        if paid and data.get("status") in ("pending", "pending_acceptance", "confirmed"):
+        # A rescheduled puja has no pujari yet, so telling the customer it is confirmed would be untrue.
+        waiting_after_reschedule = awaiting_acceptance and int(data.get("reschedule_count") or 0) > 0
+        if paid and data.get("status") in ("pending", "pending_acceptance", "confirmed") and not waiting_after_reschedule:
             data["status"] = "confirmed"
             data["customer_display_status"] = "confirmed"
         else:

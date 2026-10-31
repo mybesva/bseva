@@ -14,6 +14,7 @@ export type AuthUser = {
   preferred_language?: LangCode | string;
   calendar_preference?: CalendarPref | string;
   profile?: Record<string, unknown> | null;
+  rating?: { average: number | null; count: number };
 };
 
 export type TokenOut = {
@@ -78,6 +79,10 @@ export type Quote = {
   basePrice?: number;
   locationAdjustment?: number;
   peakFee?: number;
+  customerPlatformFee?: number;
+  gatewayFee?: number;
+  gatewayFeePercent?: number;
+  gatewayName?: string;
   platformFee?: number;
   pujariShare?: number;
   gstPercent?: number;

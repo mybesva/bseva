@@ -373,6 +373,19 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             message_key="accepted",
             message_vars={"number": str(b.get("booking_number") or booking_id[:8])},
         )
+        if int(b.get("reschedule_count") or 0) > 0:
+            create_notification(
+                db,
+                user_id=pid,
+                title="Rescheduled puja assigned",
+                body=(
+                    f"Booking {b.get('booking_number') or booking_id[:8]} is assigned to you for "
+                    f"{b['booking_date'].strftime('%d-%m-%Y')} at {b['start_time'].strftime('%H:%M')}."
+                ),
+                category="booking",
+                link=f"/pujari/bookings/{booking_id}",
+                extra_data={"booking_id": booking_id},
+            )
     except Exception:
         pass
     db.commit()
@@ -1551,6 +1564,13 @@ def public_config(db: Session = Depends(get_db)):
         ),
         "customer_timezones": __import__("app.timezones", fromlist=["CUSTOMER_TIMEZONES"]).CUSTOMER_TIMEZONES,
         "bseva_whatsapp_number": str(get_setting(db, "bseva_whatsapp_number", "919014654994")),
+        # Blank settings fall back, so existing deployments keep showing the numbers they show today.
+        "support_phone": str(
+            get_setting(db, "support_phone", "") or get_setting(db, "bseva_whatsapp_number", "919014654994")
+        ),
+        "support_email": str(
+            get_setting(db, "support_email", "") or get_setting(db, "email_from_support", "support@b-seva.com")
+        ),
         "pujari_full_booking_details_before_hours": int(get_setting(db, "pujari_full_booking_details_before_hours", 20)),
         "puja_start_otp_before_minutes": int(get_setting(db, "puja_start_otp_before_minutes", 15)),
         "pujari_location_tracking_before_minutes": int(

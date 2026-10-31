@@ -110,3 +110,11 @@ def test_binding_covers_admin_action_settlement_amount_and_reference(changed):
 def test_audit_helper_has_no_mpin_or_otp_field():
     names = set(inspect.signature(sa.log_event).parameters)
     assert not names & {"mpin", "otp", "password"}
+
+
+@pytest.mark.parametrize("key", ["support_phone", "support_email", "bseva_whatsapp_number", "reschedule_cutoff_hours"])
+def test_only_super_admin_changes_support_contacts_and_reschedule_rules(key):
+    from app.routers import ops
+    with pytest.raises(HTTPException) as e:
+        ops.update_config(ops.SettingIn(key=key, value="x"), user={"id": "a", "role": "admin"}, db=None)
+    assert e.value.status_code == 403

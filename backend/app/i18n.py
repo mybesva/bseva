@@ -32,6 +32,14 @@ def coded_http(status: int, code: str, message: str) -> HTTPException:
 
 
 CUSTOMER_ERRORS: dict[str, dict[str, str]] = {
+    "PUJA_UNAVAILABLE_AT_ADDRESS": {
+        "en": "This Puja Is Not Available For This Address.",
+        "hi": "यह पूजा इस पते के लिए उपलब्ध नहीं है।",
+        "te": "ఈ పూజ ఈ చిరునామాకు అందుబాటులో లేదు.",
+        "mr": "ही पूजा या पत्त्यासाठी उपलब्ध नाही.",
+        "kn": "ಈ ಪೂಜೆ ಈ ವಿಳಾಸಕ್ಕೆ ಲಭ್ಯವಿಲ್ಲ.",
+        "ta": "இந்த பூஜை இந்த முகவரிக்கு கிடைக்கவில்லை.",
+    },
     "SERVICE_AREA_UNAVAILABLE": {
         "en": "BSeva service is not available at this location yet. Please try another address.",
         "hi": "इस स्थान पर BSeva सेवा अभी उपलब्ध नहीं है। कृपया दूसरा पता आज़माएँ।",

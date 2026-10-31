@@ -43,7 +43,7 @@ export default function CustomerServices() {
             {t("mobile.services")}
           </AppText>
           <Pressable
-            onPress={() => router.push("/customer/my-seva")}
+            onPress={() => router.push("/customer/(tabs)/bookings" as never)}
             accessibilityRole="button"
             accessibilityLabel={t("seva.mySeva")}
             hitSlop={8}

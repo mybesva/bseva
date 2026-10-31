@@ -16,6 +16,7 @@ const en: Record<string, string> = {
   "nav.about": "About Us",
   "nav.contact": "Contact",
   "nav.bookings": "My Bookings",
+  "nav.pujariDirectory": "Pujari Directory",
   "nav.appLanguage": "App Language",
   "nav.admin": "Admin",
   "nav.login": "Login",

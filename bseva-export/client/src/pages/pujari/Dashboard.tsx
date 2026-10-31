@@ -42,7 +42,7 @@ import {
   Wallet,
   ChevronRight,
 } from "lucide-react";
-import { format, isSameDay, isSameMonth } from "date-fns";
+import { format, isSameDay, isSameMonth, startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -128,6 +128,7 @@ function PujariDashboardContent() {
     };
   }, [rows]);
 
+  const today = startOfDay(now);
   const bookingDates = useMemo(() => {
     return rows
       .map((b) => (b.booking.bookingDate ? new Date(b.booking.bookingDate) : null))
@@ -593,14 +594,21 @@ function PujariDashboardContent() {
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
-                modifiers={{ booked: bookingDates }}
+                modifiers={{
+                  past: { before: today },
+                  booked: bookingDates.filter((date) => date >= today),
+                  pastBooked: bookingDates.filter((date) => date < today),
+                }}
                 modifiersClassNames={{
+                  past: PAST_DAY,
                   booked: "bg-primary/20 text-primary font-bold rounded-md",
+                  pastBooked: "bg-slate-200 dark:bg-slate-700 rounded-md font-bold",
                 }}
                 className="rounded-md border border-border"
               />
               <p className="text-xs text-muted-foreground mt-3">
-                Highlighted dates have assigned bookings.
+                Orange dates have upcoming bookings. Grey dates have passed, and a shaded grey date had a booking. Select
+                any date to see its bookings.
               </p>
 
               <div className="mt-6 space-y-2">
@@ -825,6 +833,9 @@ function PujariDashboardContent() {
     </>
   );
 }
+
+// Past days stay clickable so pujaris can open past bookings; a selected day keeps its normal colours.
+const PAST_DAY = "[&>button:not([data-selected-single=true])]:text-muted-foreground/60";
 
 export default function PujariDashboard() {
   return (

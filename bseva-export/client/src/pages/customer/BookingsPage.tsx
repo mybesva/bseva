@@ -1,13 +1,15 @@
-import { displayTokenLabel, translatedTokenLabel } from "@bseva/config";
+import { BOOKING_TYPE_FILTERS, displayTokenLabel, sevaTypeFilter, translatedTokenLabel } from "@bseva/config";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
+import type { SevaRegistration } from "@bseva/types";
 import { CustomerPortal } from "@/components/RolePortals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiBookings, rupees } from "@/lib/api";
+import SevaRegistrationCard from "@/components/customer/SevaRegistrationCard";
+import { api, apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { Calendar, Clock, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -66,6 +68,7 @@ function BookingCard({
             <PujaTitle name={booking.service_name} />
           </h3>
           <Badge className={statusColor(displayStatus)}>{displayLabel}</Badge>
+          <Badge variant="outline">Puja Booking</Badge>
         </div>
         <Button
           size="sm"
@@ -116,33 +119,62 @@ function BookingCard({
   );
 }
 
+type TypeFilter = (typeof BOOKING_TYPE_FILTERS)[number]["id"];
+type ListItem = { kind: "booking"; date: string; booking: any } | { kind: "seva"; date: string; reg: SevaRegistration };
+
+function typeFromSearch(search: string): TypeFilter {
+  const value = new URLSearchParams(search).get("type");
+  return BOOKING_TYPE_FILTERS.some((f) => f.id === value) ? (value as TypeFilter) : "all";
+}
+
+function matchesType(item: ListItem, type: TypeFilter) {
+  if (type === "all") return true;
+  if (item.kind === "booking") return type === "bookings";
+  return sevaTypeFilter(item.reg.service_type) === type;
+}
+
+function bucketOf(item: ListItem): "upcoming" | "completed" | "cancelled" {
+  const status = String(item.kind === "booking" ? item.booking.status : item.reg.status);
+  if (status === "completed") return "completed";
+  return CANCELLED.has(status) ? "cancelled" : "upcoming";
+}
+
 export default function CustomerBookingsPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const search = useSearch();
   const { t } = useI18n();
   const { user } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
+  const [registrations, setRegistrations] = useState<SevaRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("upcoming");
+  const type = typeFromSearch(search);
 
   async function load() {
     setLoading(true);
-    try {
-      const res = await apiBookings(1, 100);
+    // Loaded separately so a problem with one list never hides the other.
+    const [bookingResult, sevaResult] = await Promise.allSettled([
+      apiBookings(1, 100),
+      api<SevaRegistration[]>("/seva/my-registrations"),
+    ]);
+    if (bookingResult.status === "fulfilled") {
       const uid = user?.id ? String(user.id) : "";
-      const mine = (res.items || []).filter(
-        (b: any) => !uid || String(b.customer_id || "") === uid,
-      );
-      setBookings(mine);
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setLoading(false);
+      setBookings((bookingResult.value.items || []).filter((b: any) => !uid || String(b.customer_id || "") === uid));
+    } else {
+      toast.error(bookingResult.reason?.message || t("errors.generic"));
     }
+    if (sevaResult.status === "fulfilled") {
+      setRegistrations(Array.isArray(sevaResult.value) ? sevaResult.value : []);
+    } else {
+      toast.error(sevaResult.reason?.message || t("errors.generic"));
+    }
+    setLoading(false);
   }
 
   useEffect(() => {
     if (!user?.id) {
       setBookings([]);
+      setRegistrations([]);
       setLoading(false);
       return;
     }
@@ -151,43 +183,31 @@ export default function CustomerBookingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const upcoming = useMemo(
-    () =>
-      (bookings || [])
-        .filter((b) => !["completed", "cancelled", "refunded"].includes(b.status))
-        .sort((a, b) => String(a.booking_date || "").localeCompare(String(b.booking_date || ""))),
-    [bookings]
-  );
+  const lists = useMemo(() => {
+    const items: ListItem[] = [
+      ...bookings.map((booking) => ({ kind: "booking" as const, date: String(booking.booking_date || ""), booking })),
+      ...registrations.map((reg) => ({ kind: "seva" as const, date: String(reg.event_start_at || ""), reg })),
+    ].filter((item) => matchesType(item, type));
+    const inBucket = (bucket: string) => items.filter((item) => bucketOf(item) === bucket);
+    return {
+      upcoming: inBucket("upcoming").sort((a, b) => a.date.localeCompare(b.date)),
+      completed: inBucket("completed").sort((a, b) => b.date.localeCompare(a.date)),
+      cancelled: inBucket("cancelled").sort((a, b) => b.date.localeCompare(a.date)),
+    };
+  }, [bookings, registrations, type]);
 
-  const completed = useMemo(
-    () =>
-      (bookings || [])
-        .filter((b) => b.status === "completed")
-        .sort((a, b) => String(b.booking_date || "").localeCompare(String(a.booking_date || ""))),
-    [bookings]
-  );
-
-  const cancelled = useMemo(
-    () =>
-      (bookings || [])
-        .filter((b) => CANCELLED.has(b.status))
-        .sort((a, b) => String(b.booking_date || "").localeCompare(String(a.booking_date || ""))),
-    [bookings]
-  );
+  function setType(next: TypeFilter) {
+    setLocation(next === "all" ? location : `${location}?type=${next}`, { replace: true });
+  }
 
   function openReceipt(booking: any) {
-    rememberBookingListReturn("/customer/bookings");
+    rememberBookingListReturn(`${location}${search ? `?${search}` : ""}`);
     setLocation(`/booking/${booking.id}`);
   }
 
-  const lists: Record<string, any[]> = {
-    upcoming,
-    completed,
-    cancelled,
-  };
-
+  const showingSevaOnly = type !== "all" && type !== "bookings";
   const emptyMsg: Record<string, string> = {
-    upcoming: t("customer.noBookings"),
+    upcoming: showingSevaOnly ? t("seva.noRegistrations") : t("customer.noBookings"),
     completed: t("priest.completed"),
     cancelled: t("status.cancelled"),
   };
@@ -199,21 +219,41 @@ export default function CustomerBookingsPage() {
   return (
     <CustomerPortal>
       <Card className="card-static overflow-visible">
-        <CardHeader className="pb-2">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
           <CardTitle>{t("nav.bookings")}</CardTitle>
+          <Button type="button" variant="outline" asChild>
+            <Link href="/services">{t("seva.explore")}</Link>
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4 overflow-visible">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {BOOKING_TYPE_FILTERS.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                aria-pressed={type === filter.id}
+                onClick={() => setType(filter.id)}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  type === filter.id
+                    ? "border-primary bg-primary text-white"
+                    : "border-border bg-card text-foreground hover:border-primary/40"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
           <Tabs value={tab} onValueChange={setTab}>
             <div className="sticky top-16 z-30 -mx-6 border-b border-primary/15 bg-card px-6 py-3">
             <TabsList className="bg-secondary/30 h-auto min-h-12 w-full flex flex-wrap justify-start gap-2 overflow-visible p-1.5">
               <TabsTrigger value="upcoming" className="h-auto min-h-10 flex-none px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
-                {t("customer.upcoming")} ({upcoming.length})
+                {t("customer.upcoming")} ({lists.upcoming.length})
               </TabsTrigger>
               <TabsTrigger value="completed" className="h-auto min-h-10 flex-none px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
-                {t("status.completed")} ({completed.length})
+                {t("status.completed")} ({lists.completed.length})
               </TabsTrigger>
               <TabsTrigger value="cancelled" className="h-auto min-h-10 flex-none px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
-                {t("status.cancelled")} ({cancelled.length})
+                {t("status.cancelled")} ({lists.cancelled.length})
               </TabsTrigger>
             </TabsList>
             </div>
@@ -225,14 +265,18 @@ export default function CustomerBookingsPage() {
                   <p className="text-sm text-muted-foreground py-6 text-center">{emptyMsg[key]}</p>
                 )}
                 {!loading &&
-                  lists[key].map((booking) => (
-                    <BookingCard
-                      key={booking.id}
-                      booking={booking}
-                      compact={key !== "upcoming"}
-                      onOpen={() => openReceipt(booking)}
-                    />
-                  ))}
+                  lists[key].map((item) =>
+                    item.kind === "booking" ? (
+                      <BookingCard
+                        key={item.booking.id}
+                        booking={item.booking}
+                        compact={key !== "upcoming"}
+                        onOpen={() => openReceipt(item.booking)}
+                      />
+                    ) : (
+                      <SevaRegistrationCard key={item.reg.id} reg={item.reg} />
+                    ),
+                  )}
               </TabsContent>
             ))}
           </Tabs>

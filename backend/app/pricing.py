@@ -186,6 +186,20 @@ def surge_paise(
     return peak_fee, reason
 
 
+def customer_fee_settings(db: Session) -> dict:
+    """Admin-set fees added to every booking: a flat platform fee and a gateway fee percentage."""
+    try:
+        platform = max(0, int(get_setting(db, "customer_platform_fee_paise", 900)))
+    except (TypeError, ValueError):
+        platform = 900
+    try:
+        percent = min(100.0, max(0.0, float(get_setting(db, "payment_gateway_fee_percent", 2))))
+    except (TypeError, ValueError):
+        percent = 2.0
+    name = str(get_setting(db, "payment_gateway_name", "Razorpay") or "").strip() or "Payment Gateway"
+    return {"platform_fee_paise": platform, "gateway_fee_percent": percent, "gateway_name": name}
+
+
 def compute_quote(
     db: Session,
     *,
@@ -323,10 +337,32 @@ def compute_quote(
         discount_paise=int(discount_paise or 0) + int(wallet_credit_paise or 0),
         fallback_rate=float(pricing["gst_percent"]),
     )
-    gst_amt = int(tax["tax_paise"])
-    rates = {line["gst_rate"] for line in tax["lines"]}
-    gst_pct = rates.pop() if len(rates) == 1 else round(gst_amt * 100 / subtotal, 2) if subtotal else 0.0
-    total = subtotal + gst_amt
+    fees = customer_fee_settings(db)
+    customer_platform_fee = fees["platform_fee_paise"]
+
+    def fee_tax(line_type: str, description: str, paise: int) -> dict:
+        # Fees are charged in full, so a puja discount never reduces them.
+        return quote_tax(
+            db,
+            amounts=[(line_type, description, paise)],
+            service_id=str(service["id"]),
+            package_type=package_type,
+            discount_paise=0,
+            fallback_rate=float(pricing["gst_percent"]),
+        )
+
+    platform_tax = fee_tax("platform_fee", "Platform Fee", customer_platform_fee)
+    gateway_label = f"{fees['gateway_name']} Transaction Fee"
+    # The gateway charges on everything it collects, so the percentage covers tax and the platform fee too.
+    before_gateway = subtotal + int(tax["tax_paise"]) + customer_platform_fee + int(platform_tax["tax_paise"])
+    gateway_fee = int(round(before_gateway * fees["gateway_fee_percent"] / 100))
+    gateway_tax = fee_tax("gateway_fee", gateway_label, gateway_fee)
+    tax_lines = [*tax["lines"], *platform_tax["lines"], *gateway_tax["lines"]]
+    gst_amt = int(tax["tax_paise"]) + int(platform_tax["tax_paise"]) + int(gateway_tax["tax_paise"])
+    taxable_total = subtotal + customer_platform_fee + gateway_fee
+    rates = {line["gst_rate"] for line in tax_lines}
+    gst_pct = rates.pop() if len(rates) == 1 else round(gst_amt * 100 / taxable_total, 2) if taxable_total else 0.0
+    total = taxable_total + gst_amt
     return {
         "basePrice": base,
         "mainPuja": base,
@@ -352,9 +388,13 @@ def compute_quote(
         "discount": int(discount_paise or 0),
         "walletCredit": int(wallet_credit_paise or 0),
         "subtotal": subtotal,
+        "customerPlatformFee": customer_platform_fee,
+        "gatewayFee": gateway_fee,
+        "gatewayFeePercent": fees["gateway_fee_percent"],
+        "gatewayName": fees["gateway_name"],
         "gstPercent": gst_pct,
         "gstAmount": gst_amt,
-        "taxLines": tax["lines"],
+        "taxLines": tax_lines,
         "totalAmount": total,
         "currency": pricing.get("currency") or "INR",
         "mode": str(mode or ""),

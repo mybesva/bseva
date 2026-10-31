@@ -19,7 +19,6 @@ export default function CustomerMore() {
   const router = useRouter();
   const items = [
     { href: "/customer/profile", label: t("mobile.profile"), icon: "person-outline" as const },
-    { href: "/customer/my-seva", label: t("seva.mySeva"), icon: "flower-outline" as const },
     { href: "/customer/family-sankalp", label: t("seva.familySankalp"), icon: "people-outline" as const },
     {
       href: "/customer/(tabs)/bookings?from=more",

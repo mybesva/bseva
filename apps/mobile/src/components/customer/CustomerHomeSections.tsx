@@ -33,7 +33,7 @@ export function SectionHeader({ title, actionLabel, onAction }: { title: string;
 const QUICK: { key: string; labelKey: string; icon: keyof typeof Ionicons.glyphMap; href: string; bg: string }[] = [
   { key: "book", labelKey: "nav.bookPuja", icon: "flower-outline", href: "/customer/services", bg: SAFFRON },
   { key: "bookings", labelKey: "nav.bookings", icon: "calendar-outline", href: "/customer/bookings", bg: "#0D2445" },
-  { key: "seva", labelKey: "seva.mySeva", icon: "sparkles-outline", href: "/customer/my-seva", bg: "#C65D3B" },
+  { key: "seva", labelKey: "seva.mySeva", icon: "sparkles-outline", href: "/customer/(tabs)/bookings", bg: "#C65D3B" },
   { key: "sankalp", labelKey: "seva.familySankalp", icon: "people-outline", href: "/customer/family-sankalp", bg: "#1B7A4A" },
 ];
 

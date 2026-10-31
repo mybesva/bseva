@@ -17,7 +17,7 @@ STATE_CODES: dict[str, str] = {
 }
 # Union territories without a legislature charge UTGST instead of SGST.
 UTGST_CODES = {"04", "26", "31", "35", "38"}
-LINE_TYPES = ("puja", "surge", "samagri", "alankaram", "food")
+LINE_TYPES = ("puja", "surge", "samagri", "alankaram", "food", "platform_fee", "gateway_fee")
 CLASSIFICATIONS = ("taxable", "exempt", "nil_rated")
 # Rates seen in CBIC schedules; anything else is flagged for review, not silently accepted.
 OFFICIAL_RATES = {Decimal(x) for x in ("0", "0.1", "0.25", "1", "1.5", "3", "5", "6", "7.5", "12", "18", "28", "40")}

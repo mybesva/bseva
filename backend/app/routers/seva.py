@@ -177,13 +177,14 @@ def register_for_event(
     try:
         from app.routers.notifications import create_notification
 
+        stype = reg.get("service_type")
         create_notification(
             db,
             user_id=str(user["id"]),
             title="Registration confirmed",
             body=f"Your registration {reg.get('registration_number')} is confirmed.",
             category="booking",
-            link=f"/my-seva/{reg['id']}",
+            link=f"/customer/bookings?type={'chadhava' if stype == 'chadhava' else 'pravachan' if stype == 'pravachan' else 'seva_puja'}",
             message_key="sevaRegistrationConfirmed",
             message_vars={"number": reg.get("registration_number"), "event_id": event_id},
         )

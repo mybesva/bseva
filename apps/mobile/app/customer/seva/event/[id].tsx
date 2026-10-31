@@ -1,5 +1,5 @@
 import type { FamilyMember, SevaEvent, ServicePackage } from "@bseva/types";
-import { rupees } from "@bseva/config";
+import { rupees, sevaTypeFilter } from "@bseva/config";
 import { ApiError } from "@bseva/api-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -156,7 +156,7 @@ export default function CustomerSevaEventDetail() {
       await apiClient.registerSevaEvent(String(id), body);
       await qc.invalidateQueries({ queryKey: ["my-seva-registrations"] });
       showSuccessAlert(t("seva.registrationConfirmed"));
-      router.replace("/customer/my-seva");
+      router.replace(`/customer/(tabs)/bookings?type=${sevaTypeFilter(event?.service_type)}` as never);
     } catch (e: unknown) {
       setError(sevaErrorMessage(t, e));
     } finally {
@@ -225,7 +225,7 @@ export default function CustomerSevaEventDetail() {
             {existingRegistration ? (
               <Card style={{ gap: 10 }}>
                 <AppText>{t("seva.alreadyRegisteredNote")}</AppText>
-                <PrimaryButton title={t("seva.mySeva")} onPress={() => router.replace("/customer/my-seva")} />
+                <PrimaryButton title={t("seva.mySeva")} onPress={() => router.replace(`/customer/(tabs)/bookings?type=${sevaTypeFilter(event?.service_type)}` as never)} />
               </Card>
             ) : registrationClosed ? (
               <ErrorBanner message={event.sold_out ? t("seva.soldOut") : t("seva.registrationClosed")} />

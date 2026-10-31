@@ -139,3 +139,25 @@ def test_customer_gstin_shown_only_when_valid():
     assert invoice_tax(snapshot([line()]), COMPANY, good)["customer_gstin"] == good
     tax = invoice_tax(snapshot([line()]), COMPANY, "BAD")
     assert tax["customer_gstin"] == "" and tax["blocking"] is False
+
+
+def test_fee_rows_show_platform_and_gateway_separately():
+    from app.invoice_docs import fee_total_rows, total_label
+
+    snap = {
+        "subtotal_paise": 110_900,
+        "fees": {"platform_fee_paise": 900, "gateway_fee_paise": 10_000, "gateway_fee_percent": 2, "gateway_name": "Razorpay"},
+    }
+    assert fee_total_rows(snap) == [
+        ("Puja & Services", 100_000),
+        ("Platform Fee", 900),
+        ("Razorpay Transaction Fee (2%)", 10_000),
+    ]
+    assert total_label(snap) == "TOTAL INVOICE AMOUNT"
+
+
+def test_invoices_issued_before_fees_keep_their_totals():
+    from app.invoice_docs import fee_total_rows, total_label
+
+    assert fee_total_rows({"subtotal_paise": 100}) == []
+    assert total_label({"subtotal_paise": 100}) == "TOTAL"

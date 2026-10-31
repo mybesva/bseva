@@ -217,7 +217,7 @@ def render_invoice_pdf_reportlab(inv: dict[str, Any]) -> bytes:
     )
     story.append(Spacer(1, 8))
 
-    from app.invoice_docs import gst_detail_lines, gst_rate_text, gst_total_rows
+    from app.invoice_docs import fee_total_rows, gst_detail_lines, gst_rate_text, gst_total_rows, total_label
 
     gst_invoice = bool(snap.get("gst_version"))
     if gst_invoice:
@@ -272,7 +272,8 @@ def render_invoice_pdf_reportlab(inv: dict[str, Any]) -> bytes:
     story.append(tbl)
     story.append(Spacer(1, 6))
 
-    totals: list[list[str]] = [["Subtotal", _inr(int(snap.get("subtotal_paise") or 0))]]
+    totals: list[list[str]] = [[label, _inr(value)] for label, value in fee_total_rows(snap)]
+    totals.append(["Subtotal", _inr(int(snap.get("subtotal_paise") or 0))])
     if int(snap.get("discount_paise") or 0):
         totals.append(["Discount", "-" + _inr(int(snap["discount_paise"]))])
     if gst_invoice:
@@ -285,7 +286,7 @@ def render_invoice_pdf_reportlab(inv: dict[str, Any]) -> bytes:
     elif int(tax.get("gst_paise") or 0):
         totals.append(["GST", _inr(int(tax["gst_paise"]))])
     total_paise = int(snap.get("total_paise") or inv.get("total_paise") or 0)
-    totals.append(["TOTAL", _inr(total_paise)])
+    totals.append([total_label(snap), _inr(total_paise)])
 
     totals_tbl = Table(
         [[Paragraph(f"<para alignment='right'>{label}</para>", muted), Paragraph(f"<para alignment='right'><b>{value}</b></para>", small)] for label, value in totals],

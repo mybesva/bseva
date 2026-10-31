@@ -139,7 +139,9 @@ def save_booking_tax(db: Session, booking_id: str, bill: dict, customer_id: str,
     snapshot = {
         "lines": bill.get("taxLines") or [],
         "tax_paise": int(bill.get("gstAmount") or 0),
-        "taxable_paise": int(bill.get("subtotal") or 0),
+        "taxable_paise": int(bill.get("subtotal") or 0)
+        + int(bill.get("customerPlatformFee") or 0)
+        + int(bill.get("gatewayFee") or 0),
         "discount_paise": int(bill.get("discount") or 0) + int(bill.get("walletCredit") or 0),
         "place_of_supply": pos,
     }

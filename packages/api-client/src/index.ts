@@ -351,7 +351,7 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     serviceAvailability(lat: number, lng: number, service_id?: string) {
-      return api<{ service_available: boolean }>(
+      return api<{ service_available: boolean; message?: string }>(
         `/service-availability${toQuery({ lat, lng, service_id })}`
       );
     },
@@ -417,6 +417,17 @@ export function createApiClient(opts: ApiClientOptions) {
 
     bookingPreparation(id: string) {
       return api(`/bookings/${id}/preparation`);
+    },
+
+    rescheduleSummary(id: string) {
+      return api(`/bookings/${id}/reschedule`);
+    },
+
+    rescheduleBooking(id: string, new_date: string, new_start_time: string) {
+      return api(`/bookings/${id}/reschedule`, {
+        method: "POST",
+        body: JSON.stringify({ new_date, new_start_time }),
+      });
     },
 
     cancelPreview(id: string) {

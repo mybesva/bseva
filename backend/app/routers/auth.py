@@ -408,7 +408,7 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
 
         apply_referral_code(db, user_id, body.referral_code)
     try:
-        from app.routers.notifications import notify_ops_staff
+        from app.routers.notifications import notify_head_pujaris, notify_ops_staff
 
         if body.account_type == "pujari":
             notify_ops_staff(
@@ -418,6 +418,7 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
                 category="kyc",
                 link="/admin/pujaris",
             )
+            notify_head_pujaris(db, pujari_id=user_id, pujari_name=display_name)
         else:
             notify_ops_staff(
                 db,
@@ -568,6 +569,9 @@ def me(user=Depends(current_user), db: Session = Depends(get_db)):
     elif user["role"] in ("pujari", "head_pujari"):
         p = db.execute(text("SELECT * FROM pujari_profiles WHERE user_id = :id"), {"id": user["id"]}).mappings().first()
         extra["profile"] = row_dict(p) if p else None
+        from app.booking_reschedule import pujari_rating_summary
+
+        extra["rating"] = pujari_rating_summary(db, str(user["id"]))
     return {**_public(user), **extra}
 
 

@@ -215,10 +215,27 @@ export const PUJARI_SUPPORT_CATS = [
   "puja_seva",
   "pujari",
   "samagri",
-  "rescheduling",
   "technical",
   "other",
 ] as const;
+
+export const BOOKING_TYPE_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "bookings", label: "Puja Bookings" },
+  { id: "seva_puja", label: "Group Puja" },
+  { id: "chadhava", label: "Chadhava" },
+  { id: "pravachan", label: "Pravachan" },
+] as const;
+
+/** My Bookings filter that shows one seva type. */
+export function sevaTypeFilter(serviceType?: string | null): string {
+  return serviceType === "chadhava" || serviceType === "pravachan" ? serviceType : "seva_puja";
+}
+
+export function sevaTypeLabel(serviceType?: string | null): string {
+  const id = sevaTypeFilter(serviceType);
+  return BOOKING_TYPE_FILTERS.find((f) => f.id === id)?.label || "Group Puja";
+}
 
 export function rupees(paise: number | null | undefined): string {
   return `₹${(Number(paise || 0) / 100).toLocaleString("en-IN")}`;
