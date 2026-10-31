@@ -235,8 +235,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     try {
       await action();
       toast.success(okMsg);
-      if (decision === "rejected") {
-        // After a reject the pujari may no longer be able to read this booking, so skip the reload.
+      if (decision === "rejected" || (decision === "cancelled" && viewerRole === "pujari")) {
+        // After stepping away the pujari may no longer be able to read this booking, so skip the reload.
         setRejectOpen(false);
         onUpdated?.({ decision });
         return;
@@ -816,12 +816,15 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 {cancelPreview.policy})
               </p>
               {viewerRole === "pujari" ? (
-                <p>
-                  Cancellation charge for you:{" "}
-                  <strong>
-                    {rupees(Number(cancelPreview.fee_paise || 0))} ({cancelPreview.fee_percent}%)
-                  </strong>
-                </p>
+                <>
+                  <p>
+                    Cancellation charge for you:{" "}
+                    <strong>
+                      {rupees(Number(cancelPreview.fee_paise || 0))} ({cancelPreview.fee_percent}%)
+                    </strong>
+                  </p>
+                  <p>This booking will go back to available pujaris.</p>
+                </>
               ) : (
                 <>
                   <p>

@@ -162,8 +162,11 @@ def refresh_offers_for_open_bookings(
     return invited
 
 
-def create_offers_for_booking(db: Session, booking_id: str) -> list[str]:
-    """Invite all eligible nearby pujaris. Returns list of notified pujari ids."""
+def create_offers_for_booking(db: Session, booking_id: str, *, reinvite: bool = False) -> list[str]:
+    """Invite all eligible nearby pujaris. Returns list of notified pujari ids.
+
+    reinvite also reopens offers those pujaris already answered, for a booking going back out.
+    """
     ensure_offers_table(db)
     b = db.execute(
         text(
@@ -196,14 +199,21 @@ def create_offers_for_booking(db: Session, booking_id: str) -> list[str]:
         end_time=b["end_time"],
         service_id=str(b["service_id"]),
     )
+    on_conflict = (
+        """DO UPDATE SET status = 'invited', invited_at = NOW(), responded_at = NULL,
+             rejection_reason = NULL, distance_km = EXCLUDED.distance_km
+           WHERE booking_pujari_offers.status <> 'invited'"""
+        if reinvite
+        else "DO NOTHING"
+    )
     invited: list[str] = []
     for pid, dist in candidates:
         ins = db.execute(
             text(
-                """
+                f"""
                 INSERT INTO booking_pujari_offers (id, booking_id, pujari_id, status, distance_km)
                 VALUES (CAST(:id AS uuid), CAST(:bid AS uuid), CAST(:pid AS uuid), 'invited', :dist)
-                ON CONFLICT (booking_id, pujari_id) DO NOTHING
+                ON CONFLICT (booking_id, pujari_id) {on_conflict}
                 RETURNING pujari_id
                 """
             ),

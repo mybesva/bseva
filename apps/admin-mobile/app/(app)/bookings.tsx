@@ -2,6 +2,7 @@ import {
   ADMIN_ASSIGNMENT_FILTERS,
   ADMIN_BOOKING_STATUS_FILTERS,
   ADMIN_DATE_RANGE_FILTERS,
+  adminBookingDisplayStatus,
   adminBookingLast30Range,
   displayTokenLabel,
   rupees,
@@ -25,6 +26,7 @@ type BookingRow = Booking & {
   customer_timezone?: string;
   schedule_display?: { customer_local?: string; india_local?: string };
   needs_reassignment?: boolean;
+  has_open_offer?: boolean;
   payment_status?: string;
 };
 
@@ -176,9 +178,9 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
                   ) : (
                     <AppText variant="h3">{b.booking_number}</AppText>
                   )}
-                  <StatusBadge status={b.status} />
+                  <StatusBadge status={adminBookingDisplayStatus(b)} />
                 </View>
-                <AppText variant="small">{b.customer_name} · {b.pujari_name || "Needs assignment"}</AppText>
+                <AppText variant="small">{b.customer_name} · {b.pujari_name ? (["pending", "pending_acceptance"].includes(String(b.status)) ? `${b.pujari_name} (awaiting acceptance)` : b.pujari_name) : "Needs assignment"}</AppText>
                 {isVirtual ? (
                   <>
                     <AppText variant="small" color={colors.mutedForeground}>

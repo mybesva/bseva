@@ -5,6 +5,7 @@ import {
   ArrowRight,
   CalendarCheck,
   CalendarClock,
+  CalendarX,
   Clock,
   Clock3,
   LayoutGrid,
@@ -53,13 +54,10 @@ type OpsDashboardData = {
   bookings?: {
     today: number;
     upcoming: number;
-    pending_acceptance: number;
-    unassigned: number;
-    needs_reassignment: number;
+    queues: Record<string, number>;
     in_progress: number;
     completed_this_month: number;
     cancelled_this_month: number;
-    status_breakdown: Record<string, number>;
     last_7_days: { day: string; count: number }[];
     today_schedule: {
       id: string;
@@ -147,16 +145,17 @@ export default function OpsDashboard() {
   const attention: AttentionItem[] = [];
   if (b) {
     attention.push(
-      { label: "Awaiting pujari acceptance", value: b.pending_acceptance, icon: Clock, tone: "amber", href: adminPath("/bookings?status=pending_acceptance") },
-      { label: "Unassigned bookings", value: b.unassigned, icon: UserX, tone: "rose", href: adminPath("/bookings?assignment=unassigned") },
-      { label: "Needs reassignment", value: b.needs_reassignment, icon: RefreshCw, tone: "rose", href: adminPath("/bookings?status=needs_reassignment") },
+      { label: "Waiting for pujari response", value: b.queues.waiting_pujari, icon: Clock, tone: "amber", href: adminPath("/bookings?status=waiting_pujari") },
+      { label: "Needs pujari assignment", value: b.queues.needs_assignment, icon: UserX, tone: "rose", href: adminPath("/bookings?status=needs_assignment") },
+      { label: "Puja date passed", value: b.queues.date_passed, icon: CalendarX, tone: "rose", href: adminPath("/bookings?status=date_passed") },
+      { label: "Puja not marked complete", value: b.queues.not_completed, icon: CalendarClock, tone: "amber", href: adminPath("/bookings?status=not_completed") },
     );
   }
   if (data?.virtual_puja) {
     attention.push({ label: "Virtual pujas without a pujari", value: data.virtual_puja.unassigned, icon: Video, tone: "violet", href: adminPath("/virtual-puja") });
   }
   if (data?.pujaris) {
-    attention.push({ label: "Pujaris to verify", value: data.pujaris.pending_verification, icon: ShieldCheck, tone: "amber", href: adminPath("/pujaris?status=pending") });
+    attention.push({ label: "Pujari's Profile Verification", value: data.pujaris.pending_verification, icon: ShieldCheck, tone: "amber", href: adminPath("/pujaris?status=pending") });
   }
   if (data?.reviews) {
     attention.push({ label: "Reviews awaiting moderation", value: data.reviews.pending, icon: Star, tone: "sky", href: adminPath("/reviews") });
@@ -235,7 +234,7 @@ export default function OpsDashboard() {
     },
   ].filter(Boolean) as { label: string; value: string; sub?: string; icon: typeof Clock; href: string }[];
 
-  const breakdown = Object.entries(b?.status_breakdown || {}).sort((x, y) => y[1] - x[1]);
+  const breakdown = Object.entries(b?.queues || {});
   const breakdownTotal = breakdown.reduce((s, [, n]) => s + n, 0) || 1;
   const trend = b?.last_7_days || [];
   const trendMax = Math.max(1, ...trend.map((d) => d.count));
@@ -423,7 +422,7 @@ export default function OpsDashboard() {
                 <div key={st} className={statusMeta(st).bar} style={{ width: `${(n / breakdownTotal) * 100}%` }} title={`${statusMeta(st).label}: ${n}`} />
               ))}
             </div>
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+            <ul className="grid gap-x-4 gap-y-1.5 2xl:grid-cols-2">
               {breakdown.map(([st, n]) => (
                 <li key={st}>
                   <Link href={adminPath(`/bookings?status=${st}`)}>

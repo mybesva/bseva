@@ -10,7 +10,22 @@ export const ADMIN_BOOKING_STATUS_FILTERS = [
   { id: "cancelled", label: "Cancelled" },
   { id: "rejected", label: "Rejected" },
   { id: "needs_reassignment", label: "Needs reassignment" },
+  { id: "waiting_pujari", label: "Waiting for pujari response" },
+  { id: "needs_assignment", label: "Needs pujari assignment" },
+  { id: "date_passed", label: "Puja date passed" },
+  { id: "confirmed_upcoming", label: "Confirmed (upcoming)" },
+  { id: "not_completed", label: "Puja not marked complete" },
 ] as const;
+
+/** Status for admin lists: a pending booking nobody has been asked to take reads "No pujari assigned". */
+export function adminBookingDisplayStatus(booking: {
+  status: string;
+  pujari_id?: string | null;
+  has_open_offer?: boolean;
+}): string {
+  const pending = booking.status === "pending" || booking.status === "pending_acceptance";
+  return pending && !booking.pujari_id && booking.has_open_offer === false ? "no_pujari_assigned" : booking.status;
+}
 
 export const ADMIN_ASSIGNMENT_FILTERS = [
   { id: "", label: "All assignments" },

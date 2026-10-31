@@ -97,6 +97,9 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
             data.pop(secret, None)
         return data
 
+    # Read before the customer view below shows paid pending bookings as confirmed.
+    awaiting_acceptance = data.get("status") in ("pending", "pending_acceptance")
+
     if role == "customer":
         paid = str(data.get("payment_status") or "").lower() in ("paid", "successful", "completed")
         if paid and data.get("status") in ("pending", "pending_acceptance", "confirmed"):
@@ -129,9 +132,10 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
         within_window = can_pujari_see_full(db, bd, st)
 
     if role == "customer" and str(data.get("customer_id")) == str(user.get("id")):
-        data["details_level"] = "full" if within_window else "customer_basic"
-        data["pujari_details_visible"] = within_window
-        if not within_window:
+        reveal = within_window and not awaiting_acceptance
+        data["details_level"] = "full" if reveal else "customer_basic"
+        data["pujari_details_visible"] = reveal
+        if not reveal:
             for k in (
                 "pujari_name",
                 "pujari_phone",
@@ -141,9 +145,11 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
                 data.pop(k, None)
             hours = int(pujari_hours_before_full(db))
             data["pujari_reveal_note"] = (
-                f"Pujari details will be shared within {hours} hours before your scheduled puja."
+                "Pujari details will be shared once a pujari accepts your booking."
+                if within_window
+                else f"Pujari details will be shared within {hours} hours before your scheduled puja."
             )
-        _attach_invite_urls(db, data, reveal_meet=within_window)
+        _attach_invite_urls(db, data, reveal_meet=reveal)
         return _finish()
 
     if role in ("pujari", "head_pujari"):

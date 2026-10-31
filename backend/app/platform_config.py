@@ -69,6 +69,9 @@ _DEFAULTS: dict[str, Any] = {
     "pujari_joining_fee_paise": 0,
     # Pujari no-show: 100% of that puja's cost is deducted from the pujari wallet
     "pujari_no_show_penalty_enabled": True,
+    # Pujari cancelling an accepted booking: allow it on a zero or negative wallet, down to this limit
+    "pujari_cancel_low_wallet_enabled": True,
+    "pujari_cancel_wallet_negative_limit_paise": 300000,
     # Cancellation charges (customer) — % of booking total
     "customer_cancel_fee_over_48h_percent": 10,
     "customer_cancel_fee_24_48h_percent": 50,

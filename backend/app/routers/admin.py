@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.booking_attention import booking_queue_counts
 from app.db import get_db
 from app.deps import require_roles
 from app.domain import row_dict
@@ -180,14 +181,12 @@ def stats_overview(user=Depends(require_super_admin), db: Session = Depends(get_
         f"date_trunc('month', created_at AT TIME ZONE 'Asia/Kolkata') = date_trunc('month', {today}::timestamp)"
     )
 
+    queues = booking_queue_counts(db)
     attention = {
-        "awaitingPujari": scalar("SELECT COUNT(*) FROM bookings WHERE status IN ('pending','pending_acceptance')"),
-        "unassigned": scalar(
-            "SELECT COUNT(*) FROM bookings WHERE pujari_id IS NULL AND status IN ('pending','pending_acceptance','confirmed')"
-        ),
-        "needsReassignment": scalar(
-            f"SELECT COUNT(*) FROM bookings WHERE COALESCE(needs_reassignment, FALSE) = TRUE AND {live} AND status <> 'completed'"
-        ),
+        "waitingPujari": queues["waiting_pujari"],
+        "needsAssignment": queues["needs_assignment"],
+        "datePassed": queues["date_passed"],
+        "notCompleted": queues["not_completed"],
         "inProgress": scalar("SELECT COUNT(*) FROM bookings WHERE status = 'in_progress'"),
         "openTickets": scalar("SELECT COUNT(*) FROM support_tickets WHERE status NOT IN ('resolved','closed')"),
         "overdueTickets": scalar(
@@ -199,7 +198,6 @@ def stats_overview(user=Depends(require_super_admin), db: Session = Depends(get_
         "pendingSettlements": scalar("SELECT COUNT(*) FROM bookings WHERE settlement_status = 'pending' AND status = 'completed'"),
     }
 
-    status_rows = q("SELECT status, COUNT(*) AS n FROM bookings GROUP BY status").mappings().all()
     trend_rows = q(
         f"""
         SELECT d::date AS day, COUNT(b.id) AS n
@@ -251,7 +249,7 @@ def stats_overview(user=Depends(require_super_admin), db: Session = Depends(get_
             "newCustomers": new_customers_month,
         },
         "attention": attention,
-        "statusBreakdown": {r["status"]: int(r["n"]) for r in status_rows},
+        "lifecycle": queues,
         "last7Days": [{"day": str(r["day"]), "count": int(r["n"])} for r in trend_rows],
         "todaySchedule": [row_dict(r) for r in todays],
         "recentBookings": [row_dict(r) for r in recent],
@@ -318,13 +316,7 @@ def ops_dashboard(user=Depends(require_admin), db: Session = Depends(get_db)):
             "upcoming": scalar(
                 f"SELECT COUNT(*) FROM bookings WHERE booking_date > {today} AND status IN ('pending','pending_acceptance','confirmed')"
             ),
-            "pending_acceptance": scalar("SELECT COUNT(*) FROM bookings WHERE status IN ('pending','pending_acceptance')"),
-            "unassigned": scalar(
-                "SELECT COUNT(*) FROM bookings WHERE pujari_id IS NULL AND status IN ('pending','pending_acceptance','confirmed')"
-            ),
-            "needs_reassignment": scalar(
-                f"SELECT COUNT(*) FROM bookings WHERE COALESCE(needs_reassignment, FALSE) = TRUE AND {live} AND status <> 'completed'"
-            ),
+            "queues": booking_queue_counts(db),
             "in_progress": scalar("SELECT COUNT(*) FROM bookings WHERE status = 'in_progress'"),
             "completed_this_month": scalar(
                 f"SELECT COUNT(*) FROM bookings WHERE status = 'completed' AND booking_date >= {month}::date"

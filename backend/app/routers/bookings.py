@@ -10,6 +10,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.audit import write_audit
+from app.booking_attention import BOOKING_QUEUES, mark_open_offers
 from app.db import get_db
 from app.deps import current_user, require_roles
 from app.rbac import ensure_admin_permission, ensure_booking_access, has_permission, is_super_admin
@@ -754,20 +756,6 @@ def create_booking(
                     ist_date,
                     start,
                 )
-            # Multiple eligible pujaris → broadcast offers. Auto-assign only when exactly one can take the slot.
-            preferred_id: str | None = None
-            if len(slot_candidates) == 1:
-                preferred_id = slot_candidates[0][0]
-            if preferred_id:
-                body.pujari_id = UUID(preferred_id)
-                has_pujari = True
-                logger.info(
-                    "booking_auto_assigned_pujari customer=%s pujari=%s service=%s date=%s",
-                    user["id"],
-                    preferred_id,
-                    body.service_id,
-                    ist_date,
-                )
 
     pujari = None
     if has_pujari:
@@ -875,7 +863,7 @@ def create_booking(
     meeting = None
     public_invite = None
     initial_status = "pending_acceptance"
-    needs_reassignment = not has_pujari
+    needs_reassignment = False
     # Paid bookings: with pujari → that pujari accepts; without → broadcast offers within 10 km
     try:
         # The advisory lock is the fast path. The savepoint is the final guard
@@ -1380,7 +1368,9 @@ def admin_booking_filters(
         extra += " AND COALESCE(b.mode, 'in_person') <> 'virtual' "
 
     st = (status or "").strip().lower()
-    if st == "needs_reassignment":
+    if st in BOOKING_QUEUES:
+        extra += f" AND {BOOKING_QUEUES[st]} "
+    elif st == "needs_reassignment":
         extra += """
           AND (
             COALESCE(b.needs_reassignment, FALSE) = TRUE
@@ -1461,6 +1451,10 @@ def list_bookings(
             if not has_permission(db, user, "view_virtual_puja", "manage_virtual_puja"):
                 raise HTTPException(403, "You do not have permission to view bookings")
             mode_n = "virtual"
+        if (status or "").strip().lower() in BOOKING_QUEUES:
+            from app.booking_offers import ensure_offers_table
+
+            ensure_offers_table(db)
         extra, filter_params = admin_booking_filters(
             mode=mode_n,
             status=status,
@@ -1497,7 +1491,7 @@ def list_bookings(
                 JOIN services s ON s.id = b.service_id
                 WHERE 1=1 {extra}
                 ORDER BY
-                  CASE WHEN COALESCE(b.needs_reassignment, FALSE) THEN 0 ELSE 1 END,
+                  CASE WHEN COALESCE(b.needs_reassignment, FALSE) OR b.pujari_id IS NULL THEN 0 ELSE 1 END,
                   CASE WHEN b.status = 'rejected' THEN 0 ELSE 1 END,
                   b.created_at DESC
                 LIMIT :lim OFFSET :off
@@ -1512,6 +1506,7 @@ def list_bookings(
             enrich_booking_pujari_team(item)
             utc = item.get("start_at_utc")
             item["schedule_display"] = display_pair(utc, item.get("customer_timezone"))
+        mark_open_offers(db, items)
         if stats and is_super_admin(user):
             pay = db.execute(
                 text(
@@ -1718,18 +1713,151 @@ def _cancel_actor(user: dict, booking: dict) -> str:
 def _cancel_fee_and_refund(db, booking, policy: dict, actor: str, total: int, paid: bool) -> tuple[int, int]:
     """Customer fee is % of booking total. Pujari under-24h / 100% is no-show (100% of puja cost)."""
     if actor == "pujari":
-        refund = total if paid else 0
+        # No customer refund: the booking stays live and goes back out to pujaris.
         if policy.get("late") or int(policy.get("fee_percent") or 0) >= 100:
             from app.no_show import penalty_paise_for_booking
 
-            return penalty_paise_for_booking(db, booking), refund
+            return penalty_paise_for_booking(db, booking), 0
         fee = int(round(total * int(policy.get("fee_percent") or 0) / 100)) if paid else 0
-        return fee, refund
+        return fee, 0
     if not paid:
         return 0, 0
     fee = int(round(total * int(policy.get("fee_percent") or 0) / 100))
     refund = int(round(total * int(policy.get("refund_percent") or 0) / 100))
     return fee, refund
+
+
+PUJARI_CANCEL_WALLET_BLOCKED = (
+    "Your wallet is zero or negative, that's why you can't cancel this booking. Please contact admin."
+)
+
+
+def _pujari_cancel_wallet_allowed(db, pujari_id: str, fee: int) -> bool:
+    """Admin settings decide whether a pujari short of funds may still cancel an accepted booking."""
+    from app.platform_config import get_setting
+
+    balance = int(
+        db.execute(
+            text("SELECT balance_paise FROM wallets WHERE user_id = CAST(:id AS uuid)"),
+            {"id": pujari_id},
+        ).scalar()
+        or 0
+    )
+    if not get_setting(db, "pujari_cancel_low_wallet_enabled", True):
+        return balance > 0 and balance >= fee
+    limit = max(0, int(get_setting(db, "pujari_cancel_wallet_negative_limit_paise", 300000) or 0))
+    return balance - fee >= -limit
+
+
+def _pujari_cancel_release(db, b, booking_id: str, user: dict, reason: str, fee: int, policy: dict) -> dict:
+    """Take the pujari off the booking, charge their penalty and send it back out to pujaris."""
+    from app.booking_state import set_booking_status
+
+    prev = str(b["pujari_id"])
+    hist = b.get("assignment_history") or []
+    if isinstance(hist, str):
+        try:
+            hist = json.loads(hist)
+        except Exception:
+            hist = []
+    if not isinstance(hist, list):
+        hist = []
+    hist.append(
+        {
+            "from": prev,
+            "to": None,
+            "by": str(user["id"]),
+            "at": date.today().isoformat(),
+            "prev_status": b.get("status"),
+            "reason": "pujari_cancelled",
+        }
+    )
+    db.execute(
+        text(
+            """
+            UPDATE bookings SET
+              pujari_id = NULL,
+              accepted_at = NULL,
+              assignment_history = CAST(:hist AS jsonb),
+              needs_reassignment = FALSE,
+              rejection_reason = NULL
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"hist": json.dumps(hist), "id": booking_id},
+    )
+    if b["status"] != "pending_acceptance":
+        set_booking_status(db, booking_id, "pending_acceptance", actor_id=str(user["id"]))
+    if fee > 0:
+        try:
+            apply_wallet(
+                db,
+                prev,
+                -fee,
+                "debit",
+                f"Cancel penalty {b['booking_number']}",
+                booking_id,
+                allow_overdraft=True,
+            )
+        except ValueError as e:
+            db.rollback()
+            raise HTTPException(400, f"Pujari cancel fee could not be deducted: {e}") from e
+    write_audit(db, str(user["id"]), f"pujari_cancel_released:{reason}", "booking", booking_id)
+
+    invited: list[str] = []
+    if b.get("mode") != "virtual":
+        from app.booking_offers import create_offers_for_booking
+
+        invited = create_offers_for_booking(db, booking_id, reinvite=True)
+    num = str(b.get("booking_number") or booking_id[:8])
+    try:
+        from app.booking_offers import notify_pujaris_new_offer
+        from app.routers.notifications import create_notification, customer_booking_link, notify_ops_staff
+
+        svc_name = db.execute(
+            text("SELECT name FROM services WHERE id = CAST(:id AS uuid)"), {"id": str(b["service_id"])}
+        ).scalar()
+        create_notification(
+            db,
+            user_id=str(b["customer_id"]),
+            title="Finding another pujari",
+            body=f"The pujari for booking {num} is no longer available. We are arranging another pujari for you.",
+            category="booking",
+            link=customer_booking_link(booking_id),
+            extra_data={"booking_id": booking_id},
+        )
+        if invited:
+            notify_pujaris_new_offer(
+                db,
+                pujari_ids=invited,
+                booking_id=booking_id,
+                booking_number=num,
+                service_name=str(svc_name or "Puja"),
+                service_id=str(b["service_id"]),
+            )
+        notify_ops_staff(
+            db,
+            title="Pujari cancelled a booking",
+            body=(
+                f"{num} was cancelled by the pujari and sent to {len(invited)} pujari(s)."
+                if invited
+                else f"{num} was cancelled by the pujari. No eligible pujari available — assign manually."
+            ),
+            category="ops",
+            link="/admin/bookings?status=waiting_pujari" if invited else "/admin/bookings?status=needs_assignment",
+        )
+    except Exception:
+        logger.exception("pujari_cancel_notifications_failed booking=%s", booking_id)
+    db.commit()
+    return {
+        "ok": True,
+        "actor": "pujari",
+        "fee_paise": fee,
+        "refund_paise": 0,
+        "policy": policy["policy"],
+        "status": "pending_acceptance",
+        "offers_sent": len(invited),
+    }
 
 
 @router.get("/bookings/{booking_id}/cancel-preview")
@@ -1746,20 +1874,21 @@ def cancel_preview(booking_id: str, user=Depends(current_user), db: Session = De
     total = int(b["total_paise"] or 0)
     paid = b["payment_status"] == "paid"
     fee, refund = _cancel_fee_and_refund(db, b, policy, actor, total, paid)
+    wallet_ok = actor != "pujari" or _pujari_cancel_wallet_allowed(db, str(b["pujari_id"]), fee)
     return {
         "ok": True,
         "actor": actor,
-        "allowed": True,
+        "allowed": wallet_ok,
         "policy": policy["policy"],
         "hours_until": policy.get("hours"),
         "min_hours": policy.get("min_hours"),
         "fee_percent": policy["fee_percent"],
-        "refund_percent": policy["refund_percent"] if actor == "customer" else (100 if paid else 0),
+        "refund_percent": policy["refund_percent"] if actor == "customer" else 0,
         "fee_paise": fee,
         "refund_paise": refund,
         "total_paise": total,
         "payment_status": b["payment_status"],
-        "message": None,
+        "message": None if wallet_ok else PUJARI_CANCEL_WALLET_BLOCKED,
     }
 
 
@@ -1787,7 +1916,9 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
     reason_clean = validate_cancel_reason(reason, required=True)
     reason_full = reason_clean
     if actor == "pujari":
-        reason_full = f"[pujari] {reason_full}"
+        if not _pujari_cancel_wallet_allowed(db, str(b["pujari_id"]), fee):
+            raise HTTPException(400, PUJARI_CANCEL_WALLET_BLOCKED)
+        return _pujari_cancel_release(db, b, booking_id, user, reason_clean, fee, policy)
     updated = db.execute(
         text(
             """
@@ -1820,20 +1951,6 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
     )
     if refund:
         apply_wallet(db, str(b["customer_id"]), refund, "credit", f"Refund {b['booking_number']}", booking_id)
-    if actor == "pujari" and fee > 0 and b.get("pujari_id"):
-        try:
-            apply_wallet(
-                db,
-                str(b["pujari_id"]),
-                -fee,
-                "debit",
-                f"Cancel penalty {b['booking_number']}",
-                booking_id,
-                allow_overdraft=True,
-            )
-        except ValueError as e:
-            db.rollback()
-            raise HTTPException(400, f"Pujari cancel fee could not be deducted: {e}") from e
     try:
         from app.routers.notifications import (
             create_notification,
@@ -1857,7 +1974,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             message_key="cancelled",
             message_vars={"number": num},
         )
-        if b.get("pujari_id") and actor != "pujari":
+        if b.get("pujari_id"):
             create_notification(
                 db,
                 user_id=str(b["pujari_id"]),
@@ -1868,14 +1985,6 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
                 extra_data={"booking_id": booking_id},
                 message_key="cancelled",
                 message_vars={"number": num},
-            )
-        if actor == "pujari":
-            notify_ops_staff(
-                db,
-                title="Pujari cancelled a booking",
-                body=f"{num} was cancelled by the pujari.",
-                category="ops",
-                link="/admin/bookings",
             )
     except Exception:
         pass

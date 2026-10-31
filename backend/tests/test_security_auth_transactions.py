@@ -452,3 +452,34 @@ def test_cron_rejects_wrong_secret(monkeypatch):
         ops._require_cron_auth(SimpleNamespace(headers={"authorization": "Bearer wrong"}))
     assert exc.value.status_code == 401
     ops._require_cron_auth(SimpleNamespace(headers={"authorization": "Bearer " + "s" * 40}))
+
+
+@pytest.mark.parametrize(
+    "enabled, limit, balance, fee, allowed",
+    [
+        (True, 300000, 0, 17700, True),  # zero wallet may go negative
+        (True, 300000, -282300, 17700, True),  # lands exactly on the limit
+        (True, 300000, -282301, 17700, False),  # one paisa past the limit
+        (True, 100000, 0, 150000, False),  # admin lowered the limit
+        (True, 500000, 0, 400000, True),  # admin raised the limit
+        (True, 300000, -300001, 0, False),  # already past it, even with no charge
+        (False, 300000, 0, 0, False),  # flag off: zero is refused even with no charge
+        (False, 300000, -100, 17700, False),
+        (False, 300000, 17699, 17700, False),  # flag off: must cover the charge
+        (False, 300000, 17700, 17700, True),
+    ],
+)
+def test_pujari_cancel_wallet_rules(monkeypatch, enabled, limit, balance, fee, allowed):
+    import app.platform_config as platform_config
+
+    settings = {"pujari_cancel_low_wallet_enabled": enabled, "pujari_cancel_wallet_negative_limit_paise": limit}
+    monkeypatch.setattr(platform_config, "get_setting", lambda db, key, default=None: settings[key])
+
+    class Db:
+        def execute(self, *a, **k):
+            return self
+
+        def scalar(self):
+            return balance
+
+    assert bookings._pujari_cancel_wallet_allowed(Db(), PUJ, fee) is allowed

@@ -79,7 +79,7 @@ export default function AdminBookingDetail() {
             <StatusBadge status={b.status} />
           </View>
           <AppText>Customer: {b.customer_name}</AppText>
-          <AppText>Pujari: {b.pujari_name || "Unassigned"}</AppText>
+          <AppText>Pujari: {b.pujari_name ? (["pending", "pending_acceptance"].includes(String(b.status)) ? `${b.pujari_name} (awaiting acceptance)` : b.pujari_name) : "Unassigned"}</AppText>
           <AppText>
             {b.booking_date} {b.start_time}
           </AppText>

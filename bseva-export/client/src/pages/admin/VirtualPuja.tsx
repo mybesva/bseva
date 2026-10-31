@@ -1,4 +1,4 @@
-import { assignmentEligibilityLead, displayTokenLabel } from "@bseva/config";
+import { adminBookingDisplayStatus, assignmentEligibilityLead, displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -295,6 +295,11 @@ export default function VirtualPuja() {
               <SelectItem value="cancelled">Cancelled</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="needs_reassignment">Needs reassignment</SelectItem>
+              <SelectItem value="waiting_pujari">Waiting for pujari response</SelectItem>
+              <SelectItem value="needs_assignment">Needs pujari assignment</SelectItem>
+              <SelectItem value="date_passed">Puja date passed</SelectItem>
+              <SelectItem value="confirmed_upcoming">Confirmed (upcoming)</SelectItem>
+              <SelectItem value="not_completed">Puja not marked complete</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -398,6 +403,8 @@ export default function VirtualPuja() {
             const needsAttention =
               Boolean(b.needs_reassignment) || b.status === "rejected" || !b.pujari_id;
             const canPenalise = ["confirmed", "in_progress", "completed", "cancelled"].includes(b.status);
+            const shownStatus = adminBookingDisplayStatus(b);
+            const noPujari = shownStatus === "no_pujari_assigned";
             return (
               <TableRow key={b.id} className={cn(needsAttention &&"bg-red-50 hover:bg-red-100/70")}>
                 <TableCell>{b.booking_number}</TableCell>
@@ -424,8 +431,8 @@ export default function VirtualPuja() {
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
-                    <Badge variant={statusVariant(b.status)}>{displayTokenLabel(b.status)}</Badge>
-                    {!b.pujari_id && (
+                    <Badge variant={noPujari ? "destructive" : statusVariant(b.status)}>{displayTokenLabel(shownStatus)}</Badge>
+                    {!b.pujari_id && !noPujari && (
                       <span className="text-xs font-medium text-red-700">Assign pujari</span>
                     )}
                     {b.pujari_id && b.needs_reassignment && (

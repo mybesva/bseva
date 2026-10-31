@@ -142,6 +142,21 @@ const PLATFORM_KEYS: PlatformKey[] = [
     hint: "When on, 100% of that puja’s cost is deducted from the pujari wallet.",
   },
   {
+    key: "pujari_cancel_low_wallet_enabled",
+    label: "Pujari can cancel with zero or negative wallet",
+    type: "boolean",
+    group: "pujari",
+    hint: "When on, a pujari can cancel an accepted booking even if the wallet is zero or negative, down to the limit below. When off, the wallet must be above zero and cover the charge.",
+  },
+  {
+    key: "pujari_cancel_wallet_negative_limit_paise",
+    label: "Pujari wallet negative limit (₹)",
+    type: "number",
+    group: "pujari",
+    money: true,
+    hint: "Cancelling is blocked if the charge would take the wallet below minus this amount. Example: 3000.",
+  },
+  {
     key: "assign_distance_rings_km",
     label: "Reassignment distance rings (km)",
     type: "json",

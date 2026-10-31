@@ -25,6 +25,14 @@ export const STATUS_META: Record<string, { label: string; bar: string; chip: str
   },
   cancelled: { label: "Cancelled", bar: "bg-slate-400", chip: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300" },
   rejected: { label: "Rejected", bar: "bg-rose-500", chip: "bg-rose-50 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300" },
+  needs_assignment: { label: "Needs pujari assignment", bar: "bg-rose-500", chip: "" },
+  waiting_pujari: { label: "Waiting for pujari response", bar: "bg-orange-400", chip: "" },
+  confirmed_upcoming: { label: "Confirmed (upcoming)", bar: "bg-sky-500", chip: "" },
+  puja_in_progress: { label: "In progress", bar: "bg-violet-500", chip: "" },
+  puja_completed: { label: "Completed", bar: "bg-emerald-500", chip: "" },
+  puja_closed: { label: "Cancelled", bar: "bg-slate-400", chip: "" },
+  date_passed: { label: "Date passed, no confirmed pujari", bar: "bg-amber-400", chip: "" },
+  not_completed: { label: "Date passed, not marked complete", bar: "bg-fuchsia-500", chip: "" },
 };
 
 export const statusMeta = (s: string) =>
@@ -73,7 +81,7 @@ export function greeting() {
 }
 
 export const CARD =
-  "rounded-3xl border border-[#EFE2CF] bg-white shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10 dark:bg-[#152238]";
+  "rounded-2xl border border-[#EFE2CF] bg-white shadow-[0_22px_40px_-36px_rgba(120,60,10,0.55)] dark:border-white/10 dark:bg-[#152238]";
 
 export function Panel({
   title,
@@ -89,11 +97,11 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn(CARD, "flex flex-col p-5 sm:p-6", className)}>
-      <header className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2.5 text-base font-bold text-[#0E1830] dark:text-white">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
-            <Icon size="1rem" />
+    <section className={cn(CARD, "flex flex-col p-3.5 sm:p-4", className)}>
+      <header className="mb-2.5 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-[#0E1830] dark:text-white">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFF1E4] text-[#FF7A00] dark:bg-[#FF7A00]/15">
+            <Icon size="0.875rem" />
           </span>
           {title}
         </h2>
@@ -127,15 +135,15 @@ export function Kpi({
 }) {
   return (
     <Link href={href}>
-      <a className={cn(CARD, "group block p-5 transition hover:-translate-y-0.5 hover:border-[#FF7A00]/40")}>
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-[0.8rem] font-semibold text-[#5B6478] dark:text-white/60">{label}</p>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF8A1F] to-[#E86A00] text-white shadow-[0_8px_18px_-10px_rgba(255,122,0,0.9)]">
-            <Icon size="1.1875rem" />
+      <a className={cn(CARD, "group block p-3 transition sm:p-3.5 hover:-translate-y-0.5 hover:border-[#FF7A00]/40")}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-xs font-semibold text-[#5B6478] dark:text-white/60">{label}</p>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF8A1F] to-[#E86A00] text-white shadow-[0_8px_18px_-10px_rgba(255,122,0,0.9)]">
+            <Icon size="1rem" />
           </span>
         </div>
-        <p className="mt-1 text-[1.7rem] font-bold leading-none tracking-tight text-[#0E1830] dark:text-white">{value}</p>
-        <div className="mt-2.5 flex items-center gap-2 text-xs">
+        <p className="mt-0.5 text-[1.4rem] font-bold leading-none sm:-mt-1 tracking-tight text-[#0E1830] dark:text-white">{value}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
           {trend != null && (
             <span
               className={cn(
@@ -149,7 +157,7 @@ export function Kpi({
               {Math.abs(trend)}%
             </span>
           )}
-          {sub && <span className="truncate text-[#5B6478] dark:text-white/55">{sub}</span>}
+          {sub && <span className="min-w-0 text-[#5B6478] dark:text-white/55">{sub}</span>}
         </div>
       </a>
     </Link>

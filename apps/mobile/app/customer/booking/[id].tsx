@@ -309,6 +309,27 @@ export default function BookingDetail() {
     );
   }
 
+  async function performPujariCancel() {
+    if (!b) return;
+    setBusyAction("cancel");
+    setError(null);
+    try {
+      await apiClient.cancelBooking(b.id, cancelReason.trim());
+      // The pujari may lose access to this booking, so don't wait on a re-fetch (same as reject).
+      void qc.invalidateQueries({ queryKey: ["bookings"] });
+      showSuccessAlert(t("mobile.bookingCancelledSuccess"), undefined, [
+        {
+          text: t("mobile.backToList"),
+          onPress: goBackToList,
+        },
+      ]);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : t("web.booking.actionFailed"));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function performRejectBooking() {
     if (!b) return;
     setBusyAction("reject");
@@ -589,18 +610,27 @@ export default function BookingDetail() {
                       message?: string;
                       allowed?: boolean;
                     };
+                    if (preview.allowed === false) {
+                      Alert.alert(t("mobile.cancelBookingQuestion"), preview.message, [{ text: t("mobile.keepBooking") }]);
+                      return;
+                    }
                     Alert.alert(
                       t("mobile.cancelBookingQuestion"),
-                      preview.message || `Fee ${rupees(preview.fee_paise)} · Refund ${rupees(preview.refund_paise)}. Fees are calculated by the server.`,
+                      preview.message ||
+                        (pujari
+                          ? `Fee ${rupees(preview.fee_paise)}. This booking will go back to available pujaris.`
+                          : `Fee ${rupees(preview.fee_paise)} · Refund ${rupees(preview.refund_paise)}. Fees are calculated by the server.`),
                       [
                         { text: t("mobile.keepBooking") },
                         {
                           text: t("booking.cancel"),
                           style: "destructive",
                           onPress: () =>
-                            void run("cancel", () => apiClient.cancelBooking(b.id, cancelReason.trim()), () =>
-                              showSuccessAlert(t("mobile.bookingCancelledSuccess")),
-                            ),
+                            pujari
+                              ? void performPujariCancel()
+                              : void run("cancel", () => apiClient.cancelBooking(b.id, cancelReason.trim()), () =>
+                                  showSuccessAlert(t("mobile.bookingCancelledSuccess")),
+                                ),
                         },
                       ],
                     );

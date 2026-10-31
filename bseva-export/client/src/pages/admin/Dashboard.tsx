@@ -17,6 +17,7 @@ import {
   Loader2,
   MapPin,
   Pencil,
+  CalendarX,
   RefreshCw,
   ShieldCheck,
   TrendingUp,
@@ -60,9 +61,10 @@ type Overview = {
   todayBookings: number;
   month: { revenue: number; revenueLastMonth: number; bookings: number; bookingsLastMonth: number; newCustomers: number };
   attention: Record<
-    | "awaitingPujari"
-    | "unassigned"
-    | "needsReassignment"
+    | "waitingPujari"
+    | "needsAssignment"
+    | "datePassed"
+    | "notCompleted"
     | "inProgress"
     | "openTickets"
     | "overdueTickets"
@@ -70,7 +72,7 @@ type Overview = {
     | "pendingSettlements",
     number
   >;
-  statusBreakdown: Record<string, number>;
+  lifecycle: Record<string, number>;
   last7Days: { day: string; count: number }[];
   todaySchedule: {
     id: string;
@@ -131,25 +133,32 @@ function SuperAdminDashboard() {
 
   const attention = [
     {
-      label: "Awaiting pujari acceptance",
-      value: a?.awaitingPujari,
+      label: "Waiting for pujari response",
+      value: a?.waitingPujari,
       icon: Clock,
       tone: "amber",
-      href: adminPath("/bookings?status=pending_acceptance"),
+      href: adminPath("/bookings?status=waiting_pujari"),
     },
     {
-      label: "Unassigned bookings",
-      value: a?.unassigned,
+      label: "Needs pujari assignment",
+      value: a?.needsAssignment,
       icon: UserX,
       tone: "rose",
-      href: adminPath("/bookings?assignment=unassigned"),
+      href: adminPath("/bookings?status=needs_assignment"),
     },
     {
-      label: "Needs reassignment",
-      value: a?.needsReassignment,
-      icon: RefreshCw,
+      label: "Puja date passed",
+      value: a?.datePassed,
+      icon: CalendarX,
       tone: "rose",
-      href: adminPath("/bookings?status=needs_reassignment"),
+      href: adminPath("/bookings?status=date_passed"),
+    },
+    {
+      label: "Puja not marked complete",
+      value: a?.notCompleted,
+      icon: CalendarClock,
+      tone: "amber",
+      href: adminPath("/bookings?status=not_completed"),
     },
     {
       label: "Pujas in progress",
@@ -167,14 +176,14 @@ function SuperAdminDashboard() {
       href: adminPath("/support"),
     },
     {
-      label: "Pujaris to verify",
+      label: "Pujari's Profile Verification",
       value: a?.pendingVerification,
       icon: ShieldCheck,
       tone: "amber",
       href: adminPath("/pujaris?status=pending"),
     },
     {
-      label: "Settlements pending",
+      label: "Pujari Settlement Pending",
       value: a?.pendingSettlements,
       icon: HandCoins,
       tone: "emerald",
@@ -191,7 +200,7 @@ function SuperAdminDashboard() {
   };
 
   const actionCount = a
-    ? a.awaitingPujari + a.unassigned + a.needsReassignment + a.overdueTickets + a.pendingVerification
+    ? a.waitingPujari + a.needsAssignment + a.datePassed + a.notCompleted + a.overdueTickets + a.pendingVerification
     : 0;
 
   const pujariStatus = [
@@ -208,7 +217,7 @@ function SuperAdminDashboard() {
     { label: "Blocked", value: ps.blocked, icon: Ban, cls: "text-slate-500", href: "/pujaris?status=blocked" },
   ];
 
-  const breakdown = Object.entries(ov?.statusBreakdown || {}).sort((x, y) => y[1] - x[1]);
+  const breakdown = Object.entries(ov?.lifecycle || {});
   const breakdownTotal = breakdown.reduce((s, [, n]) => s + n, 0) || 1;
   const trend = ov?.last7Days || [];
   const trendMax = Math.max(1, ...trend.map((d) => d.count));
@@ -217,7 +226,7 @@ function SuperAdminDashboard() {
 
   return (
     <>
-      <div className="soften-brand-mark space-y-6">
+      <div className="soften-brand-mark space-y-3">
         {loadError && (
           <p className="flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
             <AlertTriangle size="1rem" /> {loadError}
@@ -225,18 +234,18 @@ function SuperAdminDashboard() {
         )}
 
         {/* ── Welcome banner ── */}
-        <section className="relative isolate overflow-hidden rounded-3xl bg-[#071A33] px-6 py-7 text-white sm:px-8 sm:py-8">
+        <section className="relative isolate overflow-hidden rounded-2xl bg-[#071A33] px-4 py-3 text-white sm:px-5 sm:py-3.5">
           <MandalaOutline className="pointer-events-none absolute -right-24 -top-28 -z-10 h-[26rem] w-[26rem] text-[#E8B15A] opacity-[0.13]" />
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_80%_at_85%_40%,rgba(255,122,0,0.22),transparent_70%)]" />
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:pr-8">
             <div className="min-w-0">
-              <p className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-[#E8C46A]">
-                <ShieldCheck size="0.8125rem" /> Admin console
+              <p className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/50 px-2.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.16em] text-[#E8C46A]">
+                <ShieldCheck size="0.75rem" /> Admin console
               </p>
-              <h1 className="mt-3 text-[1.75rem] font-bold leading-tight sm:text-[2rem]">
+              <h1 className="mt-1.5 text-xl font-bold leading-tight sm:text-[1.5rem]">
                 {greeting()}, <span className="text-[#FF9A2E]">{firstName}</span>
               </h1>
-              <p className="mt-1.5 text-sm text-white/70">
+              <p className="mt-0.5 text-[0.8rem] text-white/70">
                 {today}
                 {a && (
                   <>
@@ -250,16 +259,18 @@ function SuperAdminDashboard() {
                 )}
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3 lg:min-w-[27rem]">
+            <div className="grid grid-cols-3 gap-2 lg:min-w-[27rem]">
               {[
                 { label: "Today's pujas", value: fmt(ov?.todayBookings), icon: CalendarCheck },
                 { label: "In progress", value: fmt(a?.inProgress), icon: Loader2 },
                 { label: "Open tickets", value: fmt(a?.openTickets), icon: LifeBuoy },
               ].map((s) => (
-                <div key={s.label} className="rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm sm:p-4">
-                  <s.icon size="1rem" className="text-[#FF9A2E]" />
-                  <p className="mt-2 text-xl font-bold sm:text-2xl">{s.value}</p>
-                  <p className="text-[0.7rem] text-white/65 sm:text-xs">{s.label}</p>
+                <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.06] px-2.5 py-1.5 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5">
+                    <s.icon size="0.875rem" className="shrink-0 text-[#FF9A2E]" />
+                    <p className="text-lg font-bold leading-tight">{s.value}</p>
+                  </div>
+                  <p className="text-[0.7rem] leading-tight text-white/65">{s.label}</p>
                 </div>
               ))}
             </div>
@@ -268,7 +279,7 @@ function SuperAdminDashboard() {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="absolute right-4 top-4 rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+            className="absolute right-2 top-2 rounded-full p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
             aria-label="Refresh dashboard"
             title="Refresh"
           >
@@ -277,7 +288,7 @@ function SuperAdminDashboard() {
         </section>
 
         {/* ── KPIs ── */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Kpi
             label="Revenue this month"
             value={ov ? compactRupees(ov.month.revenue) : "—"}
@@ -311,9 +322,9 @@ function SuperAdminDashboard() {
         </div>
 
         {/* ── Attention + today's schedule ── */}
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <Panel title="Needs attention" icon={AlertTriangle}>
-            <ul className="space-y-2">
+            <ul className="grid gap-x-3 gap-y-1 sm:grid-cols-2">
               {attention.map((it) => {
                 const zero = !it.value;
                 return (
@@ -321,21 +332,21 @@ function SuperAdminDashboard() {
                     <Link href={it.href}>
                       <a
                         className={cn(
-                          "flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 transition hover:border-[#EFE2CF] hover:bg-[#FFF8EE] dark:hover:border-white/10 dark:hover:bg-white/5",
+                          "flex items-center gap-2.5 rounded-xl border border-transparent px-2 py-1.5 transition hover:border-[#EFE2CF] hover:bg-[#FFF8EE] dark:hover:border-white/10 dark:hover:bg-white/5",
                           zero && "opacity-60"
                         )}
                       >
-                        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", TONE[it.tone])}>
-                          <it.icon size="1.0625rem" />
+                        <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", TONE[it.tone])}>
+                          <it.icon size="0.9375rem" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-[#0E1830] dark:text-white">{it.label}</span>
+                          <span className="block truncate text-[0.8rem] font-semibold leading-tight text-[#0E1830] dark:text-white">{it.label}</span>
                           {"sub" in it && it.sub && (
-                            <span className="block text-xs font-semibold text-rose-600 dark:text-rose-300">{it.sub}</span>
+                            <span className="block text-[0.7rem] font-semibold leading-tight text-rose-600 dark:text-rose-300">{it.sub}</span>
                           )}
                         </span>
-                        <span className="text-lg font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(it.value)}</span>
-                        <ArrowRight size="0.9375rem" className="shrink-0 text-[#B9A58A]" />
+                        <span className="text-base font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(it.value)}</span>
+                        <ArrowRight size="0.8125rem" className="shrink-0 text-[#B9A58A]" />
                       </a>
                     </Link>
                   </li>
@@ -350,7 +361,7 @@ function SuperAdminDashboard() {
             action={{ label: "All bookings", href: adminPath("/bookings") }}
           >
             {ov && ov.todaySchedule.length === 0 ? (
-              <p className="flex flex-1 items-center justify-center rounded-2xl bg-[#FFF8EE] py-10 text-sm text-[#5B6478] dark:bg-white/5 dark:text-white/60">
+              <p className="flex flex-1 items-center justify-center rounded-xl bg-[#FFF8EE] py-4 text-sm text-[#5B6478] dark:bg-white/5 dark:text-white/60">
                 No pujas scheduled for today.
               </p>
             ) : (
@@ -358,8 +369,8 @@ function SuperAdminDashboard() {
                 {(ov?.todaySchedule || []).map((b) => {
                   const m = statusMeta(b.status);
                   return (
-                    <li key={b.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                      <div className="w-[4.5rem] shrink-0 rounded-xl bg-[#071A33] px-2 py-1.5 text-center text-xs font-bold text-white">
+                    <li key={b.id} className="flex items-center gap-2.5 py-1.5 first:pt-0 last:pb-0">
+                      <div className="w-[4.5rem] shrink-0 rounded-lg bg-[#071A33] px-1.5 py-1 text-center text-xs font-bold text-white">
                         {formatTime(b.start_time)}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -390,15 +401,15 @@ function SuperAdminDashboard() {
         </div>
 
         {/* ── Trend · status breakdown · pujari status ── */}
-        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
           <Panel title="Bookings · last 7 days" icon={TrendingUp}>
-            <p className="-mt-2 mb-4 text-xs text-[#5B6478] dark:text-white/55">{fmt(trendTotal)} new bookings this week</p>
-            <div className="flex h-40 items-end gap-2">
+            <p className="-mt-1.5 mb-1.5 text-xs text-[#5B6478] dark:text-white/55">{fmt(trendTotal)} new bookings this week</p>
+            <div className="flex h-24 items-end gap-2">
               {trend.map((d) => {
                 const date = new Date(`${d.day}T00:00:00`);
                 const isToday = d.day === trend[trend.length - 1]?.day;
                 return (
-                  <div key={d.day} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+                  <div key={d.day} className="flex h-full flex-1 flex-col items-center justify-end gap-0.5">
                     <span className="text-[0.7rem] font-bold text-[#0E1830] dark:text-white">{d.count}</span>
                     <div
                       className={cn(
@@ -417,18 +428,18 @@ function SuperAdminDashboard() {
           </Panel>
 
           <Panel title="Booking status" icon={CalendarClock} action={{ label: "View", href: adminPath("/bookings") }}>
-            <div className="mb-4 flex h-3 overflow-hidden rounded-full bg-[#F3E8D8] dark:bg-white/10">
+            <div className="mb-2.5 flex h-2 overflow-hidden rounded-full bg-[#F3E8D8] dark:bg-white/10">
               {breakdown.map(([s, n]) => (
                 <div key={s} className={statusMeta(s).bar} style={{ width: `${(n / breakdownTotal) * 100}%` }} title={`${statusMeta(s).label}: ${n}`} />
               ))}
             </div>
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+            <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-1">
               {breakdown.map(([s, n]) => (
                 <li key={s}>
                   <Link href={adminPath(`/bookings?status=${s}`)}>
-                    <a className="flex items-center gap-2 text-sm hover:underline">
+                    <a className="flex items-center gap-2 text-[0.8rem] hover:underline">
                       <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", statusMeta(s).bar)} />
-                      <span className="min-w-0 flex-1 truncate capitalize text-[#5B6478] dark:text-white/65">{statusMeta(s).label}</span>
+                      <span className="min-w-0 flex-1 truncate text-[#5B6478] dark:text-white/65">{statusMeta(s).label}</span>
                       <span className="font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(n)}</span>
                     </a>
                   </Link>
@@ -443,14 +454,14 @@ function SuperAdminDashboard() {
             action={{ label: "Manage", href: adminPath("/pujaris") }}
             className="lg:col-span-2 xl:col-span-1"
           >
-            <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-5 xl:grid-cols-2">
+            <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-5 xl:grid-cols-2">
               {pujariStatus.map((p, i) => (
                 <li key={p.label} className={cn(i === 0 && "xl:col-span-2")}>
                   <Link href={adminPath(p.href)}>
-                    <a className="flex items-center gap-2.5 rounded-2xl bg-[#FFF8EE] px-3 py-2.5 transition hover:bg-[#FFF1E4] dark:bg-white/5 dark:hover:bg-white/10">
-                      <p.icon size="1.125rem" className={p.cls} />
+                    <a className="flex items-center gap-2 rounded-xl bg-[#FFF8EE] px-2.5 py-1.5 transition hover:bg-[#FFF1E4] dark:bg-white/5 dark:hover:bg-white/10">
+                      <p.icon size="1rem" className={p.cls} />
                       <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#5B6478] dark:text-white/65">{p.label}</span>
-                      <span className="text-base font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(p.value)}</span>
+                      <span className="text-sm font-bold tabular-nums text-[#0E1830] dark:text-white">{fmt(p.value)}</span>
                     </a>
                   </Link>
                 </li>
@@ -460,17 +471,17 @@ function SuperAdminDashboard() {
         </div>
 
         {/* ── Recent bookings · top services ── */}
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <Panel title="Recent bookings" icon={UserPlus} action={{ label: "All bookings", href: adminPath("/bookings") }}>
             <div className="-mx-2 overflow-x-auto">
               <table className="w-full min-w-[34rem] text-sm">
                 <thead>
                   <tr className="text-left text-[0.7rem] uppercase tracking-wider text-[#8A7F70] dark:text-white/45">
-                    <th className="px-2 pb-2 font-semibold">Booking</th>
-                    <th className="px-2 pb-2 font-semibold">Customer</th>
-                    <th className="px-2 pb-2 font-semibold">Puja date</th>
-                    <th className="px-2 pb-2 font-semibold">Status</th>
-                    <th className="px-2 pb-2 text-right font-semibold">Amount</th>
+                    <th className="px-2 pb-1 font-semibold">Booking</th>
+                    <th className="px-2 pb-1 font-semibold">Customer</th>
+                    <th className="px-2 pb-1 font-semibold">Puja date</th>
+                    <th className="px-2 pb-1 font-semibold">Status</th>
+                    <th className="px-2 pb-1 text-right font-semibold">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F3E8D8] dark:divide-white/10">
@@ -478,22 +489,22 @@ function SuperAdminDashboard() {
                     const m = statusMeta(b.status);
                     return (
                       <tr key={b.id}>
-                        <td className="px-2 py-2.5">
-                          <p className="max-w-[13rem] truncate font-semibold text-[#0E1830] dark:text-white">{b.service_name || "Puja"}</p>
-                          <p className="text-xs text-[#8A7F70] dark:text-white/45">
+                        <td className="px-2 py-1">
+                          <p className="max-w-[13rem] truncate text-[0.8rem] font-semibold leading-tight text-[#0E1830] dark:text-white">{b.service_name || "Puja"}</p>
+                          <p className="text-[0.7rem] leading-tight text-[#8A7F70] dark:text-white/45">
                             {b.booking_number} · {timeAgo(b.created_at)}
                           </p>
                         </td>
-                        <td className="max-w-[9rem] truncate px-2 py-2.5 text-[#1A2B4A] dark:text-white/80">{b.customer_name || "—"}</td>
-                        <td className="whitespace-nowrap px-2 py-2.5 text-[#1A2B4A] dark:text-white/80">
+                        <td className="max-w-[9rem] truncate px-2 py-1 text-[#1A2B4A] dark:text-white/80">{b.customer_name || "—"}</td>
+                        <td className="whitespace-nowrap px-2 py-1 text-[#1A2B4A] dark:text-white/80">
                           {b.booking_date
                             ? new Date(`${b.booking_date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
                             : "—"}
                         </td>
-                        <td className="px-2 py-2.5">
+                        <td className="px-2 py-1">
                           <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[0.7rem] font-semibold", m.chip)}>{m.label}</span>
                         </td>
-                        <td className="whitespace-nowrap px-2 py-2.5 text-right font-bold text-[#0E1830] dark:text-white">
+                        <td className="whitespace-nowrap px-2 py-1 text-right font-bold text-[#0E1830] dark:text-white">
                           {compactRupees(b.total_paise)}
                         </td>
                       </tr>
@@ -505,13 +516,13 @@ function SuperAdminDashboard() {
           </Panel>
 
           <Panel title="Top pujas · 30 days" icon={TrendingUp} action={{ label: "Services", href: adminPath("/services") }}>
-            <ol className="space-y-3.5">
+            <ol className="space-y-2">
               {(ov?.topServices || []).map((s, i) => (
                 <li key={s.name}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span
                       className={cn(
-                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold",
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold",
                         i === 0 ? "bg-gradient-to-br from-[#F0C35A] to-[#C98A1A] text-[#071A33]" : "bg-[#071A33] text-white dark:bg-white/15"
                       )}
                     >
@@ -520,7 +531,7 @@ function SuperAdminDashboard() {
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[#0E1830] dark:text-white">{s.name}</span>
                     <span className="text-xs text-[#5B6478] dark:text-white/55">{fmt(s.count)} bookings</span>
                   </div>
-                  <div className="ml-10 mt-1.5 flex items-center gap-2">
+                  <div className="ml-8 mt-0.5 flex items-center gap-2">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#F3E8D8] dark:bg-white/10">
                       <div className="h-full rounded-full bg-gradient-to-r from-[#FF8A1F] to-[#E86A00]" style={{ width: `${(s.count / topMax) * 100}%` }} />
                     </div>

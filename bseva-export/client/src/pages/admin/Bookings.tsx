@@ -1,4 +1,4 @@
-import { assignmentEligibilityLead, displayTokenLabel } from "@bseva/config";
+import { adminBookingDisplayStatus, assignmentEligibilityLead, displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -97,6 +97,21 @@ function last30Dates() {
   return { from: isoDate(from), to: isoDate(to) };
 }
 
+// Opened from the dashboard's Booking status card, which covers in-person and virtual pujas.
+const DASHBOARD_STATUS_LABELS: Record<string, string> = {
+  puja_in_progress: "In progress (all)",
+  puja_completed: "Completed (all)",
+  puja_closed: "Cancelled (all)",
+};
+const BOOKING_QUEUE_STATUSES = [
+  "waiting_pujari",
+  "needs_assignment",
+  "confirmed_upcoming",
+  "date_passed",
+  "not_completed",
+  ...Object.keys(DASHBOARD_STATUS_LABELS),
+];
+
 export default function Bookings() {
   const { can } = useAdminCan();
   const canManage = can("manage_bookings");
@@ -163,7 +178,8 @@ export default function Bookings() {
   }
 
   async function load(p = urlPage) {
-    const extra: Record<string, string> = { mode: "physical" };
+    // Dashboard queues count in-person and virtual bookings, so their lists must too.
+    const extra: Record<string, string> = BOOKING_QUEUE_STATUSES.includes(statusFilter) ? {} : { mode: "physical" };
     if (statusFilter && statusFilter !== "all") extra.status = statusFilter;
     if (assignmentFilter && assignmentFilter !== "all") extra.assignment = assignmentFilter;
     const qParam = (params.get("q") || "").trim();
@@ -293,6 +309,14 @@ export default function Bookings() {
               <SelectItem value="cancelled">Cancelled</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="needs_reassignment">Needs reassignment</SelectItem>
+              <SelectItem value="waiting_pujari">Waiting for pujari response</SelectItem>
+              <SelectItem value="needs_assignment">Needs pujari assignment</SelectItem>
+              <SelectItem value="date_passed">Puja date passed</SelectItem>
+              <SelectItem value="confirmed_upcoming">Confirmed (upcoming)</SelectItem>
+              <SelectItem value="not_completed">Puja not marked complete</SelectItem>
+              {DASHBOARD_STATUS_LABELS[statusFilter] && (
+                <SelectItem value={statusFilter}>{DASHBOARD_STATUS_LABELS[statusFilter]}</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -394,20 +418,27 @@ export default function Bookings() {
             const needsAttention =
               Boolean(b.needs_reassignment) || b.status === "rejected" || !b.pujari_id;
             const canPenalise = ["confirmed", "in_progress", "completed", "cancelled"].includes(b.status);
+            const shownStatus = adminBookingDisplayStatus(b);
+            const noPujari = shownStatus === "no_pujari_assigned";
             return (
               <TableRow key={b.id} className={cn(needsAttention &&"bg-red-50 hover:bg-red-100/70")}>
                 <TableCell>{b.booking_number}</TableCell>
                 <TableCell>{b.service_name ? <PujaTitle name={b.service_name} as="span" /> : "—"}</TableCell>
                 <TableCell>{b.customer_name}</TableCell>
-                <TableCell>{b.pujari_name || "—"}</TableCell>
+                <TableCell>
+                  {b.pujari_name || "—"}
+                  {b.pujari_name && ["pending", "pending_acceptance"].includes(b.status) && (
+                    <div className="text-xs text-amber-700">Awaiting acceptance</div>
+                  )}
+                </TableCell>
                 <TableCell>
                   {formatDisplayDate(b.booking_date)} {b.start_time}
                 </TableCell>
                 <TableCell>{rupees(b.total_paise)}</TableCell>
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
-                    <Badge variant={statusVariant(b.status)}>{displayTokenLabel(b.status)}</Badge>
-                    {!b.pujari_id && (
+                    <Badge variant={noPujari ? "destructive" : statusVariant(b.status)}>{displayTokenLabel(shownStatus)}</Badge>
+                    {!b.pujari_id && !noPujari && (
                       <span className="text-xs font-medium text-red-700">Assign pujari</span>
                     )}
                     {b.pujari_id && b.needs_reassignment && (

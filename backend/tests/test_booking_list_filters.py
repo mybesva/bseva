@@ -36,3 +36,12 @@ def test_payment_status_filter():
     sql, _ = admin_booking_filters(status="needs_reassignment")
     assert "needs_reassignment" in sql
     assert "rejected" in sql
+
+
+def test_booking_queue_filters_use_shared_definitions():
+    from app.booking_attention import BOOKING_QUEUES
+
+    for name, queue_sql in BOOKING_QUEUES.items():
+        sql, params = admin_booking_filters(status=name)
+        assert queue_sql in sql
+        assert "status" not in params
