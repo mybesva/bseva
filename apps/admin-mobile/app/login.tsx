@@ -20,6 +20,32 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [challenge, setChallenge] = useState<{ token: string; emailHint: string } | null>(null);
+  const [otp, setOtp] = useState("");
+
+  async function enter(role: string) {
+    if (!isAdminRole(role)) {
+      await apiClient.logout();
+      setError(t("admin.rejectNonAdmin"));
+      return;
+    }
+    await refresh();
+    router.replace("/(app)");
+  }
+
+  async function onSubmitOtp() {
+    if (!challenge) return;
+    setError(null);
+    setPending(true);
+    try {
+      const out = await apiClient.completeLoginOtp(challenge.token, otp.trim());
+      await enter(out.user.role);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Login failed");
+    } finally {
+      setPending(false);
+    }
+  }
 
   async function onSubmit() {
     setError(null);
@@ -31,14 +57,13 @@ export default function AdminLogin() {
     }
     setPending(true);
     try {
-      const out = await apiClient.login(identifier.trim(), password);
-      if (!isAdminRole(out.user.role)) {
-        await apiClient.logout();
-        setError(t("admin.rejectNonAdmin"));
+      const out = await apiClient.startLogin(identifier.trim(), password);
+      if (out.otp_required && out.challenge_token) {
+        setPassword("");
+        setChallenge({ token: out.challenge_token, emailHint: out.email_hint || "your email" });
         return;
       }
-      await refresh();
-      router.replace("/(app)");
+      await enter(String(out.user?.role));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Login failed");
     } finally {
@@ -60,9 +85,31 @@ export default function AdminLogin() {
             </AppText>
             <View style={{ gap: 14 }}>
               <ErrorBanner message={error || rejectedReason} />
+              {challenge ? (
+                <>
+                  <AppText color={colors.mutedForeground}>Enter the 6-digit OTP sent to {challenge.emailHint}.</AppText>
+                  <Field label="One-time password" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
+                  <PrimaryButton title="Verify OTP" loading={pending} onPress={onSubmitOtp} />
+                  <PrimaryButton
+                    title="Resend OTP"
+                    variant="outline"
+                    onPress={async () => {
+                      setError(null);
+                      try {
+                        await apiClient.resendLoginOtp(challenge.token);
+                      } catch (e: unknown) {
+                        setError(e instanceof Error ? e.message : "Failed");
+                      }
+                    }}
+                  />
+                </>
+              ) : (
+              <>
               <Field label={t("auth.emailOrPhone")} value={identifier} onChangeText={setIdentifier} autoCapitalize="none" />
               <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
               <PrimaryButton title={pending ? t("admin.signingIn") : t("admin.signIn")} loading={pending} onPress={onSubmit} />
+              </>
+              )}
             </View>
           </Card>
         </ScrollView>

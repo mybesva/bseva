@@ -24,28 +24,25 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { adminServiceActivationError, buildAdminServicePayload, type AdminServiceForm } from "@bseva/config";
+import { adminServiceActivationError, buildAdminServicePayload, uniqueServiceSlug, type AdminServiceForm } from "@bseva/config";
+import { copyTextSafely } from "@/lib/browserActions";
+import { SamagriItemPicker } from "@/components/admin/SamagriItemPicker";
+import { TaxRateForm } from "@/components/admin/TaxRateForm";
 import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
-import { FolderTree, ImageIcon, Package, Pencil, Plus } from "lucide-react";
+import { Copy, FolderTree, ImageIcon, Package, Pencil, Plus } from "lucide-react";
 
-/** Gathering sizes for samagri scale quantities (B-Seva samagri guide): Small is the base. */
-const SAMAGRI_SIZES = [
-  { key: "qty_small", short: "S", label: "Small (1–4 people)", factor: 1 },
-  { key: "qty_medium", short: "M", label: "Medium (5–15)", factor: 1.5 },
-  { key: "qty_large", short: "L", label: "Large (15–50)", factor: 3 },
-  { key: "qty_grand", short: "G", label: "Grand (50+)", factor: 5 },
-] as const;
-type SamagriSizeKey = (typeof SAMAGRI_SIZES)[number]["key"];
+const KIT_PROVIDERS = ["BSEVA", "PUJARI", "INCLUDED_IN_SAMAGRI_PACKAGE"];
+const isKitItem = (it: { provided_by?: string | null }) =>
+  KIT_PROVIDERS.includes(String(it.provided_by || "").toUpperCase());
 
-/** Suggested size qty from the Small qty: "15" → "22.5"; "15 pcs" keeps its unit text. */
-function scaledQty(small: string, factor: number): string {
-  const m = small.trim().match(/^(\d+(?:\.\d+)?)(.*)$/);
-  if (!m) return small.trim();
-  const n = Math.round(Number(m[1]) * factor * 100) / 100;
-  return `${n}${m[2]}`;
+/** Stored quantities sometimes include the unit: "50g" → 50 + g, "15 pcs" → 15 + pcs. */
+function splitQty(value: unknown, unit?: string | null): { qty: string; unit: string } {
+  const text = String(value ?? "").trim();
+  const m = text.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+  return m ? { qty: m[1], unit: m[2] || unit || "" } : { qty: text, unit: unit || "" };
 }
 
 /** "15" + "pcs" → "15 pcs"; "15 pcs" + "pcs" → "15 pcs" (stored values sometimes include the unit). */
@@ -179,7 +176,6 @@ export default function ServicesAdmin() {
   const [linkItemId, setLinkItemId] = useState("");
   const [linkQty, setLinkQty] = useState("");
   // Medium / Large / Grand qty; empty = follow the Small qty × size factor.
-  const [linkSizes, setLinkSizes] = useState<Partial<Record<SamagriSizeKey, string>>>({});
   const [linkUnit, setLinkUnit] = useState("");
   const [linkCategory, setLinkCategory] = useState("PUJA_SAMAGRI");
   const [linkProvidedBy, setLinkProvidedBy] = useState("CUSTOMER");
@@ -225,10 +221,35 @@ export default function ServicesAdmin() {
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
     void loadCategories().catch((e) => toast.error(e.message));
+    loadSamagriItems();
+  }, []);
+
+  function loadSamagriItems() {
     api<any[]>("/samagri/items")
       .then(setSamagriItems)
       .catch(() => setSamagriItems([]));
-  }, []);
+  }
+
+  function resetLinkForm() {
+    setLinkItemId("");
+    setLinkQty("");
+    setLinkUnit("");
+    setLinkCategory("PUJA_SAMAGRI");
+    setLinkProvidedBy("CUSTOMER");
+    setLinkOptional(false);
+  }
+
+  // Load into the form; saving again updates the same row.
+  function editLinkedItem(it: any) {
+    const parts = splitQty(it.qty_small ?? it.quantity, it.unit);
+    const provider = String(it.provided_by || "CUSTOMER").toUpperCase();
+    setLinkItemId(String(it.samagri_item_id));
+    setLinkQty(parts.qty);
+    setLinkUnit(parts.unit);
+    setLinkCategory(String(it.category || "PUJA_SAMAGRI"));
+    setLinkProvidedBy(provider === "OPTIONAL" ? "CUSTOMER" : provider);
+    setLinkOptional(Boolean(it.optional) || provider === "OPTIONAL");
+  }
 
   async function loadLinked(serviceId: string) {
     try {
@@ -351,7 +372,6 @@ export default function ServicesAdmin() {
     });
     setLinkItemId("");
     setLinkQty("");
-    setLinkSizes({});
     setLinkUnit("");
     setLinkCategory("PUJA_SAMAGRI");
     setLinkProvidedBy("CUSTOMER");
@@ -411,6 +431,23 @@ export default function ServicesAdmin() {
     }
   }
 
+  // A saved puja keeps its slug even if renamed, so links already shared keep working.
+  const serviceSlug = editId
+    ? form.slug
+    : form.name.trim()
+      ? uniqueServiceSlug(form.name, rows.map((r) => String(r.slug)))
+      : "";
+  const serviceLink = serviceSlug ? `${window.location.origin}/services/${serviceSlug}` : "";
+
+  async function copyServiceLink() {
+    try {
+      await copyTextSafely(serviceLink);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Could not copy the link");
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     const activationError = adminServiceActivationError(form);
@@ -420,7 +457,7 @@ export default function ServicesAdmin() {
     }
     setSaving(true);
     try {
-      const payload = buildAdminServicePayload(form as AdminServiceForm);
+      const payload = buildAdminServicePayload({ ...form, slug: serviceSlug } as AdminServiceForm);
       if (editId) {
         await api(`/admin/services/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
         toast.success("Service & pricing updated");
@@ -587,7 +624,7 @@ export default function ServicesAdmin() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sticky top-0 z-20 bg-background pb-3 border-b border-border/70">
+          <DialogHeader className="sticky -top-6 z-20 -mx-6 -mt-6 bg-background px-6 pt-6 pb-3 border-b border-border/70">
             <p className="text-sm font-semibold text-primary">
               {!editId ? "Add puja service" : canServices ? "Edit puja service" : "Puja samagri"}
             </p>
@@ -649,12 +686,30 @@ export default function ServicesAdmin() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="service-slug">Slug (URL)</Label>
-              <Input
-                id="service-slug"
-                placeholder="Optional — auto-generated from name"
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="service-slug"
+                  readOnly
+                  placeholder="Created automatically from the puja name"
+                  value={serviceLink}
+                  className="bg-muted/40"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5 shrink-0"
+                  disabled={!serviceLink}
+                  onClick={() => void copyServiceLink()}
+                >
+                  <Copy size="0.875rem" />
+                  Copy
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {editId
+                  ? "Stays the same even if the name changes, so shared links keep working."
+                  : "Created from the puja name. The link works once this puja is saved."}
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Catalog categories</Label>
@@ -796,32 +851,6 @@ export default function ServicesAdmin() {
                   onChange={(e) => setForm({ ...form, priests_max: Number(e.target.value) || 1 })}
                 />
               </div>
-            </div>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.homa_included}
-                  onChange={(e) => setForm({ ...form, homa_included: e.target.checked })}
-                />
-                Homa included
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.prasadam_included}
-                  onChange={(e) => setForm({ ...form, prasadam_included: e.target.checked })}
-                />
-                Prasadam
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.sankalpa_required}
-                  onChange={(e) => setForm({ ...form, sankalpa_required: e.target.checked })}
-                />
-                Sankalpa required
-              </label>
             </div>
               </TabsContent>
 
@@ -1057,6 +1086,15 @@ export default function ServicesAdmin() {
               </TabsContent>
 
               <TabsContent value="pricing" className="space-y-4 mt-4">
+            {isSuper && editId && (
+              <div className="rounded-lg border p-3 space-y-2">
+                <p className="text-sm font-medium">GST for this puja</p>
+                <p className="text-xs text-muted-foreground">
+                  Overrides the defaults on the GST &amp; Tax page from the date you choose. Issued invoices keep their values.
+                </p>
+                <TaxRateForm serviceId={editId} />
+              </div>
+            )}
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <p className="text-sm font-medium">Cost & pricing</p>
               <p className="text-xs text-muted-foreground">
@@ -1618,7 +1656,7 @@ export default function ServicesAdmin() {
             {editId ? (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label>Preparation / Samagri items for this service</Label>
+                  <Label>Samagri items for this puja</Label>
                   <Select
                     value={form.samagri_review_status}
                     onValueChange={(v) =>
@@ -1628,171 +1666,162 @@ export default function ServicesAdmin() {
                       })
                     }
                   >
-                    <SelectTrigger className="w-[11rem]">
+                    <SelectTrigger className="w-[13rem]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="UNVERIFIED">UNVERIFIED</SelectItem>
-                      <SelectItem value="VERIFIED">VERIFIED</SelectItem>
-                      <SelectItem value="NEEDS_REVIEW">NEEDS_REVIEW</SelectItem>
+                      <SelectItem value="VERIFIED">Ready for customers</SelectItem>
+                      <SelectItem value="UNVERIFIED">Not ready</SelectItem>
+                      <SelectItem value="NEEDS_REVIEW">Needs review</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Only VERIFIED lists are shown to customers after booking. Scale qty fields (S/M/L/G) are Admin-overridable.
+                  Customers see this list on their booking receipt only when it is Ready for customers.
                 </p>
-                <ul className="text-sm space-y-1 max-h-36 overflow-y-auto">
-                  {linked.map((it) => (
-                    <li key={it.samagri_item_id || it.id} className="flex items-start justify-between gap-2">
-                      <span>
-                        {it.name}
-                        {it.qty_small || it.quantity != null
-                          ? ` — S:${qtyWithUnit(it.qty_small || it.quantity, it.unit)}`
-                          : ""}
-                        {it.qty_medium ? ` · M:${qtyWithUnit(it.qty_medium, it.unit)}` : ""}
-                        {it.qty_large ? ` · L:${qtyWithUnit(it.qty_large, it.unit)}` : ""}
-                        {it.qty_grand ? ` · G:${qtyWithUnit(it.qty_grand, it.unit)}` : ""}
-                        {it.provided_by ? ` · ${it.provided_by}` : ""}
-                        {it.optional ? " (optional)" : it.required ? " (required)" : ""}
-                      </span>
-                      {canSamagri && it.samagri_item_id ? (
-                        <button
+                {[
+                  { title: "Included in kit", items: linked.filter(isKitItem) },
+                  { title: "Customer arranges", items: linked.filter((it) => !isKitItem(it)) },
+                ].map((group) => (
+                  <div key={group.title} className="space-y-1">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      {group.title} ({group.items.length})
+                    </p>
+                    <ul className="text-sm space-y-1 max-h-36 overflow-y-auto">
+                      {group.items.map((it) => (
+                        <li key={it.samagri_item_id || it.id} className="flex items-start justify-between gap-2">
+                          <span>
+                            {it.name}
+                            {it.qty_small || it.quantity != null
+                              ? ` — ${qtyWithUnit(it.qty_small || it.quantity, it.unit)}`
+                              : ""}
+                            {it.optional ? " (optional)" : ""}
+                          </span>
+                          {canSamagri && it.samagri_item_id ? (
+                            <button
+                              type="button"
+                              className="shrink-0 text-xs font-medium text-primary hover:underline"
+                              onClick={() => editLinkedItem(it)}
+                            >
+                              Edit
+                            </button>
+                          ) : null}
+                        </li>
+                      ))}
+                      {group.items.length === 0 && <li className="text-muted-foreground">None yet</li>}
+                    </ul>
+                  </div>
+                ))}
+                {canSamagri && (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div className="space-y-1">
+                    <Label>Item</Label>
+                    <SamagriItemPicker
+                      items={samagriItems}
+                      addedIds={linked.map((it) => String(it.samagri_item_id))}
+                      value={linkItemId}
+                      onOpen={loadSamagriItems}
+                      onChange={(id) => {
+                        const existing = linked.find((it) => String(it.samagri_item_id) === id);
+                        if (existing) {
+                          editLinkedItem(existing);
+                          return;
+                        }
+                        setLinkItemId(id);
+                        setLinkUnit(String(samagriItems.find((it) => it.id === id)?.unit || ""));
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Can't find it here? Add it first in the{" "}
+                      <a href={adminPath("/samagri")} target="_blank" rel="noreferrer" className="text-primary underline">
+                        Samagri tab
+                      </a>
+                      , then come back and pick it.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="link-qty">Quantity</Label>
+                      <Input
+                        id="link-qty"
+                        inputMode="decimal"
+                        placeholder="e.g. 2"
+                        value={linkQty}
+                        onChange={(e) => setLinkQty(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="link-unit">Unit</Label>
+                      <Input
+                        id="link-unit"
+                        placeholder="e.g. pcs"
+                        value={linkUnit}
+                        onChange={(e) => setLinkUnit(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Who provides this?</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "Included in kit", kit: true },
+                        { label: "Customer arranges", kit: false },
+                      ].map((option) => (
+                        <Button
+                          key={option.label}
                           type="button"
-                          className="shrink-0 text-xs font-medium text-primary hover:underline"
+                          variant={isKitItem({ provided_by: linkProvidedBy }) === option.kit ? "default" : "outline"}
                           onClick={() => {
-                            // Load into the form below; "Link item" saves it again (the API upserts).
-                            setLinkItemId(String(it.samagri_item_id));
-                            setLinkQty(String(it.qty_small ?? it.quantity ?? ""));
-                            setLinkSizes({
-                              qty_medium: it.qty_medium != null ? String(it.qty_medium) : "",
-                              qty_large: it.qty_large != null ? String(it.qty_large) : "",
-                              qty_grand: it.qty_grand != null ? String(it.qty_grand) : "",
-                            });
-                            setLinkUnit(String(it.unit || ""));
-                            if (it.category) setLinkCategory(String(it.category));
-                            if (it.provided_by) setLinkProvidedBy(String(it.provided_by));
-                            setLinkOptional(Boolean(it.optional));
+                            if (option.kit && !isKitItem({ provided_by: linkProvidedBy })) setLinkProvidedBy("BSEVA");
+                            if (!option.kit) setLinkProvidedBy("CUSTOMER");
                           }}
                         >
-                          Edit
-                        </button>
-                      ) : null}
-                    </li>
-                  ))}
-                  {linked.length === 0 && <li className="text-muted-foreground">None linked yet</li>}
-                </ul>
-                {canSamagri && (
-                <>
-                <div className="grid grid-cols-2 gap-2">
-                  <Select value={linkItemId} onValueChange={setLinkItemId}>
-                    <SelectTrigger className="col-span-2">
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {samagriItems.map((it) => (
-                        <SelectItem key={it.id} value={it.id}>
-                          {it.name}
-                        </SelectItem>
+                          {option.label}
+                        </Button>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {SAMAGRI_SIZES.map((size) => {
-                      const isSmall = size.key === "qty_small";
-                      const own = linkSizes[size.key];
-                      const value = isSmall ? linkQty : own ? own : linkQty ? scaledQty(linkQty, size.factor) : "";
-                      return (
-                        <div key={size.key} className="space-y-1">
-                          <Label className="text-xs">{size.label}</Label>
-                          <Input
-                            placeholder={isSmall ? "Qty" : `×${size.factor}`}
-                            value={value}
-                            onChange={(e) =>
-                              isSmall
-                                ? setLinkQty(e.target.value)
-                                : setLinkSizes((prev) => ({ ...prev, [size.key]: e.target.value }))
-                            }
-                          />
-                        </div>
-                      );
-                    })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      If the customer doesn't buy the kit, kit items move to their "arrange" list.
+                    </p>
                   </div>
-                  <p className="col-span-2 text-xs text-muted-foreground">
-                    Medium, Large and Grand fill in from Small (×1.5, ×3, ×5). Change any of them if this item scales differently.
-                  </p>
-                  <Input
-                    placeholder="Unit"
-                    value={linkUnit}
-                    onChange={(e) => setLinkUnit(e.target.value)}
-                    className="col-span-2 sm:col-span-1"
-                  />
-                  <Select value={linkCategory} onValueChange={setLinkCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PUJA_SAMAGRI">Puja Samagri</SelectItem>
-                      <SelectItem value="PRASADAM">Prasadam</SelectItem>
-                      <SelectItem value="HOME_VENUE">Home / venue</SelectItem>
-                      <SelectItem value="OPTIONAL">Optional</SelectItem>
-                      <SelectItem value="PUJARI_OR_BSEVA">Pujari / BSeva</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={linkProvidedBy} onValueChange={setLinkProvidedBy}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Provided by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CUSTOMER">Customer</SelectItem>
-                      <SelectItem value="INCLUDED_IN_SAMAGRI_PACKAGE">Included in kit</SelectItem>
-                      <SelectItem value="BSEVA">BSeva</SelectItem>
-                      <SelectItem value="PUJARI">Pujari</SelectItem>
-                      <SelectItem value="OPTIONAL">Optional</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={linkOptional} onCheckedChange={(v) => setLinkOptional(!!v)} />
+                    Optional item
+                  </label>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!linkItemId}
+                    onClick={async () => {
+                      if (!editId || !linkItemId) return;
+                      const parsedQty = parseFloat(linkQty);
+                      try {
+                        await api(`/admin/services/${editId}/samagri`, {
+                          method: "POST",
+                          body: JSON.stringify({
+                            samagri_item_id: linkItemId,
+                            required: !linkOptional,
+                            optional: linkOptional,
+                            customer_provided: linkProvidedBy === "CUSTOMER",
+                            sort_order: linked.length,
+                            quantity: Number.isFinite(parsedQty) ? parsedQty : null,
+                            unit: linkUnit || null,
+                            category: linkCategory,
+                            provided_by: linkProvidedBy,
+                            qty_small: linkQty || null,
+                          }),
+                        });
+                        toast.success("Item saved");
+                        resetLinkForm();
+                        await loadLinked(editId);
+                      } catch (e: any) {
+                        toast.error(e.message);
+                      }
+                    }}
+                  >
+                    {linked.some((it) => String(it.samagri_item_id) === linkItemId) ? "Update item" : "Add item"}
+                  </Button>
                 </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={linkOptional} onCheckedChange={(v) => setLinkOptional(!!v)} />
-                  Optional item
-                </label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={async () => {
-                    if (!editId || !linkItemId) return;
-                    try {
-                      await api(`/admin/services/${editId}/samagri`, {
-                        method: "POST",
-                        body: JSON.stringify({
-                          samagri_item_id: linkItemId,
-                          required: !linkOptional,
-                          optional: linkOptional,
-                          customer_provided: linkProvidedBy === "CUSTOMER",
-                          sort_order: linked.length,
-                          quantity: linkQty && Number.isFinite(parseFloat(linkQty)) ? parseFloat(linkQty) : null,
-                          unit: linkUnit || null,
-                          category: linkCategory,
-                          provided_by: linkProvidedBy,
-                          qty_small: linkQty || null,
-                          qty_medium: linkSizes.qty_medium || (linkQty ? scaledQty(linkQty, 1.5) : null),
-                          qty_large: linkSizes.qty_large || (linkQty ? scaledQty(linkQty, 3) : null),
-                          qty_grand: linkSizes.qty_grand || (linkQty ? scaledQty(linkQty, 5) : null),
-                          scale_override: true,
-                        }),
-                      });
-                      toast.success("Item linked");
-                      setLinkItemId("");
-                      setLinkQty("");
-                      setLinkSizes({});
-                      await loadLinked(editId);
-                    } catch (e: any) {
-                      toast.error(e.message);
-                    }
-                  }}
-                >
-                  Link item
-                </Button>
-                </>
                 )}
               </div>
             ) : (

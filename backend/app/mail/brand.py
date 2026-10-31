@@ -151,6 +151,14 @@ def muted(text: str) -> str:
     return f'<p style="margin:0 0 12px;color:{MUTED};font-size:13px;">{_esc(text)}</p>'
 
 
+def checklist(title: str, items: list[str]) -> str:
+    rows = "".join(f'<li style="margin:0 0 4px;">{_esc(item)}</li>' for item in items)
+    return (
+        f'<p style="margin:16px 0 6px;color:{NAVY};font-weight:600;">{_esc(title)}</p>'
+        f'<ul style="margin:0 0 12px;padding-left:20px;color:{TEXT};">{rows}</ul>'
+    )
+
+
 def otp_box(code: str) -> str:
     return (
         f'<div style="margin:20px 0;text-align:center;background:#FFF7ED;border:2px dashed {PRIMARY};'

@@ -220,12 +220,32 @@ export function createApiClient(opts: ApiClientOptions) {
     getBaseUrl: opts.getBaseUrl,
 
     async login(identifier: string, password: string) {
-      const out = await api<TokenOut>("/auth/login", {
+      const out = await this.startLogin(identifier, password);
+      if (!out.access_token) throw new Error("Super Admins sign in through the admin app");
+      return out as TokenOut;
+    },
+
+    /** Password step. A Super Admin gets `otp_required` and finishes with completeLoginOtp. */
+    async startLogin(identifier: string, password: string) {
+      const out = await api<Partial<TokenOut> & { otp_required?: boolean; challenge_token?: string; email_hint?: string }>(
+        "/auth/login",
+        { method: "POST", body: JSON.stringify({ identifier, password }) }
+      );
+      if (out.access_token) await opts.tokenStore.setToken(out.access_token);
+      return out;
+    },
+
+    async completeLoginOtp(challenge_token: string, code: string) {
+      const out = await api<TokenOut>("/auth/login/otp/complete", {
         method: "POST",
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify({ challenge_token, code }),
       });
       await opts.tokenStore.setToken(out.access_token);
       return out;
+    },
+
+    async resendLoginOtp(challenge_token: string) {
+      return api("/auth/login/otp/resend", { method: "POST", body: JSON.stringify({ challenge_token }) });
     },
 
     async register(payload: Record<string, unknown>) {

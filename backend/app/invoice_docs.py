@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.tax_config import invoice_tax, load_booking_tax
 from app.document_brand import (
     render_document_footer,
     render_document_header,
@@ -390,6 +391,72 @@ def existing_customer_invoice(db: Session, booking_id: str) -> dict | None:
     return dict(row) if row else None
 
 
+def _gst_line(line: dict[str, Any]) -> dict[str, Any]:
+    tax = int(line.get("tax_paise") or 0)
+    return {
+        "description": line.get("description"),
+        "hsn_sac": line.get("hsn_sac") or "",
+        "qty": 1,
+        "rate_paise": int(line.get("amount_paise") or 0),
+        "discount_paise": int(line.get("discount_paise") or 0),
+        "taxable_paise": int(line.get("taxable_paise") or 0),
+        "gst_rate": line.get("gst_rate") or 0,
+        "classification": line.get("classification") or "taxable",
+        "cgst_paise": int(line.get("cgst_paise") or 0),
+        "sgst_paise": int(line.get("sgst_paise") or 0),
+        "igst_paise": int(line.get("igst_paise") or 0),
+        "gst_paise": tax,
+        "amount_paise": int(line.get("taxable_paise") or 0) + tax,
+    }
+
+
+def _gst_title(tax: dict[str, Any], lines: list[dict[str, Any]]) -> str:
+    if tax.get("blocking"):
+        return "INVOICE"
+    if int(tax.get("gst_paise") or 0) <= 0:
+        return "BILL OF SUPPLY"
+    if any(x["classification"] != "taxable" for x in lines):
+        return "INVOICE-CUM-BILL OF SUPPLY"
+    return "TAX INVOICE"
+
+
+def _rate_label(snap: dict[str, Any], divisor: int = 1) -> str:
+    rates = {float(x.get("gst_rate") or 0) for x in snap.get("lines") or [] if int(x.get("gst_paise") or 0)}
+    if len(rates) != 1:
+        return ""
+    return f" @ {rates.pop() / divisor:g}%"
+
+
+def gst_total_rows(snap: dict[str, Any]) -> list[tuple[str, int]]:
+    """Only the tax components that apply: CGST with SGST/UTGST, or IGST, never both."""
+    tax = snap.get("tax") or {}
+    rows: list[tuple[str, int]] = [("Taxable Amount", int(snap.get("taxable_paise") or 0))]
+    mode = tax.get("mode")
+    if mode == "cgst_sgst":
+        rows.append((f"CGST{_rate_label(snap, 2)}", int(tax.get("cgst_paise") or 0)))
+        rows.append((f"{tax.get('sgst_label') or 'SGST'}{_rate_label(snap, 2)}", int(tax.get("sgst_paise") or 0)))
+    elif mode == "igst":
+        rows.append((f"IGST{_rate_label(snap)}", int(tax.get("igst_paise") or 0)))
+    elif mode == "unassigned":
+        rows.append(("GST (type pending Place of Supply)", int(tax.get("gst_paise") or 0)))
+    rows.append(("Total Tax", int(tax.get("gst_paise") or 0)))
+    return rows
+
+
+def gst_detail_lines(snap: dict[str, Any], company: dict[str, Any]) -> list[str]:
+    tax = snap.get("tax") or {}
+    pos = tax.get("place_of_supply") or {}
+    place = f"{pos.get('state')} ({pos.get('code')})" if pos.get("code") else "Not determined"
+    out = [
+        f"Supplier GSTIN: {tax.get('supplier_gstin') or company.get('gstin') or '—'}",
+        f"Supplier State: {company.get('state') or '—'} ({tax.get('supplier_state_code') or '—'})",
+    ]
+    if tax.get("customer_gstin"):
+        out.append(f"Customer GSTIN: {tax['customer_gstin']}")
+    out.append(f"Place of Supply: {place}")
+    return out
+
+
 def create_customer_invoice(db: Session, *, booking: dict, user_id: str) -> str | None:
     """Issue an immutable customer tax invoice. Idempotent per booking."""
     _ensure_invoice_schema(db)
@@ -403,21 +470,35 @@ def create_customer_invoice(db: Session, *, booking: dict, user_id: str) -> str 
     company = company_snapshot(db)
     bill_to = _customer_bill_to(db, booking)
     service_name, duration_minutes = _service_snapshot(db, booking)
-    lines = _customer_lines(booking, service_name, company["sac_code"], company["hsn_code"])
-    taxable = sum(int(x["taxable_paise"]) for x in lines)
-    gst_amt = int(booking.get("gst_amount_paise") or 0)
-    gst_pct = float(booking.get("gst_percent") or 0)
-    if gst_pct <= 0:
-        try:
-            row = db.execute(text("SELECT gst_percent FROM pricing_config WHERE id = 1")).first()
-            gst_pct = float(row[0] or 0) if row else 0
-        except Exception:
-            gst_pct = 0
-    tax = _tax_split(gst_amt, gst_pct, bill_to.get("state") or "", company.get("state") or "")
-    _allocate_gst(lines, gst_amt)
-    discount = int(booking.get("discount_paise") or 0)
-    total = int(booking.get("total_paise") or (taxable - discount + gst_amt))
-    title = "TAX INVOICE" if gst_amt > 0 or gst_pct > 0 else "INVOICE"
+    booking_tax = load_booking_tax(db, bid)
+    if booking_tax:
+        tax = invoice_tax(booking_tax, company, bill_to.get("gstin") or "")
+        lines = [_gst_line(line) for line in tax.pop("lines")]
+        taxable = sum(int(x["rate_paise"]) for x in lines)
+        discount = sum(int(x["discount_paise"]) for x in lines)
+        gst_amt = int(tax["gst_paise"])
+        total = int(booking.get("total_paise") or (taxable - discount + gst_amt))
+        if taxable - discount + gst_amt != total:
+            tax["flags"].append("Tax does not reconcile with the booking total")
+            tax["blocking"] = True
+        title = _gst_title(tax, lines)
+    else:
+        # Bookings made before GST configuration keep the flat-rate calculation they were charged.
+        lines = _customer_lines(booking, service_name, company["sac_code"], company["hsn_code"])
+        taxable = sum(int(x["taxable_paise"]) for x in lines)
+        gst_amt = int(booking.get("gst_amount_paise") or 0)
+        gst_pct = float(booking.get("gst_percent") or 0)
+        if gst_pct <= 0:
+            try:
+                row = db.execute(text("SELECT gst_percent FROM pricing_config WHERE id = 1")).first()
+                gst_pct = float(row[0] or 0) if row else 0
+            except Exception:
+                gst_pct = 0
+        tax = _tax_split(gst_amt, gst_pct, bill_to.get("state") or "", company.get("state") or "")
+        _allocate_gst(lines, gst_amt)
+        discount = int(booking.get("discount_paise") or 0)
+        total = int(booking.get("total_paise") or (taxable - discount + gst_amt))
+        title = "TAX INVOICE" if gst_amt > 0 or gst_pct > 0 else "INVOICE"
     pay_method, pay_id, paid_at = _payment_info(db, booking)
     snap = {
         "title": title,
@@ -441,6 +522,7 @@ def create_customer_invoice(db: Session, *, booking: dict, user_id: str) -> str 
         "discount_paise": discount,
         "taxable_paise": max(0, taxable - discount),
         "tax": tax,
+        "gst_version": 1 if booking_tax else 0,
         "total_paise": total,
         "amount_in_words": amount_in_words(total),
         "terms": company["terms"],
@@ -611,6 +693,37 @@ def _invoice_booking_mode(db: Session, inv: dict[str, Any], snap: dict[str, Any]
     return str(row[0] or "").title() if row and row[0] else ""
 
 
+_LEGACY_TABLE_HEAD = (
+    '<th class="num">#</th><th class="desc">Description</th><th class="code">HSN/SAC</th>'
+    '<th class="qty">Qty</th><th class="r">Rate</th><th class="r">Amount</th>'
+)
+_GST_TABLE_HEAD = (
+    '<th class="num">#</th><th class="desc">Description</th><th class="code">HSN/SAC</th>'
+    '<th class="r">Taxable</th><th class="qty">GST %</th><th class="r">Tax</th><th class="r">Amount</th>'
+)
+
+
+def gst_rate_text(line: dict[str, Any]) -> str:
+    kind = line.get("classification")
+    if kind and kind != "taxable":
+        return "Nil" if kind == "nil_rated" else "Exempt"
+    return f"{float(line.get('gst_rate') or 0):g}%"
+
+
+def _render_gst_line_rows(lines: list[dict[str, Any]]) -> list[str]:
+    rows = []
+    for i, r in enumerate(lines, 1):
+        rows.append(
+            f"<tr><td class='num'>{i}</td><td class='desc'>{html.escape(str(r.get('description') or ''))}</td>"
+            f"<td class='code'>{html.escape(str(r.get('hsn_sac') or '—'))}</td>"
+            f"<td class='r'>{paise_inr(int(r.get('taxable_paise') or 0))}</td>"
+            f"<td class='qty'>{html.escape(gst_rate_text(r))}</td>"
+            f"<td class='r'>{paise_inr(int(r.get('gst_paise') or 0))}</td>"
+            f"<td class='r'>{paise_inr(int(r.get('amount_paise') or 0))}</td></tr>"
+        )
+    return rows or ["<tr><td colspan='7'>No line items</td></tr>"]
+
+
 def _render_invoice_line_rows(lines: list[dict[str, Any]]) -> list[str]:
     row_html: list[str] = []
     for i, r in enumerate(lines, 1):
@@ -695,7 +808,8 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     booking_mode = _invoice_booking_mode(db, inv, snap)
     pujari_name = _invoice_pujari_name(db, inv, snap)
 
-    row_html = _render_invoice_line_rows(lines)
+    gst_invoice = bool(snap.get("gst_version"))
+    row_html = _render_gst_line_rows(lines) if gst_invoice else _render_invoice_line_rows(lines)
 
     totals: list[tuple[str, str]] = [
         ("Subtotal", paise_inr(int(snap.get("subtotal_paise") or 0))),
@@ -703,7 +817,9 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
     disc = int(snap.get("discount_paise") or 0)
     if disc:
         totals.append(("Discount", f"-{paise_inr(disc)}"))
-    if int(tax.get("cgst_paise") or 0):
+    if gst_invoice:
+        totals.extend((label, paise_inr(value)) for label, value in gst_total_rows(snap))
+    elif int(tax.get("cgst_paise") or 0):
         totals.append(("CGST", paise_inr(int(tax["cgst_paise"]))))
         totals.append(("SGST", paise_inr(int(tax["sgst_paise"]))))
     elif int(tax.get("igst_paise") or 0):
@@ -771,13 +887,13 @@ def render_invoice_html(db: Session, inv: dict[str, Any]) -> str:
   <div class="bseva-doc-grid">
     {render_info_box("BILL TO", "<br/>".join(x for x in bill_lines if x))}
     {render_info_box("BOOKING DETAILS", "<br/>".join(x for x in booking_lines if x))}
+    {render_info_box("GST DETAILS", "<br/>".join(html.escape(x) for x in gst_detail_lines(snap, company))) if gst_invoice else ""}
   </div>
   <div class="bseva-doc-table-wrap">
     <table class="bseva-doc-table">
       <thead>
         <tr>
-          <th class="num">#</th><th class="desc">Description</th><th class="code">HSN/SAC</th>
-          <th class="qty">Qty</th><th class="r">Rate</th><th class="r">Amount</th>
+          {_GST_TABLE_HEAD if gst_invoice else _LEGACY_TABLE_HEAD}
         </tr>
       </thead>
       <tbody>{''.join(row_html)}</tbody>

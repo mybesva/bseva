@@ -21,6 +21,7 @@ import { Link } from "wouter";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type InvoiceRow = {
+  tax_flags?: string[];
   id: string;
   invoice_number: string;
   invoice_type: string;
@@ -144,7 +145,14 @@ export default function AdminInvoices() {
             <TableBody>
               {rows.map((inv) => (
                 <TableRow key={inv.id}>
-                  <TableCell className="font-mono text-xs">{inv.invoice_number}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {inv.invoice_number}
+                    {inv.tax_flags && inv.tax_flags.length > 0 && (
+                      <div className="font-sans text-amber-700" title={inv.tax_flags.join("\n")}>
+                        Needs tax review
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{displayTokenLabel(inv.invoice_type)}</Badge>
                   </TableCell>

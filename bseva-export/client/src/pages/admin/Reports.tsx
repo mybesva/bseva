@@ -41,10 +41,21 @@ import {
   MapPin,
   Loader2,
 } from "lucide-react";
-import { api, rupees } from "@/lib/api";
+import { api } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { downloadReportWorkbook, type ReportWorkbookData as Report } from "@/lib/reportWorkbook";
 import { toast } from "sonner";
+
+/** Report money always shows paise consistently: ₹65,913.60, not ₹65,913.6. */
+const rupees = (paise: number) => {
+  const value = Number(paise || 0) / 100;
+  const digits = Number.isInteger(value) ? 0 : 2;
+  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: digits, maximumFractionDigits: 2 })}`;
+};
+
+const PANEL = "gap-2 py-3.5";
+const HEADER = "px-4";
+const BODY = "px-4";
 
 type RangeKey = "today" | "last_7_days" | "last_30_days" | "last_90_days" | "this_year" | "custom";
 
@@ -53,8 +64,8 @@ function Change({ value }: { value: number | null | undefined }) {
   const up = value >= 0;
   const Icon = up ? ArrowUpRight : ArrowDownRight;
   return (
-    <div className={`flex items-center mt-1 text-sm ${up ? "text-green-600" : "text-red-600"}`}>
-      <Icon className="w-4 h-4" />
+    <div className={`flex items-center mt-0.5 text-xs ${up ? "text-green-600" : "text-red-600"}`}>
+      <Icon className="w-3.5 h-3.5 shrink-0" />
       <span>
         {up ? "+" : ""}
         {value}% vs previous period
@@ -64,7 +75,7 @@ function Change({ value }: { value: number | null | undefined }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-sm text-muted-foreground py-8 text-center">{text}</p>;
+  return <p className="text-sm text-muted-foreground py-4 text-center">{text}</p>;
 }
 
 function isoDate(d: Date) {
@@ -135,10 +146,10 @@ export default function Reports() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-4">
+      <div className="flex min-h-[calc(100vh-7rem)] flex-col gap-3">
+        <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-3">
           <div>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {report
                 ? `${report.period.label} (${formatDisplayDate(report.period.from)} – ${formatDisplayDate(report.period.to)})`
                 : "Live figures from bookings, payments, and settlements."}
@@ -197,69 +208,69 @@ export default function Reports() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">{loading && !report ? "…" : rupees(ov?.revenue_paise || 0)}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card className={PANEL}>
+            <CardContent className={BODY}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Total Revenue (incl. GST)</p>
+                  <p className="text-xl font-bold leading-tight">{loading && !report ? "…" : rupees(ov?.revenue_paise || 0)}</p>
                   <Change value={ov?.revenue_change_pct} />
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <IndianRupee className="w-6 h-6 text-green-600" />
+                <div className="p-2 bg-green-100 rounded-full shrink-0">
+                  <IndianRupee className="w-4 h-4 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Bookings</p>
-                  <p className="text-2xl font-bold">{loading && !report ? "…" : ov?.bookings ?? 0}</p>
+          <Card className={PANEL}>
+            <CardContent className={BODY}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Total Bookings</p>
+                  <p className="text-xl font-bold leading-tight">{loading && !report ? "…" : ov?.bookings ?? 0}</p>
                   <Change value={ov?.bookings_change_pct} />
                 </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Calendar className="w-6 h-6 text-blue-600" />
+                <div className="p-2 bg-blue-100 rounded-full shrink-0">
+                  <Calendar className="w-4 h-4 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Active Pujaris</p>
-                  <p className="text-2xl font-bold">{loading && !report ? "…" : ov?.active_pujaris ?? 0}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{ov?.serving_pujaris ?? 0} served in this period</p>
+          <Card className={PANEL}>
+            <CardContent className={BODY}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Active Pujaris</p>
+                  <p className="text-xl font-bold leading-tight">{loading && !report ? "…" : ov?.active_pujaris ?? 0}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{ov?.serving_pujaris ?? 0} served in this period</p>
                 </div>
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <UserCog className="w-6 h-6 text-purple-600" />
+                <div className="p-2 bg-purple-100 rounded-full shrink-0">
+                  <UserCog className="w-4 h-4 text-purple-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Customer Satisfaction</p>
-                  <p className="text-2xl font-bold">
+          <Card className={PANEL}>
+            <CardContent className={BODY}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Customer Satisfaction</p>
+                  <p className="text-xl font-bold leading-tight">
                     {loading && !report ? "…" : ov?.avg_rating != null ? `${ov.avg_rating}★` : "—"}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">Repeat rate {ov?.repeat_rate ?? 0}%</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{ov?.avg_rating == null ? "No ratings · " : ""}Repeat rate {ov?.repeat_rate ?? 0}%</p>
                 </div>
-                <div className="p-3 bg-yellow-100 rounded-full">
-                  <Star className="w-6 h-6 text-yellow-600" />
+                <div className="p-2 bg-yellow-100 rounded-full shrink-0">
+                  <Star className="w-4 h-4 text-yellow-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-7 w-full max-w-4xl">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 gap-3">
+          <TabsList className="grid grid-cols-7 w-full">
             <TabsTrigger value="overview" className="flex items-center gap-1">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -290,31 +301,31 @@ export default function Reports() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Booking trend</CardTitle>
-                  <CardDescription>Bookings created in the selected period</CardDescription>
+          <TabsContent value="overview" className="flex flex-col gap-3">
+            <div className="grid flex-1 grid-cols-1 lg:grid-cols-2 gap-3">
+              <Card className={PANEL}>
+                <CardHeader className={HEADER}>
+                  <CardTitle className="text-sm font-semibold">Booking trend</CardTitle>
+                  <CardDescription className="text-xs">Bookings created in the selected period</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className={`${BODY} flex flex-1 flex-col`}>
                   {loading && !report ? (
-                    <div className="flex justify-center h-48 items-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    <div className="flex justify-center h-32 items-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                     </div>
                   ) : !ov?.trend.length ? (
                     <Empty text="No bookings in this period." />
                   ) : (
-                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    <div className="flex max-h-72 flex-1 flex-col justify-around gap-1.5 overflow-y-auto pr-1">
                       {ov.trend.map((day) => (
-                        <div key={day.date} className="flex items-center gap-4">
-                          <span className="w-24 text-sm text-muted-foreground">{formatDisplayDate(day.date)}</span>
-                          <div className="flex-1 bg-muted rounded-full h-6 overflow-hidden">
+                        <div key={day.date} className="flex items-center gap-3">
+                          <span className="w-20 shrink-0 text-xs text-muted-foreground tabular-nums">{formatDisplayDate(day.date)}</span>
+                          <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">
                             <div
-                              className="h-full bg-primary rounded-full flex items-center justify-end pr-2 min-w-[1.5rem]"
+                              className="h-full bg-primary rounded-full flex items-center justify-end pr-1.5 min-w-[1.25rem]"
                               style={{ width: `${Math.max(8, (Number(day.total) / maxTrend) * 100)}%` }}
                             >
-                              <span className="text-xs text-white font-medium">{day.total}</span>
+                              <span className="text-[0.65rem] text-white font-medium">{day.total}</span>
                             </div>
                           </div>
                         </div>
@@ -323,42 +334,66 @@ export default function Reports() {
                   )}
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Payment methods</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading && !report ? (
-                    <div className="flex justify-center h-48 items-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : !ov?.payment_methods.length ? (
-                    <Empty text="No payments in this period." />
-                  ) : (
-                    <div className="space-y-4">
-                      {ov.payment_methods.map((method) => (
-                        <div key={method.method} className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium">{displayTokenLabel(method.method, "")}</span>
-                            <span className="text-muted-foreground">
-                              {rupees(method.amount_paise)} ({method.percentage}%)
-                            </span>
+              <div className="flex flex-col gap-3">
+                <Card className={PANEL}>
+                  <CardHeader className={HEADER}>
+                    <CardTitle className="text-sm font-semibold">Payment methods</CardTitle>
+                  </CardHeader>
+                  <CardContent className={BODY}>
+                    {loading && !report ? (
+                      <div className="flex justify-center h-32 items-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : !ov?.payment_methods.length ? (
+                      <Empty text="No payments in this period." />
+                    ) : (
+                      <div className="space-y-4">
+                        {ov.payment_methods.map((method) => (
+                          <div key={method.method} className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="font-medium">{displayTokenLabel(method.method, "")}</span>
+                              <span className="text-muted-foreground">
+                                {rupees(method.amount_paise)} ({method.percentage}%)
+                              </span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2">
+                              <div className="h-full bg-sidebar rounded-full" style={{ width: `${method.percentage}%` }} />
+                            </div>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div className="h-full bg-sidebar rounded-full" style={{ width: `${method.percentage}%` }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card className={`${PANEL} flex-1`}>
+                  <CardHeader className={HEADER}>
+                    <CardTitle className="text-sm font-semibold">Booking status</CardTitle>
+                  </CardHeader>
+                  <CardContent className={`${BODY} grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4`}>
+                    {[
+                      { label: "Active", value: ov?.confirmed ?? 0, tone: "text-sky-600" },
+                      { label: "Completed", value: ov?.completed ?? 0, tone: "text-emerald-600" },
+                      { label: "Cancelled", value: ov?.cancelled ?? 0, tone: "text-slate-500" },
+                      {
+                        label: "Rejected",
+                        value: Math.max(0, (ov?.bookings ?? 0) - (ov?.confirmed ?? 0) - (ov?.completed ?? 0) - (ov?.cancelled ?? 0)),
+                        tone: "text-red-600",
+                      },
+                    ].map((item) => (
+                      <div key={item.label} className="flex flex-col justify-center rounded-lg bg-muted/50 px-3 py-2">
+                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                        <p className={`text-lg font-bold leading-tight ${item.tone}`}>{item.value}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Top performing services</CardTitle>
+            <Card className={PANEL}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">Top performing services</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!ov?.top_services.length ? (
                   <Empty text="No service bookings in this period." />
                 ) : (
@@ -387,13 +422,13 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="pujari" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Pujari performance</CardTitle>
-                <CardDescription>Approved pujaris who had bookings in this period</CardDescription>
+          <TabsContent value="pujari" className="flex flex-col">
+            <Card className={`${PANEL} flex-1`}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">Pujari performance</CardTitle>
+                <CardDescription className="text-xs">Approved pujaris who had bookings in this period</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!report?.pujaris.length ? (
                   <Empty text="No pujari bookings in this period." />
                 ) : (
@@ -403,7 +438,7 @@ export default function Reports() {
                         <TableHead>Pujari</TableHead>
                         <TableHead className="text-right">Bookings</TableHead>
                         <TableHead className="text-right">Rating</TableHead>
-                        <TableHead className="text-right">Earnings</TableHead>
+                        <TableHead className="text-right" title="Completed pujas only">Earned</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -413,10 +448,14 @@ export default function Reports() {
                           <TableCell className="font-medium">{pujari.name}</TableCell>
                           <TableCell className="text-right">{pujari.bookings}</TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                              {Number(pujari.rating || 0).toFixed(1)}
-                            </div>
+                            {Number(pujari.rating) > 0 ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                {Number(pujari.rating).toFixed(1)}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">{rupees(Number(pujari.earnings || 0))}</TableCell>
                           <TableCell>
@@ -433,38 +472,38 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="customer" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">Total customers</p>
-                  <p className="text-2xl font-bold">{report?.customers.total_customers ?? 0}</p>
+          <TabsContent value="customer" className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">Total customers</p>
+                  <p className="text-xl font-bold leading-tight">{report?.customers.total_customers ?? 0}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">New in period</p>
-                  <p className="text-2xl font-bold">{report?.customers.new_registrations ?? 0}</p>
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">New in period</p>
+                  <p className="text-xl font-bold leading-tight">{report?.customers.new_registrations ?? 0}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">Bookings</p>
-                  <p className="text-2xl font-bold">{report?.customers.total_bookings ?? 0}</p>
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">Bookings</p>
+                  <p className="text-xl font-bold leading-tight">{report?.customers.total_bookings ?? 0}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">Repeat rate</p>
-                  <p className="text-2xl font-bold">{report?.customers.repeat_rate ?? 0}%</p>
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">Repeat rate</p>
+                  <p className="text-xl font-bold leading-tight">{report?.customers.repeat_rate ?? 0}%</p>
                 </CardContent>
               </Card>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Top customers</CardTitle>
+            <Card className={`${PANEL} flex-1`}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">Top customers</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!report?.customers.top.length ? (
                   <Empty text="No customer bookings in this period." />
                 ) : (
@@ -493,12 +532,12 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="temple" className="mt-6 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">By service mode</CardTitle>
+          <TabsContent value="temple" className="flex flex-col gap-3">
+            <Card className={PANEL}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">By service mode</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!report?.modes.length ? (
                   <Empty text="No bookings in this period." />
                 ) : (
@@ -523,12 +562,12 @@ export default function Reports() {
                 )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Locations</CardTitle>
-                <CardDescription>Grouped from booking addresses in this period</CardDescription>
+            <Card className={`${PANEL} flex-1`}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">Locations</CardTitle>
+                <CardDescription className="text-xs">Grouped from booking addresses in this period</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!report?.temples.length ? (
                   <Empty text="No location data in this period." />
                 ) : (
@@ -562,12 +601,12 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="service" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Service / puja analytics</CardTitle>
+          <TabsContent value="service" className="flex flex-col">
+            <Card className={`${PANEL} flex-1`}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">Service / puja analytics</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!report?.services.length ? (
                   <Empty text="No service bookings in this period." />
                 ) : (
@@ -601,19 +640,19 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="samagri" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Samagri usage</CardTitle>
-                <CardDescription>
+          <TabsContent value="samagri" className="flex flex-col">
+            <Card className={`${PANEL} flex-1`}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">Samagri usage</CardTitle>
+                <CardDescription className="text-xs">
                   {report?.samagri_bookings ?? 0} bookings in this period included a samagri kit
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!report?.samagri.length ? (
                   <Empty text="No samagri items on file yet." />
                 ) : (
-                  <Table>
+                  <Table containerClassName="max-h-96 overflow-auto">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Item</TableHead>
@@ -642,44 +681,44 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="payment" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">GMV</p>
-                  <p className="text-xl font-bold">{rupees(report?.payments.gmv || 0)}</p>
+          <TabsContent value="payment" className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">GMV</p>
+                  <p className="text-lg font-bold leading-tight">{rupees(report?.payments.gmv || 0)}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">Platform fee</p>
-                  <p className="text-xl font-bold text-green-600">{rupees(report?.payments.commissions || 0)}</p>
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">Platform fee</p>
+                  <p className="text-lg font-bold leading-tight text-green-600">{rupees(report?.payments.commissions || 0)}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">Pujari payouts</p>
-                  <p className="text-xl font-bold">{rupees(report?.payments.priest_payouts || 0)}</p>
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">Pujari payouts</p>
+                  <p className="text-lg font-bold leading-tight">{rupees(report?.payments.priest_payouts || 0)}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">Pending settle</p>
-                  <p className="text-xl font-bold text-yellow-600">{rupees(report?.payments.pending_settlements || 0)}</p>
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">Pending settle</p>
+                  <p className="text-lg font-bold leading-tight text-yellow-600">{rupees(report?.payments.pending_settlements || 0)}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">Refunds</p>
-                  <p className="text-xl font-bold text-red-600">{rupees(report?.payments.refunds || 0)}</p>
+              <Card className={PANEL}>
+                <CardContent className={BODY}>
+                  <p className="text-xs text-muted-foreground">Refunds</p>
+                  <p className="text-lg font-bold leading-tight text-red-600">{rupees(report?.payments.refunds || 0)}</p>
                 </CardContent>
               </Card>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Payment method breakdown</CardTitle>
+            <Card className={`${PANEL} flex-1`}>
+              <CardHeader className={HEADER}>
+                <CardTitle className="text-sm font-semibold">Payment method breakdown</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className={BODY}>
                 {!report?.payments.by_method.length ? (
                   <Empty text="No payments in this period." />
                 ) : (

@@ -54,8 +54,10 @@ def send_booking_preparation_email(
     payment_status: str = "paid",
     booking_status: str = "confirmed",
 ) -> dict[str, Any]:
-    """Booking confirmation email (HTML template). preparation retained for API compat."""
-    _ = preparation, app_base_url
+    """Booking confirmation email (HTML template) with what is included and what to arrange."""
+    from app.preparation import checklist_groups, checklist_item_label
+
+    _ = app_base_url
     data = BookingEmailData(
         customer_name=customer_name or "",
         booking_id=booking_id,
@@ -74,6 +76,10 @@ def send_booking_preparation_email(
         payment_status=payment_status,
         booking_status=booking_status,
         language=language or "en",
+        checklist=[
+            (label, [checklist_item_label(item) for item in items])
+            for label, items in checklist_groups(preparation)
+        ],
         test_mode=False,
     )
     return _send_booking_confirmation_email(to=to, data=data, from_addr=from_addr)

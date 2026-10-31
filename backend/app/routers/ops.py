@@ -1,15 +1,17 @@
 """Support tickets, samagri, admin config, rewards listing."""
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.audit import write_audit
+from app.security import hash_password
 from app.db import get_db
 from app.deps import current_user, require_roles
 from app.domain import row_dict
@@ -573,7 +575,15 @@ def admin_list_invoices(
         ),
         params,
     ).mappings().all()
-    return [row_dict(r) for r in rows]
+    return [_with_tax_flags(row_dict(r)) for r in rows]
+
+
+def _with_tax_flags(row: dict) -> dict:
+    snap = row.get("snapshot")
+    if isinstance(snap, str):
+        snap = json.loads(snap or "{}")
+    row["tax_flags"] = ((snap or {}).get("tax") or {}).get("flags") or []
+    return row
 
 
 class ReferralApplyIn(BaseModel):
@@ -620,7 +630,7 @@ def list_admins(user=Depends(require_super_admin), db: Session = Depends(get_db)
     rows = db.execute(
         text(
             """
-            SELECT id, name, email, phone, role, created_at
+            SELECT id, name, email, phone, role, blocked, created_at
             FROM users WHERE role IN ('admin', 'super_admin')
             ORDER BY role DESC, name
             """
@@ -633,6 +643,85 @@ def list_admins(user=Depends(require_super_admin), db: Session = Depends(get_db)
         d["permissions"] = perms
         out.append(d)
     return out
+
+
+class AdminAccountIn(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: EmailStr
+    phone: str = Field(min_length=10, max_length=15)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AdminPasswordIn(BaseModel):
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class AdminStatusIn(BaseModel):
+    disabled: bool
+
+
+def _admin_target(db: Session, admin_id: str) -> None:
+    role = db.execute(text("SELECT role FROM users WHERE id = CAST(:id AS uuid)"), {"id": admin_id}).scalar()
+    if role is None:
+        raise HTTPException(404, "Admin not found")
+    if role != "admin":
+        raise HTTPException(400, "This action is only for Admin accounts, not Super Admins")
+
+
+@router.post("/admin/admins")
+def create_admin(body: AdminAccountIn, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    email = str(body.email).strip().lower()
+    phone = body.phone.strip()
+    if db.execute(
+        text("SELECT 1 FROM users WHERE lower(email) = :e OR phone = :p"), {"e": email, "p": phone}
+    ).first():
+        raise HTTPException(400, "Email or phone already registered")
+    admin_id = str(uuid4())
+    db.execute(
+        text(
+            """
+            INSERT INTO users (id, name, email, phone, password_hash, role, preferred_language, calendar_preference, phone_verified)
+            VALUES (CAST(:id AS uuid), :name, :email, :phone, :pw, 'admin', 'en', 'solar', TRUE)
+            """
+        ),
+        {"id": admin_id, "name": body.name.strip(), "email": email, "phone": phone, "pw": hash_password(body.password)},
+    )
+    write_audit(db, str(user["id"]), "admin_created", "user", admin_id)
+    db.commit()
+    return {"ok": True, "id": admin_id}
+
+
+@router.put("/admin/admins/{admin_id}/password")
+def set_admin_password(admin_id: str, body: AdminPasswordIn, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    _admin_target(db, admin_id)
+    db.execute(
+        text("UPDATE users SET password_hash = :pw, updated_at = NOW() WHERE id = CAST(:id AS uuid)"),
+        {"pw": hash_password(body.new_password), "id": admin_id},
+    )
+    write_audit(db, str(user["id"]), "admin_password_changed", "user", admin_id)
+    db.commit()
+    return {"ok": True}
+
+
+@router.put("/admin/admins/{admin_id}/status")
+def set_admin_status(admin_id: str, body: AdminStatusIn, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    _admin_target(db, admin_id)
+    db.execute(
+        text(
+            """
+            UPDATE users SET blocked = :b,
+              blocked_at = CASE WHEN :b THEN NOW() ELSE NULL END,
+              blocked_by = CASE WHEN :b THEN CAST(:by AS uuid) ELSE NULL END,
+              block_reason = NULL,
+              updated_at = NOW()
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"b": body.disabled, "by": str(user["id"]), "id": admin_id},
+    )
+    write_audit(db, str(user["id"]), "admin_disabled" if body.disabled else "admin_enabled", "user", admin_id)
+    db.commit()
+    return {"ok": True, "disabled": body.disabled}
 
 
 # --- Head Pujari ---

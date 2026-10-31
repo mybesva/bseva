@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/PasswordInput";
-import { loginApi } from "@/lib/api";
+import { loginApi, type AuthUser } from "@/lib/api";
+import SuperAdminOtpForm, { type LoginChallenge } from "@/components/auth/SuperAdminOtpForm";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -62,6 +63,7 @@ export default function RolePortalGate({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
+  const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const expected = apiRole(role);
   const copy = portalCopy(role, t);
   const isAdminLike = (r: string) => r === "admin" || r === "super_admin";
@@ -106,22 +108,35 @@ export default function RolePortalGate({
     );
   }
 
+  async function finishLogin(signedIn: AuthUser) {
+    const roleOk =
+      signedIn.role === expected ||
+      (expected === "pujari" && signedIn.role === "head_pujari") ||
+      (allowAdminBypass && isAdminLike(signedIn.role) && role === "admin");
+    if (!roleOk) {
+      toast.error(t("auth.wrongRole", { expected, actual: signedIn.role }));
+      await logout();
+      return;
+    }
+    await refresh();
+    toast.success(t("auth.loggedIn"));
+  }
+
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
     try {
       const out = await loginApi(email, password);
-      const roleOk =
-        out.user.role === expected ||
-        (expected === "pujari" && out.user.role === "head_pujari") ||
-        (allowAdminBypass && isAdminLike(out.user.role) && role === "admin");
-      if (!roleOk) {
-        toast.error(t("auth.wrongRole", { expected, actual: out.user.role }));
-        await logout();
+      if (out.otp_required && out.challenge_token) {
+        setPassword("");
+        if (role === "admin") {
+          setChallenge({ token: out.challenge_token, emailHint: out.email_hint || "your email" });
+        } else {
+          toast.error(t("auth.wrongRole", { expected, actual: "super_admin" }));
+        }
         return;
       }
-      await refresh();
-      toast.success(t("auth.loggedIn"));
+      await finishLogin(out.user as AuthUser);
     } catch (err: any) {
       const key = errorKeyForCode(err?.code);
       toast.error(key ? t(key) : err.message || t("errors.loginFailed"));
@@ -173,6 +188,9 @@ export default function RolePortalGate({
             <CardDescription className="leading-relaxed text-pretty">{copy.description}</CardDescription>
           </CardHeader>
           <CardContent>
+            {challenge ? (
+              <SuperAdminOtpForm challenge={challenge} onDone={finishLogin} onBack={() => setChallenge(null)} />
+            ) : (
             <form key={expected} className="space-y-3" onSubmit={onLogin} autoComplete="off">
               <div className="space-y-2">
                 <Label>{t("auth.emailOrPhone")}</Label>
@@ -192,6 +210,7 @@ export default function RolePortalGate({
                       : t("auth.loginAsCustomer")}
               </Button>
             </form>
+            )}
             {registerHref && (
               <p className="text-sm text-muted-foreground mt-4 text-center">
                 {t("auth.newHere")}{" "}

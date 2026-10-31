@@ -80,6 +80,8 @@ import { ServiceAvailabilityProvider } from "./lib/ServiceAvailabilityContext";
 import LogoWatermark from "./components/LogoWatermark";
 import AdminSettlements from "./pages/admin/Settlements";
 import AdminInvoices from "./pages/admin/Invoices";
+import AdminTaxSettings from "./pages/admin/TaxSettings";
+import AdminSecurity from "./pages/admin/Security";
 import AdminPricingRules from "./pages/admin/PricingRules";
 import AdminPermissionsPage from "./pages/admin/AdminPermissions";
 import SupportPage, { CustomerSupportPage, PujariSupportPage } from "./pages/Support";
@@ -177,6 +179,8 @@ function Router() {
       <Route path={`${ops}/muhurtham`} component={adminRoute(AdminMuhurtham)} />
       <Route path={`${ops}/settlements`} component={adminRoute(AdminSettlements)} />
       <Route path={`${ops}/invoices`} component={adminRoute(AdminInvoices)} />
+      <Route path={`${ops}/tax`} component={adminRoute(AdminTaxSettings)} />
+      <Route path={`${ops}/security`} component={adminRoute(AdminSecurity)} />
       <Route path={`${ops}/payments`} component={adminRoute(AdminPayments)} />
       <Route path={`${ops}/reviews`} component={adminRoute(AdminReviews)} />
       <Route path={`${ops}/samagri`} component={adminRoute(AdminSamagri)} />

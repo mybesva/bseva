@@ -49,14 +49,23 @@ function blockedAmount(s: any) {
 
 const TH = "sticky top-0 z-20 bg-card border-b";
 
+function settledBy(s: any, name?: string | null) {
+  if (name) return name;
+  if (s.status === "settled" && s.payment_reference?.startsWith("AUTO_")) return "System (automatic)";
+  return "—";
+}
+
 export default function AdminSettlements() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [holdDays, setHoldDays] = useState(14);
+  const [holdDays, setHoldDays] = useState(3);
   const [active, setActive] = useState<any | null>(null);
   const [reason, setReason] = useState("");
   const [ref, setRef] = useState("");
   const [saving, setSaving] = useState(false);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [mpin, setMpin] = useState("");
+  const [otp, setOtp] = useState("");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -148,7 +157,7 @@ export default function AdminSettlements() {
         setBlocked(Number(res.stats?.blocked || 0));
         if (res.hold_days) setHoldDays(Number(res.hold_days));
       }
-      const days = Number(cfg?.pujari_settlement_days ?? 14);
+      const days = Number(cfg?.pujari_settlement_days ?? 3);
       if (Number.isFinite(days) && days > 0) setHoldDays(days);
     } catch (e: any) {
       toast.error(e.message);
@@ -162,12 +171,44 @@ export default function AdminSettlements() {
     void load(urlPage);
   }, [search]);
 
-  async function settle() {
+  function closeDialog() {
+    setActive(null);
+    setReason("");
+    setRef("");
+    setChallengeId(null);
+    setMpin("");
+    setOtp("");
+  }
+
+  async function requestOtp() {
     if (!active) return;
     if (reason.trim().length < 3) {
       toast.error("Reason required");
       return;
     }
+    setSaving(true);
+    try {
+      const out = await api<{ challenge_id: string; email?: string; expires_in_minutes: number }>("/admin/security/challenge", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "settlement_override",
+          settlement_id: active.id,
+          payment_reference: ref.trim() || null,
+        }),
+      });
+      setChallengeId(out.challenge_id);
+      setOtp("");
+      toast.success(`OTP sent to ${out.email || "your email"}. Valid for ${out.expires_in_minutes} minutes.`);
+    } catch (e: any) {
+      if (e.code === "MPIN_NOT_SET") setLocation(adminPath("/security"));
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function settle() {
+    if (!active || !challengeId) return;
     setSaving(true);
     try {
       await api(`/settlements/${active.id}/override`, {
@@ -176,15 +217,22 @@ export default function AdminSettlements() {
           reason: reason.trim(),
           mark_settled: true,
           payment_reference: ref.trim() || null,
+          challenge_id: challengeId,
+          otp,
+          mpin,
         }),
       });
-      toast.success("Settlement marked settled (override)");
-      setActive(null);
-      setReason("");
-      setRef("");
+      // Reached only after the server has credited the wallet and committed.
+      toast.success("Settlement paid and recorded");
+      closeDialog();
       await load();
     } catch (e: any) {
       toast.error(e.message);
+      setMpin("");
+      setOtp("");
+      if (["VERIFICATION_EXPIRED", "VERIFICATION_MISMATCH", "OTP_ATTEMPTS_EXCEEDED", "MPIN_LOCKED"].includes(e.code)) {
+        setChallengeId(null);
+      }
     } finally {
       setSaving(false);
     }
@@ -194,7 +242,7 @@ export default function AdminSettlements() {
     <AdminLayout>
       <AdminPageHeader
         title="Settlements"
-        description={<>Pujari earnings settle automatically every <strong>{holdDays} days</strong> after a completed puja. Use <strong>Settle / override</strong> only for early payout or special cases.</>}
+        description={<>Pujaris are paid automatically every <strong>{holdDays} days</strong>, counted from each pujari's joining date. Use <strong>Settle / override</strong> only for early payout or special cases.</>}
         actions={
           <AdminPager
             page={page}
@@ -328,6 +376,8 @@ export default function AdminSettlements() {
               <TableHead className={TH}>Platform fee</TableHead>
               <TableHead className={TH}>Pujari payable</TableHead>
               <TableHead className={TH}>Blocked</TableHead>
+              <TableHead className={TH}>Processed by</TableHead>
+              <TableHead className={TH}>Approved by</TableHead>
               <TableHead className={TH} />
             </TableRow>
           </TableHeader>
@@ -340,7 +390,7 @@ export default function AdminSettlements() {
                 <TableCell>
                   <Badge variant={s.status === "settled" ? "default" : s.status === "blocked" ? "destructive" : "secondary"}>
                     {displayTokenLabel(s.status)}
-                    {s.status === "settled" && s.payment_reference === "AUTO_BIWEEKLY" ? " · auto" : ""}
+                    {s.status === "settled" && s.payment_reference?.startsWith("AUTO_") ? " · auto" : ""}
                     {s.status === "settled" && s.override_flag ? " · override" : ""}
                     {s.status === "blocked" && s.blocked_reason === "pujari_no_show" ? " · no-show" : ""}
                   </Badge>
@@ -350,6 +400,8 @@ export default function AdminSettlements() {
                 <TableCell>{rupees(s.platform_fee_paise)}</TableCell>
                 <TableCell>{rupees(s.settlement_amount_paise)}</TableCell>
                 <TableCell>{blockedAmount(s) ? rupees(blockedAmount(s)) : "—"}</TableCell>
+                <TableCell title={s.processed_by_email || undefined}>{settledBy(s, s.processed_by_name)}</TableCell>
+                <TableCell title={s.approved_by_email || undefined}>{settledBy(s, s.approved_by_name)}</TableCell>
                 <TableCell>
                   {s.status !== "settled" && s.status !== "blocked" && (
                     <Button size="sm" variant="outline" onClick={() => setActive(s)}>
@@ -361,7 +413,7 @@ export default function AdminSettlements() {
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                   No settlements match these filters.
                 </TableCell>
               </TableRow>
@@ -370,7 +422,7 @@ export default function AdminSettlements() {
         </Table>
       )}
 
-      <Dialog open={!!active} onOpenChange={(o) => !o && setActive(null)}>
+      <Dialog open={!!active} onOpenChange={(o) => !o && closeDialog()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Override — settle early</DialogTitle>
@@ -382,20 +434,56 @@ export default function AdminSettlements() {
             </p>
             <div className="space-y-1">
               <Label>Reason</Label>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
+              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} disabled={!!challengeId} />
             </div>
             <div className="space-y-1">
               <Label>Payment reference (optional)</Label>
-              <Input value={ref} onChange={(e) => setRef(e.target.value)} />
+              <Input value={ref} onChange={(e) => setRef(e.target.value)} disabled={!!challengeId} />
             </div>
+            {challengeId ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="settle-mpin">MPIN</Label>
+                  <Input
+                    id="settle-mpin"
+                    type="password"
+                    value={mpin}
+                    onChange={(e) => setMpin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    inputMode="numeric"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="settle-otp">Email OTP</Label>
+                  <Input
+                    id="settle-otp"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActive(null)}>
+            <Button variant="outline" onClick={closeDialog}>
               Cancel
             </Button>
-            <Button onClick={() => void settle()} disabled={saving}>
-              {saving ? "Saving…" : "Confirm override"}
-            </Button>
+            {challengeId ? (
+              <>
+                <Button variant="outline" onClick={() => void requestOtp()} disabled={saving}>
+                  Resend OTP
+                </Button>
+                <Button onClick={() => void settle()} disabled={saving || mpin.length !== 6 || otp.length !== 6}>
+                  {saving ? "Verifying…" : "Confirm payment"}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => void requestOtp()} disabled={saving}>
+                {saving ? "Sending…" : "Send OTP"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

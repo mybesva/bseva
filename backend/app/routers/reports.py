@@ -1,19 +1,18 @@
 """Admin analytics reports generated from live booking/payment data."""
 from __future__ import annotations
 
-import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-log = logging.getLogger(__name__)
-
 from app.db import get_db
 from app.domain import row_dict
 from app.rbac import require_permission
+from app.timezones import IST_ZONE
 
 router = APIRouter(prefix="/admin", tags=["admin-reports"])
 
@@ -27,7 +26,7 @@ def period_bounds(
     *,
     today: date | None = None,
 ) -> tuple[date, date, str]:
-    today = today or date.today()
+    today = today or datetime.now(ZoneInfo(IST_ZONE)).date()
     key = (range_key or "last_30_days").strip().lower()
     if key not in RANGE_KEYS:
         key = "last_30_days"
@@ -55,26 +54,18 @@ def period_bounds(
 
 def _pct_change(current: float, previous: float) -> float | None:
     if previous == 0:
-        return 100.0 if current > 0 else 0.0 if current == 0 else None
+        # Growth from nothing has no meaningful percentage.
+        return 0.0 if current == 0 else None
     return round(((current - previous) / previous) * 100, 1)
 
 
+# A failed query must fail the report: showing 0 would look like real data.
 def _q(db: Session, sql: str, params: dict) -> list[dict]:
-    try:
-        return [row_dict(r) for r in db.execute(text(sql), params).mappings().all()]
-    except Exception:
-        log.exception("reports query failed")
-        db.rollback()
-        return []
+    return [row_dict(r) for r in db.execute(text(sql), params).mappings().all()]
 
 
 def _scalar(db: Session, sql: str, params: dict, default: Any = 0):
-    try:
-        val = db.execute(text(sql), params).scalar()
-    except Exception:
-        log.exception("reports scalar failed")
-        db.rollback()
-        return default
+    val = db.execute(text(sql), params).scalar()
     return default if val is None else val
 
 
@@ -92,11 +83,13 @@ def generate_report(
     prev_start = prev_end - timedelta(days=days - 1)
     params = {"start": start, "end": end, "pstart": prev_start, "pend": prev_end}
 
-    in_period = "b.created_at::date BETWEEN :start AND :end"
-    paid = "COALESCE(b.payment_status, 'paid') = 'paid' AND b.status <> 'cancelled'"
+    day = "(b.created_at AT TIME ZONE 'Asia/Kolkata')::date"
+    in_period = f"{day} BETWEEN :start AND :end"
+    live = "b.status NOT IN ('cancelled', 'rejected')"
+    paid = f"COALESCE(b.payment_status, 'paid') = 'paid' AND {live}"
 
     bookings = int(_scalar(db, f"SELECT COUNT(*) FROM bookings b WHERE {in_period}", params))
-    bookings_prev = int(_scalar(db, "SELECT COUNT(*) FROM bookings b WHERE b.created_at::date BETWEEN :pstart AND :pend", params))
+    bookings_prev = int(_scalar(db, f"SELECT COUNT(*) FROM bookings b WHERE {day} BETWEEN :pstart AND :pend", params))
     revenue = int(
         _scalar(
             db,
@@ -109,7 +102,7 @@ def generate_report(
             db,
             f"""
             SELECT COALESCE(SUM(b.total_paise), 0) FROM bookings b
-            WHERE b.created_at::date BETWEEN :pstart AND :pend AND {paid}
+            WHERE {day} BETWEEN :pstart AND :pend AND {paid}
             """,
             params,
         )
@@ -151,7 +144,7 @@ def generate_report(
             f"""
             SELECT COUNT(DISTINCT b.pujari_id)
             FROM bookings b
-            WHERE {in_period} AND b.pujari_id IS NOT NULL AND b.status <> 'cancelled'
+            WHERE {in_period} AND b.pujari_id IS NOT NULL AND b.status IN ('confirmed', 'in_progress', 'completed')
             """,
             params,
         )
@@ -161,7 +154,10 @@ def generate_report(
     new_customers = int(
         _scalar(
             db,
-            "SELECT COUNT(*) FROM users WHERE role = 'customer' AND created_at::date BETWEEN :start AND :end",
+            """
+            SELECT COUNT(*) FROM users
+            WHERE role = 'customer' AND (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :start AND :end
+            """,
             params,
         )
     )
@@ -175,7 +171,7 @@ def generate_report(
             SELECT COUNT(*) FROM (
               SELECT b.customer_id
               FROM bookings b
-              WHERE {in_period} AND b.status <> 'cancelled'
+              WHERE {in_period} AND {live}
               GROUP BY b.customer_id
               HAVING COUNT(*) > 1
             ) r
@@ -183,7 +179,10 @@ def generate_report(
             params,
         )
     )
-    repeat_rate = round((repeat_customers / booked_customers) * 100, 1) if booked_customers else 0.0
+    active_customers = int(
+        _scalar(db, f"SELECT COUNT(DISTINCT b.customer_id) FROM bookings b WHERE {in_period} AND {live}", params)
+    )
+    repeat_rate = round((repeat_customers / active_customers) * 100, 1) if active_customers else 0.0
 
     avg_rating = _scalar(
         db,
@@ -193,6 +192,7 @@ def generate_report(
         JOIN bookings b ON b.id = r.booking_id
         WHERE {in_period} AND COALESCE(r.skipped, FALSE) = FALSE AND r.stars > 0
           AND r.role_from = 'customer'
+          AND COALESCE(r.moderation_status, 'approved') = 'approved'
         """,
         params,
         None,
@@ -205,7 +205,7 @@ def generate_report(
     trend = _q(
         db,
         f"""
-        SELECT b.created_at::date AS date,
+        SELECT {day} AS date,
                COUNT(*) AS total,
                COUNT(*) FILTER (WHERE b.status = 'cancelled') AS cancelled,
                COUNT(*) FILTER (WHERE b.status = 'completed') AS completed,
@@ -228,19 +228,16 @@ def generate_report(
                COALESCE(SUM(p.amount_paise), 0) AS amount_paise
         FROM payments p
         JOIN bookings b ON b.id = p.booking_id
-        WHERE {in_period} AND p.status IN ('successful', 'paid', 'completed')
+        WHERE {in_period} AND {paid} AND p.status IN ('successful', 'paid', 'completed')
         GROUP BY 1
         ORDER BY 3 DESC
         """,
         params,
     )
-    if not methods:
-        wallet_amt = revenue
-        methods = (
-            [{"method": "wallet", "count": bookings, "amount_paise": wallet_amt}]
-            if wallet_amt or bookings
-            else []
-        )
+    # Show money with no payment row openly, so the methods always add up to revenue.
+    unrecorded = revenue - sum(int(m.get("amount_paise") or 0) for m in methods)
+    if unrecorded > 0:
+        methods.append({"method": "no_payment_record", "count": 0, "amount_paise": unrecorded})
     method_total = sum(int(m.get("amount_paise") or 0) for m in methods) or 1
     for m in methods:
         m["percentage"] = round(int(m.get("amount_paise") or 0) * 100 / method_total, 1)
@@ -266,9 +263,9 @@ def generate_report(
         db,
         f"""
         SELECT u.id::text AS id, u.name,
-               COUNT(b.id) AS bookings,
+               COUNT(b.id) FILTER (WHERE {live}) AS bookings,
                COALESCE(ROUND(AVG(r.stars) FILTER (WHERE COALESCE(r.skipped, FALSE) = FALSE AND r.stars > 0)::numeric, 1), 0) AS rating,
-               COALESCE(SUM(COALESCE(b.pujari_payable_paise, 0)) FILTER (WHERE b.status <> 'cancelled'), 0) AS earnings,
+               COALESCE(SUM(COALESCE(b.pujari_payable_paise, 0)) FILTER (WHERE b.status = 'completed'), 0) AS earnings,
                CASE
                  WHEN COALESCE(u.blocked, FALSE) THEN 'unavailable'
                  WHEN COALESCE(p.available, TRUE) THEN 'available'
@@ -282,7 +279,7 @@ def generate_report(
         WHERE u.role IN ('pujari', 'head_pujari')
           AND p.verification_status = 'approved'
         GROUP BY u.id, u.name, u.blocked, p.available
-        HAVING COUNT(b.id) > 0
+        HAVING COUNT(b.id) FILTER (WHERE {live}) > 0
         ORDER BY bookings DESC, earnings DESC
         LIMIT 50
         """,
@@ -350,11 +347,11 @@ def generate_report(
                CASE WHEN COALESCE(si.active, TRUE) THEN 'OK' ELSE 'Inactive' END AS status
         FROM samagri_items si
         LEFT JOIN (
-          SELECT ss.id, ss.booking_id, ss.name
+          SELECT ss.id, ss.booking_id, ss.name, ss.item_key
           FROM booking_samagri_snapshot ss
           JOIN bookings b ON b.id = ss.booking_id
-          WHERE b.created_at::date BETWEEN :start AND :end
-        ) x ON lower(x.name) = lower(si.name)
+          WHERE {in_period}
+        ) x ON x.item_key = si.item_key OR (x.item_key IS NULL AND lower(x.name) = lower(si.name))
         GROUP BY si.id, si.name, si.unit, si.active
         ORDER BY consumed DESC, si.name
         LIMIT 50
@@ -379,11 +376,11 @@ def generate_report(
     priest_payouts = int(
         _scalar(
             db,
-            """
+            f"""
             SELECT COALESCE(SUM(s.settlement_amount_paise), 0)
             FROM settlements s
             JOIN bookings b ON b.id = s.booking_id
-            WHERE b.created_at::date BETWEEN :start AND :end
+            WHERE {in_period}
               AND s.status = 'settled'
             """,
             params,
@@ -392,12 +389,12 @@ def generate_report(
     pending_settlements = int(
         _scalar(
             db,
-            """
+            f"""
             SELECT COALESCE(SUM(s.settlement_amount_paise), 0)
             FROM settlements s
             JOIN bookings b ON b.id = s.booking_id
-            WHERE b.created_at::date BETWEEN :start AND :end
-              AND s.status IN ('pending', 'eligible')
+            WHERE {in_period}
+              AND s.status IN ('pending', 'eligible', 'held')
             """,
             params,
         )

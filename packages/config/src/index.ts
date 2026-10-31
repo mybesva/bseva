@@ -408,6 +408,7 @@ export {
   parseAliasList,
   rupeesField,
   slugFromName,
+  uniqueServiceSlug,
   type AdminServiceForm,
 } from "./serviceForm";
 export {

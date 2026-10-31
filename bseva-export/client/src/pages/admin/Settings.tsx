@@ -118,7 +118,7 @@ const PLATFORM_KEYS: PlatformKey[] = [
   { key: "puja_otp_max_requests_per_hour", label: "OTP max requests per hour", type: "number", group: "booking", hint: "Default 5." },
   { key: "puja_otp_max_verify_attempts", label: "OTP max verify attempts", type: "number", group: "booking", hint: "Default 5, then a short lockout." },
   { key: "puja_otp_lock_minutes", label: "OTP lockout minutes after failed attempts", type: "number", group: "booking", hint: "Default 10." },
-  { key: "pujari_settlement_days", label: "Settlement hold days", type: "number", group: "pujari", hint: "Auto-settle every N days (≈ 2 weeks)." },
+  { key: "pujari_settlement_days", label: "Pujari payment cycle (days)", type: "number", group: "pujari", hint: "Default 3. Paydays repeat every N days from each pujari's joining date." },
   {
     key: "pujari_joining_fee_enabled",
     label: "Pujari joining fee",

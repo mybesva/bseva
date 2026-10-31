@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from sqlalchemy import text
@@ -97,6 +98,22 @@ def _section_for(category: str, provided_by: str, purchased: bool) -> str:
     if prov == PROVIDER_PUJARI:
         return SECTION_INCLUDED if purchased else SECTION_CUSTOMER
     return SECTION_CUSTOMER
+
+
+def _quantity_text(raw: dict[str, Any], unit: str) -> str:
+    """"50g" / "15 pcs" already carry their real unit; imported rows have a generic one in `unit`."""
+    stored = str(raw.get("qty_small") or "").strip()
+    if re.search(r"[^\d.\s]", stored):
+        return stored
+    qty = raw.get("quantity")
+    if qty is None:
+        return ""
+    try:
+        qf = float(qty)
+    except (TypeError, ValueError):
+        return ""
+    q_str = str(int(qf)) if qf == int(qf) else str(qf)
+    return f"{q_str} {unit}" if unit else q_str
 
 
 def load_service_preparation_master(db: Session, service_id: str, lang: str) -> dict[str, Any]:
@@ -308,14 +325,8 @@ def build_preparation_view(
         name = raw.get("translated_name") or raw.get("item_name_en") or raw.get("name") or "Item"
         qty = raw.get("quantity")
         unit = raw.get("unit") or raw.get("item_default_unit") or ""
-        label = name
-        if qty is not None:
-            try:
-                qf = float(qty)
-                q_str = str(int(qf)) if qf == int(qf) else str(qf)
-                label = f"{name} — {q_str}" + (f" {unit}" if unit else "")
-            except (TypeError, ValueError):
-                label = name
+        qty_text = _quantity_text(raw, unit)
+        label = f"{name} — {qty_text}" if qty_text else name
         item = {
             "item_key": raw.get("item_key"),
             "name": name,
@@ -366,6 +377,34 @@ def build_preparation_view(
         "items": flat,
         "pending_message": None,
     }
+
+
+def checklist_item_label(item: dict[str, Any]) -> str:
+    label = str(item.get("label") or item.get("name") or "Item")
+    if item.get("optional") and item.get("section") != SECTION_OPTIONAL:
+        return f"{label} (optional)"
+    return label
+
+
+def checklist_groups(preparation: dict[str, Any] | None) -> list[tuple[str, list[dict[str, Any]]]]:
+    """What the customer is told on the receipt and booking email, in display order."""
+    if not preparation:
+        return []
+    sections = preparation.get("sections") or {}
+    groups = [
+        ("Included in Your Booking", sections.get(SECTION_INCLUDED) or preparation.get("provider_supplied") or []),
+        (
+            "You Need to Arrange",
+            preparation.get("customer_arranged")
+            or [
+                *(sections.get(SECTION_CUSTOMER) or []),
+                *(sections.get(SECTION_PRASADAM) or []),
+                *(sections.get(SECTION_VENUE) or []),
+            ],
+        ),
+        ("Optional Items", sections.get(SECTION_OPTIONAL) or []),
+    ]
+    return [(label, items) for label, items in groups if items]
 
 
 def enrich_legacy_preparation_snapshot(

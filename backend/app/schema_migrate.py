@@ -1188,7 +1188,7 @@ _FOUNDATION_STMTS = [
       ALTER TABLE otp_codes ADD CONSTRAINT otp_codes_purpose_check
         CHECK (purpose IN (
           'register', 'login', 'verify', 'reset', 'verify_email', 'verify_phone',
-          'start_puja', 'complete_puja'
+          'start_puja', 'complete_puja', 'sensitive_action'
         ));
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$

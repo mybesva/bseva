@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, apiBookings, rupees } from "@/lib/api";
 import { formatDisplayDate } from "@/lib/formatDate";
+import { formatTime } from "@/components/admin/dashboardKit";
 import { cn } from "@/lib/utils";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
@@ -398,19 +399,27 @@ export default function Bookings() {
         </div>
       </div>
       <Table
-        className="border-separate border-spacing-0"
+        className="table-fixed min-w-[66rem] border-separate border-spacing-0"
         containerClassName="max-h-[calc(100vh-16rem)] overflow-auto rounded-lg border bg-card"
       >
+        <colgroup>
+          <col />
+          <col className="w-[8rem]" />
+          <col className="w-[8rem]" />
+          <col className="w-[6.5rem]" />
+          <col className="w-[6rem]" />
+          <col className="w-[11rem]" />
+          <col className="w-[12.5rem]" />
+        </colgroup>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Number</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Service</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Customer</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Pujari</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Date</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Total</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Status</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b text-right">Actions</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b px-3">Booking</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b px-3">Customer</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b px-3">Pujari</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b px-3">Date</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b px-3 text-right">Total</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b px-3">Status</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b px-3 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -422,20 +431,29 @@ export default function Bookings() {
             const noPujari = shownStatus === "no_pujari_assigned";
             return (
               <TableRow key={b.id} className={cn(needsAttention &&"bg-red-50 hover:bg-red-100/70")}>
-                <TableCell>{b.booking_number}</TableCell>
-                <TableCell>{b.service_name ? <PujaTitle name={b.service_name} as="span" /> : "—"}</TableCell>
-                <TableCell>{b.customer_name}</TableCell>
-                <TableCell>
-                  {b.pujari_name || "—"}
+                <TableCell className="px-3 py-2.5">
+                  <div className="truncate">
+                    {b.service_name ? <PujaTitle name={b.service_name} as="span" /> : "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground tabular-nums">{b.booking_number}</div>
+                </TableCell>
+                <TableCell className="px-3 py-2.5 truncate" title={b.customer_name}>
+                  {b.customer_name}
+                </TableCell>
+                <TableCell className="px-3 py-2.5">
+                  <div className="truncate" title={b.pujari_name || undefined}>
+                    {b.pujari_name || "—"}
+                  </div>
                   {b.pujari_name && ["pending", "pending_acceptance"].includes(b.status) && (
                     <div className="text-xs text-amber-700">Awaiting acceptance</div>
                   )}
                 </TableCell>
-                <TableCell>
-                  {formatDisplayDate(b.booking_date)} {b.start_time}
+                <TableCell className="px-3 py-2.5 tabular-nums">
+                  <div>{formatDisplayDate(b.booking_date)}</div>
+                  <div className="text-xs text-muted-foreground">{formatTime(b.start_time)}</div>
                 </TableCell>
-                <TableCell>{rupees(b.total_paise)}</TableCell>
-                <TableCell>
+                <TableCell className="px-3 py-2.5 text-right tabular-nums">{rupees(b.total_paise)}</TableCell>
+                <TableCell className="px-3 py-2.5">
                   <div className="flex flex-col items-start gap-1">
                     <Badge variant={noPujari ? "destructive" : statusVariant(b.status)}>{displayTokenLabel(shownStatus)}</Badge>
                     {!b.pujari_id && !noPujari && (
@@ -445,11 +463,13 @@ export default function Bookings() {
                       <span className="text-xs font-medium text-red-700">Needs reassignment</span>
                     )}
                     {b.rejection_reason && (
-                      <span className="text-xs text-muted-foreground">{b.rejection_reason}</span>
+                      <span className="max-w-full truncate text-xs text-muted-foreground" title={b.rejection_reason}>
+                        {b.rejection_reason}
+                      </span>
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-3 py-2.5">
                   <div className="flex gap-2 justify-end">
                     {canManage && (
                     <Button
@@ -477,7 +497,7 @@ export default function Bookings() {
           })}
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                 No bookings match these filters.
               </TableCell>
             </TableRow>

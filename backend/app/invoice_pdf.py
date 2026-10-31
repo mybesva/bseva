@@ -217,22 +217,42 @@ def render_invoice_pdf_reportlab(inv: dict[str, Any]) -> bytes:
     )
     story.append(Spacer(1, 8))
 
-    data = [["#", "Description", "HSN/SAC", "Qty", "Rate", "Amount"]]
-    for i, row in enumerate(lines, 1):
-        data.append(
-            [
-                str(i),
-                str(row.get("description") or row.get("label") or "")[:52],
-                str(row.get("hsn_sac") or ""),
-                str(int(row.get("qty") or 1)),
-                _inr(int(row.get("rate_paise") or row.get("taxable_paise") or row.get("amount_paise") or 0)),
-                _inr(int(row.get("amount_paise") or row.get("taxable_paise") or 0)),
-            ]
-        )
-    tbl = Table(
-        data,
-        colWidths=[10 * mm, 78 * mm, 24 * mm, 12 * mm, 28 * mm, 30 * mm],
-    )
+    from app.invoice_docs import gst_detail_lines, gst_rate_text, gst_total_rows
+
+    gst_invoice = bool(snap.get("gst_version"))
+    if gst_invoice:
+        story.append(Paragraph("GST DETAILS", section))
+        story.append(Paragraph("<br/>".join(gst_detail_lines(snap, company)), small))
+        story.append(Spacer(1, 8))
+        data = [["#", "Description", "HSN/SAC", "Taxable", "GST %", "Tax", "Amount"]]
+        for i, row in enumerate(lines, 1):
+            data.append(
+                [
+                    str(i),
+                    str(row.get("description") or "")[:46],
+                    str(row.get("hsn_sac") or "-"),
+                    _inr(int(row.get("taxable_paise") or 0)),
+                    gst_rate_text(row),
+                    _inr(int(row.get("gst_paise") or 0)),
+                    _inr(int(row.get("amount_paise") or 0)),
+                ]
+            )
+        widths = [8 * mm, 66 * mm, 20 * mm, 24 * mm, 14 * mm, 22 * mm, 28 * mm]
+    else:
+        data = [["#", "Description", "HSN/SAC", "Qty", "Rate", "Amount"]]
+        for i, row in enumerate(lines, 1):
+            data.append(
+                [
+                    str(i),
+                    str(row.get("description") or row.get("label") or "")[:52],
+                    str(row.get("hsn_sac") or ""),
+                    str(int(row.get("qty") or 1)),
+                    _inr(int(row.get("rate_paise") or row.get("taxable_paise") or row.get("amount_paise") or 0)),
+                    _inr(int(row.get("amount_paise") or row.get("taxable_paise") or 0)),
+                ]
+            )
+        widths = [10 * mm, 78 * mm, 24 * mm, 12 * mm, 28 * mm, 30 * mm]
+    tbl = Table(data, colWidths=widths)
     tbl.setStyle(
         TableStyle(
             [
@@ -255,7 +275,9 @@ def render_invoice_pdf_reportlab(inv: dict[str, Any]) -> bytes:
     totals: list[list[str]] = [["Subtotal", _inr(int(snap.get("subtotal_paise") or 0))]]
     if int(snap.get("discount_paise") or 0):
         totals.append(["Discount", "-" + _inr(int(snap["discount_paise"]))])
-    if int(tax.get("cgst_paise") or 0):
+    if gst_invoice:
+        totals.extend([label, _inr(value)] for label, value in gst_total_rows(snap))
+    elif int(tax.get("cgst_paise") or 0):
         totals.append(["CGST", _inr(int(tax["cgst_paise"]))])
         totals.append(["SGST", _inr(int(tax["sgst_paise"]))])
     elif int(tax.get("igst_paise") or 0):

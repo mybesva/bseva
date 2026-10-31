@@ -1,6 +1,7 @@
 import {
   adminServiceActivationError,
   buildAdminServicePayload,
+  uniqueServiceSlug,
   emptyAdminServiceForm,
   emptyServiceCategoryForm,
   filterServiceCategories,
@@ -149,9 +150,16 @@ export default function AdminServices() {
     queryKey: ["admin-services"],
     queryFn: () => apiClient.api<Svc[] | { items?: Svc[] }>("/admin/services"),
   });
-  const rows = (Array.isArray(list.data) ? list.data : list.data?.items || []).filter((s) =>
-    matchesServiceSearch(s, q)
-  );
+  const allRows = Array.isArray(list.data) ? list.data : list.data?.items || [];
+  const rows = allRows.filter((s) => matchesServiceSearch(s, q));
+  // A saved puja keeps its slug even if renamed, so links already shared keep working.
+  const serviceSlug = !form
+    ? ""
+    : editId
+      ? form.slug
+      : form.name.trim()
+        ? uniqueServiceSlug(form.name, allRows.map((s) => String(s.slug)))
+        : "";
 
   async function save() {
     if (!form) return;
@@ -163,7 +171,7 @@ export default function AdminServices() {
     setBusy(true);
     setError(null);
     try {
-      const payload = buildAdminServicePayload(form);
+      const payload = buildAdminServicePayload({ ...form, slug: serviceSlug });
       if (editId) {
         await apiClient.api(`/admin/services/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
       } else {
@@ -192,7 +200,7 @@ export default function AdminServices() {
           <Card style={{ gap: 10 }}>
             <AppText variant="h3">{editId ? "Edit service" : "New service"}</AppText>
             <Field label="Name *" value={form.name} onChangeText={(v) => set("name", v)} />
-            <Field label="Slug" value={form.slug} onChangeText={(v) => set("slug", v)} />
+            <Field label="Slug (auto)" value={serviceSlug} editable={false} />
             <Field label="Description" value={form.description} onChangeText={(v) => set("description", v)} />
             <Field label="Short description" value={form.short_description} onChangeText={(v) => set("short_description", v)} />
             <Field label="Standard ₹" value={rupeesField(form.standard_price_paise)} onChangeText={(v) => set("standard_price_paise", paiseFromRupees(v))} keyboardType="decimal-pad" />
@@ -229,9 +237,6 @@ export default function AdminServices() {
               ["samagri_available", "Samagri available"],
               ["alankaram_available", "Alankaram available"],
               ["food_available", "Food available"],
-              ["homa_included", "Homa included"],
-              ["prasadam_included", "Prasadam included"],
-              ["sankalpa_required", "Sankalpa required"],
               ["is_popular", "Popular"],
               ["is_featured_home", "Featured home"],
               ["is_seasonal", "Seasonal"],

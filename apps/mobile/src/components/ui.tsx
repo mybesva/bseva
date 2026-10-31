@@ -1,5 +1,5 @@
 import { radius, spacing, typography } from "@bseva/tokens";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -126,9 +126,18 @@ export function Field({
   multiline,
   error,
   required,
+  value,
+  onChangeText,
+  onBlur,
+  keyboardType,
   ...props
 }: TextInputProps & { label: string; error?: string | null; required?: boolean }) {
   const { colors } = useAppTheme();
+  // Screens often turn "" into a default (Number(v) || 0). Keep an empty box, or the same number as
+  // typed, until the field is left; otherwise a number box can never be cleared.
+  const numeric = keyboardType === "numeric" || keyboardType === "number-pad" || keyboardType === "decimal-pad";
+  const [numberDraft, setNumberDraft] = useState<string | null>(null);
+  const keepDraft = numberDraft !== null && (numberDraft === "" || Number(numberDraft) === Number(value));
   return (
     <View style={{ gap: 6 }}>
       <Text style={{ color: colors.mutedForeground, fontWeight: "600", fontSize: 13 }}>
@@ -155,6 +164,16 @@ export function Field({
           style,
         ]}
         {...props}
+        keyboardType={keyboardType}
+        value={numeric && keepDraft ? (numberDraft as string) : value}
+        onChangeText={(text) => {
+          if (numeric) setNumberDraft(text);
+          onChangeText?.(text);
+        }}
+        onBlur={(e) => {
+          setNumberDraft(null);
+          onBlur?.(e);
+        }}
       />
       {error ? <Text style={{ color: colors.destructive, fontSize: 13 }}>{error}</Text> : null}
     </View>

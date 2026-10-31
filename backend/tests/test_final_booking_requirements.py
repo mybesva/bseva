@@ -284,3 +284,68 @@ def test_muhurtham_create_notifies_ops_with_admin_link(monkeypatch):
     assert result["status"] == "requested"
     assert db.committed
     assert calls[0]["link"] == "/admin/muhurtham"
+
+
+def _prep_master(*items):
+    return {
+        "ok": True,
+        "verified": True,
+        "service": {"name": "Puja", "samagri_provider": "BSEVA"},
+        "content": None,
+        "items": list(items),
+    }
+
+
+def test_preparation_label_keeps_the_real_unit_from_imported_quantity():
+    view = build_preparation_view(
+        _prep_master(
+            {"name": "Turmeric", "quantity": 50, "unit": "pc", "qty_small": "50g", "customer_provided": True},
+            {"name": "Kalash", "quantity": 1, "unit": "pcs", "qty_small": "1", "customer_provided": True},
+        ),
+        samagri_purchased=False,
+        lang="en",
+    )
+    assert [i["label"] for i in view["items"]] == ["Turmeric — 50g", "Kalash — 1 pcs"]
+
+
+def test_checklist_lists_every_item_the_customer_must_arrange():
+    from app.preparation import checklist_groups, checklist_item_label
+
+    view = build_preparation_view(
+        _prep_master(
+            {"name": "Rice", "provided_by": "BSEVA", "category": "PUJA_SAMAGRI"},
+            {"name": "Coconut", "provided_by": "CUSTOMER", "customer_provided": True},
+            {"name": "Mats", "provided_by": "CUSTOMER", "category": "HOME_VENUE", "customer_provided": True},
+            {"name": "Flowers", "provided_by": "CUSTOMER", "customer_provided": True, "optional": True},
+            {"name": "Sweets", "provided_by": "OPTIONAL", "category": "OPTIONAL"},
+        ),
+        samagri_purchased=True,
+        lang="en",
+    )
+    groups = {label: [checklist_item_label(i) for i in items] for label, items in checklist_groups(view)}
+    assert groups["You Need to Arrange"][:3] == ["Coconut", "Flowers (optional)", "Mats"]
+    assert groups["Optional Items"] == ["Sweets"]
+    assert "Rice" in groups["Included in Your Booking"]
+
+
+def test_kit_items_move_to_customer_list_when_kit_is_not_bought():
+    from app.preparation import checklist_groups
+
+    view = build_preparation_view(
+        _prep_master({"name": "Rice", "provided_by": "bseva", "category": "PUJA_SAMAGRI"}),
+        samagri_purchased=False,
+        lang="en",
+    )
+    assert [(label, [i["name"] for i in items]) for label, items in checklist_groups(view)] == [
+        ("You Need to Arrange", ["Rice"])
+    ]
+
+
+def test_booking_confirmation_email_shows_the_checklist():
+    from app.mail.templates import BookingEmailData, booking_confirmation_email
+
+    email = booking_confirmation_email(
+        BookingEmailData(checklist=[("You Need to Arrange", ["Coconuts — 2 pcs", "A<B"])])
+    )
+    assert "You Need to Arrange" in email.html and "Coconuts — 2 pcs" in email.html and "A&lt;B" in email.html
+    assert "- Coconuts — 2 pcs" in email.text

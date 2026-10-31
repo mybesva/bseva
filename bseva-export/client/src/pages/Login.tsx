@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import PasswordInput from "@/components/PasswordInput";
-import { dashboardPath, loginApi } from "@/lib/api";
+import SuperAdminOtpForm, { type LoginChallenge } from "@/components/auth/SuperAdminOtpForm";
+import { dashboardPath, loginApi, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { errorKeyForCode } from "@bseva/locales";
@@ -26,6 +27,7 @@ export default function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
+  const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
 
   function goAfterLogin(role: string) {
     if (returnUrl && (role === "customer" || !roleHint || roleHint === "customer")) {
@@ -45,22 +47,31 @@ export default function Login() {
     setPassword("");
   }, [roleHint]);
 
+  async function finishLogin(signedIn: AuthUser) {
+    const roleOk =
+      !roleHint ||
+      signedIn.role === roleHint ||
+      (roleHint === "pujari" && signedIn.role === "head_pujari") ||
+      (roleHint === "admin" && (signedIn.role === "admin" || signedIn.role === "super_admin"));
+    if (!roleOk) {
+      toast.error(t("auth.wrongRole", { expected: roleHint, actual: signedIn.role }));
+    }
+    await refresh();
+    toast.success(t("auth.welcomeName", { name: signedIn.name }));
+    goAfterLogin(signedIn.role);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
     try {
       const out = await loginApi(identifier, password);
-      const roleOk =
-        !roleHint ||
-        out.user.role === roleHint ||
-        (roleHint === "pujari" && out.user.role === "head_pujari") ||
-        (roleHint === "admin" && (out.user.role === "admin" || out.user.role === "super_admin"));
-      if (!roleOk) {
-        toast.error(t("auth.wrongRole", { expected: roleHint, actual: out.user.role }));
+      if (out.otp_required && out.challenge_token) {
+        setPassword("");
+        setChallenge({ token: out.challenge_token, emailHint: out.email_hint || "your email" });
+        return;
       }
-      await refresh();
-      toast.success(t("auth.welcomeName", { name: out.user.name }));
-      goAfterLogin(out.user.role);
+      await finishLogin(out.user as AuthUser);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
       const key = errorKeyForCode(code);
@@ -97,6 +108,9 @@ export default function Login() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {challenge ? (
+              <SuperAdminOtpForm challenge={challenge} onDone={finishLogin} onBack={() => setChallenge(null)} />
+            ) : (
             <form key={roleHint || "default"} className="space-y-4" onSubmit={onSubmit} autoComplete="off">
               <div className="space-y-2">
                 <Label htmlFor="identifier">{t("auth.emailOrPhone")}</Label>
@@ -145,6 +159,7 @@ export default function Login() {
                 <Link href="/" className="text-muted-foreground hover:text-primary">{t("auth.backHome")}</Link>
               </p>
             </form>
+            )}
           </CardContent>
         </Card>
       </div>

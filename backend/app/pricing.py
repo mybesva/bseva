@@ -307,8 +307,25 @@ def compute_quote(
     pujari_share = pujari_dakshina_paise(service, adjusted_base)
     platform_fee = adjusted_base - pujari_share
     pricing = db.execute(text("SELECT * FROM pricing_config WHERE id = 1")).mappings().one()
-    gst_pct = float(pricing["gst_percent"])
-    gst_amt = int(round(subtotal * gst_pct / 100))
+    from app.tax_config import quote_tax
+
+    tax = quote_tax(
+        db,
+        amounts=[
+            ("puja", f"{service.get('name') or 'Puja'} – {str(package_type or 'standard').title()} Package", adjusted_base),
+            ("surge", "Weekend / festival surge", peak),
+            ("samagri", "Samagri Package", samagri_charge),
+            ("alankaram", "Alankaram", alankaram_charge),
+            ("food", "Food / Prasadam", food_charge),
+        ],
+        service_id=str(service["id"]),
+        package_type=package_type,
+        discount_paise=int(discount_paise or 0) + int(wallet_credit_paise or 0),
+        fallback_rate=float(pricing["gst_percent"]),
+    )
+    gst_amt = int(tax["tax_paise"])
+    rates = {line["gst_rate"] for line in tax["lines"]}
+    gst_pct = rates.pop() if len(rates) == 1 else round(gst_amt * 100 / subtotal, 2) if subtotal else 0.0
     total = subtotal + gst_amt
     return {
         "basePrice": base,
@@ -337,6 +354,7 @@ def compute_quote(
         "subtotal": subtotal,
         "gstPercent": gst_pct,
         "gstAmount": gst_amt,
+        "taxLines": tax["lines"],
         "totalAmount": total,
         "currency": pricing.get("currency") or "INR",
         "mode": str(mode or ""),

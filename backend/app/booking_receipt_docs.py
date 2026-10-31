@@ -15,13 +15,7 @@ from app.document_brand import (
     wrap_html_document,
 )
 from app.invoice_docs import company_snapshot, format_duration_minutes, paise_inr
-from app.preparation import SECTION_CUSTOMER, SECTION_INCLUDED, get_booking_preparation
-
-SAMAGRI_SECTION_LABELS = {
-    SECTION_INCLUDED: "What BSeva / Pujari Will Bring",
-    SECTION_CUSTOMER: "What Customer Needs to Arrange",
-}
-
+from app.preparation import checklist_groups, checklist_item_label, get_booking_preparation
 
 def receipt_pdf_filename(booking_number: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9.-]+", "_", str(booking_number or "receipt")).strip("_")
@@ -68,17 +62,6 @@ def _load_booking_row(db: Session, booking_id: str) -> dict[str, Any] | None:
     return dict(row) if row else None
 
 
-def _item_label(item: dict[str, Any]) -> str:
-    if item.get("label"):
-        return str(item["label"])
-    name = str(item.get("name") or "Item")
-    qty = item.get("quantity")
-    unit = item.get("unit")
-    if qty is not None:
-        return f"{name} — {qty}{f' {unit}' if unit else ''}"
-    return name
-
-
 def _payment_summary_rows(booking: dict[str, Any]) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = [
         ("Payment Status", str(booking.get("payment_status") or "—").replace("_", " ").title()),
@@ -109,18 +92,9 @@ def _payment_summary_rows(booking: dict[str, Any]) -> list[tuple[str, str]]:
 def _samagri_sections_html(preparation: dict[str, Any] | None) -> str:
     if not preparation:
         return ""
-    sections = preparation.get("sections") or {}
     blocks: list[str] = []
-    for key in (SECTION_INCLUDED, SECTION_CUSTOMER):
-        items = sections.get(key) or []
-        if not items and key == SECTION_INCLUDED:
-            items = preparation.get("provider_supplied") or []
-        if not items and key == SECTION_CUSTOMER:
-            items = preparation.get("customer_arranged") or []
-        if not items:
-            continue
-        label = SAMAGRI_SECTION_LABELS.get(key, key.replace("_", " ").title())
-        lis = "".join(f"<li>{html.escape(_item_label(it))}</li>" for it in items)
+    for label, items in checklist_groups(preparation):
+        lis = "".join(f"<li>{html.escape(checklist_item_label(it))}</li>" for it in items)
         blocks.append(
             f'<div class="bseva-doc-section"><h3>{html.escape(label)}</h3><ul class="bseva-doc-list">{lis}</ul></div>'
         )
@@ -325,21 +299,11 @@ def _render_booking_receipt_pdf_reportlab(booking: dict[str, Any], db: Session) 
     )
     story.append(Spacer(1, 8))
 
-    if preparation:
-        sections = preparation.get("sections") or {}
-        for key in (SECTION_INCLUDED, SECTION_CUSTOMER):
-            items = sections.get(key) or []
-            if not items and key == SECTION_INCLUDED:
-                items = preparation.get("provider_supplied") or []
-            if not items and key == SECTION_CUSTOMER:
-                items = preparation.get("customer_arranged") or []
-            if not items:
-                continue
-            label = SAMAGRI_SECTION_LABELS.get(key, key)
-            story.append(Paragraph(label, section))
-            for it in items[:40]:
-                story.append(Paragraph(f"• {_item_label(it)}", muted))
-            story.append(Spacer(1, 4))
+    for label, items in checklist_groups(preparation):
+        story.append(Paragraph(label, section))
+        for it in items[:40]:
+            story.append(Paragraph(f"• {checklist_item_label(it)}", muted))
+        story.append(Spacer(1, 4))
 
     story.append(Paragraph("Payment Summary", section))
     for label, value in _payment_summary_rows(booking):

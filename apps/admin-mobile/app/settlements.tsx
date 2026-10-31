@@ -8,7 +8,15 @@ import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen,
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 
-type Row = { id: string; pujari_name?: string; status?: string; amount_paise?: number; pujari_payable_paise?: number };
+type Row = {
+  id: string;
+  pujari_name?: string;
+  status?: string;
+  amount_paise?: number;
+  pujari_payable_paise?: number;
+  processed_by_name?: string | null;
+  approved_by_name?: string | null;
+};
 
 export default function AdminSettlements() {
   const { t } = useI18n();
@@ -18,6 +26,9 @@ export default function AdminSettlements() {
   const [reason, setReason] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<{ id: string; settlementId: string } | null>(null);
+  const [mpin, setMpin] = useState("");
+  const [otp, setOtp] = useState("");
 
   useEffect(() => {
     const next = typeof params.status === "string" ? params.status : "";
@@ -44,21 +55,67 @@ export default function AdminSettlements() {
             <StatusBadge status={String(s.status || "pending")} />
             <AppText variant="h3">{s.pujari_name || s.id}</AppText>
             <AppText>{rupees(s.pujari_payable_paise ?? s.amount_paise)}</AppText>
-            <Field label="Override reason" value={reason} onChangeText={setReason} />
-            <Field label="Payment reference" value={paymentRef} onChangeText={setPaymentRef} />
-            <PrimaryButton
-              title="Mark settled"
-              variant="outline"
-              onPress={async () => {
-                setError(null);
-                try {
-                  await apiClient.api(`/settlements/${s.id}/override`, { method: "POST", body: JSON.stringify({ reason, mark_settled: true, payment_reference: paymentRef || undefined }) });
-                  await list.refetch();
-                } catch (e: unknown) {
-                  setError(e instanceof Error ? e.message : "Failed");
-                }
-              }}
-            />
+            {s.processed_by_name ? <AppText>Processed by: {s.processed_by_name}</AppText> : null}
+            {s.approved_by_name ? <AppText>Approved by: {s.approved_by_name}</AppText> : null}
+            {s.status === "settled" || s.status === "blocked" ? null : challenge?.settlementId === s.id ? (
+              <>
+                <Field label="MPIN" value={mpin} onChangeText={setMpin} secureTextEntry keyboardType="number-pad" maxLength={6} />
+                <Field label="Email OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
+                <PrimaryButton
+                  title="Confirm payment"
+                  onPress={async () => {
+                    setError(null);
+                    try {
+                      await apiClient.api(`/settlements/${s.id}/override`, {
+                        method: "POST",
+                        body: JSON.stringify({
+                          reason,
+                          mark_settled: true,
+                          payment_reference: paymentRef || null,
+                          challenge_id: challenge.id,
+                          otp,
+                          mpin,
+                        }),
+                      });
+                      setChallenge(null);
+                      setReason("");
+                      setPaymentRef("");
+                      await list.refetch();
+                    } catch (e: unknown) {
+                      setError(e instanceof Error ? e.message : "Failed");
+                    } finally {
+                      setMpin("");
+                      setOtp("");
+                    }
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <Field label="Override reason" value={reason} onChangeText={setReason} />
+                <Field label="Payment reference" value={paymentRef} onChangeText={setPaymentRef} />
+                <PrimaryButton
+                  title="Send OTP"
+                  variant="outline"
+                  onPress={async () => {
+                    setError(null);
+                    try {
+                      const out = await apiClient.api<{ challenge_id: string }>("/admin/security/challenge", {
+                        method: "POST",
+                        body: JSON.stringify({
+                          action: "settlement_override",
+                          settlement_id: s.id,
+                          payment_reference: paymentRef || null,
+                        }),
+                      });
+                      setChallenge({ id: out.challenge_id, settlementId: s.id });
+                    } catch (e: unknown) {
+                      setError(e instanceof Error ? e.message : "Failed");
+                    }
+                  }}
+                />
+              </>
+            )}
           </Card>
         ))}
       </ScrollView>

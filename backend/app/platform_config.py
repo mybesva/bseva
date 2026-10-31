@@ -17,7 +17,7 @@ _DEFAULTS: dict[str, Any] = {
         "We could not find an eligible BSeva pujari near this location. "
         "Please try another address or check again soon."
     ),
-    "pujari_settlement_days": 14,
+    "pujari_settlement_days": 3,
     "loyalty_pujari_puja_count": 10,
     "loyalty_pujari_reward_paise": 50000,
     "loyalty_pujari_active": True,

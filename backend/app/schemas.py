@@ -143,6 +143,26 @@ class TokenOut(BaseModel):
     user: dict
 
 
+class LoginOut(BaseModel):
+    """A token, or for a Super Admin the challenge to complete with the emailed OTP."""
+
+    access_token: Optional[str] = None
+    token_type: str = "bearer"
+    user: Optional[dict] = None
+    otp_required: bool = False
+    challenge_token: Optional[str] = None
+    email_hint: Optional[str] = None
+    expires_in_minutes: Optional[int] = None
+
+
+class LoginChallengeIn(BaseModel):
+    challenge_token: str = Field(max_length=1000)
+
+
+class LoginOtpIn(LoginChallengeIn):
+    code: str = Field(max_length=12)
+
+
 class BookingCreateIn(BaseModel):
     idempotency_key: Optional[str] = Field(default=None, max_length=128)
     service_id: UUID
@@ -178,6 +198,9 @@ class WalletAdminCreditIn(BaseModel):
     # Offline payment proof (UPI ref / bank UTR / receipt no.) — unique per wallet.
     reference: str = Field(min_length=4, max_length=80)
     note: Optional[str] = Field(default=None, max_length=200)
+    challenge_id: UUID
+    otp: str = Field(max_length=12)
+    mpin: str = Field(max_length=12)
 
 
 class BlockIn(BaseModel):

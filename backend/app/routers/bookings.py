@@ -28,6 +28,7 @@ from app.domain import (
 )
 from app.panchang import panchang_for, normalize_calendar_pref
 from app.schemas import BookingCreateIn
+from app.tax_config import save_booking_tax
 
 router = APIRouter(tags=["bookings"])
 logger = logging.getLogger(__name__)
@@ -954,6 +955,18 @@ def create_booking(
         text("INSERT INTO payments (booking_id, amount_paise, status, provider) VALUES (CAST(:id AS uuid), :amt, 'successful', 'wallet')"),
         {"id": booking_id, "amt": total},
     )
+    save_booking_tax(
+        db,
+        booking_id,
+        bill,
+        str(user["id"]),
+        {
+            "mode": body.mode,
+            "latitude": body.latitude,
+            "longitude": body.longitude,
+            "country": body.customer_country,
+        },
+    )
 
     # Virtual puja: create Google Meet (when configured) + public invite token
     if body.mode == "virtual" and has_pujari:
@@ -1018,8 +1031,6 @@ def create_booking(
             {"id": user["id"]},
         ).mappings().first()
         lang = customer_preferred_language(db, str(user["id"]))
-        opted_samagri = bool(body.include_samagri) or int(bill.get("samagri") or 0) > 0
-        opted_alan = bool(body.include_alankaram) or int(bill.get("alankaram") or 0) > 0
         if cust and cust.get("email"):
             email_payload = {
                 "to": str(cust["email"]),
@@ -1029,9 +1040,7 @@ def create_booking(
                 "service_name": str(prep_view.get("display_name") or svc.get("name") or "Puja"),
                 "booking_date": str(body.booking_date),
                 "start_time": str(body.start_time),
-                "preparation": prep_view
-                if (opted_samagri or opted_alan)
-                else {**prep_view, "verified": False, "skip_samagri_cta": True},
+                "preparation": prep_view,
                 "language": lang,
                 "from_addr": str(_gs(db, "email_from_accounts", "admin@b-seva.com")),
                 "package": str(body.package_type or ""),
@@ -1194,6 +1203,18 @@ def create_booking(
                         "ccountry": (body.customer_country or "").upper() if body.mode == "virtual" else None,
                         "start_utc": start_at_utc,
                         "vtier": bill.get("virtualPriceTier"),
+                    },
+                )
+                save_booking_tax(
+                    db,
+                    nid,
+                    child_bill,
+                    str(user["id"]),
+                    {
+                        "mode": body.mode,
+                        "latitude": body.latitude,
+                        "longitude": body.longitude,
+                        "country": body.customer_country,
                     },
                 )
             if skipped:

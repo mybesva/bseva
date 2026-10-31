@@ -1069,6 +1069,8 @@ const en: Record<string, string> = {
   "admin.invoices": "Invoices",
   "admin.payments": "Payments",
   "admin.pricing": "Pricing",
+  "admin.tax": "GST & Tax",
+  "admin.security": "Security Settings",
   "admin.permissions": "Admin Permissions",
   "admin.reviews": "Reviews",
   "admin.notifications": "Notifications",

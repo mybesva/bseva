@@ -54,7 +54,13 @@ def invalidate_prior_otps(db: Session, *, email: str | None, purpose: str) -> No
     )
 
 
-def check_otp_rate_limit(db: Session, *, email: str) -> dict[str, Any]:
+def check_otp_rate_limit(
+    db: Session,
+    *,
+    email: str,
+    hourly_limit: int = MAX_REQUESTS_PER_HOUR,
+    cooldown_seconds: int = RESEND_COOLDOWN_SECONDS,
+) -> dict[str, Any]:
     email_n = _normalize_email(email)
     if not email_n:
         return {"allowed": False, "reason": "email_required"}
@@ -70,10 +76,10 @@ def check_otp_rate_limit(db: Session, *, email: str) -> dict[str, Any]:
             LIMIT :lim
             """
         ),
-        {"email": email_n, "lim": MAX_REQUESTS_PER_HOUR + 1},
+        {"email": email_n, "lim": hourly_limit + 1},
     ).mappings().all()
 
-    if len(recent) >= MAX_REQUESTS_PER_HOUR:
+    if len(recent) >= hourly_limit:
         return {"allowed": False, "reason": "hourly_limit", "retry_after_seconds": 3600}
 
     if recent:
@@ -86,8 +92,8 @@ def check_otp_rate_limit(db: Session, *, email: str) -> dict[str, Any]:
             age_s = float(age or 0)
         except (TypeError, ValueError):
             age_s = 0.0
-        if age_s < RESEND_COOLDOWN_SECONDS:
-            wait = int(RESEND_COOLDOWN_SECONDS - age_s) + 1
+        if age_s < cooldown_seconds:
+            wait = int(cooldown_seconds - age_s) + 1
             return {"allowed": False, "reason": "cooldown", "retry_after_seconds": wait}
 
     return {"allowed": True}
@@ -102,9 +108,12 @@ def issue_email_otp(
     language: str = "en",
     phone: str | None = None,
     deliver: bool = True,
+    ttl_minutes: int = OTP_TTL_MINUTES,
+    hourly_limit: int = MAX_REQUESTS_PER_HOUR,
+    cooldown_seconds: int = RESEND_COOLDOWN_SECONDS,
 ) -> dict[str, Any]:
     """
-    Create hashed OTP (10 min), invalidate prior codes for same email+purpose,
+    Create hashed OTP (10 min by default), invalidate prior codes for same email+purpose,
     optionally deliver via email provider.
     Never returns plaintext OTP except in non-production when SMTP is not configured
     and OTP_DEV_CODE is set for local fallback.
@@ -113,9 +122,9 @@ def issue_email_otp(
     if not email_n:
         return {"ok": False, "error": "email_required"}
 
-    purpose_n = purpose if purpose in ("register", "login", "verify", "reset", "verify_email") else "login"
+    purpose_n = purpose if purpose in ("register", "login", "verify", "reset", "verify_email", "sensitive_action") else "login"
 
-    rate = check_otp_rate_limit(db, email=email_n)
+    rate = check_otp_rate_limit(db, email=email_n, hourly_limit=hourly_limit, cooldown_seconds=cooldown_seconds)
     if not rate.get("allowed"):
         return {
             "ok": False,
@@ -140,7 +149,7 @@ def issue_email_otp(
         text(
             """
             INSERT INTO otp_codes (phone, email, code_hash, purpose, expires_at)
-            VALUES (:phone, :email, :hash, :purpose, NOW() + INTERVAL '10 minutes')
+            VALUES (:phone, :email, :hash, :purpose, NOW() + make_interval(mins => :ttl))
             """
         ),
         {
@@ -148,6 +157,7 @@ def issue_email_otp(
             "email": email_n,
             "hash": hash_otp(code),
             "purpose": purpose_n,
+            "ttl": ttl_minutes,
         },
     )
     db.commit()
@@ -214,8 +224,8 @@ def issue_email_otp(
 
     out: dict[str, Any] = {
         "ok": True,
-        "message": f"OTP sent to {email_n}. Valid for {OTP_TTL_MINUTES} minutes.",
-        "expires_in_minutes": OTP_TTL_MINUTES,
+        "message": f"OTP sent to {email_n}. Valid for {ttl_minutes} minutes.",
+        "expires_in_minutes": ttl_minutes,
         "email": email_n,
         "delivery": {"status": delivery.get("status"), "channel": delivery.get("channel", "email")},
     }

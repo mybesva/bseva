@@ -15,8 +15,26 @@ from app.deps import ACCOUNT_BLOCKED, current_user
 from app.domain import row_dict
 from app.platform_config import get_setting
 from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
-from app.schemas import ChangePasswordIn, LoginIn, MePatchIn, OtpRequestIn, OtpVerifyIn, RegisterIn, TokenOut
-from app.security import create_access_token, hash_password, verify_password
+from app.schemas import (
+    ChangePasswordIn,
+    LoginChallengeIn,
+    LoginIn,
+    LoginOtpIn,
+    LoginOut,
+    MePatchIn,
+    OtpRequestIn,
+    OtpVerifyIn,
+    RegisterIn,
+    TokenOut,
+)
+from app.security import (
+    create_access_token,
+    create_login_challenge,
+    decode_login_challenge,
+    hash_password,
+    password_version,
+    verify_password,
+)
 from app.i18n import coded_http
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -117,7 +135,7 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else "login"
     # Generic response — do not reveal whether the account exists for login
     user_row = db.execute(
-        text("SELECT name, preferred_language, blocked FROM users WHERE lower(email) = :e LIMIT 1"),
+        text("SELECT name, role, preferred_language, blocked FROM users WHERE lower(email) = :e LIMIT 1"),
         {"e": email},
     ).mappings().first()
 
@@ -128,7 +146,8 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
             "message": "If an account exists for this email, an OTP has been sent.",
             "expires_in_minutes": 10,
         }
-        if not user_row or user_row.get("blocked"):
+        # A Super Admin gets the login OTP only after the password step, so it cannot be requested here.
+        if not user_row or user_row.get("blocked") or user_row.get("role") == "super_admin":
             return generic
         result = issue_email_otp(
             db,
@@ -219,7 +238,9 @@ def login_with_otp(body: OtpVerifyIn, request: Request, db: Session = Depends(ge
         raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
     if row["blocked"]:
         raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
-    return TokenOut(access_token=create_access_token(str(row["id"]), row["role"]), user=_public(dict(row)))
+    if row["role"] == "super_admin":
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Super Admins sign in with password and OTP")
+    return TokenOut(access_token=create_access_token(str(row["id"]), row["role"], row["password_hash"]), user=_public(dict(row)))
 
 
 @router.post("/register", response_model=TokenOut)
@@ -423,7 +444,48 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     return TokenOut(access_token=create_access_token(user_id, body.account_type), user=_public(dict(row)))
 
 
-@router.post("/login", response_model=TokenOut)
+def _mask_email(email: str) -> str:
+    name, _, domain = str(email).partition("@")
+    return f"{name[:2]}***@{domain}"
+
+
+def _send_super_admin_otp(db: Session, row: dict) -> None:
+    from app.otp_service import issue_email_otp
+    from app.sensitive_auth import SUPER_ADMIN_OTP_PER_HOUR
+
+    result = issue_email_otp(
+        db,
+        email=str(row["email"]),
+        purpose="login",
+        customer_name=str(row.get("name") or ""),
+        language=str(row.get("preferred_language") or "en"),
+        hourly_limit=SUPER_ADMIN_OTP_PER_HOUR,
+    )
+    if result.get("ok"):
+        return
+    if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
+        wait = result.get("retry_after_seconds")
+        raise HTTPException(429, f"Please wait before requesting another OTP{f' ({wait}s)' if wait else ''}")
+    # No OTP means no sign-in: this step never falls back to password alone.
+    raise HTTPException(502, result.get("message") or "Could not send your OTP. Please try again shortly.")
+
+
+def _super_admin_challenge(db: Session, token: str) -> dict:
+    try:
+        claims = decode_login_challenge(token)
+    except ValueError:
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "LOGIN_EXPIRED", "Your sign-in expired. Please start again.") from None
+    row = db.execute(
+        text("SELECT * FROM users WHERE id = CAST(:id AS uuid)"), {"id": claims.get("sub")}
+    ).mappings().first()
+    if not row or row["role"] != "super_admin" or claims.get("pv") != password_version(row["password_hash"]):
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "LOGIN_EXPIRED", "Your sign-in expired. Please start again.")
+    if row["blocked"]:
+        raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
+    return dict(row)
+
+
+@router.post("/login", response_model=LoginOut)
 def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     identifier = body.identifier.strip()
     ip = rate_limit.client_ip(request)
@@ -451,7 +513,43 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         ensure_public_id(db, str(row["id"]))
         db.commit()
         row = db.execute(text("SELECT * FROM users WHERE id = CAST(:id AS uuid)"), {"id": str(row["id"])}).mappings().one()
-    return TokenOut(access_token=create_access_token(str(row["id"]), row["role"]), user=_public(dict(row)))
+    if row["role"] == "super_admin":
+        _send_super_admin_otp(db, dict(row))
+        return LoginOut(
+            otp_required=True,
+            challenge_token=create_login_challenge(str(row["id"]), row["password_hash"]),
+            email_hint=_mask_email(row["email"]),
+            expires_in_minutes=10,
+        )
+    return LoginOut(access_token=create_access_token(str(row["id"]), row["role"], row["password_hash"]), user=_public(dict(row)))
+
+
+@router.post("/login/otp/resend")
+def resend_super_admin_otp(body: LoginChallengeIn, request: Request, db: Session = Depends(get_db)):
+    rate_limit.enforce(db, rate_limit.OTP_REQUEST_IP, rate_limit.client_ip(request))
+    _send_super_admin_otp(db, _super_admin_challenge(db, body.challenge_token))
+    return {"ok": True}
+
+
+@router.post("/login/otp/complete", response_model=TokenOut)
+def complete_super_admin_login(body: LoginOtpIn, request: Request, db: Session = Depends(get_db)):
+    """Second step of Super Admin sign-in; only this mints a Super Admin session."""
+    from app.otp_service import verify_email_otp
+    from app.sensitive_auth import log_event, log_failure
+
+    ip = rate_limit.client_ip(request)
+    _check_otp_verify_ip(db, ip)
+    row = _super_admin_challenge(db, body.challenge_token)
+    verified = verify_email_otp(db, email=str(row["email"]), code=body.code, purpose="login", consume=True)
+    if not verified.get("ok"):
+        log_failure(db, row, "super_admin_login", "wrong_otp", ip=ip)
+        _raise_otp_failure(db, ip, verified, status.HTTP_401_UNAUTHORIZED)
+    log_event(db, row, "super_admin_login", "success", ip=ip)
+    db.commit()
+    return TokenOut(
+        access_token=create_access_token(str(row["id"]), row["role"], row["password_hash"], mfa=True),
+        user=_public(row),
+    )
 
 
 @router.get("/me")

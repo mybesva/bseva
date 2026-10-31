@@ -1,15 +1,17 @@
 """Booking lifecycle: accept, OTP start, complete, ratings, location, settlements, rewards."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
-from uuid import uuid4
+from datetime import date, datetime, timezone
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import rate_limit, sensitive_auth as sa
 from app.audit import write_audit
+from app.settlement_cycle import cycle_days, pujari_next_payday, run_due_settlements
 from app.booking_state import set_booking_status
 from app.booking_visibility import booking_for_role, public_pujari
 from app.db import get_db
@@ -56,7 +58,10 @@ class CompleteOtpVerifyIn(BaseModel):
 class SettlementOverrideIn(BaseModel):
     reason: str = Field(min_length=3)
     mark_settled: bool = True
-    payment_reference: str | None = None
+    payment_reference: str | None = Field(default=None, max_length=120)
+    challenge_id: UUID
+    otp: str = Field(max_length=12)
+    mpin: str = Field(max_length=12)
 
 
 @router.get("/bookings/{booking_id}")
@@ -693,13 +698,12 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
         text("SELECT * FROM services WHERE id = CAST(:id AS uuid)"),
         {"id": str(b["service_id"])},
     ).mappings().first()
-    days = int(get_setting(db, "pujari_settlement_days", 14))
     base = int(b["base_price_paise"])
     payable = pujari_dakshina_paise(svc, base)
     platform = base - payable
     reimbursement = int(b.get("pujari_reimbursement_paise") or 0)
     settlement_total = payable + reimbursement
-    due = date.today() + timedelta(days=days)
+    due = pujari_next_payday(db, str(b["pujari_id"]))
     try:
         st = b.get("settlement_status") or "not_applicable"
         if st != "legacy" and not no_show_blocked and paid:
@@ -1358,62 +1362,9 @@ def list_settlements(
         # Settlements are Super Admin only on the back office (pujaris see their own below).
         raise HTTPException(403, "Not allowed")
 
-    days = int(get_setting(db, "pujari_settlement_days", 14) or 14)
-
-    # Biweekly auto-settle: when hold period ends, credit pujari wallet and mark settled.
-    due = db.execute(
-        text(
-            """
-            SELECT * FROM settlements
-            WHERE status IN ('pending', 'eligible')
-              AND due_date IS NOT NULL
-              AND due_date <= CURRENT_DATE
-            ORDER BY due_date
-            FOR UPDATE SKIP LOCKED
-            """
-        )
-    ).mappings().all()
-    for s in due:
-        try:
-            apply_wallet(
-                db,
-                str(s["pujari_id"]),
-                int(s["settlement_amount_paise"] or 0),
-                "credit",
-                f"Auto settlement (every {days} days)",
-                str(s["booking_id"]),
-            )
-            db.execute(
-                text(
-                    """
-                    UPDATE settlements SET
-                      status = 'settled',
-                      settled_at = NOW(),
-                      override_flag = FALSE,
-                      override_reason = :reason,
-                      payment_reference = COALESCE(payment_reference, 'AUTO_BIWEEKLY')
-                    WHERE id = :id AND status IN ('pending', 'eligible')
-                    """
-                ),
-                {
-                    "id": s["id"],
-                    "reason": f"Automatic settlement after {days}-day (2-week) hold",
-                },
-            )
-            db.execute(
-                text("UPDATE bookings SET settlement_status = 'settled' WHERE id = CAST(:id AS uuid)"),
-                {"id": str(s["booking_id"])},
-            )
-        except ValueError:
-            db.execute(
-                text(
-                    """
-                    UPDATE settlements SET status = 'eligible'
-                    WHERE id = :id AND status = 'pending'
-                    """
-                ),
-                {"id": s["id"]},
-            )
+    # Also runs from the background worker; here it keeps the list current without one.
+    days = cycle_days(db)
+    run_due_settlements(db)
     db.commit()
 
     if user["role"] != "super_admin":
@@ -1472,8 +1423,21 @@ def list_settlements(
     rows = db.execute(
         text(
             f"""
-            SELECT s.*, b.booking_number, pu.name AS pujari_name, cu.name AS customer_name
+            SELECT s.*, b.booking_number, pu.name AS pujari_name, cu.name AS customer_name,
+              COALESCE(done.actor_name, ov.name) AS processed_by_name,
+              COALESCE(done.actor_email, ov.email) AS processed_by_email,
+              COALESCE(ok.actor_name, ov.name) AS approved_by_name,
+              COALESCE(ok.actor_email, ov.email) AS approved_by_email
             {join_sql}
+            LEFT JOIN users ov ON ov.id = s.override_by
+            LEFT JOIN LATERAL (
+              SELECT actor_name, actor_email FROM security_audit_log
+              WHERE settlement_id = s.id AND action = 'settled' ORDER BY created_at DESC LIMIT 1
+            ) done ON TRUE
+            LEFT JOIN LATERAL (
+              SELECT actor_name, actor_email FROM security_audit_log
+              WHERE settlement_id = s.id AND action = 'approved' ORDER BY created_at DESC LIMIT 1
+            ) ok ON TRUE
             WHERE 1=1 {extra}
             ORDER BY s.created_at DESC
             LIMIT :lim OFFSET :off
@@ -1500,19 +1464,41 @@ def list_settlements(
 def override_settlement(
     settlement_id: str,
     body: SettlementOverrideIn,
+    request: Request,
     user=Depends(require_super_admin),
     db: Session = Depends(get_db),
 ):
+    ip = rate_limit.client_ip(request)
+    reference = (body.payment_reference or "").strip() or None
+    action = "settlement_override" if body.mark_settled else "settlement_note"
+    try:
+        amount = int(sa.settlement_for_action(db, settlement_id)["settlement_amount_paise"] or 0)
+    except HTTPException as e:
+        if e.status_code == 400:
+            sa.log_failure(db, user, action, str(e.detail), settlement_id=settlement_id, reference=reference, ip=ip)
+        raise
+    audit = {"settlement_id": settlement_id, "amount_paise": amount, "reference": reference, "ip": ip}
+    sa.verify_challenge(
+        db,
+        user,
+        challenge_id=str(body.challenge_id),
+        otp=body.otp,
+        mpin=body.mpin,
+        action=action,
+        audit_action=action,
+        ip=ip,
+        settlement_id=settlement_id,
+        amount_paise=amount,
+        reference=reference,
+    )
     # Row lock: a concurrent override or the auto-settle sweep waits here, then sees status='settled'.
     s = db.execute(
         text("SELECT * FROM settlements WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": settlement_id}
     ).mappings().first()
-    if not s:
-        raise HTTPException(404, "Settlement not found")
-    if s["status"] == "settled":
-        raise HTTPException(400, "Already settled")
-    if s["status"] == "blocked":
-        raise HTTPException(400, "This settlement is blocked for a pujari no-show and cannot be paid out")
+    if s["status"] in ("settled", "blocked") or int(s["settlement_amount_paise"] or 0) != amount:
+        sa.log_failure(db, user, action, f"state_changed:{s['status']}", **audit)
+        raise HTTPException(400, "This settlement changed while it was being verified. Nothing was paid.")
+    sa.log_event(db, user, "approved", "success", **audit)
     if body.mark_settled:
         # Credit pujari if not legacy/double
         try:
@@ -1525,6 +1511,7 @@ def override_settlement(
                 str(s["booking_id"]),
             )
         except ValueError as e:
+            sa.log_failure(db, user, action, str(e), **audit)
             raise HTTPException(400, str(e))
         db.execute(
             text(
@@ -1534,12 +1521,13 @@ def override_settlement(
                 WHERE id = CAST(:id AS uuid)
                 """
             ),
-            {"r": body.reason, "u": user["id"], "pref": body.payment_reference, "id": settlement_id},
+            {"r": body.reason, "u": user["id"], "pref": reference, "id": settlement_id},
         )
         db.execute(
             text("UPDATE bookings SET settlement_status = 'settled' WHERE id = CAST(:id AS uuid)"),
             {"id": str(s["booking_id"])},
         )
+        sa.log_event(db, user, "settled", "success", reason=body.reason, **audit)
     write_audit(db, str(user["id"]), "settlement_override", "settlement", settlement_id, reason=body.reason)
     db.commit()
     return {"ok": True}

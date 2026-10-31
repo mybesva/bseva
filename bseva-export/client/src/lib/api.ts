@@ -234,13 +234,35 @@ export type AuthUser = {
   profile?: Record<string, unknown> | null;
 };
 
+export type LoginOut = {
+  access_token?: string;
+  user?: AuthUser;
+  otp_required?: boolean;
+  challenge_token?: string;
+  email_hint?: string;
+};
+
+/** A Super Admin gets `otp_required` here and signs in with completeLoginOtp. */
 export async function loginApi(identifier: string, password: string) {
-  const out = await api<{ access_token: string; user: AuthUser }>("/auth/login", {
+  const out = await api<LoginOut>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ identifier, password }),
   });
+  if (out.access_token) setToken(out.access_token);
+  return out;
+}
+
+export async function completeLoginOtp(challenge_token: string, code: string) {
+  const out = await api<{ access_token: string; user: AuthUser }>("/auth/login/otp/complete", {
+    method: "POST",
+    body: JSON.stringify({ challenge_token, code }),
+  });
   setToken(out.access_token);
   return out;
+}
+
+export async function resendLoginOtp(challenge_token: string) {
+  return api("/auth/login/otp/resend", { method: "POST", body: JSON.stringify({ challenge_token }) });
 }
 
 export async function registerApi(payload: Record<string, unknown>) {
