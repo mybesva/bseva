@@ -9,6 +9,8 @@ supabase/migrations 001–012 → ensure_schema() → remaining files in order �
 Applied files are recorded in `schema_migrations`. A database that already has the B-Seva schema but no
 tracking table (e.g. a restored Supabase dump) is baselined: existing files are recorded, not re-run.
 A Postgres advisory lock prevents two deploys migrating at once. Nothing is ever dropped.
+ensure_schema() changes structure only and seeds only a new, empty database, so running it never alters existing
+rows. Changes to existing data must be numbered files in supabase/migrations.
 """
 from __future__ import annotations
 
@@ -83,8 +85,12 @@ def _ensure_schema() -> None:
     from app.schema_migrate import ensure_schema
 
     started = time.monotonic()
-    ensure_schema(quiet=True)
-    _log("ensure_schema_ok", ms=int((time.monotonic() - started) * 1000))
+    failed = ensure_schema(quiet=True)
+    ms = int((time.monotonic() - started) * 1000)
+    if failed:
+        _log("ensure_schema_failed", failed=[{"step": p, "error": err} for p, err in failed[:20]], ms=ms)
+    else:
+        _log("ensure_schema_ok", ms=ms)
 
 
 def migrate() -> int:

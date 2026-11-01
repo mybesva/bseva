@@ -22,6 +22,15 @@ env:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,6 +42,9 @@ jobs:
         working-directory: backend
         env:
           DATABASE_URL: postgresql+psycopg://ci:ci@127.0.0.1:1/ci
+          # Deployments must not change existing data: tests/test_ensure_schema_data_integrity.py
+          BSEVA_TEST_PG_URL: postgresql://ci:ci@127.0.0.1:5432/postgres
+          REQUIRE_PG_TESTS: "1"
         run: |
           pip install -r requirements.txt pytest==8.3.5 boto3==1.42.64
           # Known pre-existing failure on main (invoice label wording), tracked separately.

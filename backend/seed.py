@@ -69,7 +69,7 @@ USERS = [
         "cal": "solar",
     },
     {
-        "name": "Pandit Reddy",
+        "name": "Pandit",
         "email": "pujari2@bseva.test",
         "phone": "9000000006",
         "role": "pujari",
@@ -280,7 +280,8 @@ def run() -> None:
         except Exception:
             pass
 
-        # Human-readable CUST-/PUJ- public IDs
+        # Human-readable CUST-/PUJ- public IDs (a second connection, so it must see these users unlocked)
+        conn.commit()
         try:
             from app.public_ids import backfill_missing_public_ids
             from app.db import SessionLocal
