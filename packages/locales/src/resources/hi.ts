@@ -148,6 +148,7 @@ const hi: Record<string, string> = {
   "auth.accountType": "आप किस प्रकार का खाता बनाना चाहते हैं?",
   "auth.customer": "ग्राहक",
   "auth.pujari": "पुजारी",
+  "auth.headPujari": "मुख्य पुजारी",
   "auth.blocked": "आपका खाता अवरुद्ध है। सहायता के लिए BSeva सपोर्ट से संपर्क करें।",
   "auth.emailOrPhone": "ईमेल या फ़ोन",
   "auth.loginTitle": "BSeva में लॉगिन",

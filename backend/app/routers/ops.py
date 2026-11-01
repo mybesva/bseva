@@ -94,7 +94,18 @@ class PermissionGrantIn(BaseModel):
 
 @router.get("/samagri/items")
 def list_samagri(db: Session = Depends(get_db), user=Depends(current_user)):
-    rows = db.execute(text("SELECT * FROM samagri_items WHERE active = TRUE ORDER BY name")).mappings().all()
+    rows = db.execute(
+        text(
+            """
+            SELECT si.*,
+              (SELECT COUNT(*) FROM service_samagri ss
+               WHERE ss.samagri_item_id = si.id AND COALESCE(ss.active, TRUE) = TRUE) AS service_count
+            FROM samagri_items si
+            WHERE si.active = TRUE
+            ORDER BY si.name
+            """
+        )
+    ).mappings().all()
     out = []
     for r in rows:
         d = row_dict(r)
@@ -155,6 +166,76 @@ def create_samagri(body: SamagriItemIn, user=Depends(require_permission("manage_
             break
     db.commit()
     return {"id": iid}
+
+
+@router.put("/admin/samagri/items/{item_id}")
+def update_samagri(
+    item_id: UUID,
+    body: SamagriItemIn,
+    user=Depends(require_permission("manage_samagri")),
+    db: Session = Depends(get_db),
+):
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(400, "Enter the item name")
+    key = (body.item_key or "").strip() or None
+    params = {"id": str(item_id), "n": name, "d": body.description, "u": body.unit, "k": key}
+    if key and db.execute(
+        text("SELECT 1 FROM samagri_items WHERE item_key = :k AND id <> CAST(:id AS uuid)"), params
+    ).first():
+        raise HTTPException(400, "Another item already uses this item key")
+    row = db.execute(
+        text(
+            """
+            UPDATE samagri_items
+            SET name = :n, description = :d, unit = :u, default_unit = :u, item_key = :k
+            WHERE id = CAST(:id AS uuid) AND active = TRUE
+            RETURNING id
+            """
+        ),
+        params,
+    ).first()
+    if not row:
+        raise HTTPException(404, "Samagri item not found")
+    for lang, value in {**(body.translations or {}), "en": name}.items():
+        value = (value or "").strip()
+        if value:
+            db.execute(
+                text(
+                    """
+                    INSERT INTO samagri_item_translations (samagri_item_id, language_code, item_name)
+                    VALUES (CAST(:id AS uuid), :lang, :name)
+                    ON CONFLICT (samagri_item_id, language_code) DO UPDATE SET item_name = EXCLUDED.item_name
+                    """
+                ),
+                {"id": str(item_id), "lang": lang, "name": value},
+            )
+        else:
+            db.execute(
+                text("DELETE FROM samagri_item_translations WHERE samagri_item_id = CAST(:id AS uuid) AND language_code = :lang"),
+                {"id": str(item_id), "lang": lang},
+            )
+    write_audit(db, str(user["id"]), "samagri_item_updated", "samagri_item", str(item_id))
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/admin/samagri/items/{item_id}")
+def delete_samagri(
+    item_id: UUID,
+    user=Depends(require_permission("manage_samagri")),
+    db: Session = Depends(get_db),
+):
+    """Hidden, not erased: every puja and preparation list reads active items only."""
+    row = db.execute(
+        text("UPDATE samagri_items SET active = FALSE, item_key = NULL WHERE id = CAST(:id AS uuid) AND active = TRUE RETURNING id"),
+        {"id": str(item_id)},
+    ).first()
+    if not row:
+        raise HTTPException(404, "Samagri item not found")
+    write_audit(db, str(user["id"]), "samagri_item_deleted", "samagri_item", str(item_id))
+    db.commit()
+    return {"ok": True}
 
 
 @router.put("/admin/samagri/items/{item_id}/translations")

@@ -52,7 +52,7 @@ const SETTING_GROUPS: { id: string; title: string; description?: string }[] = [
     title: "Rescheduling",
     description: "When customers can move a puja and what it costs. All fees apply per booking and start at ₹0.",
   },
-  { id: "pricing", title: "Pricing & Surge", description: "GST and date-based surcharges. Puja prices are set per service. Surge is added to the quoted puja total." },
+  { id: "pricing", title: "Pricing & Surge", description: "One GST rate for the whole bill, and date-based surcharges. Puja prices are set per service. Surge is added to the quoted puja total." },
   { id: "pujari", title: "Pujari", description: "Settlement, joining fee, no-show, and assignment rules." },
   { id: "email", title: "Email", description: "From-addresses used in outgoing mail." },
     { id: "invoices", title: "Invoices", description: "Company, GST, numbering, SAC/HSN, and invoice notes. Used on new invoices only — issued invoices stay unchanged." },
@@ -267,7 +267,7 @@ const PLATFORM_KEYS: PlatformKey[] = [
   { key: "invoice_prefix_settlement", label: "Settlement Invoice Prefix", type: "string", group: "invoices" },
   { key: "invoice_signatory_name", label: "Authorized Signatory Name", type: "string", group: "invoices" },
   { key: "invoice_signatory_designation", label: "Authorized Signatory Designation", type: "string", group: "invoices" },
-  { key: "invoice_sac_code", label: "SAC Code (Services)", type: "string", group: "invoices", hint: "Shown on tax invoices. Default 999799. GST % is set in Pricing — invoices use the rate stored on the booking." },
+  { key: "invoice_sac_code", label: "SAC Code", type: "string", group: "pricing", hint: "Printed on every line of new tax invoices. 999591 is Religious Services." },
   { key: "invoice_hsn_code", label: "HSN Code (Optional)", type: "string", group: "invoices" },
   { key: "invoice_terms", label: "Invoice Terms & Conditions", type: "string", group: "invoices", multiline: true },
   { key: "invoice_notes", label: "Invoice Notes / Footer", type: "string", group: "invoices", multiline: true },
@@ -872,10 +872,15 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 {isPricing && (
                   <div className="space-y-4 rounded-lg border border-border p-4">
-                    <h3 className="font-semibold text-foreground">Tax</h3>
+                    <h3 className="font-semibold text-foreground">GST</h3>
+                    <p className="text-sm text-muted-foreground">
+                      One rate applies to the whole bill: puja, surge, samagri, alankaram, food, platform fee and
+                      gateway fee. It applies to new bookings only. Issued invoices never change.
+                    </p>
                     <div className="space-y-1">
                       <Label>GST %</Label>
                       <Input value={gst} onChange={(e) => setGst(e.target.value)} type="number" min={0} step="0.01" />
+                      <p className="text-xs text-muted-foreground">Use a notified GST rate, such as 0, 5, 12 or 18.</p>
                     </div>
                     {pricingDirty && (
                       <div className="flex flex-wrap gap-2 pt-1">

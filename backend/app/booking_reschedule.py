@@ -160,6 +160,10 @@ def reschedule_summary(db: Session, booking: dict[str, Any]) -> dict[str, Any]:
         text("SELECT booking_lead_hours FROM services WHERE id = CAST(:id AS uuid)"),
         {"id": str(booking["service_id"])},
     ).scalar()
+    wallet_balance = db.execute(
+        text("SELECT balance_paise FROM wallets WHERE user_id = CAST(:id AS uuid)"),
+        {"id": str(booking["customer_id"])},
+    ).scalar()
     return {
         "eligible": blocked is None,
         "blocked_code": blocked[0] if blocked else None,
@@ -167,6 +171,7 @@ def reschedule_summary(db: Session, booking: dict[str, Any]) -> dict[str, Any]:
         "cutoff_hours": rules["cutoff_hours"],
         "deadline": (start - timedelta(hours=rules["cutoff_hours"])).isoformat(),
         "next_fee_paise": fee,
+        "wallet_balance_paise": int(wallet_balance or 0),
         "lead_hours": int(lead) if lead and lead >= 1 else 48,
         "reschedule_count": int(booking.get("reschedule_count") or 0),
         "pujari_performance": performance,
@@ -311,7 +316,14 @@ def _send_emails(db: Session, booking: dict[str, Any], *, old_date: str, old_tim
         )
 
 
-def reschedule_booking(db: Session, booking_id: str, user: dict, new_date: date, new_time: time) -> dict[str, Any]:
+def reschedule_booking(
+    db: Session,
+    booking_id: str,
+    user: dict,
+    new_date: date,
+    new_time: time,
+    expected_fee_paise: int | None = None,
+) -> dict[str, Any]:
     """Move a paid booking, release its pujari and send it back out through the normal offer flow.
 
     Everything up to the commit is one transaction, so a failure leaves the booking unchanged."""
@@ -334,6 +346,8 @@ def reschedule_booking(db: Session, booking_id: str, user: dict, new_date: date,
     performance = pujari_performance(db, previous_pujari)
     rating = (performance or {}).get("rating", {}).get("average")
     fee, fee_rule = reschedule_fee(rules, prior, rating)
+    if expected_fee_paise is not None and expected_fee_paise != fee:
+        raise coded_http(409, "RESCHEDULE_FEE_CHANGED", "The rescheduling charge has changed. Please review it and try again.")
     num = str(b.get("booking_number") or booking_id[:8])
     if fee > 0:
         try:

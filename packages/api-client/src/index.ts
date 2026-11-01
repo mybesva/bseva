@@ -423,10 +423,10 @@ export function createApiClient(opts: ApiClientOptions) {
       return api(`/bookings/${id}/reschedule`);
     },
 
-    rescheduleBooking(id: string, new_date: string, new_start_time: string) {
+    rescheduleBooking(id: string, new_date: string, new_start_time: string, expected_fee_paise?: number) {
       return api(`/bookings/${id}/reschedule`, {
         method: "POST",
-        body: JSON.stringify({ new_date, new_start_time }),
+        body: JSON.stringify({ new_date, new_start_time, expected_fee_paise }),
       });
     },
 

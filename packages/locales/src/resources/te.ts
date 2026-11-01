@@ -148,6 +148,7 @@ const te: Record<string, string> = {
   "auth.accountType": "మీరు ఏ రకమైన ఖాతా సృష్టించాలనుకుంటున్నారు?",
   "auth.customer": "కస్టమర్",
   "auth.pujari": "పూజారి",
+  "auth.headPujari": "ప్రధాన పూజారి",
   "auth.blocked": "మీ ఖాతా బ్లాక్ చేయబడింది. BSeva సపోర్ట్‌ను సంప్రదించండి.",
   "auth.emailOrPhone": "ఇమెయిల్ లేదా ఫోన్",
   "auth.loginTitle": "BSevaలో లాగిన్",

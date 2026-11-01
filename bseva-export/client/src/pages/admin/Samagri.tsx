@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
@@ -31,6 +31,7 @@ type SamagriItem = {
   unit?: string | null;
   item_key?: string | null;
   active?: boolean;
+  service_count?: number;
   translations?: Record<string, string>;
 };
 
@@ -40,6 +41,7 @@ export default function AdminSamagri() {
   const [items, setItems] = useState<SamagriItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState("pcs");
@@ -63,37 +65,52 @@ export default function AdminSamagri() {
     void load();
   }, []);
 
-  async function createItem(e: React.FormEvent) {
+  function openForm(item?: SamagriItem) {
+    setEditingId(item?.id ?? null);
+    setName(item?.name ?? "");
+    setDescription(item?.description ?? "");
+    setUnit(item?.unit ?? "pcs");
+    setItemKey(item?.item_key ?? "");
+    setNameHi(item?.translations?.hi ?? "");
+    setNameTe(item?.translations?.te ?? "");
+    setOpen(true);
+  }
+
+  async function saveItem(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      const translations: Record<string, string> = { en: name };
-      if (nameHi.trim()) translations.hi = nameHi.trim();
-      if (nameTe.trim()) translations.te = nameTe.trim();
-      await api("/admin/samagri/items", {
-        method: "POST",
+      await api(editingId ? `/admin/samagri/items/${editingId}` : "/admin/samagri/items", {
+        method: editingId ? "PUT" : "POST",
         body: JSON.stringify({
           name,
           description: description || null,
           unit,
           item_key: itemKey.trim() || null,
           active: true,
-          translations,
+          translations: { en: name, hi: nameHi.trim(), te: nameTe.trim() },
         }),
       });
-      toast.success("Item added");
+      toast.success(editingId ? "Item updated" : "Item added");
       setOpen(false);
-      setName("");
-      setDescription("");
-      setUnit("pcs");
-      setItemKey("");
-      setNameHi("");
-      setNameTe("");
       await load();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteItem(item: SamagriItem) {
+    const used = item.service_count ?? 0;
+    const impact = used ? ` It will be removed from ${used} puja${used === 1 ? "" : "s"}.` : "";
+    if (!confirm(`Delete "${item.name}"?${impact}`)) return;
+    try {
+      await api(`/admin/samagri/items/${item.id}`, { method: "DELETE" });
+      toast.success("Item deleted");
+      await load();
+    } catch (err: any) {
+      toast.error(err.message);
     }
   }
 
@@ -106,7 +123,7 @@ export default function AdminSamagri() {
           </p>
         </div>
         {canManage && (
-          <Button onClick={() => setOpen(true)}>
+          <Button onClick={() => openForm()}>
             <Plus className="h-4 w-4 mr-2" />
             Add item
           </Button>
@@ -128,6 +145,8 @@ export default function AdminSamagri() {
                 <TableRow>
                   <TableHead>Name (EN)</TableHead>
                   <TableHead>HI / TE</TableHead>
+                  <TableHead>Used In</TableHead>
+                  {canManage && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -137,6 +156,23 @@ export default function AdminSamagri() {
                     <TableCell className="text-muted-foreground text-sm">
                       {(it.translations?.hi || "—") + " / " + (it.translations?.te || "—")}
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {it.service_count ?? 0} puja{it.service_count === 1 ? "" : "s"}
+                    </TableCell>
+                    {canManage && (
+                      <TableCell className="text-right">
+                        <div className="inline-flex gap-1">
+                          <Button size="sm" variant="outline" onClick={() => openForm(it)}>
+                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => void deleteItem(it)}>
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -148,9 +184,9 @@ export default function AdminSamagri() {
       <Dialog open={open && canManage} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Samagri Item</DialogTitle>
+            <DialogTitle>{editingId ? "Edit Samagri Item" : "Add Samagri Item"}</DialogTitle>
           </DialogHeader>
-          <form className="space-y-3" onSubmit={createItem}>
+          <form className="space-y-3" onSubmit={saveItem}>
             <div className="space-y-1">
               <Label>Name (English)</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} required />

@@ -1,8 +1,7 @@
-"""Super Admin GST configuration: rate lookup, place of supply and the booking tax snapshot."""
+"""GST for bookings: the Settings rate, place of supply and the booking tax snapshot."""
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -10,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import gst
+from app.platform_config import get_setting
 
 _ready = False
 
@@ -22,61 +22,29 @@ def tax_tables_ready(db: Session) -> bool:
     return _ready
 
 
-def tax_date() -> Any:
-    return (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).date()
-
-
-def resolve_rate(db: Session, line_type: str, service_id: str | None, package_type: str | None, on: Any) -> dict | None:
-    """Most specific row in force on `on`: puja + package, then puja, then the default."""
-    row = db.execute(
-        text(
-            """
-            SELECT hsn_sac, gst_rate, classification, effective_from
-            FROM gst_rate_config
-            WHERE line_type = :lt
-              AND effective_from <= :on
-              AND (service_id IS NULL OR service_id = CAST(:sid AS uuid))
-              AND (package_type IS NULL OR package_type = :pkg)
-            ORDER BY (service_id IS NOT NULL AND package_type IS NOT NULL) DESC,
-                     (service_id IS NOT NULL) DESC,
-                     (package_type IS NOT NULL) DESC,
-                     effective_from DESC, created_at DESC
-            LIMIT 1
-            """
-        ),
-        {"lt": line_type, "sid": service_id, "pkg": package_type, "on": on},
-    ).mappings().first()
-    return dict(row) if row else None
-
-
 def quote_tax(
     db: Session,
     *,
     amounts: list[tuple[str, str, int]],
-    service_id: str | None,
-    package_type: str | None,
     discount_paise: int,
-    fallback_rate: float,
+    rate: float,
 ) -> dict[str, Any]:
-    """Tax for a priced booking. `amounts` is (line_type, description, paise)."""
-    ready = tax_tables_ready(db)
-    on = tax_date()
-    lines = []
-    for line_type, description, paise in amounts:
-        if paise <= 0:
-            continue
-        cfg = resolve_rate(db, line_type, service_id, package_type, on) if ready else None
-        lines.append(
-            {
-                "line_type": line_type,
-                "description": description,
-                "amount_paise": int(paise),
-                "hsn_sac": (cfg or {}).get("hsn_sac") or "",
-                "gst_rate": float((cfg or {}).get("gst_rate", fallback_rate)),
-                "classification": (cfg or {}).get("classification") or "taxable",
-                "configured": cfg is not None,
-            }
-        )
+    """Tax for a priced booking: one GST rate and one SAC code from Settings, on every line.
+    `amounts` is (line_type, description, paise)."""
+    code = str(get_setting(db, "invoice_sac_code", "") or "").strip()
+    lines = [
+        {
+            "line_type": line_type,
+            "description": description,
+            "amount_paise": int(paise),
+            "hsn_sac": code,
+            "gst_rate": float(rate),
+            "classification": "taxable" if rate > 0 else "nil_rated",
+            "configured": True,
+        }
+        for line_type, description, paise in amounts
+        if paise > 0
+    ]
     return gst.calculate_lines(lines, discount_paise)
 
 

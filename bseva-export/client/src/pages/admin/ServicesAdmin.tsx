@@ -27,7 +27,6 @@ import { Badge } from "@/components/ui/badge";
 import { adminServiceActivationError, buildAdminServicePayload, uniqueServiceSlug, type AdminServiceForm } from "@bseva/config";
 import { copyTextSafely } from "@/lib/browserActions";
 import { SamagriItemPicker } from "@/components/admin/SamagriItemPicker";
-import { TaxRateForm } from "@/components/admin/TaxRateForm";
 import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
@@ -1086,15 +1085,6 @@ export default function ServicesAdmin() {
               </TabsContent>
 
               <TabsContent value="pricing" className="space-y-4 mt-4">
-            {isSuper && editId && (
-              <div className="rounded-lg border p-3 space-y-2">
-                <p className="text-sm font-medium">GST for this puja</p>
-                <p className="text-xs text-muted-foreground">
-                  Overrides the defaults on the GST &amp; Tax page from the date you choose. Issued invoices keep their values.
-                </p>
-                <TaxRateForm serviceId={editId} />
-              </div>
-            )}
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <p className="text-sm font-medium">Cost & pricing</p>
               <p className="text-xs text-muted-foreground">

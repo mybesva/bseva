@@ -148,6 +148,7 @@ const kn: Record<string, string> = {
   "auth.accountType": "ನೀವು ಯಾವ ರೀತಿಯ ಖಾತೆ ರಚಿಸಲು ಬಯಸುತ್ತೀರಿ?",
   "auth.customer": "ಗ್ರಾಹಕ",
   "auth.pujari": "ಪೂಜಾರಿ",
+  "auth.headPujari": "ಮುಖ್ಯ ಪೂಜಾರಿ",
   "auth.blocked": "ನಿಮ್ಮ ಖಾತೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ. BSeva ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ.",
   "auth.emailOrPhone": "ಇಮೇಲ್ ಅಥವಾ ಫೋನ್",
   "auth.loginTitle": "BSeva ಗೆ ಲಾಗಿನ್",
