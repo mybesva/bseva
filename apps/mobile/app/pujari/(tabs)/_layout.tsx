@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useDarkStatusBarWhileFocused } from "@/hooks/useDarkStatusBarWhileFocused";
 import { Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useI18n } from "@/providers/I18nProvider";
@@ -35,6 +36,7 @@ function TabIcon({
 }
 
 export default function PujariTabs() {
+  useDarkStatusBarWhileFocused();
   const { colors } = useAppTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
