@@ -23,7 +23,6 @@ import {
   IndianRupee,
   Lightbulb,
   Info,
-  Percent,
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,7 +91,6 @@ const navigation: NavItem[] = [
   { nameKey: "admin.muhurtham", suffix: "/muhurtham", icon: Clock3 },
   { nameKey: "admin.settlements", suffix: "/settlements", icon: CreditCard },
   { nameKey: "admin.invoices", suffix: "/invoices", icon: FileText },
-  { nameKey: "admin.tax", suffix: "/tax", icon: Percent },
   { nameKey: "admin.security", suffix: "/security", icon: ShieldCheck },
   { nameKey: "admin.payments", suffix: "/payments", icon: CreditCard },
   { nameKey: "admin.pricing", suffix: "/pricing", icon: IndianRupee },

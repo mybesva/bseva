@@ -148,6 +148,7 @@ const ta: Record<string, string> = {
   "auth.accountType": "எந்த வகை கணக்கை உருவாக்க விரும்புகிறீர்கள்?",
   "auth.customer": "வாடிக்கையாளர்",
   "auth.pujari": "பூசாரி",
+  "auth.headPujari": "தலைமை பூசாரி",
   "auth.blocked": "உங்கள் கணக்கு தடுக்கப்பட்டுள்ளது. BSeva ஆதரவைத் தொடர்பு கொள்ளவும்.",
   "auth.emailOrPhone": "மின்னஞ்சல் அல்லது தொலைபேசி",
   "auth.loginTitle": "BSeva-இல் உள்நுழைவு",

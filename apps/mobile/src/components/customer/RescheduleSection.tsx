@@ -1,5 +1,6 @@
 import { rupees } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { DatePickerField } from "@/components/DatePickerField";
@@ -16,6 +17,7 @@ type Summary = {
   blocked_message?: string | null;
   deadline: string;
   next_fee_paise: number;
+  wallet_balance_paise: number;
   lead_hours: number;
   reschedule_count: number;
   pujari_performance?: {
@@ -47,7 +49,7 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
     queryKey: ["reschedule", bookingId],
     queryFn: () => apiClient.rescheduleSummary(bookingId) as Promise<Summary>,
   });
-  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<"closed" | "slot" | "pay">("closed");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
   const [saving, setSaving] = useState(false);
@@ -56,21 +58,23 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
   const info = q.data;
   if (!info || (info.blocked_code === "RESCHEDULE_NOT_ALLOWED" && !info.reschedule_count)) return null;
   const performance = info.pujari_performance;
+  const fee = info.next_fee_paise;
+  const shortfall = Math.max(0, fee - info.wallet_balance_paise);
 
   async function save() {
-    if (!date) {
-      setError("Choose a new date");
-      return;
-    }
     setSaving(true);
     setError(null);
     try {
-      await apiClient.rescheduleBooking(bookingId, date, time);
-      setOpen(false);
+      await apiClient.rescheduleBooking(bookingId, date, time, fee);
+      setStep("closed");
       setDate("");
       await q.refetch();
       onChanged();
-      showSuccessAlert("Puja rescheduled. We are finding a pujari for the new time.");
+      showSuccessAlert(
+        fee
+          ? `${rupees(fee)} was paid from your wallet. We are finding a pujari for the new time.`
+          : "Your puja was rescheduled free of cost. We are finding a pujari for the new time.",
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not reschedule");
       await q.refetch();
@@ -87,10 +91,14 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
           Rescheduled {info.reschedule_count} time{info.reschedule_count === 1 ? "" : "s"}
         </AppText>
         <AppText color={colors.mutedForeground}>
-          {info.eligible
-            ? `Available until ${stamp(info.deadline)}. ${feeText(info.next_fee_paise)}.`
-            : info.blocked_message}
+          {info.eligible ? `Available until ${stamp(info.deadline)}.` : info.blocked_message}
         </AppText>
+        {info.eligible ? (
+          <AppText>
+            Rescheduling Charge: {rupees(fee)}
+            {fee ? "" : " (Free)"}
+          </AppText>
+        ) : null}
         <ErrorBanner message={error} />
         {performance ? (
           <AppText color={colors.mutedForeground}>
@@ -98,8 +106,10 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
             {performance.completed_pujas} pujas completed
           </AppText>
         ) : null}
-        {info.eligible && !open ? <PrimaryButton title="Reschedule Puja" variant="outline" onPress={() => setOpen(true)} /> : null}
-        {open ? (
+        {info.eligible && step === "closed" ? (
+          <PrimaryButton title="Reschedule Puja" variant="outline" onPress={() => setStep("slot")} />
+        ) : null}
+        {step === "slot" ? (
           <>
             <AppText color={colors.mutedForeground}>
               Your booking and payment stay the same. The current pujari is released and the puja goes out to available
@@ -107,8 +117,41 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
             </AppText>
             <DatePickerField value={date} onChange={setDate} leadHours={info.lead_hours} label="New Date" />
             <TimePicker value={time} onChange={setTime} />
-            <PrimaryButton title="Confirm New Time" loading={saving} onPress={() => void save()} />
-            <PrimaryButton title="Cancel" variant="outline" disabled={saving} onPress={() => setOpen(false)} />
+            <PrimaryButton
+              title="Continue"
+              onPress={() => {
+                setError(date ? null : "Choose a new date");
+                if (date) setStep("pay");
+              }}
+            />
+            <PrimaryButton title="Cancel" variant="outline" onPress={() => setStep("closed")} />
+          </>
+        ) : null}
+        {step === "pay" ? (
+          <>
+            <AppText variant="h3">{fee ? "Pay Rescheduling Charge" : "Free Rescheduling"}</AppText>
+            <AppText>New Time: {slot(date, time)}</AppText>
+            <AppText>Rescheduling Charge: {rupees(fee)}</AppText>
+            {fee ? (
+              <AppText>Wallet Balance: {rupees(info.wallet_balance_paise)}</AppText>
+            ) : (
+              <AppText color={colors.mutedForeground}>This reschedule is free of cost. Nothing will be charged.</AppText>
+            )}
+            {shortfall ? (
+              <>
+                <AppText color={colors.mutedForeground}>
+                  Your wallet is {rupees(shortfall)} short. Add money to your wallet, then reschedule again.
+                </AppText>
+                <PrimaryButton title="Add Money to Wallet" onPress={() => router.push("/customer/wallet")} />
+              </>
+            ) : (
+              <PrimaryButton
+                title={fee ? `Pay ${rupees(fee)} from Wallet` : "Confirm Free Reschedule"}
+                loading={saving}
+                onPress={() => void save()}
+              />
+            )}
+            <PrimaryButton title="Back" variant="outline" disabled={saving} onPress={() => setStep("slot")} />
           </>
         ) : null}
         {info.history.map((row) => (

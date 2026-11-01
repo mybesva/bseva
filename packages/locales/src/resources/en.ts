@@ -162,6 +162,7 @@ const en: Record<string, string> = {
   "auth.accountType": "What type of account do you want to create?",
   "auth.customer": "Customer",
   "auth.pujari": "Pujari",
+  "auth.headPujari": "Head Pujari",
   "auth.blocked": "Your account has been blocked. Please contact BSeva support for assistance.",
   "auth.emailOrPhone": "Email or Phone",
   "auth.loginTitle": "Login to BSeva",

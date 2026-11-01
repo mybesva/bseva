@@ -69,6 +69,7 @@ type Overview = {
     | "openTickets"
     | "overdueTickets"
     | "pendingVerification"
+    | "correctionRequired"
     | "pendingSettlements",
     number
   >;
@@ -183,6 +184,13 @@ function SuperAdminDashboard() {
       href: adminPath("/pujaris?status=pending"),
     },
     {
+      label: "Pujari Correction Required",
+      value: a?.correctionRequired,
+      icon: Pencil,
+      tone: "amber",
+      href: adminPath("/pujaris?status=correction_required"),
+    },
+    {
       label: "Pujari Settlement Pending",
       value: a?.pendingSettlements,
       icon: HandCoins,
@@ -200,7 +208,13 @@ function SuperAdminDashboard() {
   };
 
   const actionCount = a
-    ? a.waitingPujari + a.needsAssignment + a.datePassed + a.notCompleted + a.overdueTickets + a.pendingVerification
+    ? a.waitingPujari +
+      a.needsAssignment +
+      a.datePassed +
+      a.notCompleted +
+      a.overdueTickets +
+      a.pendingVerification +
+      a.correctionRequired
     : 0;
 
   const pujariStatus = [

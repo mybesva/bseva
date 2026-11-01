@@ -127,6 +127,7 @@ export const mlCatalog: Record<string, string> = {
   "auth.password": "പാസ്‌വേഡ്",
   "auth.passwordChanged": "പാസ്‌വേഡ് അപ്‌ഡേറ്റ് ചെയ്തു",
   "auth.pujari": "പൂജാരി",
+  "auth.headPujari": "മുഖ്യ പൂജാരി",
   "auth.pujariLogin": "പൂജാരി ലോഗിൻ",
   "auth.pujariLoginDescription": "BSeva-യോടൊപ്പം നിങ്ങളുടെ സേവനയാത്ര തുടരുക. പൂജ ബുക്കിംഗുകൾ കൈകാര്യം ചെയ്ത് ഭക്തരെ സേവിക്കുകയും പവിത്രമായ ഉത്തരവാദിത്തങ്ങളുമായി ബന്ധപ്പെട്ടിരിക്കുകയും ചെയ്യുക.",
   "auth.pujariLoginHint": "പൂജാരിമാർക്കും മുഖ്യ പൂജാരിമാർക്കും മാത്രം. പോർട്ടലുകൾ മാറാൻ ഹെഡർ ഉപയോഗിക്കുക.",

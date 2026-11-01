@@ -60,6 +60,7 @@ export const ADMIN_PUJARI_STATUS_FILTERS = [
   { id: "pending", label: "Pending" },
   { id: "approved", label: "Approved" },
   { id: "correction_required", label: "Correction" },
+  { id: "head_pujari", label: "Head Pujari" },
   { id: "rejected", label: "Rejected" },
   { id: "blocked", label: "Blocked" },
 ] as const;

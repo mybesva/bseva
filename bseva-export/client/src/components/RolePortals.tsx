@@ -78,6 +78,7 @@ const HEAD_ONLY_LINKS = new Set(["/pujari/head-ratings", "/pujari/head/pujaris"]
 
 function PortalShell({
   role,
+  headPujari,
   nav,
   children,
   photoUrl,
@@ -85,6 +86,7 @@ function PortalShell({
   headerBelow,
 }: {
   role: "customer" | "pujari";
+  headPujari?: boolean;
   nav: NavItem[];
   children: ReactNode;
   photoUrl?: string | null;
@@ -149,6 +151,7 @@ function PortalShell({
     .toUpperCase();
 
   // Both portals use the navy sidebar with a profile card; `isCustomer` kept for role-specific bits.
+  const roleLabel = headPujari ? t("auth.headPujari") : role === "pujari" ? t("auth.pujari") : t("auth.customer");
   const isCustomer = true;
   /** Nav groups: work · account · help. */
   const groupBreakBefore = new Set(
@@ -169,7 +172,7 @@ function PortalShell({
               {role === "pujari" ? <PujariRating rating={user?.rating} /> : null}
               {user?.public_id ? <p className="truncate font-mono text-[0.6875rem] text-white/60">{user.public_id}</p> : null}
               <p className="mt-1 text-[0.6562rem] font-extrabold uppercase tracking-[0.14em] text-[#FF7A00]">
-                {role === "pujari" ? t("auth.pujari") : t("auth.customer")}
+                {roleLabel}
               </p>
             </div>
           </div>
@@ -191,7 +194,7 @@ function PortalShell({
               <p className="text-xs text-sidebar-foreground/85 font-mono mt-0.5 truncate">{user.public_id}</p>
             ) : null}
             <p className="text-xs text-sidebar-foreground">
-              {role === "pujari" ? t("auth.pujari") : t("auth.customer")}
+              {roleLabel}
             </p>
             {headerBelow}
           </div>
@@ -419,7 +422,14 @@ function PujariShell({ children }: { children: ReactNode }) {
   })() : null;
 
   return (
-    <PortalShell role="pujari" nav={nav} photoUrl={photoUrl} photoRequired headerBelow={headerBelow}>
+    <PortalShell
+      role="pujari"
+      nav={nav}
+      photoUrl={photoUrl}
+      photoRequired
+      headerBelow={headerBelow}
+      headPujari={!!profile?.is_head_pujari || user?.role === "head_pujari"}
+    >
       {children}
     </PortalShell>
   );

@@ -1906,6 +1906,7 @@ def _pujari_cancel_release(db, b, booking_id: str, user: dict, reason: str, fee:
 class RescheduleIn(BaseModel):
     new_date: date
     new_start_time: time
+    expected_fee_paise: int | None = None
 
 
 @router.get("/bookings/{booking_id}/reschedule")
@@ -1929,7 +1930,7 @@ def reschedule(
 ):
     from app.booking_reschedule import reschedule_booking
 
-    return reschedule_booking(db, str(booking_id), user, body.new_date, body.new_start_time)
+    return reschedule_booking(db, str(booking_id), user, body.new_date, body.new_start_time, body.expected_fee_paise)
 
 
 @router.get("/bookings/{booking_id}/cancel-preview")

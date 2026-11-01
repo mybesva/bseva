@@ -2,10 +2,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 import time
 
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import gst
 from app.booking_attention import booking_queue_counts
 from app.db import get_db
 from app.deps import require_roles
@@ -96,6 +99,7 @@ _PUJARI_SORT_COLUMNS = {
     "public_id": "u.public_id",
     "name": "LOWER(u.name)",
     "email": "LOWER(u.email)",
+    "phone": "u.phone",
     "location": f"LOWER({_PUJARI_LOCATION_SQL})",
     "approved_level": "p.approved_level",
     "experience": "p.experience_years",
@@ -193,7 +197,12 @@ def stats_overview(user=Depends(require_super_admin), db: Session = Depends(get_
             "SELECT COUNT(*) FROM support_tickets WHERE status NOT IN ('resolved','closed') AND sla_due_at IS NOT NULL AND sla_due_at < now()"
         ),
         "pendingVerification": scalar(
-            "SELECT COUNT(*) FROM pujari_profiles WHERE verification_status IN ('pending','under_review','correction_required')"
+            "SELECT COUNT(*) FROM pujari_profiles p JOIN users u ON u.id = p.user_id "
+            "WHERE u.blocked = FALSE AND p.verification_status IN ('pending','under_review')"
+        ),
+        "correctionRequired": scalar(
+            "SELECT COUNT(*) FROM pujari_profiles p JOIN users u ON u.id = p.user_id "
+            "WHERE u.blocked = FALSE AND p.verification_status = 'correction_required'"
         ),
         "pendingSettlements": scalar("SELECT COUNT(*) FROM bookings WHERE settlement_status = 'pending' AND status = 'completed'"),
     }
@@ -731,6 +740,8 @@ def list_pujaris(
         base_where += " AND u.blocked = FALSE AND p.verification_status = 'correction_required'"
     elif st == "rejected":
         base_where += " AND u.blocked = FALSE AND p.verification_status = 'rejected'"
+    elif st == "head_pujari":
+        base_where += " AND u.blocked = FALSE AND (u.role = 'head_pujari' OR COALESCE(p.is_head_pujari, FALSE))"
     elif blocked is not None:
         base_where += " AND u.blocked = :blocked"
         params["blocked"] = blocked
@@ -1440,6 +1451,8 @@ def get_pricing(user=Depends(require_permission("manage_config")), db: Session =
 
 @router.put("/pricing")
 def update_pricing(body: PricingIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
+    if Decimal(str(body.gst_percent)) not in gst.OFFICIAL_RATES:
+        raise HTTPException(400, "Enter a GST rate notified under GST, such as 0, 5, 12 or 18")
     db.execute(
         text("UPDATE pricing_config SET gst_percent = :g, peak_day_fee_paise = 0, updated_at = NOW() WHERE id = 1"),
         {"g": body.gst_percent},
