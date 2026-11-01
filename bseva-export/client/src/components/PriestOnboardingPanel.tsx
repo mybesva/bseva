@@ -155,7 +155,7 @@ export default function PriestOnboardingPanel() {
             <Button type="button" size="sm" disabled={busy} asChild>
               <span className="gap-2">
                 <Upload size="0.875rem" />
-                {busy ? "Uploading…" : "Upload file"}
+                {busy ? "Uploading…" : "Upload File"}
               </span>
             </Button>
           </label>

@@ -19,8 +19,8 @@ export default function AdminPayments() {
   const statusOptions = useMemo(
     () => [
       ...ADMIN_PAYMENT_STATUS_FILTERS,
-      { id: "refund_pending", label: "Refund pending" },
-      { id: "refund_requested", label: "Refund requested" },
+      { id: "refund_pending", label: "Refund Pending" },
+      { id: "refund_requested", label: "Refund Requested" },
     ],
     []
   );

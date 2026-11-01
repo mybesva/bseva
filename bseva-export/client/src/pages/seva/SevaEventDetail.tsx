@@ -1,3 +1,4 @@
+import { sevaTypeFilter } from "@bseva/config";
 import { useEffect, useMemo, useState } from "react";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
@@ -146,7 +147,7 @@ export default function SevaEventDetail() {
       });
       setRegistered(true);
       toast.success(t("seva.registrationConfirmed"));
-      setLocation("/customer/my-seva");
+      setLocation(`/customer/bookings?type=${sevaTypeFilter(event?.service_type)}`);
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       toast.error(sevaErrorMessage(t, e.code, e.message));
@@ -383,7 +384,7 @@ export default function SevaEventDetail() {
               <Card>
                 <CardContent className="space-y-4 pt-6">
                   <p>{t("seva.alreadyRegisteredNote")}</p>
-                  <Button type="button" onClick={() => setLocation("/customer/my-seva")}>
+                  <Button type="button" onClick={() => setLocation(`/customer/bookings?type=${sevaTypeFilter(event?.service_type)}`)}>
                     {t("seva.mySeva")}
                   </Button>
                 </CardContent>

@@ -187,13 +187,30 @@ def service_available_near(
     lng: float,
     required_level: int = 1,
     radius_km: float = SERVICE_RADIUS_KM,
+    service_id: str | None = None,
 ) -> bool:
-    """True if at least one eligible pujari is within radius_km of (lat, lng)."""
+    """True if at least one eligible pujari is within radius_km of (lat, lng).
+
+    With service_id, that pujari must also be verified for this puja with a complete profile:
+    the same pujaris who would receive the booking request. Busy pujaris still count, because
+    the customer can choose another time."""
     pad = (radius_km * 1.2) / 111.0
     lng_pad = pad / max(0.2, abs(cos(radians(lat))))
+    capable = ""
+    if service_id:
+        from app.pujari_services import ensure_service_tables
+
+        ensure_service_tables(db)
+        capable = """
+              AND COALESCE(p.profile_complete, FALSE) = TRUE
+              AND EXISTS (
+                SELECT 1 FROM pujari_verified_services v
+                WHERE v.pujari_id = p.user_id AND v.service_id = CAST(:service_id AS uuid)
+              )
+        """
     rows = db.execute(
         text(
-            """
+            f"""
             SELECT p.approved_level, p.latitude, p.longitude, p.service_radius_km
             FROM pujari_profiles p
             JOIN users u ON u.id = p.user_id
@@ -204,6 +221,7 @@ def service_available_near(
               AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
               AND p.latitude BETWEEN :min_lat AND :max_lat
               AND p.longitude BETWEEN :min_lng AND :max_lng
+              {capable}
             """
         ),
         {
@@ -212,6 +230,7 @@ def service_available_near(
             "max_lat": lat + pad,
             "min_lng": lng - lng_pad,
             "max_lng": lng + lng_pad,
+            "service_id": service_id,
         },
     ).mappings().all()
     rows = filter_rows_for_required_level(rows, required_level)

@@ -13,6 +13,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LegalAcceptRow } from "@/components/LegalAcceptRow";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
+import { BookingContactSupport } from "@/components/customer/BookingContactSupport";
+import { RescheduleSection } from "@/components/customer/RescheduleSection";
 import { TrackingMap } from "@/components/TrackingMap";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -202,6 +204,11 @@ function LiveTrackCard({ bookingId, role }: { bookingId: string; role: "customer
       ) : null}
     </Card>
   );
+}
+
+/** "Checklist will be confirmed shortly" only makes sense while the puja is still ahead. */
+function prepPendingOver(status?: string | null) {
+  return ["completed", "cancelled", "rejected"].includes(String(status));
 }
 
 function prepItemLabel(item: PreparationItem) {
@@ -397,7 +404,7 @@ export default function BookingDetail() {
       for (const item of items) lines.push(`• ${prepItemLabel(item)}${item.notes ? ` — ${item.notes}` : ""}`);
       lines.push("");
     }
-    if (!preparation.verified) lines.push(preparation.pending_message || t("web.preparation.pending"));
+    if (!preparation.verified && !prepPendingOver(b!.status)) lines.push(preparation.pending_message || t("web.preparation.pending"));
     try {
       const uri = `${FileSystem.cacheDirectory}samagri-${b!.booking_number || b!.id}.txt`;
       await FileSystem.writeAsStringAsync(uri, lines.filter(Boolean).join("\n"));
@@ -543,7 +550,7 @@ export default function BookingDetail() {
                 </View>
               ) : null
             )}
-            {!preparation.verified && preparation.pending_message ? (
+            {!preparation.verified && preparation.pending_message && !prepPendingOver(b.status) ? (
               <AppText variant="small" color={colors.mutedForeground}>{preparation.pending_message}</AppText>
             ) : null}
             <PrimaryButton title={`${t("mobile.share")} / ${t("web.preparation.print")}`} variant="outline" onPress={() => void sharePreparation()} />
@@ -577,6 +584,15 @@ export default function BookingDetail() {
                 showSuccessAlert(t("mobile.paymentSuccess")),
               )
             }
+          />
+        ) : null}
+
+        {!pujari ? <BookingContactSupport bookingNumber={String(b.booking_number || b.id)} /> : null}
+
+        {!pujari ? (
+          <RescheduleSection
+            bookingId={b.id}
+            onChanged={() => void qc.invalidateQueries({ queryKey: ["booking", id] })}
           />
         ) : null}
 

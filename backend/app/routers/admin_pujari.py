@@ -687,7 +687,7 @@ def assign_pujari_to_booking(
             create_notification(
                 db,
                 user_id=str(pujari_user["id"]),
-                title="New booking assignment",
+                title="New Booking Assignment",
                 body=f"Booking {b.get('booking_number') or booking_id[:8]} was assigned to you.",
                 category="booking",
                 link=pujari_booking_link(booking_id),
@@ -696,7 +696,7 @@ def assign_pujari_to_booking(
             create_notification(
                 db,
                 user_id=str(b["customer_id"]),
-                title="Pujari assigned",
+                title="Pujari Assigned",
                 body=f"A pujari has been assigned to booking {b.get('booking_number') or booking_id[:8]}.",
                 category="booking",
                 link=f"/booking/{booking_id}",
@@ -706,7 +706,7 @@ def assign_pujari_to_booking(
                 create_notification(
                     db,
                     user_id=str(prev),
-                    title="Booking changed",
+                    title="Booking Changed",
                     body=f"Booking {b.get('booking_number') or booking_id[:8]} was reassigned.",
                     category="booking",
                     link=pujari_booking_link(booking_id),

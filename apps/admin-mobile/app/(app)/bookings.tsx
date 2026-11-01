@@ -121,7 +121,7 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
           label="Status"
           value={status}
           options={ADMIN_BOOKING_STATUS_FILTERS.map((o) => ({ id: o.id, label: o.label }))}
-          placeholder="All statuses"
+          placeholder="All Statuses"
           onChange={(v) => {
             setStatus(v);
             setPage(1);
@@ -131,17 +131,17 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
           label="Pujari"
           value={assignment}
           options={ADMIN_ASSIGNMENT_FILTERS.map((o) => ({ id: o.id, label: o.label }))}
-          placeholder="All assignments"
+          placeholder="All Assignments"
           onChange={(v) => {
             setAssignment(v);
             setPage(1);
           }}
         />
         <SupportSelect
-          label="Customer date"
+          label="Customer Date"
           value={range}
           options={ADMIN_DATE_RANGE_FILTERS.map((o) => ({ id: o.id, label: o.label }))}
-          placeholder="All dates"
+          placeholder="All Dates"
           onChange={(v) => {
             setRange(v);
             if (v !== "custom") {
@@ -158,7 +158,7 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
           </>
         ) : null}
         {hasActiveFilters ? (
-          <PrimaryButton title="Clear filters" variant="outline" onPress={resetFilters} />
+          <PrimaryButton title="Clear Filters" variant="outline" onPress={resetFilters} />
         ) : null}
 
         {list.isLoading ? <LoadingBlock /> : null}
@@ -180,7 +180,7 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
                   )}
                   <StatusBadge status={adminBookingDisplayStatus(b)} />
                 </View>
-                <AppText variant="small">{b.customer_name} · {b.pujari_name ? (["pending", "pending_acceptance"].includes(String(b.status)) ? `${b.pujari_name} (awaiting acceptance)` : b.pujari_name) : "Needs assignment"}</AppText>
+                <AppText variant="small">{b.customer_name} · {b.pujari_name ? (["pending", "pending_acceptance"].includes(String(b.status)) ? `${b.pujari_name} (awaiting acceptance)` : b.pujari_name) : "Needs Assignment"}</AppText>
                 {isVirtual ? (
                   <>
                     <AppText variant="small" color={colors.mutedForeground}>
@@ -203,10 +203,10 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
                   {b.payment_status ? ` · ${displayTokenLabel(b.payment_status)}` : ""}
                 </AppText>
                 {!b.pujari_id ? (
-                  <AppText variant="small" color={colors.destructive}>Assign pujari</AppText>
+                  <AppText variant="small" color={colors.destructive}>Assign Pujari</AppText>
                 ) : null}
                 {b.pujari_id && b.needs_reassignment ? (
-                  <AppText variant="small" color={colors.destructive}>Needs reassignment</AppText>
+                  <AppText variant="small" color={colors.destructive}>Needs Reassignment</AppText>
                 ) : null}
               </Card>
             </Pressable>

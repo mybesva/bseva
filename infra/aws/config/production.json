@@ -6,7 +6,7 @@
   "project": "bseva",
   "domain": "b-seva.com",
   "github_repo": "mybesva/bseva",
-  "github_environment": "production",
+  "github_environment": "aws-production",
   "alert_emails": [
     "mybseva@gmail.com"
   ],

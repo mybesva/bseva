@@ -34,7 +34,7 @@ export const SUPPORT_CONTACT_SOURCES = [
   { id: "phone", label: "Phone" },
   { id: "email", label: "Email" },
   { id: "whatsapp", label: "WhatsApp" },
-  { id: "in_app", label: "In app" },
+  { id: "in_app", label: "In App" },
 ] as const;
 
 export const SUPPORT_PRIORITIES = [
@@ -66,10 +66,10 @@ export const SUPPORT_ESCALATIONS = [
 
 export const SUPPORT_NOTE_KINDS = [
   { id: "reply", label: "Reply" },
-  { id: "internal_note", label: "Internal note" },
-  { id: "call_note", label: "Call note" },
-  { id: "whatsapp_note", label: "WhatsApp note" },
-  { id: "email_note", label: "Email note" },
+  { id: "internal_note", label: "Internal Note" },
+  { id: "call_note", label: "Call Note" },
+  { id: "whatsapp_note", label: "WhatsApp Note" },
+  { id: "email_note", label: "Email Note" },
 ] as const;
 
 export const SUPPORT_CATEGORIES = [

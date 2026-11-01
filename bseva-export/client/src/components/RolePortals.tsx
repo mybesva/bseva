@@ -18,11 +18,11 @@ import {
   Gift,
   Flower2,
   Info,
-  Flower,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { api, apiBase, getToken, pujariMediaUrl } from "@/lib/api";
@@ -47,7 +47,6 @@ const customerNav: NavItem[] = [
   { labelKey: "nav.dashboard", href: "/customer", icon: LayoutDashboard },
   { labelKey: "nav.ourServices", href: "/services", icon: Flower2 },
   { labelKey: "nav.bookings", href: "/customer/bookings", icon: Calendar },
-  { labelKey: "seva.mySeva", href: "/customer/my-seva", icon: Flower },
   { labelKey: "seva.familySankalp", href: "/customer/family-sankalp", icon: Users },
   { labelKey: "customer.myProfile", href: "/customer/profile", icon: User },
   { labelKey: "customer.walletPayments", href: "/customer/wallet", icon: Wallet },
@@ -70,9 +69,12 @@ const pujariNav: NavItem[] = [
   { labelKey: "nav.bank", href: "/pujari/bank", icon: Landmark },
   { labelKey: "nav.referral", href: "/pujari/referral", icon: Gift },
   { labelKey: "nav.headRatings", href: "/pujari/head-ratings", icon: Star },
+  { labelKey: "nav.pujariDirectory", href: "/pujari/head/pujaris", icon: Users },
   { labelKey: "mobile.supportAndContact", href: "/pujari/support", icon: FileText },
   { labelKey: "nav.about", href: "/about", icon: Info },
 ];
+
+const HEAD_ONLY_LINKS = new Set(["/pujari/head-ratings", "/pujari/head/pujaris"]);
 
 function PortalShell({
   role,
@@ -164,6 +166,7 @@ function PortalShell({
             </Avatar>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold" title={user?.name || undefined}>{user?.name}</p>
+              {role === "pujari" ? <PujariRating rating={user?.rating} /> : null}
               {user?.public_id ? <p className="truncate font-mono text-[0.6875rem] text-white/60">{user.public_id}</p> : null}
               <p className="mt-1 text-[0.6562rem] font-extrabold uppercase tracking-[0.14em] text-[#FF7A00]">
                 {role === "pujari" ? t("auth.pujari") : t("auth.customer")}
@@ -183,6 +186,7 @@ function PortalShell({
             <p className="font-bold text-sm leading-snug truncate" title={user?.name || undefined}>
               {user?.name}
             </p>
+            {role === "pujari" ? <PujariRating rating={user?.rating} /> : null}
             {user?.public_id ? (
               <p className="text-xs text-sidebar-foreground/85 font-mono mt-0.5 truncate">{user.public_id}</p>
             ) : null}
@@ -365,11 +369,11 @@ function PujariShell({ children }: { children: ReactNode }) {
           ? pujariNav.filter((item) => item.href !== "/pujari/onboarding")
           : [...pujariNav];
         if (!isHead) {
-          next = next.filter((item) => item.href !== "/pujari/head-ratings");
+          next = next.filter((item) => !HEAD_ONLY_LINKS.has(item.href));
         }
         setNav(next);
       })
-      .catch(() => setNav(pujariNav.filter((item) => item.href !== "/pujari/head-ratings")));
+      .catch(() => setNav(pujariNav.filter((item) => !HEAD_ONLY_LINKS.has(item.href))));
   }, [location, user?.role]);
 
   const headerBelow = profile ? (() => {
@@ -418,6 +422,26 @@ function PujariShell({ children }: { children: ReactNode }) {
     <PortalShell role="pujari" nav={nav} photoUrl={photoUrl} photoRequired headerBelow={headerBelow}>
       {children}
     </PortalShell>
+  );
+}
+
+
+function PujariRating({ rating }: { rating?: { average: number | null; count: number } }) {
+  const count = rating?.count ?? 0;
+  const score = (rating?.average ?? 0).toFixed(1);
+  const people = count === 1 ? "1 customer" : `${count} customers`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="mt-0.5 inline-flex cursor-default items-center gap-1 text-xs font-semibold tabular-nums">
+          <Star className="size-3.5 fill-[#D4AF37] text-[#D4AF37]" aria-hidden />
+          {score}/5 ({count})
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        {score} rating out of 5, given by {people}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -130,21 +130,44 @@ def test_admin_credit_requires_payment_reference():
         WalletAdminCreditIn(amount_paise=100, reference="")
 
 
-def test_super_admin_can_credit_offline_payment_once():
+VERIFIED = {"challenge_id": "00000000-0000-0000-0000-00000000c0de", "otp": "000000", "mpin": "482915"}
+
+
+def _request():
+    return type("R", (), {"headers": {}, "client": None})()
+
+
+def test_super_admin_can_credit_offline_payment_once(monkeypatch):
+    monkeypatch.setattr(wallet.sa, "verify_challenge", lambda *a, **k: None)
     db = _wallet_db(**{"FROM users WHERE id": {"id": CUST, "role": "customer"}})
-    body = WalletAdminCreditIn(amount_paise=2_000_00, reference="UPI-778812", note="Paid via UPI")
-    out = wallet.admin_credit_wallet(CUST, body, admin=_user(SUPER, "super_admin"), db=db)
+    body = WalletAdminCreditIn(amount_paise=2_000_00, reference="UPI-778812", note="Paid via UPI", **VERIFIED)
+    out = wallet.admin_credit_wallet(CUST, body, _request(), admin=_user(SUPER, "super_admin"), db=db)
     assert out == {"ok": True, "balance_paise": 1000 + 2_000_00}
     tx = next(p for sql, p in db.writes if "INSERT INTO wallet_transactions" in sql)
     assert tx["ref"] == "UPI-778812" and tx["descr"].startswith(wallet.ADMIN_CREDIT_PREFIX)
     assert any("INSERT INTO audit_logs" in sql for sql, _ in db.writes)
+    assert any("INSERT INTO security_audit_log" in sql for sql, _ in db.writes)
 
 
-def test_same_payment_reference_cannot_be_credited_twice():
+def test_failed_verification_credits_nothing(monkeypatch):
+    def refuse(*_a, **_k):
+        raise HTTPException(400, "Incorrect MPIN")
+
+    monkeypatch.setattr(wallet.sa, "verify_challenge", refuse)
+    db = _wallet_db(**{"FROM users WHERE id": {"id": CUST, "role": "customer"}})
+    body = WalletAdminCreditIn(amount_paise=100, reference="UPI-778812", **VERIFIED)
+    with pytest.raises(HTTPException):
+        wallet.admin_credit_wallet(CUST, body, _request(), admin=_user(SUPER, "super_admin"), db=db)
+    assert not any("wallet_transactions" in sql for sql, _ in db.writes)
+
+
+def test_same_payment_reference_cannot_be_credited_twice(monkeypatch):
+    monkeypatch.setattr(wallet.sa, "verify_challenge", lambda *a, **k: None)
+    monkeypatch.setattr(wallet.sa, "log_failure", lambda *a, **k: None)
     db = _wallet_db(**{"FROM users WHERE id": {"id": CUST, "role": "customer"}, "t.reference = :ref": {"id": "t1"}})
-    body = WalletAdminCreditIn(amount_paise=100, reference="UPI-778812")
+    body = WalletAdminCreditIn(amount_paise=100, reference="UPI-778812", **VERIFIED)
     with pytest.raises(HTTPException) as exc:
-        wallet.admin_credit_wallet(CUST, body, admin=_user(SUPER, "super_admin"), db=db)
+        wallet.admin_credit_wallet(CUST, body, _request(), admin=_user(SUPER, "super_admin"), db=db)
     assert exc.value.status_code == 409
     assert not any("wallet_transactions" in sql for sql, _ in db.writes)
 

@@ -282,7 +282,7 @@ export default function Register() {
               <BSevaLogo variant="full" size="lg" />
             </div>
             <CardTitle className="text-2xl text-foreground text-center">
-              {accountType === "pujari" ? "Create your Pujari account" : "Create your Customer account"}
+              {accountType === "pujari" ? "Create Your Pujari Account" : "Create Your Customer Account"}
             </CardTitle>
             <CardDescription className="leading-relaxed text-pretty text-center">
               {accountType === "pujari"
@@ -311,7 +311,7 @@ export default function Register() {
                   </div>
                 ) : (
                   <div className="md:col-span-2 space-y-2">
-                    <Label>Full name</Label>
+                    <Label>Full Name</Label>
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -364,7 +364,7 @@ export default function Register() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Confirm password</Label>
+                  <Label>Confirm Password</Label>
                   <PasswordInput
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -374,7 +374,7 @@ export default function Register() {
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2">
-                  <Label>Preferred language</Label>
+                  <Label>Preferred Language</Label>
                   <select
                     className="w-full h-10 rounded-md border px-2 text-sm"
                     value={language}
@@ -458,7 +458,7 @@ export default function Register() {
                 </span>
               </label>
               <Button type="submit" className="w-full" disabled={pending}>
-                {pending ? "Creating account…" : "Create account"}
+                {pending ? "Creating account…" : "Create Account"}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Already registered?{" "}

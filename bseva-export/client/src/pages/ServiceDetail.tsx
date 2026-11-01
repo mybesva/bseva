@@ -42,9 +42,6 @@ type Svc = {
   priests_min?: number;
   priests_max?: number;
   requires_muhurta?: boolean;
-  homa_included?: boolean;
-  prasadam_included?: boolean;
-  sankalpa_required?: boolean;
   languages?: string[];
   process_steps?: { order?: number; text?: string }[];
   samagri_available?: boolean;
@@ -237,7 +234,6 @@ export default function ServiceDetail() {
                 <Meta label={t("service.deity")} value={svc.deity || "—"} />
                 <Meta label={t("service.location")} value={svc.location_notes || t("service.homeTemple")} />
                 <Meta label={t("booking.muhurtham")} value={svc.requires_muhurta ? t("common.required") : t("common.optional")} />
-                <Meta label={t("services.havans")} value={svc.homa_included ? t("service.includedOption") : t("service.asConfigured")} />
                 <Meta label={t("pujari.public.languages")} value={(svc.languages || ["en"]).join(", ").toUpperCase()} />
                 <Meta
                   label={t("service.price")}
@@ -265,8 +261,6 @@ export default function ServiceDetail() {
                 {svc.samagri_available && <span>{t("web.service.samagriAvailable")}</span>}
                 {svc.alankaram_available && <span>· {t("web.service.alankaramAvailable")}</span>}
                 {svc.food_available && <span>· {t("web.service.foodAvailable")}</span>}
-                {svc.prasadam_included && <span>· {t("web.service.prasadam")}</span>}
-                {svc.sankalpa_required && <span>· {t("web.service.sankalpaRequired")}</span>}
               </div>
 
               {prep?.verified && (

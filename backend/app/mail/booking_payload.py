@@ -99,11 +99,11 @@ def invoice_email_data_from_snapshot(
     language: str = "en",
 ) -> InvoiceEmailData:
     lines = [
-        ("Main puja", _paise(booking, "main_puja_charge_paise", "base_price_paise")),
+        ("Main Puja", _paise(booking, "main_puja_charge_paise", "base_price_paise")),
         ("Samagri", _paise(booking, "samagri_charge_paise", "samagri_paise", "samagri_total_paise")),
         ("Alankaram", _paise(booking, "alankaram_charge_paise", "alankaram_paise")),
         ("Food / Prasadam", _paise(booking, "food_charge_paise", "food_prasadam_paise", "prasadam_paise")),
-        ("Platform fee", _paise(booking, "platform_fee_paise")),
+        ("Platform Fee", _paise(booking, "platform_fee_paise")),
     ]
     return InvoiceEmailData(
         customer_name=customer_name,

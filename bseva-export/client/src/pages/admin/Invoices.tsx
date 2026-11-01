@@ -21,6 +21,10 @@ import { Link } from "wouter";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 type InvoiceRow = {
+  customer_platform_fee_paise?: number | null;
+  gateway_fee_paise?: number | null;
+  gateway_name?: string | null;
+  tax_flags?: string[];
   id: string;
   invoice_number: string;
   invoice_type: string;
@@ -99,7 +103,7 @@ export default function AdminInvoices() {
         description="Official tax invoices issued after payment. Issued numbers never change. Company details for new invoices are configured in Settings."
         actions={
           <Link href={adminPath("/settings")}>
-            <Button variant="outline" size="sm">Invoice settings</Button>
+            <Button variant="outline" size="sm">Invoice Settings</Button>
           </Link>
         }
       />
@@ -134,7 +138,9 @@ export default function AdminInvoices() {
               <TableHead className="sticky top-0 z-20 bg-card border-b">Type</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Booking</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Customer</TableHead>
-              <TableHead className="sticky top-0 z-20 bg-card border-b">Amount</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Total Invoice</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Platform Fee</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Gateway Fee</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Payment</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Email</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Issued</TableHead>
@@ -144,7 +150,14 @@ export default function AdminInvoices() {
             <TableBody>
               {rows.map((inv) => (
                 <TableRow key={inv.id}>
-                  <TableCell className="font-mono text-xs">{inv.invoice_number}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {inv.invoice_number}
+                    {inv.tax_flags && inv.tax_flags.length > 0 && (
+                      <div className="font-sans text-amber-700" title={inv.tax_flags.join("\n")}>
+                        Needs tax review
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{displayTokenLabel(inv.invoice_type)}</Badge>
                   </TableCell>
@@ -154,6 +167,8 @@ export default function AdminInvoices() {
                     <div className="text-xs text-muted-foreground">{inv.customer_email}</div>
                   </TableCell>
                   <TableCell>{rupees(inv.total_paise)}</TableCell>
+                  <TableCell>{Number(inv.customer_platform_fee_paise || 0) > 0 ? rupees(Number(inv.customer_platform_fee_paise)) : "—"}</TableCell>
+                  <TableCell title={inv.gateway_name || undefined}>{Number(inv.gateway_fee_paise || 0) > 0 ? rupees(Number(inv.gateway_fee_paise)) : "—"}</TableCell>
                   <TableCell>{displayTokenLabel(inv.payment_status || "paid")}</TableCell>
                   <TableCell>{displayTokenLabel(inv.email_status)}</TableCell>
                   <TableCell className="whitespace-nowrap">{formatDisplayDateTime(inv.created_at)}</TableCell>

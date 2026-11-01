@@ -31,9 +31,9 @@ export default function AdminInvoices() {
           <Card key={inv.id}>
             <AppText variant="h3">{inv.invoice_number || inv.id}</AppText>
             <AppText variant="small">{inv.type} · {formatDisplayDateTime(inv.created_at)}</AppText>
-            <PrimaryButton title="View invoice" onPress={() => router.push(`/invoice/${inv.id}`)} />
+            <PrimaryButton title="View Invoice" onPress={() => router.push(`/invoice/${inv.id}`)} />
             <PrimaryButton
-              title="Resend email"
+              title="Resend Email"
               variant="outline"
               onPress={async () => {
                 setError(null);

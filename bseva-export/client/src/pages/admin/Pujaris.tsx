@@ -2,6 +2,7 @@ import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import { PujariPortal } from "@/components/RolePortals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,11 +80,15 @@ function PujariRow({
   levels,
   onChanged,
   can,
+  basePath,
+  readOnly,
 }: {
   u: any;
   levels: { level: number; title: string }[];
   onChanged: () => Promise<void>;
   can: (...anyOf: string[]) => boolean;
+  basePath: string;
+  readOnly: boolean;
 }) {
   const [, setLocation] = useLocation();
   const canVerify = can("verify_pujaris");
@@ -135,7 +140,7 @@ function PujariRow({
   const verifiedCount = u.verified_service_count ?? 0;
   const appliedCount = u.applied_service_count ?? 0;
   const pendingServices = u.pending_service_review_count ?? 0;
-  const openServices = () => setLocation(adminPath(`/pujaris/${u.id}#services`));
+  const openServices = () => setLocation(`${basePath}/${u.id}#services`);
 
   return (
     <TableRow className="align-top">
@@ -144,7 +149,7 @@ function PujariRow({
         <button
           type="button"
           className="text-left font-medium text-primary hover:underline"
-          onClick={() => setLocation(adminPath(`/pujaris/${u.id}`))}
+          onClick={() => setLocation(`${basePath}/${u.id}`)}
         >
           {u.name}
         </button>
@@ -208,7 +213,7 @@ function PujariRow({
               className="text-xs text-primary font-medium hover:underline w-fit text-left"
               onClick={openServices}
             >
-              Open services
+              Open Services
             </button>
           )}
         </div>
@@ -228,9 +233,10 @@ function PujariRow({
       </TableCell>
       <TableCell className="text-right whitespace-nowrap">
         <div className="inline-flex items-center gap-1">
-          <Button size="sm" variant="outline" onClick={() => setLocation(adminPath(`/pujaris/${u.id}`))}>
+          <Button size="sm" variant="outline" onClick={() => setLocation(`${basePath}/${u.id}`)}>
             Profile
           </Button>
+          {readOnly ? null : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="secondary" className="gap-1 px-2">
@@ -241,15 +247,15 @@ function PujariRow({
             <DropdownMenuContent align="end" className="w-48">
               {canVerify && (
                 <>
-                  <DropdownMenuItem onClick={() => void setVerification("approved")}>Approve profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void setVerification("approved")}>Approve Profile</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => void setVerification("correction_required")}>
-                    Request correction
+                    Request Correction
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void setVerification("rejected")}>Reject profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void setVerification("rejected")}>Reject Profile</DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem onClick={openServices}>Review services</DropdownMenuItem>
+              <DropdownMenuItem onClick={openServices}>Review Services</DropdownMenuItem>
               {(canHead || canBlock) && <DropdownMenuSeparator />}
               {!canHead ? null : u.is_head_pujari || u.role === "head_pujari" ? (
                 <DropdownMenuItem
@@ -262,7 +268,7 @@ function PujariRow({
                     await onChanged();
                   }}
                 >
-                  Remove head pujari
+                  Remove Head Pujari
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
@@ -275,7 +281,7 @@ function PujariRow({
                     await onChanged();
                   }}
                 >
-                  Make head pujari
+                  Make Head Pujari
                 </DropdownMenuItem>
               )}
               {canBlock && (
@@ -289,7 +295,7 @@ function PujariRow({
                   await onChanged();
                 }}
               >
-                {u.blocked ? "Unblock account" : "Block account"}
+                {u.blocked ? "Unblock Account" : "Block Account"}
               </DropdownMenuItem>
               )}
               {canBlock && (
@@ -299,15 +305,24 @@ function PujariRow({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
       </TableCell>
     </TableRow>
   );
 }
 
-export default function PujarisPage() {
-  const { can } = useAdminCan();
+/** Read-only for Head Pujaris: same list, their GET-only API, and no row actions. */
+export function HeadPujarisPage() {
+  return <PujarisPage headView />;
+}
+
+export default function PujarisPage({ headView = false }: { headView?: boolean }) {
+  const { can: adminCan } = useAdminCan();
+  const can = headView ? () => false : adminCan;
   const canCreate = can("create_pujaris");
+  const basePath = headView ? "/pujari/head/pujaris" : adminPath("/pujaris");
+  const Frame = headView ? PujariPortal : AdminLayout;
   const [rows, setRows] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -351,7 +366,7 @@ export default function PujarisPage() {
     if (size !== DEFAULT_PAGE_SIZE) sp.set("size", String(size));
     if (p > 1) sp.set("page", String(p));
     const qs = sp.toString();
-    setLocation(adminPath(`/pujaris${qs ? `?${qs}` : ""}`));
+    setLocation(`${basePath}${qs ? `?${qs}` : ""}`);
   }
 
   async function load(p = urlPage) {
@@ -361,7 +376,7 @@ export default function PujarisPage() {
     if (qParam) qs.set("q", qParam);
     if (sortBy) qs.set("sort", sortBy);
     if (sortDir) qs.set("dir", sortDir);
-    const res = await api<{ items: any[]; total: number; page: number; pages: number } | any[]>(`/admin/pujaris?${qs}`);
+    const res = await api<{ items: any[]; total: number; page: number; pages: number } | any[]>(`${headView ? "/head/pujari-directory" : "/admin/pujaris"}?${qs}`);
     if (Array.isArray(res)) {
       setRows(res);
       setTotal(res.length);
@@ -400,8 +415,9 @@ export default function PujarisPage() {
   }
 
   return (
-    <AdminLayout>
+    <Frame>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        {headView ? <h1 className="text-h1">Pujari Directory</h1> : null}
         <div className="flex items-center gap-2 ml-auto">
           <AdminPager
             page={page}
@@ -423,7 +439,7 @@ export default function PujarisPage() {
 
       <div className="flex flex-wrap gap-2 mb-4 items-end">
         <div className="space-y-1">
-          <Label className="text-xs">Status filter</Label>
+          <Label className="text-xs">Status Filter</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
             <SelectTrigger className="w-[13.75rem]">
               <SelectValue />
@@ -431,8 +447,8 @@ export default function PujarisPage() {
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="pending">Pending verification</SelectItem>
-              <SelectItem value="correction_required">Correction required</SelectItem>
+              <SelectItem value="pending">Pending Verification</SelectItem>
+              <SelectItem value="correction_required">Correction Required</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
             </SelectContent>
@@ -466,7 +482,7 @@ export default function PujarisPage() {
       <Dialog open={open && canCreate} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="">Add pujari</DialogTitle>
+            <DialogTitle className="">Add Pujari</DialogTitle>
           </DialogHeader>
           <form id="add-pujari-form" onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">
@@ -501,7 +517,7 @@ export default function PujarisPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pujari-location">City / area</Label>
+              <Label htmlFor="pujari-location">City / Area</Label>
               <Input
                 id="pujari-location"
                 placeholder="e.g. Jayanagar, Bangalore"
@@ -545,7 +561,7 @@ export default function PujarisPage() {
               Cancel
             </Button>
             <Button type="submit" form="add-pujari-form" disabled={saving}>
-              {saving ? "Adding…" : "Add pujari"}
+              {saving ? "Adding…" : "Add Pujari"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -558,7 +574,7 @@ export default function PujarisPage() {
             <SortableHead label="Name" column="name" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
             <SortableHead label="Email" column="email" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="max-w-[12.5rem]" />
             <SortableHead label="Location" column="location" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Approved level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[12.5rem]" />
+            <SortableHead label="Approved Level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[12.5rem]" />
             <SortableHead label="Experience" column="experience" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
             <SortableHead label="Services" column="services" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[8.125rem]" />
             <SortableHead label="Verification" column="verification" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
@@ -568,13 +584,13 @@ export default function PujarisPage() {
         </TableHeader>
         <TableBody>
           {rows.map((u) => (
-            <PujariRow key={u.id} u={u} levels={pujariLevels} onChanged={load} can={can} />
+            <PujariRow key={u.id} u={u} levels={pujariLevels} onChanged={load} can={can} basePath={basePath} readOnly={headView} />
           ))}
         </TableBody>
       </Table>
       {rows.length === 0 && (
         <p className="text-sm text-muted-foreground mt-4">No pujaris match this filter.</p>
       )}
-    </AdminLayout>
+    </Frame>
   );
 }

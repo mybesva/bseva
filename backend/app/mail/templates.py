@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.mail.brand import (
+    checklist,
     booking_url,
     detail_rows,
     format_inr_paise,
@@ -45,6 +46,7 @@ class BookingEmailData:
     booking_status: str = ""
     language: str = "en"
     extra_rows: list[tuple[str, str]] = field(default_factory=list)
+    checklist: list[tuple[str, list[str]]] = field(default_factory=list)
     test_mode: bool = False
 
 
@@ -123,24 +125,28 @@ def login_otp_email(
     purpose: str = "login",
 ) -> EmailContent:
     is_register = purpose == "register"
-    title = "BSeva Registration OTP" if is_register else "BSeva Login Verification"
+    is_sensitive = purpose == "sensitive_action"
+    title = "BSeva Registration OTP" if is_register else "BSeva Security Verification" if is_sensitive else "BSeva Login Verification"
     subject = title + (" [TEST]" if test_mode else "")
     action = (
         "Use this one-time password to complete your BSeva registration."
         if is_register
+        else "Use this one-time password to confirm a sensitive action on your BSeva account. If this was not you, change your password now."
+        if is_sensitive
         else "Use this one-time password to sign in to your BSeva account."
     )
+    valid_for = "5 minutes" if is_sensitive else "10 minutes"
     body = (
         heading(title)
         + paragraph(_greet(customer_name or "Ji", language))
         + paragraph(action)
         + otp_box(otp_code)
-        + muted("Valid for: 10 minutes")
+        + muted(f"Valid for: {valid_for}")
         + muted("Do not share this OTP with anyone. BSeva will never ask for your OTP.")
     )
     html = render_email(
         title=subject,
-        preheader=f"Your BSeva OTP — valid for 10 minutes",
+        preheader=f"Your BSeva OTP — valid for {valid_for}",
         body_html=body,
         language=language,
         test_banner=test_mode,
@@ -198,6 +204,7 @@ def booking_confirmation_email(data: BookingEmailData) -> EmailContent:
         + paragraph(_greet(data.customer_name, data.language))
         + paragraph("Your BSeva puja booking is confirmed. Here are the details:")
         + detail_rows(_booking_detail_rows(data))
+        + "".join(checklist(label, items) for label, items in data.checklist)
     )
     html = render_email(
         title=subject,
@@ -211,7 +218,11 @@ def booking_confirmation_email(data: BookingEmailData) -> EmailContent:
     return EmailContent(
         subject=subject,
         html=html,
-        text=_booking_text(data, "Your BSeva puja booking is confirmed."),
+        text=_booking_text(data, "Your BSeva puja booking is confirmed.")
+        + "".join(
+            f"\n\n{label}:\n" + "\n".join(f"- {item}" for item in items)
+            for label, items in data.checklist
+        ),
         template_id="booking_confirmation",
     )
 
@@ -291,7 +302,7 @@ def payment_confirmation_email(data: BookingEmailData, *, transaction_id: str = 
     )
     extra = list(data.extra_rows)
     if method:
-        extra.append(("Payment method", method))
+        extra.append(("Payment Method", method))
     if transaction_id:
         extra.append(("Transaction / reference", transaction_id))
     payload = BookingEmailData(**{**data.__dict__, "extra_rows": extra})
@@ -325,15 +336,15 @@ def invoice_receipt_email(data: InvoiceEmailData) -> EmailContent:
         line_rows.append(("Taxes / GST", format_inr_paise(data.tax_paise)))
     line_rows.extend(
         [
-            ("Total paid", format_inr_paise(data.total_paid_paise)),
-            ("Payment status", data.payment_status),
-            ("Invoice number", data.invoice_number),
+            ("Total Paid", format_inr_paise(data.total_paid_paise)),
+            ("Payment Status", data.payment_status),
+            ("Invoice Number", data.invoice_number),
             ("Booking ID", data.booking_number or data.booking_id),
             ("Customer", data.customer_name),
             ("Service", data.service_name),
-            ("Booking date", data.booking_date),
-            ("Payment date", data.payment_date),
-            ("Payment method", data.payment_method or "—"),
+            ("Booking Date", data.booking_date),
+            ("Payment Date", data.payment_date),
+            ("Payment Method", data.payment_method or "—"),
             ("Transaction / reference", data.transaction_id or "—"),
         ]
     )
@@ -420,8 +431,8 @@ def refund_confirmation_email(
         " [TEST]" if data.test_mode else ""
     )
     extra = list(data.extra_rows) + [
-        ("Refund amount", format_inr_paise(refund_paise)),
-        ("Refund method", refund_method),
+        ("Refund Amount", format_inr_paise(refund_paise)),
+        ("Refund Method", refund_method),
     ]
     payload = BookingEmailData(**{**data.__dict__, "extra_rows": extra})
     body = (
@@ -458,7 +469,7 @@ def booking_rescheduled_email(
     )
     extra = list(data.extra_rows)
     if previous_date or previous_time:
-        extra.append(("Previous schedule", f"{previous_date} {previous_time}".strip()))
+        extra.append(("Previous Schedule", f"{previous_date} {previous_time}".strip()))
     payload = BookingEmailData(**{**data.__dict__, "extra_rows": extra})
     body = (
         heading("Booking Rescheduled / Updated")
@@ -548,7 +559,7 @@ def sample_invoice_data(*, test_mode: bool = True) -> InvoiceEmailData:
         payment_method="Wallet",
         transaction_id="TXN-TEST-998877",
         lines=[
-            ("Main puja", b.main_puja_paise),
+            ("Main Puja", b.main_puja_paise),
             ("Samagri", b.samagri_paise),
             ("Alankaram", b.alankaram_paise),
             ("Food / Prasadam", b.food_prasadam_paise),

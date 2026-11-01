@@ -418,7 +418,7 @@ export default function TemplesPage() {
                       <div className="text-sm font-medium">{temple.pujari_name || temple.pujari_account_name || "—"}</div>
                       {temple.pujari_registered ? (
                         <Badge className="mt-1 bg-green-100 text-green-800 hover:bg-green-100">
-                          On BSeva as pujari
+                          On BSeva as Pujari
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="mt-1">Not on BSeva</Badge>
@@ -500,7 +500,7 @@ export default function TemplesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pujari_name">Pujari name</Label>
+                <Label htmlFor="pujari_name">Pujari Name</Label>
                 <Input
                   id="pujari_name"
                   value={formData.pujari_name}
@@ -509,7 +509,7 @@ export default function TemplesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contact_phone">Contact phone</Label>
+                <Label htmlFor="contact_phone">Contact Phone</Label>
                 <Input
                   id="contact_phone"
                   value={formData.contact_phone}

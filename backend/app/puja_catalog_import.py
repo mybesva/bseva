@@ -489,6 +489,9 @@ def ensure_puja_catalog_import(conn: Connection) -> dict[str, Any]:
     top_text = _read("The_10_Most_Popular_Pujas_to_Feature_on_BSeva.txt")
     proc_text = _read("B-Seva_Puja_Processes_Guidelines_For_All_Pujas.txt")
     sam_text = _read("B-Seva_Samagri_Expanded.txt")
+    if not (top_text and proc_text and sam_text):
+        # docs/ is not in the API image; importing empty text would blank process steps and translations.
+        return {**report, "skipped": "source documents not found"}
     cards = _parse_top10_cards(top_text)
     processes = _parse_process_blocks(proc_text)
     samagri = _parse_samagri_blocks(sam_text)

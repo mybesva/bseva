@@ -145,27 +145,27 @@ export default function OpsDashboard() {
   const attention: AttentionItem[] = [];
   if (b) {
     attention.push(
-      { label: "Waiting for pujari response", value: b.queues.waiting_pujari, icon: Clock, tone: "amber", href: adminPath("/bookings?status=waiting_pujari") },
-      { label: "Needs pujari assignment", value: b.queues.needs_assignment, icon: UserX, tone: "rose", href: adminPath("/bookings?status=needs_assignment") },
-      { label: "Puja date passed", value: b.queues.date_passed, icon: CalendarX, tone: "rose", href: adminPath("/bookings?status=date_passed") },
-      { label: "Puja not marked complete", value: b.queues.not_completed, icon: CalendarClock, tone: "amber", href: adminPath("/bookings?status=not_completed") },
+      { label: "Waiting for Pujari Response", value: b.queues.waiting_pujari, icon: Clock, tone: "amber", href: adminPath("/bookings?status=waiting_pujari") },
+      { label: "Needs Pujari Assignment", value: b.queues.needs_assignment, icon: UserX, tone: "rose", href: adminPath("/bookings?status=needs_assignment") },
+      { label: "Puja Date Passed", value: b.queues.date_passed, icon: CalendarX, tone: "rose", href: adminPath("/bookings?status=date_passed") },
+      { label: "Puja Not Marked Complete", value: b.queues.not_completed, icon: CalendarClock, tone: "amber", href: adminPath("/bookings?status=not_completed") },
     );
   }
   if (data?.virtual_puja) {
-    attention.push({ label: "Virtual pujas without a pujari", value: data.virtual_puja.unassigned, icon: Video, tone: "violet", href: adminPath("/virtual-puja") });
+    attention.push({ label: "Virtual Pujas Without a Pujari", value: data.virtual_puja.unassigned, icon: Video, tone: "violet", href: adminPath("/virtual-puja") });
   }
   if (data?.pujaris) {
     attention.push({ label: "Pujari's Profile Verification", value: data.pujaris.pending_verification, icon: ShieldCheck, tone: "amber", href: adminPath("/pujaris?status=pending") });
   }
   if (data?.reviews) {
-    attention.push({ label: "Reviews awaiting moderation", value: data.reviews.pending, icon: Star, tone: "sky", href: adminPath("/reviews") });
+    attention.push({ label: "Reviews Awaiting Moderation", value: data.reviews.pending, icon: Star, tone: "sky", href: adminPath("/reviews") });
   }
   if (data?.muhurtham) {
-    attention.push({ label: "New muhurtham requests", value: data.muhurtham.requested, icon: Clock3, tone: "violet", href: adminPath("/muhurtham") });
+    attention.push({ label: "New Muhurtham Requests", value: data.muhurtham.requested, icon: Clock3, tone: "violet", href: adminPath("/muhurtham") });
   }
   if (data?.support) {
     attention.push({
-      label: "Open support tickets",
+      label: "Open Support Tickets",
       value: data.support.open,
       sub: data.support.overdue ? `${data.support.overdue} past SLA` : undefined,
       icon: LifeBuoy,
@@ -176,9 +176,9 @@ export default function OpsDashboard() {
   const actionCount = attention.reduce((n, a) => n + (a.value || 0), 0);
 
   const bannerStats = [
-    b && { label: "Today's pujas", value: fmt(b.today), icon: CalendarCheck },
-    b && { label: "In progress", value: fmt(b.in_progress), icon: Loader2 },
-    data?.support && { label: "Open tickets", value: fmt(data.support.open), icon: LifeBuoy },
+    b && { label: "Today's Pujas", value: fmt(b.today), icon: CalendarCheck },
+    b && { label: "In Progress", value: fmt(b.in_progress), icon: Loader2 },
+    data?.support && { label: "Open Tickets", value: fmt(data.support.open), icon: LifeBuoy },
     !b && data?.customers && { label: "Customers", value: fmt(data.customers.total), icon: Users },
     !b && data?.pujaris && { label: "Pujaris", value: fmt(data.pujaris.total), icon: UserCog },
   ].filter(Boolean).slice(0, 3) as { label: string; value: string; icon: typeof Clock }[];
@@ -199,35 +199,35 @@ export default function OpsDashboard() {
       href: adminPath("/pujaris"),
     },
     b && {
-      label: "Upcoming bookings",
+      label: "Upcoming Bookings",
       value: fmt(b.upcoming),
       sub: `${fmt(b.today)} today`,
       icon: CalendarClock,
       href: adminPath("/bookings"),
     },
     b && {
-      label: "Completed this month",
+      label: "Completed This Month",
       value: fmt(b.completed_this_month),
       sub: `${fmt(b.cancelled_this_month)} cancelled this month`,
       icon: CalendarCheck,
       href: adminPath("/bookings?status=completed"),
     },
     data?.virtual_puja && {
-      label: "Virtual & online pujas",
+      label: "Virtual & Online Pujas",
       value: fmt(data.virtual_puja.upcoming),
       sub: `${fmt(data.virtual_puja.today)} today`,
       icon: Video,
       href: adminPath("/virtual-puja"),
     },
     data?.services && {
-      label: "Active services",
+      label: "Active Services",
       value: fmt(data.services.active),
       sub: `${fmt(data.services.inactive)} inactive`,
       icon: Sparkles,
       href: adminPath("/services"),
     },
     data?.seva_events && {
-      label: "Upcoming seva events",
+      label: "Upcoming Seva Events",
       value: fmt(data.seva_events.upcoming),
       icon: CalendarClock,
       href: adminPath("/seva-events"),
@@ -293,7 +293,7 @@ export default function OpsDashboard() {
           onClick={() => void load()}
           disabled={loading}
           className="absolute right-4 top-4 rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
-          aria-label="Refresh dashboard"
+          aria-label="Refresh Dashboard"
           title="Refresh"
         >
           <RefreshCw size="1rem" className={cn(loading && "animate-spin")} />
@@ -323,7 +323,7 @@ export default function OpsDashboard() {
       {(attention.length > 0 || b) && (
         <div className={cn("grid gap-6", attention.length > 0 && b && "xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]")}>
           {attention.length > 0 && (
-            <Panel title="Needs attention" icon={AlertTriangle}>
+            <Panel title="Needs Attention" icon={AlertTriangle}>
               <ul className="space-y-2">
                 {attention.map((it) => (
                   <li key={it.label}>
@@ -352,7 +352,7 @@ export default function OpsDashboard() {
           )}
 
           {b && (
-            <Panel title={`Today's schedule · ${fmt(b.today)}`} icon={CalendarCheck} action={{ label: "All bookings", href: adminPath("/bookings") }}>
+            <Panel title={`Today's Schedule · ${fmt(b.today)}`} icon={CalendarCheck} action={{ label: "All Bookings", href: adminPath("/bookings") }}>
               {b.today_schedule.length === 0 ? (
                 <p className="flex flex-1 items-center justify-center rounded-2xl bg-[#FFF8EE] py-10 text-sm text-[#5B6478] dark:bg-white/5 dark:text-white/60">
                   No pujas scheduled for today.
@@ -395,7 +395,7 @@ export default function OpsDashboard() {
 
       {b && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <Panel title="Bookings · last 7 days" icon={TrendingUp}>
+          <Panel title="Bookings · Last 7 Days" icon={TrendingUp}>
             <p className="-mt-2 mb-4 text-xs text-[#5B6478] dark:text-white/55">{fmt(trendTotal)} new bookings this week</p>
             <div className="flex h-40 items-end gap-2">
               {trend.map((d, i) => {
@@ -416,7 +416,7 @@ export default function OpsDashboard() {
             </div>
           </Panel>
 
-          <Panel title="Booking status" icon={CalendarClock} action={{ label: "View", href: adminPath("/bookings") }}>
+          <Panel title="Booking Status" icon={CalendarClock} action={{ label: "View", href: adminPath("/bookings") }}>
             <div className="mb-4 flex h-3 overflow-hidden rounded-full bg-[#F3E8D8] dark:bg-white/10">
               {breakdown.map(([st, n]) => (
                 <div key={st} className={statusMeta(st).bar} style={{ width: `${(n / breakdownTotal) * 100}%` }} title={`${statusMeta(st).label}: ${n}`} />
@@ -442,14 +442,14 @@ export default function OpsDashboard() {
       {(b || has("top_services")) && (
         <div className={cn("grid gap-6", b && has("top_services") && "xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]")}>
           {b && (
-            <Panel title="Recent bookings" icon={UserPlus} action={{ label: "All bookings", href: adminPath("/bookings") }}>
+            <Panel title="Recent Bookings" icon={UserPlus} action={{ label: "All Bookings", href: adminPath("/bookings") }}>
               <div className="-mx-2 overflow-x-auto">
                 <table className="w-full min-w-[30rem] text-sm">
                   <thead>
                     <tr className="text-left text-[0.7rem] uppercase tracking-wider text-[#8A7F70] dark:text-white/45">
                       <th className="px-2 pb-2 font-semibold">Booking</th>
                       <th className="px-2 pb-2 font-semibold">Customer</th>
-                      <th className="px-2 pb-2 font-semibold">Puja date</th>
+                      <th className="px-2 pb-2 font-semibold">Puja Date</th>
                       <th className="px-2 pb-2 font-semibold">Status</th>
                     </tr>
                   </thead>
@@ -483,7 +483,7 @@ export default function OpsDashboard() {
           )}
 
           {has("top_services") && (
-            <Panel title="Top pujas · 30 days" icon={TrendingUp}>
+            <Panel title="Top Pujas · 30 Days" icon={TrendingUp}>
               <ol className="space-y-3.5">
                 {(data?.top_services || []).map((s, i) => (
                   <li key={s.name}>
@@ -516,7 +516,7 @@ export default function OpsDashboard() {
       {(data?.customers || data?.pujaris) && (
         <div className={cn("grid gap-6", data?.customers && data?.pujaris && "lg:grid-cols-2")}>
           {data?.customers && (
-            <Panel title="Newest customers" icon={Users} action={{ label: "All customers", href: adminPath("/customers") }}>
+            <Panel title="Newest Customers" icon={Users} action={{ label: "All Customers", href: adminPath("/customers") }}>
               <ul className="divide-y divide-[#F3E8D8] dark:divide-white/10">
                 {data.customers.recent.map((c) => (
                   <li key={c.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -534,7 +534,7 @@ export default function OpsDashboard() {
             </Panel>
           )}
           {data?.pujaris && (
-            <Panel title="Recently registered pujaris" icon={UserCog} action={{ label: "All pujaris", href: adminPath("/pujaris") }}>
+            <Panel title="Recently Registered Pujaris" icon={UserCog} action={{ label: "All Pujaris", href: adminPath("/pujaris") }}>
               <ul className="divide-y divide-[#F3E8D8] dark:divide-white/10">
                 {data.pujaris.recent.map((p) => {
                   const st = p.verification_status || "pending";

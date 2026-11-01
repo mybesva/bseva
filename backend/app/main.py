@@ -10,6 +10,8 @@ from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 from app.config import settings
 from app import env_loader  # noqa: F401 — load .env into os.environ
 from app.routers import (
+    admin_security,
+    tax_admin,
     admin,
     admin_pujari,
     admin_seva,
@@ -63,6 +65,8 @@ app.add_middleware(
 )
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(bookings.router, prefix="/api/v1")
+app.include_router(tax_admin.router, prefix="/api/v1")
+app.include_router(admin_security.router, prefix="/api/v1")
 app.include_router(meetings.router, prefix="/api/v1")
 app.include_router(wallet.router, prefix="/api/v1")
 app.include_router(wallet.admin_router, prefix="/api/v1")

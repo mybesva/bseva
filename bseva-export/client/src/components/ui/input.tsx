@@ -9,8 +9,15 @@ function Input({
   onKeyDown,
   onCompositionStart,
   onCompositionEnd,
+  value,
+  onChange,
+  onBlur,
   ...props
 }: React.ComponentProps<"input">) {
+  // Parents often turn "" into a default (Number(v) || 1). Keep an empty box, or the same number as
+  // typed, until the field is left; otherwise a number box can never be cleared.
+  const [numberDraft, setNumberDraft] = React.useState<string | null>(null);
+  const keepDraft = numberDraft !== null && (numberDraft === "" || Number(numberDraft) === Number(value));
   // Get dialog composition context if available (will be no-op if not inside Dialog)
   const dialogComposition = useDialogComposition();
 
@@ -63,6 +70,15 @@ function Input({
       onCompositionEnd={handleCompositionEnd}
       onKeyDown={handleKeyDown}
       {...props}
+      value={type === "number" && keepDraft ? (numberDraft as string) : value}
+      onChange={(e) => {
+        if (type === "number") setNumberDraft(e.target.value);
+        onChange?.(e);
+      }}
+      onBlur={(e) => {
+        setNumberDraft(null);
+        onBlur?.(e);
+      }}
     />
   );
 }

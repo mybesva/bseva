@@ -41,7 +41,7 @@ export default function PersonNameFields({
         {errors?.first_name ? <p className="text-xs text-destructive">{errors.first_name}</p> : null}
       </div>
       <div className="space-y-2">
-        <Label>Middle name</Label>
+        <Label>Middle Name</Label>
         <Input
           name="bseva_middle_name"
           value={value.middle_name}
@@ -51,7 +51,7 @@ export default function PersonNameFields({
           autoCorrect="off"
           data-1p-ignore
           data-lpignore="true"
-          aria-label="Middle name (optional)"
+          aria-label="Middle Name (Optional)"
         />
       </div>
       <div className="space-y-2">

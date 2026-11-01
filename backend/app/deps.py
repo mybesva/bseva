@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.db import get_db
-from app.security import decode_token
+from app.security import decode_token, password_version
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -29,6 +29,11 @@ def current_user(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
     if row["blocked"]:
         raise HTTPException(status.HTTP_403_FORBIDDEN, ACCOUNT_BLOCKED)
+    if payload.get("pv") and payload["pv"] != password_version(row["password_hash"]):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Your password was changed. Please sign in again.")
+    # Also ends sessions from before OTP was required, and accounts promoted while signed in.
+    if row["role"] == "super_admin" and not payload.get("mfa"):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Please sign in again with your one-time code.")
     return dict(row)
 
 

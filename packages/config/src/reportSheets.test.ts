@@ -58,6 +58,6 @@ describe("reportSheets", () => {
       "Payment",
     ]);
     expect(reportWorkbookFilename(sample)).toBe("BSeva_Reports_2026-09-01_to_2026-09-20.xlsx");
-    expect(sheets[0].rows.some((r) => r[0] === "Total revenue (₹)")).toBe(true);
+    expect(sheets[0].rows.some((r) => r[0] === "Total Revenue (₹)")).toBe(true);
   });
 });

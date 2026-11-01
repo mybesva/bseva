@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Ban,
   CheckCheck,
   Crown,
   Eraser,
+  KeyRound,
   Loader2,
   Lock,
+  Plus,
   RotateCcw,
   Save,
   Search,
@@ -24,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AddAdminDialog, AdminPasswordDialog } from "@/components/admin/AdminAccountDialogs";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +37,7 @@ type AdminRow = {
   email: string | null;
   phone: string | null;
   role: "admin" | "super_admin";
+  blocked?: boolean;
   permissions: string[];
 };
 
@@ -74,6 +79,9 @@ function PermissionsWorkspace() {
   const [draft, setDraft] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [pendingSwitch, setPendingSwitch] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [passwordFor, setPasswordFor] = useState<AdminRow | null>(null);
+  const [statusFor, setStatusFor] = useState<AdminRow | null>(null);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -126,6 +134,17 @@ function PermissionsWorkspace() {
   const setGroup = (keys: string[], on: boolean) =>
     setDraft((prev) => (on ? Array.from(new Set([...prev, ...keys])) : prev.filter((p) => !keys.includes(p))));
 
+  async function changeStatus(admin: AdminRow) {
+    const disabled = !admin.blocked;
+    try {
+      await api(`/admin/admins/${admin.id}/status`, { method: "PUT", body: JSON.stringify({ disabled }) });
+      setAdmins((list) => list.map((a) => (a.id === admin.id ? { ...a, blocked: disabled } : a)));
+      toast.success(disabled ? "Admin disabled. Their access ended immediately." : "Admin enabled");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   async function save() {
     if (!selected || saving) return;
     setSaving(true);
@@ -163,13 +182,20 @@ function PermissionsWorkspace() {
       <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
         {/* Admin directory */}
         <aside className={cn(CARD, "flex h-fit flex-col p-4 xl:sticky xl:top-20")}>
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="mb-3 inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#FF7A00] text-sm font-semibold text-white hover:bg-[#E86A00]"
+          >
+            <Plus size="1rem" /> Add admin
+          </button>
           <div className="relative">
             <Search size="1rem" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8A7F70]" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search admins"
-              aria-label="Search admins"
+              aria-label="Search Admins"
               className="h-10 w-full rounded-xl border border-[#EFE2CF] bg-[#FFFCF7] pl-9 pr-3 text-sm outline-none focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00]/20 dark:border-white/10 dark:bg-white/5"
             />
           </div>
@@ -216,7 +242,11 @@ function PermissionsWorkspace() {
                           : "bg-[#EEF2F8] text-[#1A2B4A] dark:bg-white/10 dark:text-white/75",
                       )}
                     >
-                      {isSuper ? "Super Admin" : `${a.permissions.filter((p) => assignable.includes(p)).length} perms`}
+                      {isSuper
+                        ? "Super Admin"
+                        : a.blocked
+                          ? "Disabled"
+                          : `${a.permissions.filter((p) => assignable.includes(p)).length} perms`}
                     </span>
                   </button>
                 </li>
@@ -235,7 +265,7 @@ function PermissionsWorkspace() {
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF1E4] text-[#E86A00] dark:bg-[#FF7A00]/15">
                 <UserCog size="1.625rem" />
               </span>
-              <h2 className="mt-4 text-lg font-bold text-[#0E1830] dark:text-white">Select an admin</h2>
+              <h2 className="mt-4 text-lg font-bold text-[#0E1830] dark:text-white">Select an Admin</h2>
               <p className="mt-1 max-w-sm text-sm text-[#5B6478] dark:text-white/60">
                 Pick an account on the left to review and change the modules they can access.
               </p>
@@ -272,6 +302,23 @@ function PermissionsWorkspace() {
                     >
                       <Eraser size="0.875rem" /> Clear all
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setPasswordFor(selected)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/10 px-3 text-xs font-semibold hover:bg-white/20"
+                    >
+                      <KeyRound size="0.875rem" /> Change password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatusFor(selected)}
+                      className={cn(
+                        "inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold",
+                        selected.blocked ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700",
+                      )}
+                    >
+                      <Ban size="0.875rem" /> {selected.blocked ? "Enable" : "Disable"}
+                    </button>
                   </div>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F0C35A]/20 px-3 py-1 text-xs font-bold text-[#F0C35A]">
@@ -306,7 +353,7 @@ function PermissionsWorkspace() {
                           checked={state}
                           disabled={saving}
                           onCheckedChange={(v) => setGroup(keys, v === true)}
-                          aria-label={`Select all ${g.label} permissions`}
+                          aria-label={`Select All ${g.label} Permissions`}
                         />
                         <span className="min-w-0 flex-1 text-sm font-bold text-[#0E1830] dark:text-white">{g.label}</span>
                         <span
@@ -383,6 +430,42 @@ function PermissionsWorkspace() {
         </div>
       )}
 
+      <AddAdminDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreated={(id) => {
+          void load().then(() => {
+            setSelectedId(id);
+            setDraft([]);
+          });
+        }}
+      />
+      <AdminPasswordDialog admin={passwordFor} onClose={() => setPasswordFor(null)} />
+      <AlertDialog open={!!statusFor} onOpenChange={(o) => !o && setStatusFor(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusFor?.blocked ? "Enable" : "Disable"} {statusFor?.name || "this admin"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusFor?.blocked
+                ? "They will be able to sign in again with their existing permissions."
+                : "They will lose access immediately, including any session already open. You can enable them again later."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (statusFor) void changeStatus(statusFor);
+                setStatusFor(null);
+              }}
+            >
+              {statusFor?.blocked ? "Enable Admin" : "Disable Admin"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={!!pendingSwitch} onOpenChange={(o) => !o && setPendingSwitch(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -392,14 +475,14 @@ function PermissionsWorkspace() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogCancel>Keep Editing</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (pendingSwitch) select(pendingSwitch);
                 setPendingSwitch(null);
               }}
             >
-              Discard changes
+              Discard Changes
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

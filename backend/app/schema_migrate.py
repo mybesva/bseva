@@ -1,3 +1,11 @@
+"""Idempotent schema updates, safe to run on every deploy.
+
+ensure_schema() changes structure only. It must never insert, update or delete rows in a database that is in use:
+a change to existing data belongs in a numbered file under supabase/migrations, where it is reviewed, recorded in
+schema_migrations and applied exactly once. tests/test_ensure_schema_data_integrity.py enforces this.
+
+Reference data (catalogue, legal text, settings, roles) is seeded only into a brand-new database. See _seeding_allowed.
+"""
 from sqlalchemy import text
 
 from app.db import engine
@@ -27,6 +35,14 @@ _SECURITY_STMTS = [
 ]
 
 _STMTS = [
+    # Which reference-data seeds have run here; key '_origin' records whether the database started out empty.
+    """
+    CREATE TABLE IF NOT EXISTS schema_seed_state (
+      key TEXT PRIMARY KEY,
+      status TEXT NOT NULL,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS profile_photo_path TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS full_name TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS father_name TEXT",
@@ -144,31 +160,6 @@ _STMTS = [
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS bank_name TEXT",
     "ALTER TABLE pujari_profiles ADD COLUMN IF NOT EXISTS upi_id TEXT",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pujaris_required INTEGER NOT NULL DEFAULT 1",
-    """
-    UPDATE bookings b
-    SET pujaris_required = COALESCE(
-      CASE LOWER(COALESCE(b.package_type, 'standard'))
-        WHEN 'basic' THEN s.basic_pujaris_required
-        WHEN 'premium' THEN s.premium_pujaris_required
-        ELSE s.standard_pujaris_required
-      END,
-      s.pujaris_required,
-      1
-    )
-    FROM services s
-    WHERE s.id = b.service_id
-      AND (b.pujaris_required IS NULL OR b.pujaris_required <= 1)
-    """,
-    """
-    UPDATE services
-    SET
-      standard_price_paise = 500000,
-      main_puja_price_paise = 500000
-    WHERE COALESCE(standard_price_paise, 0) = 0
-      AND COALESCE(main_puja_price_paise, 0) = 0
-      AND COALESCE(premium_price_paise, 0) = 0
-      AND COALESCE(basic_price_paise, 0) = 0
-    """,
     """
     CREATE TABLE IF NOT EXISTS pujari_roles (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -355,6 +346,7 @@ _DEFAULT_LEGAL_POLICIES = [
     {
         "slug": "booking_terms",
         "title": "Booking Terms & Conditions",
+        "version": "2026-09",
         "sort_order": 2,
         "points": [
             {"title": "Booking confirmation", "body": "Confirming a booking means you accept the selected service, pujari, date, time, package (Standard/Premium), and mode (In-person or Virtual)."},
@@ -366,6 +358,7 @@ _DEFAULT_LEGAL_POLICIES = [
     {
         "slug": "cancellation_policy",
         "title": "Cancellation Policy",
+        "version": "2026-09",
         "sort_order": 3,
         "points": [
             {"title": "More than 48 hours before booking", "body": "10% cancellation charge, 90% refund to your Customer Wallet."},
@@ -394,36 +387,23 @@ def _seed_legal_policies(conn) -> None:
     import json
 
     count = conn.execute(text("SELECT COUNT(*) FROM legal_policies")).scalar() or 0
-    if not count:
-        for policy in _DEFAULT_LEGAL_POLICIES:
-            conn.execute(
-                text(
-                    """
-                    INSERT INTO legal_policies (slug, title, version, sort_order, points)
-                    VALUES (:slug, :title, '2026-01', :sort_order, CAST(:points AS jsonb))
-                    """
-                ),
-                {
-                    "slug": policy["slug"],
-                    "title": policy["title"],
-                    "sort_order": policy["sort_order"],
-                    "points": json.dumps(policy["points"]),
-                },
-            )
+    if count:
         return
-    for slug in ("cancellation_policy", "booking_terms"):
-        policy = next((p for p in _DEFAULT_LEGAL_POLICIES if p["slug"] == slug), None)
-        if not policy:
-            continue
+    for policy in _DEFAULT_LEGAL_POLICIES:
         conn.execute(
             text(
                 """
-                UPDATE legal_policies
-                SET points = CAST(:points AS jsonb), version = '2026-09', updated_at = NOW()
-                WHERE slug = :slug
+                INSERT INTO legal_policies (slug, title, version, sort_order, points)
+                VALUES (:slug, :title, :version, :sort_order, CAST(:points AS jsonb))
                 """
             ),
-            {"points": json.dumps(policy["points"]), "slug": slug},
+            {
+                "slug": policy["slug"],
+                "title": policy["title"],
+                "version": policy.get("version", "2026-01"),
+                "sort_order": policy["sort_order"],
+                "points": json.dumps(policy["points"]),
+            },
         )
 
 
@@ -462,6 +442,8 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS booking_lead_hours INTEGER NOT NULL DEFAULT 48",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_share_percent NUMERIC NOT NULL DEFAULT 85",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_amount_paise INTEGER",
+    # Pujari penalties may overdraw the wallet; apply_wallet guards every other change.
+    "ALTER TABLE wallets DROP CONSTRAINT IF EXISTS wallets_balance_paise_check",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name TEXT",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT",
@@ -516,33 +498,8 @@ _FOUNDATION_STMTS = [
       ON fcm_device_tokens (user_id)
       WHERE active = TRUE
     """,
-    """
-    UPDATE services
-    SET name = replace(name, 'Muhurta Consultation', 'Muhurtham Consultation')
-    WHERE name LIKE '%Muhurta Consultation%'
-    """,
-    """
-    UPDATE services
-    SET name = replace(name, 'Wedding Muhurta', 'Wedding Muhurtham')
-    WHERE name LIKE '%Wedding Muhurta%'
-    """,
-    """
-    UPDATE services
-    SET name = replace(name, 'Vivaha Muhurta', 'Vivaha Muhurtham')
-    WHERE name LIKE '%Vivaha Muhurta%'
-    """,
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS virtual_domestic_price_paise INTEGER",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS virtual_international_price_paise INTEGER",
-    """
-    UPDATE services
-    SET virtual_domestic_price_paise = COALESCE(virtual_domestic_price_paise, online_nri_price_paise)
-    WHERE virtual_domestic_price_paise IS NULL
-    """,
-    """
-    UPDATE services
-    SET virtual_international_price_paise = COALESCE(virtual_international_price_paise, online_nri_price_paise)
-    WHERE virtual_international_price_paise IS NULL
-    """,
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_timezone TEXT",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_country TEXT",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS start_at_utc TIMESTAMPTZ",
@@ -676,7 +633,7 @@ _FOUNDATION_STMTS = [
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$
     """,
-    # App uses lunar/solar; legacy DB allowed north/south/lunar — drop check before remapping
+    # App uses lunar/solar; rows were remapped by migration 022
     """
     DO $$
     DECLARE r record;
@@ -689,24 +646,6 @@ _FOUNDATION_STMTS = [
         EXECUTE format('ALTER TABLE users DROP CONSTRAINT IF EXISTS %I', r.conname);
       END LOOP;
     END $$
-    """,
-    """
-    UPDATE users
-    SET calendar_preference = CASE
-      WHEN lower(calendar_preference) = 'lunar' THEN 'lunar'
-      ELSE 'solar'
-    END
-    WHERE calendar_preference IS NULL
-       OR lower(calendar_preference) NOT IN ('lunar', 'solar')
-    """,
-    """
-    UPDATE customer_profiles
-    SET calendar_preference = CASE
-      WHEN lower(calendar_preference) = 'lunar' THEN 'lunar'
-      ELSE 'solar'
-    END
-    WHERE calendar_preference IS NOT NULL
-      AND lower(calendar_preference) NOT IN ('lunar', 'solar')
     """,
     """
     DO $$ BEGIN
@@ -1126,16 +1065,6 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE pujari_blocked_dates ADD COLUMN IF NOT EXISTS start_time TIME",
     "ALTER TABLE pujari_blocked_dates ADD COLUMN IF NOT EXISTS end_time TIME",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT",
-    "ALTER TABLE otp_codes DROP CONSTRAINT IF EXISTS otp_codes_purpose_check",
-    """
-    DO $$ BEGIN
-      ALTER TABLE otp_codes ADD CONSTRAINT otp_codes_purpose_check
-        CHECK (purpose IN (
-          'register', 'login', 'verify', 'reset', 'verify_email', 'verify_phone', 'start_puja'
-        ));
-    EXCEPTION WHEN duplicate_object THEN NULL;
-    END $$
-    """,
     """
     DO $$
     DECLARE r record;
@@ -1188,7 +1117,7 @@ _FOUNDATION_STMTS = [
       ALTER TABLE otp_codes ADD CONSTRAINT otp_codes_purpose_check
         CHECK (purpose IN (
           'register', 'login', 'verify', 'reset', 'verify_email', 'verify_phone',
-          'start_puja', 'complete_puja'
+          'start_puja', 'complete_puja', 'sensitive_action'
         ));
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$
@@ -1224,23 +1153,6 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS guest_phone TEXT",
     "ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS guest_email TEXT",
     "ALTER TABLE support_tickets ALTER COLUMN priority SET DEFAULT 'medium'",
-    """
-    UPDATE support_tickets SET last_activity_at = COALESCE(updated_at, created_at)
-    WHERE last_activity_at IS NULL
-    """,
-    """
-    UPDATE support_tickets
-    SET reporter_type = CASE
-      WHEN user_role IN ('pujari', 'head_pujari') THEN 'pujari'
-      WHEN user_role = 'customer' THEN 'customer'
-      ELSE COALESCE(reporter_type, 'other')
-    END
-    WHERE reporter_type IS NULL
-    """,
-    """
-    UPDATE support_tickets SET priority = 'medium'
-    WHERE LOWER(COALESCE(priority, '')) IN ('normal', '')
-    """,
     "ALTER TABLE support_ticket_messages ALTER COLUMN author_id DROP NOT NULL",
     "ALTER TABLE support_ticket_messages ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'public'",
     "ALTER TABLE support_ticket_messages ADD COLUMN IF NOT EXISTS event_type TEXT NOT NULL DEFAULT 'message'",
@@ -1450,7 +1362,76 @@ def _exec_safe(conn, stmt: str) -> str | None:
         return msg
 
 
-def ensure_schema(*, quiet: bool = False) -> None:
+def _seeding_allowed(conn) -> bool:
+    """True only while a database has never held real data.
+
+    The first ensure_schema() records whether the database started out empty. One that already had accounts or a
+    seeded catalogue is 'existing' and is never seeded. An empty one is seeded step by step (see _run_seed), and a
+    step that failed is retried only until the first account exists.
+    """
+    has_users = conn.execute(text("SELECT EXISTS (SELECT 1 FROM users)")).scalar()
+    origin = conn.execute(text("SELECT status FROM schema_seed_state WHERE key = '_origin'")).scalar()
+    if origin is None:
+        seeded = conn.execute(text("SELECT EXISTS (SELECT 1 FROM service_category_map)")).scalar()
+        origin = "existing" if has_users or seeded else "new"
+        conn.execute(text("INSERT INTO schema_seed_state (key, status) VALUES ('_origin', :o)"), {"o": origin})
+    return origin == "new" and not has_users
+
+
+def _run_seed(conn, key: str, label: str, seed, failed: list[tuple[str, str]]) -> None:
+    """Run one reference-data seed unless it has already completed on this database."""
+    if conn.execute(text("SELECT 1 FROM schema_seed_state WHERE key = :k"), {"k": key}).first():
+        return
+    conn.execute(text("SAVEPOINT bseva_seed"))
+    try:
+        seed(conn)
+        conn.execute(text("INSERT INTO schema_seed_state (key, status) VALUES (:k, 'applied')"), {"k": key})
+        conn.execute(text("RELEASE SAVEPOINT bseva_seed"))
+    except Exception as e:
+        conn.execute(text("ROLLBACK TO SAVEPOINT bseva_seed"))
+        failed.append((label, str(e).split("\n")[0][:180]))
+
+
+def _seed_catalog(conn) -> None:
+    from app.catalog_seed import ensure_catalog
+
+    ensure_catalog(conn)
+
+
+def _seed_samagri(conn) -> None:
+    from app.samagri_seed import ensure_samagri_content
+
+    ensure_samagri_content(conn)
+
+
+def _seed_puja_catalog(conn) -> None:
+    from app.puja_catalog_import import ensure_puja_catalog_import
+
+    ensure_puja_catalog_import(conn)
+
+
+def _seed_catalog_translations(conn) -> None:
+    from app.catalog_i18n_seed import ensure_catalog_translations
+
+    ensure_catalog_translations(conn)
+
+
+class SchemaMigrationError(RuntimeError):
+    """ensure_schema(strict=True) hit failed statements; the schema transaction was rolled back."""
+
+    def __init__(self, failed: list[tuple[str, str]]):
+        self.failed = failed
+        lines = "; ".join(f"{preview} -> {err}" for preview, err in failed[:10])
+        super().__init__(f"{len(failed)} schema step(s) failed: {lines}")
+
+
+def ensure_schema(*, quiet: bool = False, strict: bool = False) -> list[tuple[str, str]]:
+    """Apply idempotent schema updates and seeds. Returns the failed steps as (statement preview, error).
+
+    strict=True (deploys): any failure inside the DDL transaction rolls the whole transaction back and raises
+    SchemaMigrationError; failures in the later steps (public-id backfill, RBAC v2) raise after they run.
+    """
+
     def log(msg: str) -> None:
         if not quiet:
             print(msg, flush=True)
@@ -1513,154 +1494,24 @@ def ensure_schema(*, quiet: bool = False) -> None:
             run_batch("phase7", list(_PHASE7_STMTS))
         except Exception as e:
             log(f"  ! phase7 skipped: {e}")
-        # Backfill main_puja_price from standard when null
-        err = _exec_safe(
-            conn,
-            """
-            UPDATE services SET main_puja_price_paise = standard_price_paise
-            WHERE main_puja_price_paise IS NULL
-              AND standard_price_paise IS NOT NULL
-            """,
-        )
-        if err:
-            failed.append(("backfill main_puja_price", err))
-        else:
-            ok += 1
-        try:
-            from app.catalog_seed import ensure_catalog
-
-            log("  → catalog seed")
-            conn.execute(text("SAVEPOINT bseva_catalog"))
-            try:
-                ensure_catalog(conn)
-                conn.execute(text("RELEASE SAVEPOINT bseva_catalog"))
-                ok += 1
-            except Exception as e:
-                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_catalog"))
-                failed.append(("catalog seed", str(e).split("\n")[0][:180]))
-        except Exception as e:
-            log(f"  ! catalog seed skipped: {e}")
-        try:
-            from app.samagri_seed import ensure_samagri_content
-
-            log("  → samagri seed")
-            conn.execute(text("SAVEPOINT bseva_samagri"))
-            try:
-                ensure_samagri_content(conn)
-                conn.execute(text("RELEASE SAVEPOINT bseva_samagri"))
-                ok += 1
-            except Exception as e:
-                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_samagri"))
-                failed.append(("samagri seed", str(e).split("\n")[0][:180]))
-        except Exception as e:
-            log(f"  ! samagri seed skipped: {e}")
-        try:
-            from app.puja_catalog_import import ensure_puja_catalog_import
-
-            log("  → puja catalog import")
-            conn.execute(text("SAVEPOINT bseva_puja_docs"))
-            try:
-                ensure_puja_catalog_import(conn)
-                conn.execute(text("RELEASE SAVEPOINT bseva_puja_docs"))
-                ok += 1
-            except Exception as e:
-                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_puja_docs"))
-                failed.append(("puja catalog import", str(e).split("\n")[0][:180]))
-        except Exception as e:
-            log(f"  ! puja catalog import skipped: {e}")
-        try:
-            from app.catalog_i18n_seed import ensure_catalog_translations
-
-            log("  → six-language catalog translations")
-            conn.execute(text("SAVEPOINT bseva_catalog_i18n"))
-            try:
-                ensure_catalog_translations(conn)
-                conn.execute(text("RELEASE SAVEPOINT bseva_catalog_i18n"))
-                ok += 1
-            except Exception as e:
-                conn.execute(text("ROLLBACK TO SAVEPOINT bseva_catalog_i18n"))
-                failed.append(("catalog i18n seed", str(e).split("\n")[0][:180]))
-        except Exception as e:
-            log(f"  ! catalog i18n seed skipped: {e}")
+        seeding = _seeding_allowed(conn)
+        if seeding:
+            log("  → reference data for a new database")
+            _run_seed(conn, "catalog", "catalog seed", _seed_catalog, failed)
+            _run_seed(conn, "samagri", "samagri seed", _seed_samagri, failed)
+            _run_seed(conn, "puja_catalog", "puja catalog import", _seed_puja_catalog, failed)
+            # The import creates services that the catalogue and samagri seeds then enrich, so each runs once more.
+            _run_seed(conn, "catalog_second_pass", "catalog seed", _seed_catalog, failed)
+            _run_seed(conn, "samagri_second_pass", "samagri seed", _seed_samagri, failed)
+            _run_seed(conn, "puja_catalog_second_pass", "puja catalog import", _seed_puja_catalog, failed)
+            _run_seed(conn, "catalog_translations", "catalog i18n seed", _seed_catalog_translations, failed)
         run_batch("specialized pujari roles", list(_SPECIALIZED_ROLE_SCHEMA_STMTS))
-        log("  → seeds (roles, legal, settings)")
-        conn.execute(text("SAVEPOINT bseva_platform_seeds"))
-        try:
-            _seed_pujari_roles(conn)
-            _seed_legal_policies(conn)
-            _seed_platform_settings(conn)
-            _seed_reward_campaigns(conn)
-            _seed_pujari_booking_terms(conn)
-            conn.execute(text("RELEASE SAVEPOINT bseva_platform_seeds"))
-            ok += 1
-        except Exception as e:
-            conn.execute(text("ROLLBACK TO SAVEPOINT bseva_platform_seeds"))
-            failed.append(("platform seeds", str(e).split("\n")[0][:180]))
-        # Mark historical payouts as legacy settlements
-        for label, stmt in (
-            (
-                "wallet demo labels",
-                """
-            UPDATE wallet_transactions
-            SET description = CASE
-              WHEN description ILIKE '%welcome bonus%' THEN 'Welcome bonus'
-              WHEN description ILIKE '%wallet load%' THEN 'Wallet load'
-              WHEN description ILIKE '%demo payment%' THEN 'Wallet load'
-              ELSE regexp_replace(description, '\\s*\\((demo|mock)[^)]*\\)', '', 'gi')
-            END
-            WHERE description ILIKE '%demo%' OR description ILIKE '%mock%'
-            """,
-            ),
-            (
-                "legacy settlements",
-                """
-            UPDATE bookings SET settlement_status = 'legacy'
-            WHERE (settlement_status IS NULL OR settlement_status = 'not_applicable')
-              AND status IN ('confirmed', 'completed', 'in_progress')
-              AND pujari_id IS NOT NULL
-            """,
-            ),
-            (
-                "demo pujari name",
-                """
-            UPDATE users
-            SET name = 'Pandit'
-            WHERE name ILIKE '%Reddy%'
-               OR (lower(email) = 'pujari2@bseva.test' AND name <> 'Pandit')
-            """,
-            ),
-            (
-                "demo pujari profile",
-                """
-            UPDATE pujari_profiles pp
-            SET full_name = 'Pandit',
-                mobile_number = COALESCE(
-                  NULLIF(regexp_replace(pp.mobile_number, '\\D', '', 'g'), ''),
-                  NULLIF(regexp_replace(u.phone, '\\D', '', 'g'), '')
-                )
-            FROM users u
-            WHERE pp.user_id = u.id
-              AND (
-                pp.full_name ILIKE '%Reddy%'
-                OR lower(u.email) = 'pujari2@bseva.test'
-              )
-            """,
-            ),
-            (
-                "normalize mobile",
-                """
-            UPDATE pujari_profiles
-            SET mobile_number = right(regexp_replace(mobile_number, '\\D', '', 'g'), 10)
-            WHERE mobile_number IS NOT NULL
-              AND length(regexp_replace(mobile_number, '\\D', '', 'g')) > 10
-            """,
-            ),
-        ):
-            err = _exec_safe(conn, stmt)
-            if err:
-                failed.append((label, err))
-            else:
-                ok += 1
+        if seeding:
+            _run_seed(conn, "pujari_roles", "pujari roles seed", _seed_pujari_roles, failed)
+            _run_seed(conn, "legal_policies", "legal seed", _seed_legal_policies, failed)
+            _run_seed(conn, "platform_settings", "platform settings seed", _seed_platform_settings, failed)
+            _run_seed(conn, "reward_campaigns", "reward campaigns seed", _seed_reward_campaigns, failed)
+            _run_seed(conn, "pujari_booking_terms", "pujari terms seed", _seed_pujari_booking_terms, failed)
 
         # Verify columns we care about for recent features
         log("  → verifying recent columns")
@@ -1683,25 +1534,8 @@ def ensure_schema(*, quiet: bool = False) -> None:
             ).first()
             log(f"     {table}.{col}: {'OK' if present else 'MISSING'}")
 
-    # Assign CUST-/PUJ- public IDs for existing users (outside the DDL transaction)
-    try:
-        from app.db import SessionLocal
-        from app.public_ids import backfill_missing_public_ids
-
-        log("  → backfill users.public_id")
-        db = SessionLocal()
-        try:
-            n = backfill_missing_public_ids(db)
-            db.commit()
-            log(f"     assigned {n} public_id(s)")
-            ok += 1
-        except Exception as e:
-            db.rollback()
-            failed.append(("backfill public_id", str(e).split("\n")[0][:180]))
-        finally:
-            db.close()
-    except Exception as e:
-        log(f"  ! public_id backfill skipped: {e}")
+        if strict and failed:
+            raise SchemaMigrationError(failed)  # leaving the block rolls the DDL transaction back
 
     # Admin RBAC v2: split permission catalogue, Super-Admin-only finance (one-time, idempotent)
     try:
@@ -1721,8 +1555,11 @@ def ensure_schema(*, quiet: bool = False) -> None:
             log(f"  - {preview}")
             log(f"    {err}")
         log("Note: IF NOT EXISTS failures are rare; lock/timeout or permission errors are more common.")
+        if strict:
+            raise SchemaMigrationError(failed)
     else:
         log("All statements succeeded (or were already applied).")
+    return failed
 
 
 _CALENDAR_PREF_STMTS = [

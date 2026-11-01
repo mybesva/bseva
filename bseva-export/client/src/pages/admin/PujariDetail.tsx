@@ -2,6 +2,7 @@ import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import { PujariPortal } from "@/components/RolePortals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ import { notifyBadgesChanged } from "@/components/NotificationBell";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const DOC_LABELS: Record<string, string> = {
-  identity: "Aadhaar (required)",
+  identity: "Aadhaar (Required)",
   driving_licence: "Driving Licence",
   certificate: "Professional (optional)",
   supporting: "Additional (optional)",
@@ -43,10 +44,10 @@ const QUAL_OPTS = [
 const LANG_OPTS = ["Sanskrit", "Hindi", "English", "Telugu", "Kannada", "Tamil", "Marathi"];
 const SPEC_OPTS = [...PUJARI_SPECIALIZATIONS];
 const LICENCE_TYPES = [
-  { id: "", label: "Not required / N/A" },
+  { id: "", label: "Not Required / N/A" },
   { id: "driving_licence", label: "Driving Licence" },
   { id: "cab_commercial", label: "Cab / Commercial Licence" },
-  { id: "other", label: "Other licence" },
+  { id: "other", label: "Other Licence" },
 ];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -124,17 +125,25 @@ function ServiceBucket({
   );
 }
 
-export default function PujariDetailPage() {
+/** Read-only for Head Pujaris: same page, their GET-only API, and every action hidden. */
+export function HeadPujariDetailPage() {
+  return <PujariDetailPage headView />;
+}
+
+export default function PujariDetailPage({ headView = false }: { headView?: boolean }) {
   const params = useParams<{ id: string }>();
   const id = params.id || "";
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { levels } = usePujariLevels();
   const { can } = useAdminCan();
-  const canEdit = can("edit_pujaris");
-  const canVerify = can("verify_pujaris");
-  const canHead = can("approve_pujaris");
-  const canBlock = can("block_pujaris");
+  const canEdit = !headView && can("edit_pujaris");
+  const canVerify = !headView && can("verify_pujaris");
+  const canHead = !headView && can("approve_pujaris");
+  const canBlock = !headView && can("block_pujaris");
+  const apiBase = headView ? "/head/pujari-directory" : "/admin/pujaris";
+  const listPath = headView ? "/pujari/head/pujaris" : adminPath("/pujaris");
+  const Frame = headView ? PujariPortal : AdminLayout;
 
   const [loading, setLoading] = useState(true);
   const [editingRaw, setEditing] = useState(() => new URLSearchParams(search).get("edit") === "1");
@@ -163,7 +172,7 @@ export default function PujariDetailPage() {
         documents: any[];
         verification_history: any[];
         referral_code: string | null;
-      }>(`/admin/pujaris/${id}`);
+      }>(`${apiBase}/${id}`);
       setProfile(data.profile);
       setDraft({ ...data.profile });
       setDocuments(data.documents || []);
@@ -172,7 +181,7 @@ export default function PujariDetailPage() {
       setVerifyLevel(Number(data.profile?.approved_level || data.profile?.requested_level || 2));
       setRejectionReason(data.profile?.rejection_reason || "");
       try {
-        const offers = await api<any>(`/admin/pujaris/${id}/service-offers`);
+        const offers = await api<any>(`${apiBase}/${id}/service-offers`);
         setServiceOffers(offers);
         setVerifiedDraft(new Set(offers.verified_service_ids || []));
       } catch {
@@ -314,9 +323,9 @@ export default function PujariDetailPage() {
 
   if (loading || !profile) {
     return (
-      <AdminLayout>
+      <Frame>
         <p className="text-muted-foreground">Loading…</p>
-      </AdminLayout>
+      </Frame>
     );
   }
 
@@ -327,10 +336,10 @@ export default function PujariDetailPage() {
   const ratingCount = profile.rating_count ?? profile.ratings_count ?? null;
 
   return (
-    <AdminLayout>
+    <Frame>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <Link href={adminPath("/pujaris")} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link href={listPath} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft size="0.875rem" />
             Back to pujaris
           </Link>
@@ -354,20 +363,24 @@ export default function PujariDetailPage() {
             {editing ? (
               <span className="font-semibold text-primary">Editing — save to update. Completing the profile auto-verifies.</span>
             ) : (
-              <span>Read-only view. Click Edit to change details or upload documents.</span>
+              <span>
+                {headView
+                  ? "Read-only view. Only Admin can verify or change a pujari. Contact Admin for any action."
+                  : "Read-only view. Click Edit to change details or upload documents."}
+              </span>
             )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {!canEdit ? null : !editing ? (
-            <Button onClick={() => setEditing(true)}>Edit profile</Button>
+            <Button onClick={() => setEditing(true)}>Edit Profile</Button>
           ) : (
             <>
               <Button variant="outline" onClick={cancelEdit} disabled={saving}>
                 Cancel
               </Button>
               <Button onClick={() => void saveProfile()} disabled={saving}>
-                {saving ? "Saving…" : "Save profile"}
+                {saving ? "Saving…" : "Save Profile"}
               </Button>
             </>
           )}
@@ -421,9 +434,11 @@ export default function PujariDetailPage() {
       <div className="space-y-6">
         <Card id="pujari-services">
           <CardHeader>
-            <CardTitle className="text-base">Admin verified services</CardTitle>
+            <CardTitle className="text-base">{headView ? "Services" : "Admin Verified Services"}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Only services in the Verified column (first) are used for bookings. Review in the three columns, then save.
+              {headView
+                    ? "Only services in the Verified column are used for bookings."
+                    : "Only services in the Verified column (first) are used for bookings. Review in the three columns, then save."}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -472,9 +487,9 @@ export default function PujariDetailPage() {
                 <div className="grid gap-4 lg:grid-cols-3">
                   <ServiceBucket
                     title="Verified"
-                    subtitle="Used for booking assignment — uncheck to remove"
+                    subtitle="Used for booking assignment"
                     accent="border-emerald-500/40 bg-emerald-50/30"
-                    empty="None verified yet — check items in Pending or All applied"
+                    empty={headView ? "None verified yet" : "None verified yet — check items in Pending or All applied"}
                     items={(serviceOffers.services || []).filter((s: any) => verifiedDraft.has(s.id))}
                     verifiedDraft={verifiedDraft}
                     readOnly={!canEdit}
@@ -488,7 +503,7 @@ export default function PujariDetailPage() {
                     }}
                   />
                   <ServiceBucket
-                    title="Pending review"
+                    title="Pending Review"
                     subtitle="Pujari applied — not verified yet"
                     accent="border-amber-400/60 bg-amber-50/40"
                     empty="No new applications"
@@ -505,7 +520,7 @@ export default function PujariDetailPage() {
                     }}
                   />
                   <ServiceBucket
-                    title="All applied"
+                    title="All Applied"
                     subtitle="Everything the pujari requested"
                     accent="border-border bg-secondary/20"
                     empty="No applications"
@@ -560,7 +575,7 @@ export default function PujariDetailPage() {
                                 toast.message(`Added to verified — click Save when done`);
                               }}
                             >
-                              Add to verified
+                              Add to Verified
                             </Button>
                           </li>
                         ))}
@@ -588,11 +603,11 @@ export default function PujariDetailPage() {
             {editing ? (
               <>
                 <div className="space-y-2">
-                  <Label>Full name</Label>
+                  <Label>Full Name</Label>
                   <Input value={p.full_name || ""} onChange={(e) => setField("full_name", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Father name</Label>
+                  <Label>Father Name</Label>
                   <Input value={p.father_name || ""} onChange={(e) => setField("father_name", e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -604,7 +619,7 @@ export default function PujariDetailPage() {
                   <Input value={p.pravara || ""} onChange={(e) => setField("pravara", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Date of birth</Label>
+                  <Label>Date of Birth</Label>
                   <Input
                     type="date"
                     value={(p.date_of_birth || "").toString().slice(0, 10)}
@@ -612,7 +627,7 @@ export default function PujariDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Native place</Label>
+                  <Label>Native Place</Label>
                   <Input value={p.native_place || ""} onChange={(e) => setField("native_place", e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -633,19 +648,19 @@ export default function PujariDetailPage() {
                     checked={!!p.website_publication_consent}
                     onCheckedChange={(v) => setField("website_publication_consent", !!v)}
                   />
-                  <Label>Website publication consent</Label>
+                  <Label>Website Publication Consent</Label>
                 </div>
               </>
             ) : (
               <>
-                <Field label="Full name">{p.full_name || p.name}</Field>
-                <Field label="Father name">{p.father_name}</Field>
+                <Field label="Full Name">{p.full_name || p.name}</Field>
+                <Field label="Father Name">{p.father_name}</Field>
                 <Field label="Gotra">{p.gotra}</Field>
                 <Field label="Pravara">{p.pravara}</Field>
-                <Field label="Date of birth">{p.date_of_birth ? String(p.date_of_birth).slice(0, 10) : null}</Field>
-                <Field label="Native place">{p.native_place}</Field>
+                <Field label="Date of Birth">{p.date_of_birth ? String(p.date_of_birth).slice(0, 10) : null}</Field>
+                <Field label="Native Place">{p.native_place}</Field>
                 <Field label="Sampradaya">{p.sampradaya}</Field>
-                <Field label="Website consent">{p.website_publication_consent ? "Yes" : "No"}</Field>
+                <Field label="Website Consent">{p.website_publication_consent ? "Yes" : "No"}</Field>
               </>
             )}
           </CardContent>
@@ -667,14 +682,14 @@ export default function PujariDetailPage() {
                   <Input value={p.whatsapp_number || ""} onChange={(e) => setField("whatsapp_number", e.target.value)} />
                 </div>
                 <Field label="Email">{profile.email}</Field>
-                <Field label="Account phone">{profile.phone}</Field>
+                <Field label="Account Phone">{profile.phone}</Field>
               </>
             ) : (
               <>
                 <Field label="Mobile">{p.mobile_number}</Field>
                 <Field label="WhatsApp">{p.whatsapp_number}</Field>
                 <Field label="Email">{profile.email}</Field>
-                <Field label="Account phone">{profile.phone}</Field>
+                <Field label="Account Phone">{profile.phone}</Field>
               </>
             )}
           </CardContent>
@@ -688,19 +703,19 @@ export default function PujariDetailPage() {
             {editing ? (
               <>
                 <div className="md:col-span-2 space-y-2">
-                  <Label>Permanent address</Label>
+                  <Label>Permanent Address</Label>
                   <Textarea value={p.permanent_address || ""} onChange={(e) => setField("permanent_address", e.target.value)} />
                 </div>
                 <div className="md:col-span-2 space-y-2">
-                  <Label>Present address</Label>
+                  <Label>Present Address</Label>
                   <Textarea value={p.present_address || ""} onChange={(e) => setField("present_address", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Address line 1</Label>
+                  <Label>Address Line 1</Label>
                   <Input value={p.address_line1 || ""} onChange={(e) => setField("address_line1", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Address line 2</Label>
+                  <Label>Address Line 2</Label>
                   <Input value={p.address_line2 || ""} onChange={(e) => setField("address_line2", e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -724,7 +739,7 @@ export default function PujariDetailPage() {
                   <Input value={p.country || ""} onChange={(e) => setField("country", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Location label</Label>
+                  <Label>Location Label</Label>
                   <Input value={p.location_label || ""} onChange={(e) => setField("location_label", e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -738,16 +753,16 @@ export default function PujariDetailPage() {
               </>
             ) : (
               <>
-                <Field label="Permanent address">{p.permanent_address}</Field>
-                <Field label="Present address">{p.present_address}</Field>
-                <Field label="Address line 1">{p.address_line1}</Field>
-                <Field label="Address line 2">{p.address_line2}</Field>
+                <Field label="Permanent Address">{p.permanent_address}</Field>
+                <Field label="Present Address">{p.present_address}</Field>
+                <Field label="Address Line 1">{p.address_line1}</Field>
+                <Field label="Address Line 2">{p.address_line2}</Field>
                 <Field label="City">{p.city}</Field>
                 <Field label="District">{p.district}</Field>
                 <Field label="State">{p.state}</Field>
                 <Field label="Pincode">{p.pincode}</Field>
                 <Field label="Country">{p.country}</Field>
-                <Field label="Location label">{p.location_label}</Field>
+                <Field label="Location Label">{p.location_label}</Field>
                 <Field label="Coordinates">
                   {p.latitude != null && p.longitude != null ? `${p.latitude}, ${p.longitude}` : null}
                 </Field>
@@ -764,7 +779,7 @@ export default function PujariDetailPage() {
             {editing ? (
               <>
                 <div className="max-w-xs space-y-2">
-                  <Label>Years of experience</Label>
+                  <Label>Years of Experience</Label>
                   <Input
                     type="number"
                     min={0}
@@ -788,7 +803,7 @@ export default function PujariDetailPage() {
                   </div>
                 </div>
                 <div className="max-w-xs space-y-2">
-                  <Label>Qualification year</Label>
+                  <Label>Qualification Year</Label>
                   <Input
                     type="number"
                     value={p.qualification_year ?? ""}
@@ -810,7 +825,7 @@ export default function PujariDetailPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Specializations (legacy labels)</Label>
+                  <Label>Specializations (Legacy Labels)</Label>
                   <div className="flex flex-wrap gap-3">
                     {SPEC_OPTS.map((s) => (
                       <label key={s} className="flex items-center gap-2 text-sm">
@@ -829,8 +844,8 @@ export default function PujariDetailPage() {
               </>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Experience (years)">{p.experience_years}</Field>
-                <Field label="Qualification year">{p.qualification_year}</Field>
+                <Field label="Experience (Years)">{p.experience_years}</Field>
+                <Field label="Qualification Year">{p.qualification_year}</Field>
                 <Field label="Qualifications">{listDisplay(p.qualifications)}</Field>
                 <Field label="Languages">{listDisplay(p.languages)}</Field>
                 <Field label="Specializations">{listDisplay(p.specializations)}</Field>
@@ -848,10 +863,10 @@ export default function PujariDetailPage() {
               <>
                 <div className="flex items-center gap-2">
                   <Checkbox checked={!!p.available} onCheckedChange={(v) => setField("available", !!v)} />
-                  <Label>Available for bookings</Label>
+                  <Label>Available for Bookings</Label>
                 </div>
                 <div className="space-y-2">
-                  <Label>Service radius (km)</Label>
+                  <Label>Service Radius (Km)</Label>
                   <Input
                     type="number"
                     min={1}
@@ -864,7 +879,7 @@ export default function PujariDetailPage() {
             ) : (
               <>
                 <Field label="Available">{p.available ? "Yes" : "No"}</Field>
-                <Field label="Service radius (km)">{p.service_radius_km}</Field>
+                <Field label="Service Radius (Km)">{p.service_radius_km}</Field>
               </>
             )}
           </CardContent>
@@ -872,22 +887,22 @@ export default function PujariDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Account status</CardTitle>
+            <CardTitle className="text-base">Account Status</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <Field label="Role">{profile.role}</Field>
             <Field label="Blocked">{profile.blocked ? "Yes" : "No"}</Field>
-            <Field label="Requested level">{profile.requested_level}</Field>
-            <Field label="Approved level">{profile.approved_level}</Field>
+            <Field label="Requested Level">{profile.requested_level}</Field>
+            <Field label="Approved Level">{profile.approved_level}</Field>
             <Field label="Verification">{profile.verification_status}</Field>
-            <Field label="Onboarding step">{profile.onboarding_step}</Field>
+            <Field label="Onboarding Step">{profile.onboarding_step}</Field>
             {(p.upi_id || p.bank_holder_name || p.bank_ifsc || p.bank_account_last4) && (
               <>
                 {p.upi_id ? <Field label="UPI ID">{p.upi_id}</Field> : null}
-                <Field label="Bank holder">{p.bank_holder_name}</Field>
-                <Field label="Bank name">{p.bank_name}</Field>
+                <Field label="Bank Holder">{p.bank_holder_name}</Field>
+                <Field label="Bank Name">{p.bank_name}</Field>
                 <Field label="IFSC">{p.bank_ifsc}</Field>
-                <Field label="Account number">
+                <Field label="Account Number">
                   {p.bank_account_number
                     ? String(p.bank_account_number)
                     : p.bank_account_last4
@@ -904,7 +919,7 @@ export default function PujariDetailPage() {
             <CardTitle className="text-base">Referral</CardTitle>
           </CardHeader>
           <CardContent>
-            <Field label="Referral code">{referralCode}</Field>
+            <Field label="Referral Code">{referralCode}</Field>
           </CardContent>
         </Card>
 
@@ -940,7 +955,7 @@ export default function PujariDetailPage() {
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      void openAdminPujariDocument(id, d.id).catch((e: any) => toast.error(e.message))
+                      void openAdminPujariDocument(id, d.id, apiBase).catch((e: any) => toast.error(e.message))
                     }
                   >
                     View
@@ -986,7 +1001,7 @@ export default function PujariDetailPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Approved level</Label>
+                <Label>Approved Level</Label>
                 <Select value={String(verifyLevel)} onValueChange={(v) => setVerifyLevel(Number(v))} disabled={!canVerify}>
                   <SelectTrigger>
                     <SelectValue />
@@ -1001,7 +1016,7 @@ export default function PujariDetailPage() {
                 </Select>
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>Rejection / correction reason</Label>
+                <Label>Rejection / Correction Reason</Label>
                 <Textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
@@ -1028,7 +1043,7 @@ export default function PujariDetailPage() {
             </div>
             )}
             <div className="pt-4 border-t space-y-2">
-              <h3 className="text-sm font-semibold">Verification history</h3>
+              <h3 className="text-sm font-semibold">Verification History</h3>
               {history.length === 0 && <p className="text-sm text-muted-foreground">No history yet.</p>}
               <ul className="space-y-2">
                 {history.map((h, i) => (
@@ -1044,6 +1059,6 @@ export default function PujariDetailPage() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </Frame>
   );
 }

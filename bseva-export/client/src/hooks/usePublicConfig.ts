@@ -7,6 +7,8 @@ export type PublicConfig = {
   service_area_unavailable_description?: string;
   customer_timezones?: { id: string; label: string }[];
   bseva_whatsapp_number: string;
+  support_phone?: string;
+  support_email?: string;
   pujari_full_booking_details_before_hours: number;
   puja_start_otp_before_minutes: number;
   registration_captcha_enabled?: boolean;
@@ -33,6 +35,7 @@ const DEFAULTS: PublicConfig = {
 /** Digits-only WhatsApp / phone number for wa.me and tel: links. */
 export function whatsappDigits(raw?: string | null) {
   const d = String(raw || DEFAULTS.bseva_whatsapp_number).replace(/\D/g, "");
+  if (d.length === 10) return `91${d}`;
   return d || DEFAULTS.bseva_whatsapp_number;
 }
 

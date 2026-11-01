@@ -29,7 +29,7 @@ export default function PujariDocuments() {
         {saved ? <AppText>{saved}</AppText> : null}
         <AppText>{t("mobile.documentsHelp")}</AppText>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <AppText>Driving licence</AppText>
+          <AppText>Driving Licence</AppText>
           <Switch
             value={licenceOn}
             onValueChange={(on) => {

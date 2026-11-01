@@ -1,10 +1,26 @@
 name: Production deploy
 
-# main → AWS Production (Mumbai), separate infrastructure in the shared account (bseva-prod-*). Runs only for commits on main, and every run waits for
-# approval in the GitHub `production` environment (required reviewers). The OIDC role trusts only that
-# environment and can reach only the Production ECR repositories and the Production host. Never runs from develop.
+# main → AWS Production (Mumbai), separate infrastructure in the shared account (bseva-prod-*).
+# Starts automatically when a release PR (develop → main) merges; nothing reaches AWS until a reviewer approves
+# the `aws-production` environment (required reviewers, main only, no admin bypass). The OIDC role trusts only
+# that environment and can reach only the Production ECR repositories, its RDS snapshots and the Production host.
+#
+#   gate    the release commit's code must equal a develop commit whose QA deploy succeeded (deploy/ci/qa_gate.py)
+#   checks  the same tests / migration tests / static checks as PR CI
+#   deploy  (after approval) promote the QA-tested API image → build web from the same code with Production values
+#           → preflight (target database guard + migration plan, read-only) → verified RDS snapshot
+#           → migrations (fail-fast) → deploy (health-gated, app auto-rollback) → public verification
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      emergency_reason:
+        description: >-
+          Emergency only: deploy main even though this exact code has not passed QA (rebuilds from source).
+          Leave empty for normal releases. Still requires aws-production approval; record the incident/ticket here.
+        type: string
+        default: ""
 
 concurrency:
   group: production-deploy
@@ -16,11 +32,21 @@ permissions:
 env:
   AWS_REGION: ap-south-1
   AWS_ACCOUNT_ID: "472238087252"
-  DOMAIN: app.b-seva.com
+  DOMAIN: b-seva.com
+  EXTRA_DOMAINS: www.b-seva.com app.b-seva.com
+  DB_INSTANCE: bseva-prod-db
 
 jobs:
-  test:
+  gate:
+    name: QA-passed gate
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tag: ${{ steps.result.outputs.tag }}
+      mode: ${{ steps.result.outputs.mode }}
+      qa_sha: ${{ steps.qa.outputs.qa_sha }}
     steps:
       - name: Only main may deploy to Production
         if: github.ref != 'refs/heads/main'
@@ -28,39 +54,56 @@ jobs:
           echo "Production deploys run from main only (got ${GITHUB_REF})." >&2
           exit 1
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-      - name: Backend tests
-        working-directory: backend
+          fetch-depth: 0
+      - id: qa
+        name: Find the successful QA deploy of this exact code
+        continue-on-error: true
         env:
-          DATABASE_URL: postgresql+psycopg://ci:ci@127.0.0.1:1/ci
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 deploy/ci/qa_gate.py
+      - id: result
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+          QA_TAG: ${{ steps.qa.outputs.tag }}
+          EMERGENCY_REASON: ${{ inputs.emergency_reason }}
         run: |
-          pip install -r requirements.txt pytest==8.3.5 boto3==1.42.64
-          # Known pre-existing failure on main (invoice label wording), tracked separately.
-          python -m pytest -q -p no:cacheprovider \
-            --deselect tests/test_final_booking_requirements.py::test_invoice_html_renders_snapshot_duration_dynamically
-      - name: Infra CLI compiles
-        run: python -m py_compile infra/aws/bseva_qa.py
-      - name: Host scripts (shellcheck)
-        run: shellcheck -S warning deploy/host/*.sh deploy/nginx/40-bseva-config.sh
+          if [ "$QA_OUTCOME" = success ]; then
+            { echo "tag=$QA_TAG"; echo "mode=promote"; } >> "$GITHUB_OUTPUT"
+            echo "### Release qualified by QA: \`$QA_TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          elif [ -n "$EMERGENCY_REASON" ]; then
+            { echo "tag=sha-${GITHUB_SHA::12}"; echo "mode=emergency"; } >> "$GITHUB_OUTPUT"
+            echo "::warning::EMERGENCY deploy without a matching QA pass: $EMERGENCY_REASON"
+            echo "### EMERGENCY release (not QA-qualified): $EMERGENCY_REASON — by ${GITHUB_ACTOR}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::This code has not passed QA. Merge it to develop, let 'QA deploy' succeed, then release develop → main."
+            exit 1
+          fi
 
-  build:
-    needs: test
+  checks:
+    needs: gate
+    uses: ./.github/workflows/checks.yml
+
+  deploy:
+    name: Deploy to Production
+    needs: [gate, checks]
     runs-on: ubuntu-24.04-arm
-    environment: production
+    environment:
+      name: aws-production
+      url: https://b-seva.com
+    timeout-minutes: 60
     permissions:
       id-token: write
       contents: read
-    outputs:
-      tag: ${{ steps.meta.outputs.tag }}
-      registry: ${{ steps.ecr.outputs.registry }}
+    env:
+      TAG: ${{ needs.gate.outputs.tag }}
+      RELEASE_MODE: ${{ needs.gate.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
-      - id: meta
-        run: echo "tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet boto3==1.42.64
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/bseva-prod-github-deploy
@@ -68,69 +111,77 @@ jobs:
       - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
       - uses: docker/setup-buildx-action@v3
-      - name: Build and push API image (arm64)
+
+      - name: Promote the QA-tested API image (same digest)
+        if: env.RELEASE_MODE == 'promote'
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          docker buildx imagetools create --tag "$REGISTRY/bseva-prod-api:$TAG" "$REGISTRY/bseva-api:$TAG"
+          qa="$(aws ecr describe-images --repository-name bseva-api --image-ids imageTag="$TAG" --query 'imageDetails[0].imageDigest' --output text)"
+          prod="$(aws ecr describe-images --repository-name bseva-prod-api --image-ids imageTag="$TAG" --query 'imageDetails[0].imageDigest' --output text)"
+          echo "QA $qa / Production $prod"
+          test -n "$qa" && test "$qa" = "$prod"
+          echo "API image promoted from QA: \`$prod\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build API image from source (emergency only)
+        if: env.RELEASE_MODE == 'emergency'
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
           docker buildx build --platform linux/arm64 -f deploy/docker/api.Dockerfile \
             --build-arg APP_VERSION="$TAG" -t "$REGISTRY/bseva-prod-api:$TAG" --push .
-      - name: Build web image (arm64)
+
+      # The web bundle bakes in public, per-environment values (Firebase web config, Maps browser key), so it is
+      # rebuilt from the same code the QA image came from (the gate matched the git tree), with Production values
+      # from SSM /bseva/prod/build/ — the same source build-on-host.sh used for the current release.
+      - name: Build web image (arm64) with Production build values
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: ${{ steps.meta.outputs.tag }}
+          VITE_ADMIN_PATH: ${{ vars.VITE_ADMIN_PATH || '/bseva-ops-m8k4q' }}
         run: |
-          docker buildx build --platform linux/arm64 -f deploy/docker/web.Dockerfile --load \
-            --build-arg VITE_ADMIN_PATH="${{ vars.VITE_ADMIN_PATH || '/bseva-ops-m8k4q' }}" \
-            --build-arg VITE_GOOGLE_MAPS_API_KEY="${{ vars.VITE_GOOGLE_MAPS_API_KEY }}" \
-            --build-arg VITE_FIREBASE_API_KEY="${{ vars.VITE_FIREBASE_API_KEY }}" \
-            --build-arg VITE_FIREBASE_AUTH_DOMAIN="${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}" \
-            --build-arg VITE_FIREBASE_PROJECT_ID="${{ vars.VITE_FIREBASE_PROJECT_ID }}" \
-            --build-arg VITE_FIREBASE_STORAGE_BUCKET="${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}" \
-            --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID="${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}" \
-            --build-arg VITE_FIREBASE_APP_ID="${{ vars.VITE_FIREBASE_APP_ID }}" \
-            --build-arg VITE_FIREBASE_VAPID_KEY="${{ vars.VITE_FIREBASE_VAPID_KEY }}" \
+          args=(--build-arg "VITE_ADMIN_PATH=$VITE_ADMIN_PATH")
+          while IFS=$'\t' read -r name value; do
+            [ -n "$name" ] && args+=(--build-arg "${name##*/}=${value}")
+          done < <(aws ssm get-parameters-by-path --path /bseva/prod/build/ --query 'Parameters[].[Name,Value]' --output text)
+          echo "web build values: $(( ${#args[@]} / 2 )) (including VITE_ADMIN_PATH)"
+          test "$(( ${#args[@]} / 2 ))" -ge 9 || { echo "::error::expected the Firebase + Maps build values under /bseva/prod/build/"; exit 1; }
+          docker buildx build --platform linux/arm64 -f deploy/docker/web.Dockerfile --load "${args[@]}" \
             -t "$REGISTRY/bseva-prod-web:$TAG" .
-      - name: Validate Nginx configuration
-        env:
-          IMAGE: ${{ steps.ecr.outputs.registry }}/bseva-prod-web:${{ steps.meta.outputs.tag }}
-        run: docker run --rm --add-host api:127.0.0.1 -e DOMAIN="$DOMAIN" "$IMAGE" nginx -t
-      - name: Smoke-test API image (imports, gunicorn config)
-        env:
-          IMAGE: ${{ steps.ecr.outputs.registry }}/bseva-prod-api:${{ steps.meta.outputs.tag }}
-        run: |
-          docker pull --quiet "$IMAGE"
-          docker run --rm -e DATABASE_URL=postgresql://ci:ci@127.0.0.1:1/ci -e ENVIRONMENT=development \
-            "$IMAGE" python -c "import app.main, app.worker, app.db_bootstrap, weasyprint; print('ok')"
-      - name: Push web image
-        env:
-          IMAGE: ${{ steps.ecr.outputs.registry }}/bseva-prod-web:${{ steps.meta.outputs.tag }}
-        run: docker push "$IMAGE"
+          docker run --rm --add-host api:127.0.0.1 -e DOMAIN="$DOMAIN" -e EXTRA_DOMAINS="$EXTRA_DOMAINS" \
+            "$REGISTRY/bseva-prod-web:$TAG" nginx -t
+          docker push "$REGISTRY/bseva-prod-web:$TAG"
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-24.04
-    environment: production
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/bseva-prod-github-deploy
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Deploy on the Production host via SSM (health-gated, auto-rollback)
+      - name: Preflight on the Production host (target database guard + migration plan, read-only)
         env:
-          TAG: ${{ needs.build.outputs.tag }}
-          REGISTRY: ${{ needs.build.outputs.registry }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
           DEPLOY_ENV: production
+          MODE: preflight
         run: python3 deploy/ci/ssm_deploy.py
-      - name: Public health check
+
+      - id: snapshot
+        name: Verified RDS snapshot before migrations
+        run: python3 deploy/ci/rds_snapshot.py
+
+      - name: Migrate + deploy on the Production host via SSM (fail-fast migrations, health-gated, auto-rollback)
         env:
-          TAG: ${{ needs.build.outputs.tag }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          DEPLOY_ENV: production
+          MODE: deploy
+        run: python3 deploy/ci/ssm_deploy.py
+
+      - name: Public verification
         run: |
           body="$(curl -fsS --max-time 15 "https://${DOMAIN}/api/ready")"
           echo "$body"
-          echo "$body" | jq -e --arg v "$TAG" '.ok == true and .version == $v'
-          echo "### Production deployed: \`$TAG\` (${GITHUB_SHA}) by ${GITHUB_ACTOR}" >> "$GITHUB_STEP_SUMMARY"
+          echo "$body" | jq -e --arg v "$TAG" '.ok == true and .version == $v and .environment == "production"'
+          for host in $EXTRA_DOMAINS; do
+            loc="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 15 "https://${host}/")"
+            echo "$host → $loc"
+            [[ "$loc" == "301 https://${DOMAIN}/" ]]
+          done
+          curl -fsS --max-time 15 -o /dev/null "https://${DOMAIN}/"
+          {
+            echo "### Production deployed: \`$TAG\` ($RELEASE_MODE) from ${GITHUB_SHA} by ${GITHUB_ACTOR}"
+            echo "QA commit: ${{ needs.gate.outputs.qa_sha }} · pre-deploy snapshot: \`${{ steps.snapshot.outputs.snapshot }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

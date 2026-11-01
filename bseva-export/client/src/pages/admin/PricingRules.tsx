@@ -50,14 +50,14 @@ export default function AdminPricingRules() {
   }, []);
 
   const serviceName = (id?: string | null) =>
-    id ? services.find((s) => s.id === String(id))?.name || "Selected puja" : "All pujas";
+    id ? services.find((s) => s.id === String(id))?.name || "Selected puja" : "All Pujas";
 
   return (
     <AdminLayout>
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">City / location adjustments</CardTitle>
+            <CardTitle className="text-base">City / Location Adjustments</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {canManage && (
@@ -115,7 +115,7 @@ export default function AdminPricingRules() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Surge rules</CardTitle>
+            <CardTitle className="text-base">Surge Rules</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {canManage && (
@@ -127,7 +127,7 @@ export default function AdminPricingRules() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All pujas</SelectItem>
+                  <SelectItem value="all">All Pujas</SelectItem>
                   {services.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
@@ -174,7 +174,7 @@ export default function AdminPricingRules() {
                 }
               }}
             >
-              Add surge rule
+              Add Surge Rule
             </Button>
             </>
             )}

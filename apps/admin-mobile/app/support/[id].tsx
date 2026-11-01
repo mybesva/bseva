@@ -247,7 +247,7 @@ export default function AdminSupportTicketDetails() {
                   onChange={(priority) => void patch({ priority })}
                 />
                 <SupportSelect
-                  label="Assigned agent"
+                  label="Assigned Agent"
                   value={String(ticket.assigned_admin_id || "none")}
                   options={[
                     { id: "none", label: "Unassigned" },
@@ -266,13 +266,13 @@ export default function AdminSupportTicketDetails() {
                   </AppText>
                 ) : null}
                 <SupportSelect
-                  label="Escalate to"
+                  label="Escalate To"
                   value={escTo}
                   options={SUPPORT_ESCALATIONS.map((e) => ({ id: e.id, label: e.label }))}
                   onChange={setEscTo}
                 />
-                <Field label="Escalation reason" value={escReason} onChangeText={setEscReason} multiline />
-                <Field label="Required action" value={escAction} onChangeText={setEscAction} />
+                <Field label="Escalation Reason" value={escReason} onChangeText={setEscReason} multiline />
+                <Field label="Required Action" value={escAction} onChangeText={setEscAction} />
                 <PrimaryButton
                   title="Escalate"
                   variant="outline"
@@ -294,7 +294,7 @@ export default function AdminSupportTicketDetails() {
               <Card style={{ gap: 10 }}>
                 <AppText variant="h3">Resolution</AppText>
                 <SupportSelect
-                  label="Resolution type"
+                  label="Resolution Type"
                   value={resType}
                   options={SUPPORT_RESOLUTIONS.map((e) => ({ id: e.id, label: e.label }))}
                   onChange={setResType}
@@ -309,7 +309,7 @@ export default function AdminSupportTicketDetails() {
                   ]}
                   onChange={setOutcome}
                 />
-                <Field label="Resolution details" value={resDetails} onChangeText={setResDetails} multiline />
+                <Field label="Resolution Details" value={resDetails} onChangeText={setResDetails} multiline />
                 <PrimaryButton
                   title="Mark Resolved"
                   loading={busy}

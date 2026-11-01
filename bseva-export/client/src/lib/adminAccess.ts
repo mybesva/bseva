@@ -39,6 +39,8 @@ export const ADMIN_ROUTE_ACCESS: Record<string, AdminAccess> = {
   "/legal": { anyOf: ["manage_legal"] },
   // Super Admin only: finance, reporting, platform configuration and admin management.
   "/settlements": { superOnly: true },
+  "/tax": { superOnly: true },
+  "/security": { superOnly: true },
   "/reports": { superOnly: true },
   "/permissions": { superOnly: true },
   "/settings": { superOnly: true },

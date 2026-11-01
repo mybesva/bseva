@@ -205,7 +205,7 @@ export default function HeadRatings() {
             {advancedOpen ? (
               <View style={{ marginBottom: 12 }}>
                 <Field
-                  label="UUID / email / phone"
+                  label="UUID / Email / Phone"
                   value={manualId}
                   onChangeText={(text) => {
                     setManualId(text);
@@ -294,7 +294,7 @@ export default function HeadRatings() {
                   color={starsFilter === "all" ? colors.primaryForeground : colors.foreground}
                   style={{ fontWeight: "600" }}
                 >
-                  All ratings
+                  All Ratings
                 </AppText>
               </Pressable>
               {[5, 4, 3, 2, 1].map((n) => (
@@ -325,7 +325,7 @@ export default function HeadRatings() {
               style={{ marginBottom: 12 }}
             >
               <AppText variant="small" color={colors.primary} style={{ fontWeight: "700" }}>
-                Sort: {historySort === "newest" ? "Newest first" : "Oldest first"} ▼
+                Sort: {historySort === "newest" ? "Newest First" : "Oldest First"} ▼
               </AppText>
             </Pressable>
 

@@ -8,7 +8,7 @@ export default function NotFound() {
     <Screen>
       <View style={{ padding: 24, gap: 12 }}>
         <AppText variant="h2">Screen not found</AppText>
-        <PrimaryButton title="Admin home" onPress={() => router.replace("/(app)")} />
+        <PrimaryButton title="Admin Home" onPress={() => router.replace("/(app)")} />
       </View>
     </Screen>
   );

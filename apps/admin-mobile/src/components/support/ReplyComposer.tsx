@@ -41,14 +41,14 @@ export function ReplyComposer({
       <ErrorBanner message={error || null} />
       <SuccessBanner message={success || null} />
       <SupportSelect
-        label="Message type"
+        label="Message Type"
         value={noteKind}
         options={SUPPORT_NOTE_KINDS.map((k) => ({ id: k.id, label: k.label }))}
         onChange={setNoteKind}
         disabled={disabled || sending}
       />
       <Field
-        label="Write a reply"
+        label="Write a Reply"
         value={reply}
         onChangeText={setReply}
         multiline

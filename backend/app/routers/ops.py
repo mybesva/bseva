@@ -1,15 +1,17 @@
 """Support tickets, samagri, admin config, rewards listing."""
 from __future__ import annotations
 
+import json
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.audit import write_audit
+from app.security import hash_password
 from app.db import get_db
 from app.deps import current_user, require_roles
 from app.domain import row_dict
@@ -365,6 +367,9 @@ def admin_config(user=Depends(require_permission("manage_config")), db: Session 
 
 @router.put("/admin/config")
 def update_config(body: SettingIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
+    super_only = body.key.startswith("reschedule_") or body.key in ("bseva_whatsapp_number", "support_phone", "support_email")
+    if super_only and not is_super_admin(user):
+        raise HTTPException(403, "Super Admin only")
     set_setting(db, body.key, body.value, str(user["id"]))
     write_audit(db, str(user["id"]), "config_update", "platform_settings", body.key)
     db.commit()
@@ -562,7 +567,8 @@ def admin_list_invoices(
     rows = db.execute(
         text(
             f"""
-            SELECT i.*, b.booking_number, u.name AS customer_name, u.email AS customer_email
+            SELECT i.*, b.booking_number, u.name AS customer_name, u.email AS customer_email,
+                   b.customer_platform_fee_paise, b.gateway_fee_paise, b.gateway_name
             FROM invoices i
             LEFT JOIN bookings b ON b.id = i.booking_id
             LEFT JOIN users u ON u.id = i.user_id
@@ -573,7 +579,15 @@ def admin_list_invoices(
         ),
         params,
     ).mappings().all()
-    return [row_dict(r) for r in rows]
+    return [_with_tax_flags(row_dict(r)) for r in rows]
+
+
+def _with_tax_flags(row: dict) -> dict:
+    snap = row.get("snapshot")
+    if isinstance(snap, str):
+        snap = json.loads(snap or "{}")
+    row["tax_flags"] = ((snap or {}).get("tax") or {}).get("flags") or []
+    return row
 
 
 class ReferralApplyIn(BaseModel):
@@ -620,7 +634,7 @@ def list_admins(user=Depends(require_super_admin), db: Session = Depends(get_db)
     rows = db.execute(
         text(
             """
-            SELECT id, name, email, phone, role, created_at
+            SELECT id, name, email, phone, role, blocked, created_at
             FROM users WHERE role IN ('admin', 'super_admin')
             ORDER BY role DESC, name
             """
@@ -633,6 +647,85 @@ def list_admins(user=Depends(require_super_admin), db: Session = Depends(get_db)
         d["permissions"] = perms
         out.append(d)
     return out
+
+
+class AdminAccountIn(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: EmailStr
+    phone: str = Field(min_length=10, max_length=15)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AdminPasswordIn(BaseModel):
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class AdminStatusIn(BaseModel):
+    disabled: bool
+
+
+def _admin_target(db: Session, admin_id: str) -> None:
+    role = db.execute(text("SELECT role FROM users WHERE id = CAST(:id AS uuid)"), {"id": admin_id}).scalar()
+    if role is None:
+        raise HTTPException(404, "Admin not found")
+    if role != "admin":
+        raise HTTPException(400, "This action is only for Admin accounts, not Super Admins")
+
+
+@router.post("/admin/admins")
+def create_admin(body: AdminAccountIn, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    email = str(body.email).strip().lower()
+    phone = body.phone.strip()
+    if db.execute(
+        text("SELECT 1 FROM users WHERE lower(email) = :e OR phone = :p"), {"e": email, "p": phone}
+    ).first():
+        raise HTTPException(400, "Email or phone already registered")
+    admin_id = str(uuid4())
+    db.execute(
+        text(
+            """
+            INSERT INTO users (id, name, email, phone, password_hash, role, preferred_language, calendar_preference, phone_verified)
+            VALUES (CAST(:id AS uuid), :name, :email, :phone, :pw, 'admin', 'en', 'solar', TRUE)
+            """
+        ),
+        {"id": admin_id, "name": body.name.strip(), "email": email, "phone": phone, "pw": hash_password(body.password)},
+    )
+    write_audit(db, str(user["id"]), "admin_created", "user", admin_id)
+    db.commit()
+    return {"ok": True, "id": admin_id}
+
+
+@router.put("/admin/admins/{admin_id}/password")
+def set_admin_password(admin_id: str, body: AdminPasswordIn, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    _admin_target(db, admin_id)
+    db.execute(
+        text("UPDATE users SET password_hash = :pw, updated_at = NOW() WHERE id = CAST(:id AS uuid)"),
+        {"pw": hash_password(body.new_password), "id": admin_id},
+    )
+    write_audit(db, str(user["id"]), "admin_password_changed", "user", admin_id)
+    db.commit()
+    return {"ok": True}
+
+
+@router.put("/admin/admins/{admin_id}/status")
+def set_admin_status(admin_id: str, body: AdminStatusIn, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    _admin_target(db, admin_id)
+    db.execute(
+        text(
+            """
+            UPDATE users SET blocked = :b,
+              blocked_at = CASE WHEN :b THEN NOW() ELSE NULL END,
+              blocked_by = CASE WHEN :b THEN CAST(:by AS uuid) ELSE NULL END,
+              block_reason = NULL,
+              updated_at = NOW()
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"b": body.disabled, "by": str(user["id"]), "id": admin_id},
+    )
+    write_audit(db, str(user["id"]), "admin_disabled" if body.disabled else "admin_enabled", "user", admin_id)
+    db.commit()
+    return {"ok": True, "disabled": body.disabled}
 
 
 # --- Head Pujari ---
@@ -721,6 +814,69 @@ def _resolve_pujari_user_id(db: Session, raw: str) -> str:
             "Enter the pujari's UUID, email, or phone — numeric IDs like '2' are not supported",
         )
     return str(row["id"])
+
+
+def require_head_pujari(user=Depends(require_roles("head_pujari")), db: Session = Depends(get_db)):
+    active = db.execute(
+        text("SELECT is_head_pujari FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+        {"id": user["id"]},
+    ).scalar()
+    if not active:
+        raise HTTPException(403, "Not a Head Pujari")
+    return user
+
+
+def _without_bank_details(profile: dict) -> dict:
+    """Bank and UPI details stay with Admin; the Head Pujari brief covers everything else."""
+    return {k: v for k, v in profile.items() if not k.startswith(("bank_", "upi_"))}
+
+
+# The directory reuses the Admin read endpoints. These routes are GET only, so a Head Pujari has
+# no way to approve, edit or delete; every /admin write keeps its own permission check.
+@router.get("/head/pujari-directory")
+def head_pujari_directory(
+    status: str | None = None,
+    q: str | None = None,
+    sort_by: str | None = Query(None, alias="sort"),
+    sort_dir: str | None = Query(None, alias="dir"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    user=Depends(require_head_pujari),
+    db: Session = Depends(get_db),
+):
+    from app.routers.admin import list_pujaris
+
+    out = list_pujaris(
+        status=status, blocked=None, q=q, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size, user=user, db=db
+    )
+    return {**out, "items": [_without_bank_details(row) for row in out["items"]]}
+
+
+@router.get("/head/pujari-directory/{pujari_id}")
+def head_pujari_details(pujari_id: UUID, user=Depends(require_head_pujari), db: Session = Depends(get_db)):
+    from app.routers.admin_pujari import get_pujari_detail
+
+    out = get_pujari_detail(str(pujari_id), user=user, db=db)
+    return {**out, "profile": _without_bank_details(out["profile"])}
+
+
+@router.get("/head/pujari-directory/{pujari_id}/service-offers")
+def head_pujari_services(pujari_id: UUID, user=Depends(require_head_pujari), db: Session = Depends(get_db)):
+    from app.routers.admin_pujari import admin_get_service_offers
+
+    return admin_get_service_offers(str(pujari_id), admin=user, db=db)
+
+
+@router.get("/head/pujari-directory/{pujari_id}/documents/{doc_id}/file")
+def head_pujari_document(
+    pujari_id: UUID, doc_id: UUID, user=Depends(require_head_pujari), db: Session = Depends(get_db)
+):
+    from app.routers.admin_pujari import admin_document_file
+
+    response = admin_document_file(str(pujari_id), str(doc_id), user=user, db=db)
+    write_audit(db, str(user["id"]), "head_viewed_pujari_document", "pujari", str(pujari_id))
+    db.commit()
+    return response
 
 
 @router.get("/head/pujaris")

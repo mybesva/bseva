@@ -1,7 +1,10 @@
 name: QA deploy
 
-# develop → AWS QA (Mumbai). Never deploys Production: the OIDC role only trusts the `qa` environment,
-# and its permissions are limited to the QA ECR repositories and the QA host.
+# develop → AWS QA (Mumbai), automatically on every push/merge: checks (tests, migration tests, static) → arm64
+# images → migrations on the QA database (target-guarded, fail-fast) → deploy → health checks, with automatic
+# rollback of the application if health checks fail. Never deploys Production: the OIDC role only trusts the
+# `qa` environment (develop only), and its permissions are limited to the QA ECR repositories and the QA host.
+# A successful run of this workflow is what qualifies a commit for Production (deploy/ci/qa_gate.py).
 on:
   push:
     branches: [develop]
@@ -20,31 +23,11 @@ env:
   QA_DOMAIN: qa.b-seva.com
 
 jobs:
-  test:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-      - name: Backend tests
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql+psycopg://ci:ci@127.0.0.1:1/ci
-        run: |
-          pip install -r requirements.txt pytest==8.3.5 boto3==1.42.64
-          # Known pre-existing failure on main (invoice label wording), tracked separately.
-          python -m pytest -q -p no:cacheprovider \
-            --deselect tests/test_final_booking_requirements.py::test_invoice_html_renders_snapshot_duration_dynamically
-      - name: Infra CLI compiles
-        run: python -m py_compile infra/aws/bseva_qa.py
-      - name: Host scripts (shellcheck)
-        run: shellcheck -S warning deploy/host/*.sh deploy/nginx/40-bseva-config.sh
+  checks:
+    uses: ./.github/workflows/checks.yml
 
   build:
-    needs: test
+    needs: checks
     runs-on: ubuntu-24.04-arm
     environment: qa
     permissions:
@@ -116,7 +99,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/bseva-qa-github-deploy
           aws-region: ${{ env.AWS_REGION }}
-      - name: Deploy on the QA host via SSM (health-gated, auto-rollback)
+      - name: Migrate + deploy on the QA host via SSM (health-gated, auto-rollback)
         env:
           TAG: ${{ needs.build.outputs.tag }}
           REGISTRY: ${{ needs.build.outputs.registry }}

@@ -128,7 +128,7 @@ export default function SevaEventsAdmin() {
         ))}
         {canManage && (
           <Button className="ml-auto" onClick={() => setOpen(true)}>
-            Create event
+            Create Event
           </Button>
         )}
       </div>
@@ -169,7 +169,7 @@ export default function SevaEventsAdmin() {
                   </Button>
                 )}
                 <Button size="sm" variant="ghost" onClick={() => openManifest(ev)}>
-                  Sankalp list
+                  Sankalp List
                 </Button>
               </TableCell>
             </TableRow>
@@ -222,7 +222,7 @@ export default function SevaEventsAdmin() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Title override</Label>
+            <Label>Title Override</Label>
             <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
             <Label>Description</Label>
             <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
@@ -230,7 +230,7 @@ export default function SevaEventsAdmin() {
             <Input type="datetime-local" value={form.start_at} onChange={(e) => setForm((f) => ({ ...f, start_at: e.target.value }))} />
             <Label>End</Label>
             <Input type="datetime-local" value={form.end_at} onChange={(e) => setForm((f) => ({ ...f, end_at: e.target.value }))} />
-            <Label>Booking cutoff</Label>
+            <Label>Booking Cutoff</Label>
             <Input
               type="datetime-local"
               value={form.booking_cutoff_at}
@@ -238,7 +238,7 @@ export default function SevaEventsAdmin() {
             />
             <Label>Capacity</Label>
             <Input value={form.capacity} onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))} />
-            <Label>Participation mode</Label>
+            <Label>Participation Mode</Label>
             <Select value={form.participation_mode} onValueChange={(v) => setForm((f) => ({ ...f, participation_mode: v }))}>
               <SelectTrigger>
                 <SelectValue />
@@ -249,7 +249,7 @@ export default function SevaEventsAdmin() {
                 <SelectItem value="hybrid">Hybrid</SelectItem>
               </SelectContent>
             </Select>
-            <Label>Puja event kind</Label>
+            <Label>Puja Event Kind</Label>
             <Select value={form.puja_event_kind} onValueChange={(v) => setForm((f) => ({ ...f, puja_event_kind: v }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Optional" />
@@ -261,7 +261,7 @@ export default function SevaEventsAdmin() {
             </Select>
             <div className="flex items-center gap-2">
               <Switch checked={form.is_free} onCheckedChange={(v) => setForm((f) => ({ ...f, is_free: v }))} />
-              <Label>Free event</Label>
+              <Label>Free Event</Label>
             </div>
             {!form.is_free ? (
               <>
@@ -271,11 +271,11 @@ export default function SevaEventsAdmin() {
             ) : null}
             <div className="flex items-center gap-2">
               <Switch checked={form.online_enabled} onCheckedChange={(v) => setForm((f) => ({ ...f, online_enabled: v }))} />
-              <Label>Online joining enabled</Label>
+              <Label>Online Joining Enabled</Label>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.published} onCheckedChange={(v) => setForm((f) => ({ ...f, published: v }))} />
-              <Label>Publish immediately</Label>
+              <Label>Publish Immediately</Label>
             </div>
           </div>
           <DialogFooter>

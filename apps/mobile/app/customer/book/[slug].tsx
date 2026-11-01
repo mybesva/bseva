@@ -146,6 +146,7 @@ export default function BookService() {
   const [hydrated, setHydrated] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => newIdempotencyKey(slug || "service"));
   const [serviceAvailable, setServiceAvailable] = useState<boolean | null>(null);
+  const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const panchang = useQuery({
     queryKey: ["panchang", date, calendar],
     queryFn: () => apiClient.panchang(date, calendar) as Promise<Record<string, unknown>>,
@@ -448,8 +449,9 @@ export default function BookService() {
       return true;
     }
     try {
-      const result = await apiClient.serviceAvailability(lat, lng);
+      const result = await apiClient.serviceAvailability(lat, lng, String(svc.id));
       setServiceAvailable(result.service_available);
+      setUnavailableMessage(result.message || null);
       return result.service_available;
     } catch (e: unknown) {
       setServiceAvailable(false);
@@ -839,11 +841,14 @@ export default function BookService() {
             {serviceAvailable === false && mode === "in_person" ? (
               <Card style={{ gap: 8, borderColor: colors.warning }}>
                 <AppText variant="h3">
-                  {String(configQ.data?.service_area_unavailable_heading || t("web.availability.bookingUnavailable"))}
+                  {unavailableMessage ||
+                    String(configQ.data?.service_area_unavailable_heading || t("web.availability.bookingUnavailable"))}
                 </AppText>
-                <AppText color={colors.mutedForeground}>
-                  {String(configQ.data?.service_area_unavailable_description || t("errors.serviceAreaUnavailable"))}
-                </AppText>
+                {unavailableMessage ? null : (
+                  <AppText color={colors.mutedForeground}>
+                    {String(configQ.data?.service_area_unavailable_description || t("errors.serviceAreaUnavailable"))}
+                  </AppText>
+                )}
                 {svc.virtual_available && configQ.data?.virtual_puja_enabled ? (
                   <PrimaryButton
                     title={t("web.availability.bookVirtual")}
@@ -1040,6 +1045,8 @@ export default function BookService() {
                 {Number(quote.peakFee) ? <AppText>{t("booking.peakFee")} {rupees(Number(quote.peakFee))}</AppText> : null}
                 {Number(quote.discount) ? <AppText>{t("booking.coupon")} {rupees(Number(quote.discount))}</AppText> : null}
                 {Number(quote.subtotal) ? <AppText>{t("booking.subtotal")} {rupees(Number(quote.subtotal))}</AppText> : null}
+                {Number(quote.customerPlatformFee) ? <AppText>Platform Fee {rupees(Number(quote.customerPlatformFee))}</AppText> : null}
+                {Number(quote.gatewayFee) ? <AppText>{quote.gatewayName} Transaction Fee {rupees(Number(quote.gatewayFee))}</AppText> : null}
                 <AppText>
                   {t("booking.gst")}
                   {quote.gstPercent ? ` (${quote.gstPercent}%)` : ""} {rupees(Number(quote.gstAmount))}
@@ -1068,6 +1075,8 @@ export default function BookService() {
                 {includeFood && Number(quote.foodPrasadam) ? <AppText>{t("booking.food")} {rupees(Number(quote.foodPrasadam))}</AppText> : null}
                 {Number(quote.peakFee) ? <AppText>{t("booking.peakFee")} {rupees(Number(quote.peakFee))}</AppText> : null}
                 {Number(quote.subtotal) ? <AppText>{t("booking.subtotal")} {rupees(Number(quote.subtotal))}</AppText> : null}
+                {Number(quote.customerPlatformFee) ? <AppText>Platform Fee {rupees(Number(quote.customerPlatformFee))}</AppText> : null}
+                {Number(quote.gatewayFee) ? <AppText>{quote.gatewayName} Transaction Fee {rupees(Number(quote.gatewayFee))}</AppText> : null}
                 <AppText>
                   {t("booking.gst")}
                   {quote.gstPercent ? ` (${quote.gstPercent}%)` : ""} {rupees(Number(quote.gstAmount))}

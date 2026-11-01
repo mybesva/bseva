@@ -27,7 +27,7 @@ export default function AdminBulkImport() {
 
   return (
     <Screen>
-      <ScreenHeader title="Bulk import" back />
+      <ScreenHeader title="Bulk Import" back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
         <Card style={{ gap: 8 }}>

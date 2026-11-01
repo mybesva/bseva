@@ -34,10 +34,10 @@ export default function AdminSamagri() {
           </Card>
         ))}
         <Card>
-          <AppText variant="h3">Add item</AppText>
+          <AppText variant="h3">Add Item</AppText>
           <Field label="Name" value={name} onChangeText={setName} />
           <Field label="Unit" value={unit} onChangeText={setUnit} />
-          <Field label="Item key" value={itemKey} onChangeText={setItemKey} />
+          <Field label="Item Key" value={itemKey} onChangeText={setItemKey} />
           <Field label="Name (hi)" value={nameHi} onChangeText={setNameHi} />
           <Field label="Name (te)" value={nameTe} onChangeText={setNameTe} />
           <PrimaryButton

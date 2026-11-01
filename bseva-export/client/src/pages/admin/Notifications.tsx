@@ -78,7 +78,7 @@ export default function AdminNotifications() {
               <option value="system">System</option>
             </select>
             <Button variant="outline" size="sm" onClick={() => void markAll()}>
-              Mark all read
+              Mark All Read
             </Button>
           </div>
         }
@@ -105,7 +105,7 @@ export default function AdminNotifications() {
               </div>
               {!n.is_read && (
                 <Button size="sm" variant="outline" onClick={() => void markRead(n.id)}>
-                  Mark read
+                  Mark Read
                 </Button>
               )}
             </div>

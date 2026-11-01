@@ -1,6 +1,7 @@
 import {
   adminServiceActivationError,
   buildAdminServicePayload,
+  uniqueServiceSlug,
   emptyAdminServiceForm,
   emptyServiceCategoryForm,
   filterServiceCategories,
@@ -82,23 +83,23 @@ function ServiceCategories({ onError, search }: { onError: (v: string | null) =>
 
   return (
     <Card style={{ gap: 8 }}>
-      <AppText variant="h3">Service categories</AppText>
+      <AppText variant="h3">Service Categories</AppText>
       {rows.map((c) => {
         const editing = editId === c.id;
         return (
           <Card key={c.id} style={{ gap: 8 }}>
             {editing ? (
               <>
-                <AppText variant="h3">Edit category</AppText>
+                <AppText variant="h3">Edit Category</AppText>
                 <Field label="Name" value={editForm.name} onChangeText={(name) => setEditForm({ ...editForm, name })} />
                 <Field label="Slug" value={editForm.slug} onChangeText={(slug) => setEditForm({ ...editForm, slug })} />
                 <Field label="Description" value={editForm.description} onChangeText={(description) => setEditForm({ ...editForm, description })} />
-                <Field label="Sort order" value={String(editForm.sort_order)} onChangeText={(v) => setEditForm({ ...editForm, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
+                <Field label="Sort Order" value={String(editForm.sort_order)} onChangeText={(v) => setEditForm({ ...editForm, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <AppText>Active</AppText>
                   <Switch value={editForm.active} onValueChange={(active) => setEditForm({ ...editForm, active })} />
                 </View>
-                <PrimaryButton title="Update category" loading={busy} onPress={() => void saveEdit(c.id)} />
+                <PrimaryButton title="Update Category" loading={busy} onPress={() => void saveEdit(c.id)} />
                 <PrimaryButton title="Cancel" variant="ghost" onPress={() => setEditId(null)} />
               </>
             ) : (
@@ -123,16 +124,16 @@ function ServiceCategories({ onError, search }: { onError: (v: string | null) =>
           </Card>
         );
       })}
-      <AppText variant="h3">Add category</AppText>
+      <AppText variant="h3">Add Category</AppText>
       <Field label="Name" value={addForm.name} onChangeText={(name) => setAddForm({ ...addForm, name })} />
       <Field label="Slug" value={addForm.slug} onChangeText={(slug) => setAddForm({ ...addForm, slug })} />
       <Field label="Description" value={addForm.description} onChangeText={(description) => setAddForm({ ...addForm, description })} />
-      <Field label="Sort order" value={String(addForm.sort_order)} onChangeText={(v) => setAddForm({ ...addForm, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
+      <Field label="Sort Order" value={String(addForm.sort_order)} onChangeText={(v) => setAddForm({ ...addForm, sort_order: Number(v) || 0 })} keyboardType="number-pad" />
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <AppText>Active</AppText>
         <Switch value={addForm.active} onValueChange={(active) => setAddForm({ ...addForm, active })} />
       </View>
-      <PrimaryButton title="Add category" loading={busy && !editId} onPress={() => void saveNew()} />
+      <PrimaryButton title="Add Category" loading={busy && !editId} onPress={() => void saveNew()} />
     </Card>
   );
 }
@@ -149,9 +150,16 @@ export default function AdminServices() {
     queryKey: ["admin-services"],
     queryFn: () => apiClient.api<Svc[] | { items?: Svc[] }>("/admin/services"),
   });
-  const rows = (Array.isArray(list.data) ? list.data : list.data?.items || []).filter((s) =>
-    matchesServiceSearch(s, q)
-  );
+  const allRows = Array.isArray(list.data) ? list.data : list.data?.items || [];
+  const rows = allRows.filter((s) => matchesServiceSearch(s, q));
+  // A saved puja keeps its slug even if renamed, so links already shared keep working.
+  const serviceSlug = !form
+    ? ""
+    : editId
+      ? form.slug
+      : form.name.trim()
+        ? uniqueServiceSlug(form.name, allRows.map((s) => String(s.slug)))
+        : "";
 
   async function save() {
     if (!form) return;
@@ -163,7 +171,7 @@ export default function AdminServices() {
     setBusy(true);
     setError(null);
     try {
-      const payload = buildAdminServicePayload(form);
+      const payload = buildAdminServicePayload({ ...form, slug: serviceSlug });
       if (editId) {
         await apiClient.api(`/admin/services/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
       } else {
@@ -190,48 +198,45 @@ export default function AdminServices() {
         <ErrorBanner message={error} />
         {form ? (
           <Card style={{ gap: 10 }}>
-            <AppText variant="h3">{editId ? "Edit service" : "New service"}</AppText>
+            <AppText variant="h3">{editId ? "Edit Service" : "New Service"}</AppText>
             <Field label="Name *" value={form.name} onChangeText={(v) => set("name", v)} />
-            <Field label="Slug" value={form.slug} onChangeText={(v) => set("slug", v)} />
+            <Field label="Slug (Auto)" value={serviceSlug} editable={false} />
             <Field label="Description" value={form.description} onChangeText={(v) => set("description", v)} />
-            <Field label="Short description" value={form.short_description} onChangeText={(v) => set("short_description", v)} />
+            <Field label="Short Description" value={form.short_description} onChangeText={(v) => set("short_description", v)} />
             <Field label="Standard ₹" value={rupeesField(form.standard_price_paise)} onChangeText={(v) => set("standard_price_paise", paiseFromRupees(v))} keyboardType="decimal-pad" />
             <Field label="Premium ₹" value={rupeesField(form.premium_price_paise)} onChangeText={(v) => set("premium_price_paise", paiseFromRupees(v))} keyboardType="decimal-pad" />
-            <Field label="Virtual domestic ₹" value={rupeesField(form.virtual_domestic_price_paise)} onChangeText={(v) => set("virtual_domestic_price_paise", paiseFromRupees(v))} keyboardType="decimal-pad" />
-            <Field label="Virtual international ₹" value={rupeesField(form.virtual_international_price_paise)} onChangeText={(v) => set("virtual_international_price_paise", paiseFromRupees(v))} keyboardType="decimal-pad" />
+            <Field label="Virtual Domestic ₹" value={rupeesField(form.virtual_domestic_price_paise)} onChangeText={(v) => set("virtual_domestic_price_paise", paiseFromRupees(v))} keyboardType="decimal-pad" />
+            <Field label="Virtual International ₹" value={rupeesField(form.virtual_international_price_paise)} onChangeText={(v) => set("virtual_international_price_paise", paiseFromRupees(v))} keyboardType="decimal-pad" />
             <Field label="Samagri ₹" value={rupeesField(form.samagri_price_paise)} onChangeText={(v) => set("samagri_price_paise", paiseFromRupees(v) ?? 0)} keyboardType="decimal-pad" />
             <Field label="Alankaram ₹" value={rupeesField(form.alankaram_price_paise)} onChangeText={(v) => set("alankaram_price_paise", paiseFromRupees(v) ?? 0)} keyboardType="decimal-pad" />
             <Field label="Food ₹" value={rupeesField(form.food_price_paise)} onChangeText={(v) => set("food_price_paise", paiseFromRupees(v) ?? 0)} keyboardType="decimal-pad" />
-            <Field label="Duration (min)" value={String(form.duration_minutes)} onChangeText={(v) => set("duration_minutes", Number(v) || 90)} keyboardType="number-pad" />
-            <Field label="Lead hours" value={String(form.booking_lead_hours ?? 48)} onChangeText={(v) => set("booking_lead_hours", Number(v) || 48)} keyboardType="number-pad" />
-            <Field label="Required level" value={String(form.required_level)} onChangeText={(v) => set("required_level", Number(v) || 1)} keyboardType="number-pad" />
+            <Field label="Duration (Min)" value={String(form.duration_minutes)} onChangeText={(v) => set("duration_minutes", Number(v) || 90)} keyboardType="number-pad" />
+            <Field label="Lead Hours" value={String(form.booking_lead_hours ?? 48)} onChangeText={(v) => set("booking_lead_hours", Number(v) || 48)} keyboardType="number-pad" />
+            <Field label="Required Level" value={String(form.required_level)} onChangeText={(v) => set("required_level", Number(v) || 1)} keyboardType="number-pad" />
             <AppText variant="small" color={colors.mutedForeground}>
               Levels 1–4 keep the existing hierarchy. Level 5 is Chava Seva. Level 6 is Pravachana Seva.
             </AppText>
             <Field label="Pujaris required" value={String(form.pujaris_required)} onChangeText={(v) => set("pujaris_required", Number(v) || 1)} keyboardType="number-pad" />
-            <Field label="Priests min" value={String(form.priests_min)} onChangeText={(v) => set("priests_min", Number(v) || 1)} keyboardType="number-pad" />
-            <Field label="Priests max" value={String(form.priests_max)} onChangeText={(v) => set("priests_max", Number(v) || 1)} keyboardType="number-pad" />
-            <Field label="Muhurtham fee ₹" value={rupeesField(form.muhurta_fee_paise)} onChangeText={(v) => set("muhurta_fee_paise", paiseFromRupees(v) ?? 0)} keyboardType="decimal-pad" />
-            <Field label="Dakshina share %" value={String(form.dakshina_share_percent)} onChangeText={(v) => set("dakshina_share_percent", Number(v) || 0)} keyboardType="decimal-pad" />
+            <Field label="Priests Min" value={String(form.priests_min)} onChangeText={(v) => set("priests_min", Number(v) || 1)} keyboardType="number-pad" />
+            <Field label="Priests Max" value={String(form.priests_max)} onChangeText={(v) => set("priests_max", Number(v) || 1)} keyboardType="number-pad" />
+            <Field label="Muhurtham Fee ₹" value={rupeesField(form.muhurta_fee_paise)} onChangeText={(v) => set("muhurta_fee_paise", paiseFromRupees(v) ?? 0)} keyboardType="decimal-pad" />
+            <Field label="Dakshina Share %" value={String(form.dakshina_share_percent)} onChangeText={(v) => set("dakshina_share_percent", Number(v) || 0)} keyboardType="decimal-pad" />
             <Field
-              label="Dakshina fixed amount ₹ (optional, replaces %)"
+              label="Dakshina Fixed Amount ₹ (Optional, Replaces %)"
               value={rupeesField(form.dakshina_amount_paise)}
               onChangeText={(v) => set("dakshina_amount_paise", paiseFromRupees(v))}
               keyboardType="decimal-pad"
             />
             <Field label="Languages" value={form.languages_text} onChangeText={(v) => set("languages_text", v)} />
-            <Field label="Search aliases" value={form.search_aliases_text} onChangeText={(v) => set("search_aliases_text", v)} />
-            <Field label="Process steps (one per line)" value={form.process_steps_text} onChangeText={(v) => set("process_steps_text", v)} />
+            <Field label="Search Aliases" value={form.search_aliases_text} onChangeText={(v) => set("search_aliases_text", v)} />
+            <Field label="Process Steps (One per Line)" value={form.process_steps_text} onChangeText={(v) => set("process_steps_text", v)} />
             {[
               ["virtual_available", "Virtual"],
               ["muhurta_consultation_enabled", "Muhurtham"],
               ["requires_muhurta", "Requires Muhurtham"],
-              ["samagri_available", "Samagri available"],
-              ["alankaram_available", "Alankaram available"],
+              ["samagri_available", "Samagri Available"],
+              ["alankaram_available", "Alankaram Available"],
               ["food_available", "Food available"],
-              ["homa_included", "Homa included"],
-              ["prasadam_included", "Prasadam included"],
-              ["sankalpa_required", "Sankalpa required"],
               ["is_popular", "Popular"],
               ["is_featured_home", "Featured home"],
               ["is_seasonal", "Seasonal"],
@@ -250,12 +255,12 @@ export default function AdminServices() {
               />
             </View>
             <PrimaryButton title={busy ? t("admin.save") : t("admin.save")} loading={busy} onPress={() => void save()} />
-            <PrimaryButton title="Back to list" variant="outline" onPress={() => { setForm(null); setEditId(null); }} />
+            <PrimaryButton title="Back to List" variant="outline" onPress={() => { setForm(null); setEditId(null); }} />
           </Card>
         ) : (
           <>
             <PrimaryButton title="+ Add service" onPress={() => { setEditId(null); setForm(emptyAdminServiceForm()); }} />
-            <Field label="Search services" placeholder="Search services…" value={q} onChangeText={setQ} />
+            <Field label="Search Services" placeholder="Search services…" value={q} onChangeText={setQ} />
             <ServiceCategories onError={setError} search={q} />
             {list.isLoading ? <LoadingBlock /> : null}
             {rows.map((s) => (

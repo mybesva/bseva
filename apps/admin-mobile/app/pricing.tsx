@@ -21,7 +21,7 @@ export default function AdminPricing() {
       <ScreenHeader title={t("admin.pricing")} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
-        <AppText variant="h3">City adjustments</AppText>
+        <AppText variant="h3">City Adjustments</AppText>
         {loc.isLoading ? <LoadingBlock /> : null}
         {(Array.isArray(loc.data) ? loc.data : []).map((r) => (
           <Card key={String(r.id || r.city)}>
@@ -29,9 +29,9 @@ export default function AdminPricing() {
           </Card>
         ))}
         <Field label="City" value={city} onChangeText={setCity} />
-        <Field label="Adjustment (rupees)" value={adj} onChangeText={setAdj} keyboardType="decimal-pad" />
+        <Field label="Adjustment (Rupees)" value={adj} onChangeText={setAdj} keyboardType="decimal-pad" />
         <PrimaryButton
-          title="Add city price"
+          title="Add City Price"
           onPress={async () => {
             setError(null);
             try {
@@ -42,7 +42,7 @@ export default function AdminPricing() {
             }
           }}
         />
-        <AppText variant="h3">Surge rules</AppText>
+        <AppText variant="h3">Surge Rules</AppText>
         {(Array.isArray(surge.data) ? surge.data : []).map((r) => (
           <Card key={String(r.id || r.label)}>
             <AppText>{String(r.label)} · {String(r.percent_increase || 0)}%</AppText>
@@ -51,7 +51,7 @@ export default function AdminPricing() {
         <Field label="Label" value={label} onChangeText={setLabel} />
         <Field label="Percent" value={percent} onChangeText={setPercent} keyboardType="decimal-pad" />
         <PrimaryButton
-          title="Add surge rule"
+          title="Add Surge Rule"
           variant="outline"
           onPress={async () => {
             setError(null);

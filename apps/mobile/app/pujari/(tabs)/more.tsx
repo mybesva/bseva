@@ -23,6 +23,9 @@ export default function PujariMore() {
       ? [{ href: "/pujari/onboarding", label: t("nav.onboarding"), icon: "flag-outline" as const }]
       : []),
     { href: "/pujari/profile", label: t("mobile.profile"), icon: "person-outline" as const },
+    ...(profile.data?.is_head_pujari
+      ? [{ href: "/pujari/head/pujaris", label: t("nav.pujariDirectory"), icon: "people-outline" as const }]
+      : []),
     { href: "/pujari/documents", label: t("nav.documents"), icon: "document-outline" as const },
     { href: "/pujari/availability", label: t("nav.availability"), icon: "calendar-outline" as const },
     { href: "/pujari/services", label: t("mobile.serviceOffers"), icon: "layers-outline" as const },

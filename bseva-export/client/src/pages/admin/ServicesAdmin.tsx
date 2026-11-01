@@ -24,28 +24,25 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { adminServiceActivationError, buildAdminServicePayload, type AdminServiceForm } from "@bseva/config";
+import { adminServiceActivationError, buildAdminServicePayload, uniqueServiceSlug, type AdminServiceForm } from "@bseva/config";
+import { copyTextSafely } from "@/lib/browserActions";
+import { SamagriItemPicker } from "@/components/admin/SamagriItemPicker";
+import { TaxRateForm } from "@/components/admin/TaxRateForm";
 import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
-import { FolderTree, ImageIcon, Package, Pencil, Plus } from "lucide-react";
+import { Copy, FolderTree, ImageIcon, Package, Pencil, Plus } from "lucide-react";
 
-/** Gathering sizes for samagri scale quantities (B-Seva samagri guide): Small is the base. */
-const SAMAGRI_SIZES = [
-  { key: "qty_small", short: "S", label: "Small (1–4 people)", factor: 1 },
-  { key: "qty_medium", short: "M", label: "Medium (5–15)", factor: 1.5 },
-  { key: "qty_large", short: "L", label: "Large (15–50)", factor: 3 },
-  { key: "qty_grand", short: "G", label: "Grand (50+)", factor: 5 },
-] as const;
-type SamagriSizeKey = (typeof SAMAGRI_SIZES)[number]["key"];
+const KIT_PROVIDERS = ["BSEVA", "PUJARI", "INCLUDED_IN_SAMAGRI_PACKAGE"];
+const isKitItem = (it: { provided_by?: string | null }) =>
+  KIT_PROVIDERS.includes(String(it.provided_by || "").toUpperCase());
 
-/** Suggested size qty from the Small qty: "15" → "22.5"; "15 pcs" keeps its unit text. */
-function scaledQty(small: string, factor: number): string {
-  const m = small.trim().match(/^(\d+(?:\.\d+)?)(.*)$/);
-  if (!m) return small.trim();
-  const n = Math.round(Number(m[1]) * factor * 100) / 100;
-  return `${n}${m[2]}`;
+/** Stored quantities sometimes include the unit: "50g" → 50 + g, "15 pcs" → 15 + pcs. */
+function splitQty(value: unknown, unit?: string | null): { qty: string; unit: string } {
+  const text = String(value ?? "").trim();
+  const m = text.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+  return m ? { qty: m[1], unit: m[2] || unit || "" } : { qty: text, unit: unit || "" };
 }
 
 /** "15" + "pcs" → "15 pcs"; "15 pcs" + "pcs" → "15 pcs" (stored values sometimes include the unit). */
@@ -58,10 +55,10 @@ import { serviceImageUrl } from "@/lib/serviceImage";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const PROVIDERS = [
-  { value: "included", label: "Included in price" },
-  { value: "customer", label: "Customer provides" },
-  { value: "pujari", label: "Pujari provides" },
-  { value: "reimbursable", label: "Pujari provides, reimbursed" },
+  { value: "included", label: "Included in Price" },
+  { value: "customer", label: "Customer Provides" },
+  { value: "pujari", label: "Pujari Provides" },
+  { value: "reimbursable", label: "Pujari Provides, Reimbursed" },
 ];
 
 type CategoryRow = {
@@ -179,7 +176,6 @@ export default function ServicesAdmin() {
   const [linkItemId, setLinkItemId] = useState("");
   const [linkQty, setLinkQty] = useState("");
   // Medium / Large / Grand qty; empty = follow the Small qty × size factor.
-  const [linkSizes, setLinkSizes] = useState<Partial<Record<SamagriSizeKey, string>>>({});
   const [linkUnit, setLinkUnit] = useState("");
   const [linkCategory, setLinkCategory] = useState("PUJA_SAMAGRI");
   const [linkProvidedBy, setLinkProvidedBy] = useState("CUSTOMER");
@@ -225,10 +221,35 @@ export default function ServicesAdmin() {
   useEffect(() => {
     void load().catch((e) => toast.error(e.message));
     void loadCategories().catch((e) => toast.error(e.message));
+    loadSamagriItems();
+  }, []);
+
+  function loadSamagriItems() {
     api<any[]>("/samagri/items")
       .then(setSamagriItems)
       .catch(() => setSamagriItems([]));
-  }, []);
+  }
+
+  function resetLinkForm() {
+    setLinkItemId("");
+    setLinkQty("");
+    setLinkUnit("");
+    setLinkCategory("PUJA_SAMAGRI");
+    setLinkProvidedBy("CUSTOMER");
+    setLinkOptional(false);
+  }
+
+  // Load into the form; saving again updates the same row.
+  function editLinkedItem(it: any) {
+    const parts = splitQty(it.qty_small ?? it.quantity, it.unit);
+    const provider = String(it.provided_by || "CUSTOMER").toUpperCase();
+    setLinkItemId(String(it.samagri_item_id));
+    setLinkQty(parts.qty);
+    setLinkUnit(parts.unit);
+    setLinkCategory(String(it.category || "PUJA_SAMAGRI"));
+    setLinkProvidedBy(provider === "OPTIONAL" ? "CUSTOMER" : provider);
+    setLinkOptional(Boolean(it.optional) || provider === "OPTIONAL");
+  }
 
   async function loadLinked(serviceId: string) {
     try {
@@ -351,7 +372,6 @@ export default function ServicesAdmin() {
     });
     setLinkItemId("");
     setLinkQty("");
-    setLinkSizes({});
     setLinkUnit("");
     setLinkCategory("PUJA_SAMAGRI");
     setLinkProvidedBy("CUSTOMER");
@@ -411,6 +431,23 @@ export default function ServicesAdmin() {
     }
   }
 
+  // A saved puja keeps its slug even if renamed, so links already shared keep working.
+  const serviceSlug = editId
+    ? form.slug
+    : form.name.trim()
+      ? uniqueServiceSlug(form.name, rows.map((r) => String(r.slug)))
+      : "";
+  const serviceLink = serviceSlug ? `${window.location.origin}/services/${serviceSlug}` : "";
+
+  async function copyServiceLink() {
+    try {
+      await copyTextSafely(serviceLink);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Could not copy the link");
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     const activationError = adminServiceActivationError(form);
@@ -420,7 +457,7 @@ export default function ServicesAdmin() {
     }
     setSaving(true);
     try {
-      const payload = buildAdminServicePayload(form as AdminServiceForm);
+      const payload = buildAdminServicePayload({ ...form, slug: serviceSlug } as AdminServiceForm);
       if (editId) {
         await api(`/admin/services/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
         toast.success("Service & pricing updated");
@@ -454,7 +491,7 @@ export default function ServicesAdmin() {
             Categories
           </Button>
           <Button variant="outline" onClick={() => setLocation(adminPath("/pricing"))}>
-            Location & surge pricing
+            Location & Surge Pricing
           </Button>
           {canServices && (
             <Button onClick={openAdd} className="gap-2">
@@ -478,7 +515,7 @@ export default function ServicesAdmin() {
       <Dialog open={categoriesOpen} onOpenChange={setCategoriesOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="">Service categories</DialogTitle>
+            <DialogTitle className="">Service Categories</DialogTitle>
           </DialogHeader>
           {canServices && (
           <form id="category-form" onSubmit={handleCategorySave} className="space-y-4">
@@ -504,7 +541,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="cat-sort">Sort order</Label>
+                <Label htmlFor="cat-sort">Sort Order</Label>
                 <Input
                   id="cat-sort"
                   type="number"
@@ -523,7 +560,7 @@ export default function ServicesAdmin() {
               </label>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cat-desc">Description (optional)</Label>
+              <Label htmlFor="cat-desc">Description (Optional)</Label>
               <Textarea
                 id="cat-desc"
                 rows={2}
@@ -533,11 +570,11 @@ export default function ServicesAdmin() {
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={categorySaving}>
-                {categorySaving ? "Saving…" : categoryEditId ? "Update category" : "Add category"}
+                {categorySaving ? "Saving…" : categoryEditId ? "Update Category" : "Add Category"}
               </Button>
               {categoryEditId && (
                 <Button type="button" variant="outline" onClick={openCategoryAdd}>
-                  Cancel edit
+                  Cancel Edit
                 </Button>
               )}
             </div>
@@ -587,12 +624,12 @@ export default function ServicesAdmin() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sticky top-0 z-20 bg-background pb-3 border-b border-border/70">
+          <DialogHeader className="sticky -top-6 z-20 -mx-6 -mt-6 bg-background px-6 pt-6 pb-3 border-b border-border/70">
             <p className="text-sm font-semibold text-primary">
-              {!editId ? "Add puja service" : canServices ? "Edit puja service" : "Puja samagri"}
+              {!editId ? "Add puja service" : canServices ? "Edit Puja Service" : "Puja Samagri"}
             </p>
             <DialogTitle className="text-xl font-bold text-foreground pr-8 leading-snug">
-              {form.name.trim() || (editId ? "Untitled puja" : "New puja")}
+              {form.name.trim() || (editId ? "Untitled Puja" : "New Puja")}
             </DialogTitle>
           </DialogHeader>
           <form id="add-service-form" onSubmit={handleSave} className="space-y-4">
@@ -616,7 +653,7 @@ export default function ServicesAdmin() {
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Basic Information</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="service-name">Puja / service name</Label>
+                <Label htmlFor="service-name">Puja / Service Name</Label>
                 <Input
                   id="service-name"
                   placeholder="e.g. Satyanarayan Puja"
@@ -626,7 +663,7 @@ export default function ServicesAdmin() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-local">Local name (optional)</Label>
+                <Label htmlFor="service-local">Local Name (Optional)</Label>
                 <Input
                   id="service-local"
                   value={form.local_name}
@@ -640,7 +677,7 @@ export default function ServicesAdmin() {
                 <Input value={form.deity} onChange={(e) => setForm({ ...form, deity: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Languages (comma-separated)</Label>
+                <Label>Languages (Comma-Separated)</Label>
                 <Input
                   value={form.languages_text}
                   onChange={(e) => setForm({ ...form, languages_text: e.target.value })}
@@ -649,15 +686,33 @@ export default function ServicesAdmin() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="service-slug">Slug (URL)</Label>
-              <Input
-                id="service-slug"
-                placeholder="Optional — auto-generated from name"
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="service-slug"
+                  readOnly
+                  placeholder="Created automatically from the puja name"
+                  value={serviceLink}
+                  className="bg-muted/40"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5 shrink-0"
+                  disabled={!serviceLink}
+                  onClick={() => void copyServiceLink()}
+                >
+                  <Copy size="0.875rem" />
+                  Copy
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {editId
+                  ? "Stays the same even if the name changes, so shared links keep working."
+                  : "Created from the puja name. The link works once this puja is saved."}
+              </p>
             </div>
             <div className="space-y-2">
-              <Label>Catalog categories</Label>
+              <Label>Catalog Categories</Label>
               <div className="rounded-lg border p-3 max-h-36 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {catalogCategories.map((c) => (
                   <label key={c.id} className="flex items-center gap-2 text-sm">
@@ -677,7 +732,7 @@ export default function ServicesAdmin() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-aliases">Search aliases</Label>
+              <Label htmlFor="service-aliases">Search Aliases</Label>
               <Input
                 id="service-aliases"
                 placeholder="Comma-separated, e.g. Satyanarayana, Satya Narayan"
@@ -690,7 +745,7 @@ export default function ServicesAdmin() {
               <TabsContent value="content" className="space-y-4 mt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Content</p>
             <div className="space-y-2">
-              <Label htmlFor="service-short">Short description</Label>
+              <Label htmlFor="service-short">Short Description</Label>
               <Textarea
                 id="service-short"
                 placeholder="One-line summary for listings"
@@ -700,7 +755,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-full">Full description</Label>
+              <Label htmlFor="service-full">Full Description</Label>
               <Textarea
                 id="service-full"
                 placeholder="Detailed description for the service page"
@@ -710,7 +765,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Spiritual meaning / purpose</Label>
+              <Label>Spiritual Meaning / Purpose</Label>
               <textarea
                 className="w-full min-h-[4.375rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.spiritual_meaning}
@@ -718,7 +773,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Common occasions</Label>
+              <Label>Common Occasions</Label>
               <textarea
                 className="w-full min-h-[3.75rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.common_occasions}
@@ -726,7 +781,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-benefits">Benefits / purpose</Label>
+              <Label htmlFor="service-benefits">Benefits / Purpose</Label>
               <Textarea
                 id="service-benefits"
                 value={form.benefits}
@@ -735,7 +790,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>What&apos;s included</Label>
+              <Label>What&apos;s Included</Label>
               <Textarea
                 value={form.whats_included}
                 onChange={(e) => setForm({ ...form, whats_included: e.target.value })}
@@ -743,14 +798,14 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Location notes</Label>
+              <Label>Location Notes</Label>
               <Input
                 value={form.location_notes}
                 onChange={(e) => setForm({ ...form, location_notes: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label>Tradition / regional notes</Label>
+              <Label>Tradition / Regional Notes</Label>
               <Textarea
                 value={form.tradition_notes}
                 onChange={(e) => setForm({ ...form, tradition_notes: e.target.value })}
@@ -758,7 +813,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-description">Legacy description (optional)</Label>
+              <Label htmlFor="service-description">Legacy Description (Optional)</Label>
               <Textarea
                 id="service-description"
                 placeholder="Fallback if short description is empty"
@@ -772,7 +827,7 @@ export default function ServicesAdmin() {
               <TabsContent value="process" className="space-y-4 mt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Process</p>
             <div className="space-y-2">
-              <Label>Process steps (one per line)</Label>
+              <Label>Process Steps (One per Line)</Label>
               <textarea
                 className="w-full min-h-[6.25rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.process_steps_text}
@@ -781,7 +836,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Priests min</Label>
+                <Label>Priests Min</Label>
                 <Input
                   type="number"
                   value={form.priests_min}
@@ -789,7 +844,7 @@ export default function ServicesAdmin() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Priests max</Label>
+                <Label>Priests Max</Label>
                 <Input
                   type="number"
                   value={form.priests_max}
@@ -797,43 +852,17 @@ export default function ServicesAdmin() {
                 />
               </div>
             </div>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.homa_included}
-                  onChange={(e) => setForm({ ...form, homa_included: e.target.checked })}
-                />
-                Homa included
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.prasadam_included}
-                  onChange={(e) => setForm({ ...form, prasadam_included: e.target.checked })}
-                />
-                Prasadam
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.sankalpa_required}
-                  onChange={(e) => setForm({ ...form, sankalpa_required: e.target.checked })}
-                />
-                Sankalpa required
-              </label>
-            </div>
               </TabsContent>
 
               <TabsContent value="images" className="space-y-4 mt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Images</p>
             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
               <div className="flex items-center justify-between gap-2">
-                <Label className="text-base">Service image</Label>
+                <Label className="text-base">Service Image</Label>
                 {(form.image_url || form.image_path) ? (
                   <Badge variant="secondary" className="text-xs">Assigned</Badge>
                 ) : (
-                  <Badge variant="outline" className="text-xs">Using placeholder</Badge>
+                  <Badge variant="outline" className="text-xs">Using Placeholder</Badge>
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-4 items-start">
@@ -864,8 +893,8 @@ export default function ServicesAdmin() {
                         {imageUploading
                           ? "Uploading…"
                           : form.image_url || form.image_path
-                            ? "Replace image"
-                            : "Upload image"}
+                            ? "Replace Image"
+                            : "Upload Image"}
                       </Button>
                       <input
                         id="service-image-file"
@@ -934,7 +963,7 @@ export default function ServicesAdmin() {
                             }
                           }}
                         >
-                          Remove image
+                          Remove Image
                         </Button>
                       )}
                     </div>
@@ -956,7 +985,7 @@ export default function ServicesAdmin() {
                 </summary>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
                   <div className="space-y-2">
-                    <Label htmlFor="service-image-path">Image path</Label>
+                    <Label htmlFor="service-image-path">Image Path</Label>
                     <Input
                       id="service-image-path"
                       value={form.image_path}
@@ -1012,7 +1041,7 @@ export default function ServicesAdmin() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-display-order">Display order</Label>
+                  <Label htmlFor="service-display-order">Display Order</Label>
                   <Input
                     id="service-display-order"
                     type="number"
@@ -1021,7 +1050,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="service-home-rank">Homepage rank</Label>
+                  <Label htmlFor="service-home-rank">Homepage Rank</Label>
                   <Input
                     id="service-home-rank"
                     type="number"
@@ -1036,7 +1065,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="service-pricing-status">Pricing status</Label>
+                  <Label htmlFor="service-pricing-status">Pricing Status</Label>
                   <Select
                     value={form.pricing_status}
                     onValueChange={(v: "priced" | "awaiting_pricing") =>
@@ -1047,7 +1076,7 @@ export default function ServicesAdmin() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="awaiting_pricing">Awaiting pricing</SelectItem>
+                      <SelectItem value="awaiting_pricing">Awaiting Pricing</SelectItem>
                       <SelectItem value="priced">Priced</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1057,6 +1086,15 @@ export default function ServicesAdmin() {
               </TabsContent>
 
               <TabsContent value="pricing" className="space-y-4 mt-4">
+            {isSuper && editId && (
+              <div className="rounded-lg border p-3 space-y-2">
+                <p className="text-sm font-medium">GST for this puja</p>
+                <p className="text-xs text-muted-foreground">
+                  Overrides the defaults on the GST &amp; Tax page from the date you choose. Issued invoices keep their values.
+                </p>
+                <TaxRateForm serviceId={editId} />
+              </div>
+            )}
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <p className="text-sm font-medium">Cost & pricing</p>
               <p className="text-xs text-muted-foreground">
@@ -1064,7 +1102,7 @@ export default function ServicesAdmin() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-dakshina-type">Dakshina (pujari share)</Label>
+                  <Label htmlFor="service-dakshina-type">Dakshina (Pujari Share)</Label>
                   <Select
                     value={form.dakshina_amount_paise != null ? "amount" : "percent"}
                     onValueChange={(v) =>
@@ -1084,15 +1122,15 @@ export default function ServicesAdmin() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="percent">Percentage of puja price (%)</SelectItem>
-                      <SelectItem value="amount">Fixed amount (₹)</SelectItem>
+                      <SelectItem value="percent">Percentage of Puja Price (%)</SelectItem>
+                      <SelectItem value="amount">Fixed Amount (₹)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   {form.dakshina_amount_paise != null ? (
                     <>
-                      <Label htmlFor="service-dakshina">Dakshina amount (₹)</Label>
+                      <Label htmlFor="service-dakshina">Dakshina Amount (₹)</Label>
                       <Input
                         id="service-dakshina"
                         type="number"
@@ -1138,7 +1176,7 @@ export default function ServicesAdmin() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-standard">Standard price (₹)</Label>
+                  <Label htmlFor="service-standard">Standard Price (₹)</Label>
                   <Input
                     id="service-standard"
                     type="number"
@@ -1156,7 +1194,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="service-premium">Premium price (₹)</Label>
+                  <Label htmlFor="service-premium">Premium Price (₹)</Label>
                   <Input
                     id="service-premium"
                     type="number"
@@ -1177,7 +1215,7 @@ export default function ServicesAdmin() {
               <p className="text-sm font-medium pt-2 border-t border-border/60">Pujaris included (team size)</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="puj-default">Default (fallback)</Label>
+                  <Label htmlFor="puj-default">Default (Fallback)</Label>
                   <Input
                     id="puj-default"
                     type="number"
@@ -1189,7 +1227,7 @@ export default function ServicesAdmin() {
                   <p className="text-[0.6875rem] text-muted-foreground">Used when Standard or Premium is left blank below.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="puj-standard">Standard package</Label>
+                  <Label htmlFor="puj-standard">Standard Package</Label>
                   <Input
                     id="puj-standard"
                     type="number"
@@ -1206,7 +1244,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="puj-premium">Premium package</Label>
+                  <Label htmlFor="puj-premium">Premium Package</Label>
                   <Input
                     id="puj-premium"
                     type="number"
@@ -1236,7 +1274,7 @@ export default function ServicesAdmin() {
                 gets the amount back on top of their earnings.
               </p>
               <div className="space-y-2">
-                <Label htmlFor="service-main">Main puja charge (₹)</Label>
+                <Label htmlFor="service-main">Main Puja Charge (₹)</Label>
                 <Input
                   id="service-main"
                   type="number"
@@ -1254,7 +1292,7 @@ export default function ServicesAdmin() {
               </div>
               {(
                 [
-                  { label: "Food / prasadam", priceKey: "food_price_paise", providerKey: "food_provider" },
+                  { label: "Food / Prasadam", priceKey: "food_price_paise", providerKey: "food_provider" },
                 ] as const
               ).map((row) => (
                 <div key={row.priceKey} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1312,7 +1350,7 @@ export default function ServicesAdmin() {
               <div className="rounded-md border bg-card p-3 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
                   <div className="space-y-2">
-                    <Label htmlFor="addon-samagri-enabled">Samagri on booking</Label>
+                    <Label htmlFor="addon-samagri-enabled">Samagri on Booking</Label>
                     <Select
                       value={form.samagri_available ? "yes" : "no"}
                       onValueChange={(v) => {
@@ -1339,7 +1377,7 @@ export default function ServicesAdmin() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                   <div className="space-y-2">
-                    <Label htmlFor="addon-samagri-price">Samagri price (₹)</Label>
+                    <Label htmlFor="addon-samagri-price">Samagri Price (₹)</Label>
                     <Input
                       id="addon-samagri-price"
                       type="number"
@@ -1355,7 +1393,7 @@ export default function ServicesAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>How it works</Label>
+                    <Label>How It Works</Label>
                     <p className="text-xs text-muted-foreground pt-2">
                       Pujari brings materials; customer reimburses from booking payment.
                     </p>
@@ -1373,7 +1411,7 @@ export default function ServicesAdmin() {
 
               <div className="rounded-md border bg-card p-3 space-y-3">
                 <div className="space-y-2">
-                  <Label htmlFor="addon-alankaram-enabled">Alankaram on booking</Label>
+                  <Label htmlFor="addon-alankaram-enabled">Alankaram on Booking</Label>
                   <Select
                     value={form.alankaram_available ? "yes" : "no"}
                     onValueChange={(v) => {
@@ -1399,7 +1437,7 @@ export default function ServicesAdmin() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                   <div className="space-y-2">
-                    <Label htmlFor="addon-alankaram-price">Alankaram price (₹)</Label>
+                    <Label htmlFor="addon-alankaram-price">Alankaram Price (₹)</Label>
                     <Input
                       id="addon-alankaram-price"
                       type="number"
@@ -1415,7 +1453,7 @@ export default function ServicesAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>How it works</Label>
+                    <Label>How It Works</Label>
                     <p className="text-xs text-muted-foreground pt-2">
                       Pujari brings flowers / decoration; customer reimburses from booking payment.
                     </p>
@@ -1451,7 +1489,7 @@ export default function ServicesAdmin() {
                 Muhurtham is required before booking
               </label>
               <div className="space-y-2 max-w-xs">
-                <Label htmlFor="service-muhurta-fee">Consultation fee (₹)</Label>
+                <Label htmlFor="service-muhurta-fee">Consultation Fee (₹)</Label>
                 <Input
                   id="service-muhurta-fee"
                   type="number"
@@ -1470,7 +1508,7 @@ export default function ServicesAdmin() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="service-level">Required pujari level</Label>
+                <Label htmlFor="service-level">Required Pujari Level</Label>
                 <Select
                   value={String(form.required_level)}
                   onValueChange={(v) => setForm({ ...form, required_level: Number(v) })}
@@ -1489,7 +1527,7 @@ export default function ServicesAdmin() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-duration">Duration (minutes)</Label>
+                <Label htmlFor="service-duration">Duration (Minutes)</Label>
                 <Input
                   id="service-duration"
                   type="number"
@@ -1521,7 +1559,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Domestic Virtual & Online Puja price (₹)</Label>
+                <Label>Domestic Virtual & Online Puja Price (₹)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -1538,7 +1576,7 @@ export default function ServicesAdmin() {
                 <p className="text-xs text-muted-foreground">Used when the customer’s country is India.</p>
               </div>
               <div className="space-y-2">
-                <Label>International Virtual & Online Puja price (₹)</Label>
+                <Label>International Virtual & Online Puja Price (₹)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -1570,7 +1608,7 @@ export default function ServicesAdmin() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="samagri-tab-enabled">Offer on booking</Label>
+                  <Label htmlFor="samagri-tab-enabled">Offer on Booking</Label>
                   <Select
                     value={form.samagri_available ? "yes" : "no"}
                     onValueChange={(v) => {
@@ -1592,7 +1630,7 @@ export default function ServicesAdmin() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="samagri-tab-price">Kit price for this puja (₹)</Label>
+                  <Label htmlFor="samagri-tab-price">Kit Price for This Puja (₹)</Label>
                   <Input
                     id="samagri-tab-price"
                     type="number"
@@ -1618,7 +1656,7 @@ export default function ServicesAdmin() {
             {editId ? (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label>Preparation / Samagri items for this service</Label>
+                  <Label>Samagri Items for This Puja</Label>
                   <Select
                     value={form.samagri_review_status}
                     onValueChange={(v) =>
@@ -1628,171 +1666,162 @@ export default function ServicesAdmin() {
                       })
                     }
                   >
-                    <SelectTrigger className="w-[11rem]">
+                    <SelectTrigger className="w-[13rem]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="UNVERIFIED">UNVERIFIED</SelectItem>
-                      <SelectItem value="VERIFIED">VERIFIED</SelectItem>
-                      <SelectItem value="NEEDS_REVIEW">NEEDS_REVIEW</SelectItem>
+                      <SelectItem value="VERIFIED">Ready for Customers</SelectItem>
+                      <SelectItem value="UNVERIFIED">Not Ready</SelectItem>
+                      <SelectItem value="NEEDS_REVIEW">Needs Review</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Only VERIFIED lists are shown to customers after booking. Scale qty fields (S/M/L/G) are Admin-overridable.
+                  Customers see this list on their booking receipt only when it is Ready for customers.
                 </p>
-                <ul className="text-sm space-y-1 max-h-36 overflow-y-auto">
-                  {linked.map((it) => (
-                    <li key={it.samagri_item_id || it.id} className="flex items-start justify-between gap-2">
-                      <span>
-                        {it.name}
-                        {it.qty_small || it.quantity != null
-                          ? ` — S:${qtyWithUnit(it.qty_small || it.quantity, it.unit)}`
-                          : ""}
-                        {it.qty_medium ? ` · M:${qtyWithUnit(it.qty_medium, it.unit)}` : ""}
-                        {it.qty_large ? ` · L:${qtyWithUnit(it.qty_large, it.unit)}` : ""}
-                        {it.qty_grand ? ` · G:${qtyWithUnit(it.qty_grand, it.unit)}` : ""}
-                        {it.provided_by ? ` · ${it.provided_by}` : ""}
-                        {it.optional ? " (optional)" : it.required ? " (required)" : ""}
-                      </span>
-                      {canSamagri && it.samagri_item_id ? (
-                        <button
+                {[
+                  { title: "Included in Kit", items: linked.filter(isKitItem) },
+                  { title: "Customer Arranges", items: linked.filter((it) => !isKitItem(it)) },
+                ].map((group) => (
+                  <div key={group.title} className="space-y-1">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      {group.title} ({group.items.length})
+                    </p>
+                    <ul className="text-sm space-y-1 max-h-36 overflow-y-auto">
+                      {group.items.map((it) => (
+                        <li key={it.samagri_item_id || it.id} className="flex items-start justify-between gap-2">
+                          <span>
+                            {it.name}
+                            {it.qty_small || it.quantity != null
+                              ? ` — ${qtyWithUnit(it.qty_small || it.quantity, it.unit)}`
+                              : ""}
+                            {it.optional ? " (optional)" : ""}
+                          </span>
+                          {canSamagri && it.samagri_item_id ? (
+                            <button
+                              type="button"
+                              className="shrink-0 text-xs font-medium text-primary hover:underline"
+                              onClick={() => editLinkedItem(it)}
+                            >
+                              Edit
+                            </button>
+                          ) : null}
+                        </li>
+                      ))}
+                      {group.items.length === 0 && <li className="text-muted-foreground">None yet</li>}
+                    </ul>
+                  </div>
+                ))}
+                {canSamagri && (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div className="space-y-1">
+                    <Label>Item</Label>
+                    <SamagriItemPicker
+                      items={samagriItems}
+                      addedIds={linked.map((it) => String(it.samagri_item_id))}
+                      value={linkItemId}
+                      onOpen={loadSamagriItems}
+                      onChange={(id) => {
+                        const existing = linked.find((it) => String(it.samagri_item_id) === id);
+                        if (existing) {
+                          editLinkedItem(existing);
+                          return;
+                        }
+                        setLinkItemId(id);
+                        setLinkUnit(String(samagriItems.find((it) => it.id === id)?.unit || ""));
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Can't find it here? Add it first in the{" "}
+                      <a href={adminPath("/samagri")} target="_blank" rel="noreferrer" className="text-primary underline">
+                        Samagri tab
+                      </a>
+                      , then come back and pick it.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="link-qty">Quantity</Label>
+                      <Input
+                        id="link-qty"
+                        inputMode="decimal"
+                        placeholder="e.g. 2"
+                        value={linkQty}
+                        onChange={(e) => setLinkQty(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="link-unit">Unit</Label>
+                      <Input
+                        id="link-unit"
+                        placeholder="e.g. pcs"
+                        value={linkUnit}
+                        onChange={(e) => setLinkUnit(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Who provides this?</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "Included in Kit", kit: true },
+                        { label: "Customer Arranges", kit: false },
+                      ].map((option) => (
+                        <Button
+                          key={option.label}
                           type="button"
-                          className="shrink-0 text-xs font-medium text-primary hover:underline"
+                          variant={isKitItem({ provided_by: linkProvidedBy }) === option.kit ? "default" : "outline"}
                           onClick={() => {
-                            // Load into the form below; "Link item" saves it again (the API upserts).
-                            setLinkItemId(String(it.samagri_item_id));
-                            setLinkQty(String(it.qty_small ?? it.quantity ?? ""));
-                            setLinkSizes({
-                              qty_medium: it.qty_medium != null ? String(it.qty_medium) : "",
-                              qty_large: it.qty_large != null ? String(it.qty_large) : "",
-                              qty_grand: it.qty_grand != null ? String(it.qty_grand) : "",
-                            });
-                            setLinkUnit(String(it.unit || ""));
-                            if (it.category) setLinkCategory(String(it.category));
-                            if (it.provided_by) setLinkProvidedBy(String(it.provided_by));
-                            setLinkOptional(Boolean(it.optional));
+                            if (option.kit && !isKitItem({ provided_by: linkProvidedBy })) setLinkProvidedBy("BSEVA");
+                            if (!option.kit) setLinkProvidedBy("CUSTOMER");
                           }}
                         >
-                          Edit
-                        </button>
-                      ) : null}
-                    </li>
-                  ))}
-                  {linked.length === 0 && <li className="text-muted-foreground">None linked yet</li>}
-                </ul>
-                {canSamagri && (
-                <>
-                <div className="grid grid-cols-2 gap-2">
-                  <Select value={linkItemId} onValueChange={setLinkItemId}>
-                    <SelectTrigger className="col-span-2">
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {samagriItems.map((it) => (
-                        <SelectItem key={it.id} value={it.id}>
-                          {it.name}
-                        </SelectItem>
+                          {option.label}
+                        </Button>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {SAMAGRI_SIZES.map((size) => {
-                      const isSmall = size.key === "qty_small";
-                      const own = linkSizes[size.key];
-                      const value = isSmall ? linkQty : own ? own : linkQty ? scaledQty(linkQty, size.factor) : "";
-                      return (
-                        <div key={size.key} className="space-y-1">
-                          <Label className="text-xs">{size.label}</Label>
-                          <Input
-                            placeholder={isSmall ? "Qty" : `×${size.factor}`}
-                            value={value}
-                            onChange={(e) =>
-                              isSmall
-                                ? setLinkQty(e.target.value)
-                                : setLinkSizes((prev) => ({ ...prev, [size.key]: e.target.value }))
-                            }
-                          />
-                        </div>
-                      );
-                    })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      If the customer doesn't buy the kit, kit items move to their "arrange" list.
+                    </p>
                   </div>
-                  <p className="col-span-2 text-xs text-muted-foreground">
-                    Medium, Large and Grand fill in from Small (×1.5, ×3, ×5). Change any of them if this item scales differently.
-                  </p>
-                  <Input
-                    placeholder="Unit"
-                    value={linkUnit}
-                    onChange={(e) => setLinkUnit(e.target.value)}
-                    className="col-span-2 sm:col-span-1"
-                  />
-                  <Select value={linkCategory} onValueChange={setLinkCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PUJA_SAMAGRI">Puja Samagri</SelectItem>
-                      <SelectItem value="PRASADAM">Prasadam</SelectItem>
-                      <SelectItem value="HOME_VENUE">Home / venue</SelectItem>
-                      <SelectItem value="OPTIONAL">Optional</SelectItem>
-                      <SelectItem value="PUJARI_OR_BSEVA">Pujari / BSeva</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={linkProvidedBy} onValueChange={setLinkProvidedBy}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Provided by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CUSTOMER">Customer</SelectItem>
-                      <SelectItem value="INCLUDED_IN_SAMAGRI_PACKAGE">Included in kit</SelectItem>
-                      <SelectItem value="BSEVA">BSeva</SelectItem>
-                      <SelectItem value="PUJARI">Pujari</SelectItem>
-                      <SelectItem value="OPTIONAL">Optional</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={linkOptional} onCheckedChange={(v) => setLinkOptional(!!v)} />
+                    Optional item
+                  </label>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!linkItemId}
+                    onClick={async () => {
+                      if (!editId || !linkItemId) return;
+                      const parsedQty = parseFloat(linkQty);
+                      try {
+                        await api(`/admin/services/${editId}/samagri`, {
+                          method: "POST",
+                          body: JSON.stringify({
+                            samagri_item_id: linkItemId,
+                            required: !linkOptional,
+                            optional: linkOptional,
+                            customer_provided: linkProvidedBy === "CUSTOMER",
+                            sort_order: linked.length,
+                            quantity: Number.isFinite(parsedQty) ? parsedQty : null,
+                            unit: linkUnit || null,
+                            category: linkCategory,
+                            provided_by: linkProvidedBy,
+                            qty_small: linkQty || null,
+                          }),
+                        });
+                        toast.success("Item saved");
+                        resetLinkForm();
+                        await loadLinked(editId);
+                      } catch (e: any) {
+                        toast.error(e.message);
+                      }
+                    }}
+                  >
+                    {linked.some((it) => String(it.samagri_item_id) === linkItemId) ? "Update Item" : "Add Item"}
+                  </Button>
                 </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={linkOptional} onCheckedChange={(v) => setLinkOptional(!!v)} />
-                  Optional item
-                </label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={async () => {
-                    if (!editId || !linkItemId) return;
-                    try {
-                      await api(`/admin/services/${editId}/samagri`, {
-                        method: "POST",
-                        body: JSON.stringify({
-                          samagri_item_id: linkItemId,
-                          required: !linkOptional,
-                          optional: linkOptional,
-                          customer_provided: linkProvidedBy === "CUSTOMER",
-                          sort_order: linked.length,
-                          quantity: linkQty && Number.isFinite(parseFloat(linkQty)) ? parseFloat(linkQty) : null,
-                          unit: linkUnit || null,
-                          category: linkCategory,
-                          provided_by: linkProvidedBy,
-                          qty_small: linkQty || null,
-                          qty_medium: linkSizes.qty_medium || (linkQty ? scaledQty(linkQty, 1.5) : null),
-                          qty_large: linkSizes.qty_large || (linkQty ? scaledQty(linkQty, 3) : null),
-                          qty_grand: linkSizes.qty_grand || (linkQty ? scaledQty(linkQty, 5) : null),
-                          scale_override: true,
-                        }),
-                      });
-                      toast.success("Item linked");
-                      setLinkItemId("");
-                      setLinkQty("");
-                      setLinkSizes({});
-                      await loadLinked(editId);
-                    } catch (e: any) {
-                      toast.error(e.message);
-                    }
-                  }}
-                >
-                  Link item
-                </Button>
-                </>
                 )}
               </div>
             ) : (
@@ -1802,7 +1831,7 @@ export default function ServicesAdmin() {
 
               <TabsContent value="advanced" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>Admin internal notes</Label>
+              <Label>Admin Internal Notes</Label>
               <Textarea
                 value={form.admin_notes}
                 onChange={(e) => setForm({ ...form, admin_notes: e.target.value })}
@@ -1819,7 +1848,7 @@ export default function ServicesAdmin() {
             </Button>
             {canServices && (
               <Button type="submit" form="add-service-form" disabled={saving}>
-                {saving ? "Saving…" : editId ? "Save changes" : "Add service"}
+                {saving ? "Saving…" : editId ? "Save Changes" : "Add Service"}
               </Button>
             )}
           </DialogFooter>
@@ -1901,7 +1930,7 @@ export default function ServicesAdmin() {
                       ) : Number(s.samagri_price_paise) > 0 ? (
                         rupees(Number(s.samagri_price_paise))
                       ) : (
-                        <span className="text-muted-foreground" title="Platform default on booking">
+                        <span className="text-muted-foreground" title="Platform Default on Booking">
                           Default
                         </span>
                       )}
@@ -1970,7 +1999,7 @@ export default function ServicesAdmin() {
                           variant="secondary"
                           className="gap-1.5"
                           onClick={() => openEdit(s)}
-                          title="Replace image"
+                          title="Replace Image"
                         >
                           <ImageIcon size="0.875rem" />
                           Image

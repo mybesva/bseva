@@ -61,7 +61,7 @@ function htmlShell(key: string) {
     const destination = { lat: Number(dlat), lng: Number(dlng) };
     if (!dest) {
       dest = new google.maps.Marker({
-        map, position: destination, title: 'Puja location',
+        map, position: destination, title: 'Puja Location',
         icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#1A2B4A', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
       });
     } else {

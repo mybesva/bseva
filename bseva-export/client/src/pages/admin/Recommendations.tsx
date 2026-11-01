@@ -164,7 +164,7 @@ export default function RecommendationsAdmin() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="">
-              {editId ? "Edit recommendation" : "Add recommendation"}
+              {editId ? "Edit Recommendation" : "Add Recommendation"}
             </DialogTitle>
           </DialogHeader>
           <form id="recommendation-form" onSubmit={handleSave} className="space-y-4">
@@ -215,7 +215,7 @@ export default function RecommendationsAdmin() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ANY_MONTH}>Any month</SelectItem>
+                    <SelectItem value={ANY_MONTH}>Any Month</SelectItem>
                     {MONTHS.map((m, i) => (
                       <SelectItem key={m} value={String(i + 1)}>
                         {m}
@@ -225,7 +225,7 @@ export default function RecommendationsAdmin() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec-order">Sort order</Label>
+                <Label htmlFor="rec-order">Sort Order</Label>
                 <Input
                   id="rec-order"
                   type="number"
@@ -235,7 +235,7 @@ export default function RecommendationsAdmin() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rec-recurrence">Recurrence hint</Label>
+              <Label htmlFor="rec-recurrence">Recurrence Hint</Label>
               <Input
                 id="rec-recurrence"
                 placeholder="e.g. Every Purnima"
@@ -257,7 +257,7 @@ export default function RecommendationsAdmin() {
               Cancel
             </Button>
             <Button type="submit" form="recommendation-form" disabled={saving}>
-              {saving ? "Saving…" : editId ? "Save changes" : "Add recommendation"}
+              {saving ? "Saving…" : editId ? "Save Changes" : "Add Recommendation"}
             </Button>
           </DialogFooter>
         </DialogContent>

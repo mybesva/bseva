@@ -1,20 +1,20 @@
 /** Shared admin QA helpers — validation, filters, chip selection. */
 
 export const ADMIN_BOOKING_STATUS_FILTERS = [
-  { id: "", label: "All statuses" },
+  { id: "", label: "All Statuses" },
   { id: "pending", label: "Pending" },
-  { id: "pending_acceptance", label: "Pending acceptance" },
+  { id: "pending_acceptance", label: "Pending Acceptance" },
   { id: "confirmed", label: "Confirmed" },
-  { id: "in_progress", label: "In progress" },
+  { id: "in_progress", label: "In Progress" },
   { id: "completed", label: "Completed" },
   { id: "cancelled", label: "Cancelled" },
   { id: "rejected", label: "Rejected" },
-  { id: "needs_reassignment", label: "Needs reassignment" },
-  { id: "waiting_pujari", label: "Waiting for pujari response" },
-  { id: "needs_assignment", label: "Needs pujari assignment" },
-  { id: "date_passed", label: "Puja date passed" },
-  { id: "confirmed_upcoming", label: "Confirmed (upcoming)" },
-  { id: "not_completed", label: "Puja not marked complete" },
+  { id: "needs_reassignment", label: "Needs Reassignment" },
+  { id: "waiting_pujari", label: "Waiting for Pujari Response" },
+  { id: "needs_assignment", label: "Needs Pujari Assignment" },
+  { id: "date_passed", label: "Puja Date Passed" },
+  { id: "confirmed_upcoming", label: "Confirmed (Upcoming)" },
+  { id: "not_completed", label: "Puja Not Marked Complete" },
 ] as const;
 
 /** Status for admin lists: a pending booking nobody has been asked to take reads "No pujari assigned". */
@@ -28,15 +28,15 @@ export function adminBookingDisplayStatus(booking: {
 }
 
 export const ADMIN_ASSIGNMENT_FILTERS = [
-  { id: "", label: "All assignments" },
-  { id: "unassigned", label: "Needs assignment" },
+  { id: "", label: "All Assignments" },
+  { id: "unassigned", label: "Needs Assignment" },
   { id: "assigned", label: "Assigned" },
 ] as const;
 
 export const ADMIN_DATE_RANGE_FILTERS = [
-  { id: "", label: "All dates" },
-  { id: "last_30", label: "Last 30 days" },
-  { id: "custom", label: "Between dates" },
+  { id: "", label: "All Dates" },
+  { id: "last_30", label: "Last 30 Days" },
+  { id: "custom", label: "Between Dates" },
 ] as const;
 
 /** ISO date strings for admin booking list “last 30 days” filter (matches web). */

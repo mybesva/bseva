@@ -42,7 +42,7 @@ import {
   Wallet,
   ChevronRight,
 } from "lucide-react";
-import { format, isSameDay, isSameMonth } from "date-fns";
+import { format, isSameDay, isSameMonth, startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -128,6 +128,7 @@ function PujariDashboardContent() {
     };
   }, [rows]);
 
+  const today = startOfDay(now);
   const bookingDates = useMemo(() => {
     return rows
       .map((b) => (b.booking.bookingDate ? new Date(b.booking.bookingDate) : null))
@@ -499,7 +500,7 @@ function PujariDashboardContent() {
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <CardTitle className="text-foreground text-lg leading-tight">
-                  New booking requests
+                  New Booking Requests
                 </CardTitle>
                 <p className="text-sm text-muted-foreground font-normal">
                   {isLoading
@@ -538,7 +539,7 @@ function PujariDashboardContent() {
               <>
                 <div
                   className="max-h-[26rem] overflow-y-auto space-y-3 pr-1 overscroll-contain"
-                  aria-label="New booking requests list"
+                  aria-label="New Booking Requests List"
                 >
                   {pendingAcceptance.map((row) => (
                     <BookingListItem key={row.booking.id} row={row} showAcceptReject />
@@ -563,7 +564,7 @@ function PujariDashboardContent() {
         {!isLoading && readyToStart.length > 0 && (
           <Card className="rounded-3xl border border-[#BFD3EE] bg-[#F1F6FD] dark:border-white/10 dark:bg-white/5">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-foreground">Ready to start (OTP)</CardTitle>
+              <CardTitle className="text-base text-foreground">Ready to Start (OTP)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {readyToStart.slice(0, DASHBOARD_LIST_LIMIT).map((row) => (
@@ -593,14 +594,21 @@ function PujariDashboardContent() {
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
-                modifiers={{ booked: bookingDates }}
+                modifiers={{
+                  past: { before: today },
+                  booked: bookingDates.filter((date) => date >= today),
+                  pastBooked: bookingDates.filter((date) => date < today),
+                }}
                 modifiersClassNames={{
+                  past: PAST_DAY,
                   booked: "bg-primary/20 text-primary font-bold rounded-md",
+                  pastBooked: "bg-slate-200 dark:bg-slate-700 rounded-md font-bold",
                 }}
                 className="rounded-md border border-border"
               />
               <p className="text-xs text-muted-foreground mt-3">
-                Highlighted dates have assigned bookings.
+                Orange dates have upcoming bookings. Grey dates have passed, and a shaded grey date had a booking. Select
+                any date to see its bookings.
               </p>
 
               <div className="mt-6 space-y-2">
@@ -623,7 +631,7 @@ function PujariDashboardContent() {
               <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-foreground">Your Bookings</CardTitle>
                 <Button variant="outline" size="sm" onClick={() => setLocation("/pujari/bookings")}>
-                  View all
+                  View All
                 </Button>
               </CardHeader>
               <CardContent>
@@ -774,7 +782,7 @@ function PujariDashboardContent() {
             <DialogHeader className="text-left">
               <DialogTitle className="text-foreground">
                 {detailIntent === "reject" ? (
-                  "Reject booking"
+                  "Reject Booking"
                 ) : selectedBooking ? (
                   <PujaTitle name={selectedBooking.pujaType.name} as="span" />
                 ) : null}
@@ -825,6 +833,9 @@ function PujariDashboardContent() {
     </>
   );
 }
+
+// Past days stay clickable so pujaris can open past bookings; a selected day keeps its normal colours.
+const PAST_DAY = "[&>button:not([data-selected-single=true])]:text-muted-foreground/60";
 
 export default function PujariDashboard() {
   return (

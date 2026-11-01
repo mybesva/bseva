@@ -43,18 +43,37 @@ const SETTING_GROUPS: { id: string; title: string; description?: string }[] = [
   { id: "features", title: "Features", description: "Platform feature flags." },
   {
     id: "service_area",
-    title: "Service area unavailable message",
+    title: "Service Area Unavailable Message",
     description: "Message shown when a customer is outside the locations currently served by BSeva.",
   },
-  { id: "booking", title: "Booking & puja day", description: "When OTP, tracking, and full booking details become available." },
-  { id: "pricing", title: "Pricing & surge", description: "GST and date-based surcharges. Puja prices are set per service. Surge is added to the quoted puja total." },
+  { id: "booking", title: "Booking & Puja Day", description: "When OTP, tracking, and full booking details become available." },
+  {
+    id: "rescheduling",
+    title: "Rescheduling",
+    description: "When customers can move a puja and what it costs. All fees apply per booking and start at ₹0.",
+  },
+  { id: "pricing", title: "Pricing & Surge", description: "GST and date-based surcharges. Puja prices are set per service. Surge is added to the quoted puja total." },
   { id: "pujari", title: "Pujari", description: "Settlement, joining fee, no-show, and assignment rules." },
   { id: "email", title: "Email", description: "From-addresses used in outgoing mail." },
     { id: "invoices", title: "Invoices", description: "Company, GST, numbering, SAC/HSN, and invoice notes. Used on new invoices only — issued invoices stay unchanged." },
 ];
 
 const PLATFORM_KEYS: PlatformKey[] = [
-  { key: "bseva_whatsapp_number", label: "WhatsApp number (digits, with country code)", type: "string", group: "contact" },
+  { key: "bseva_whatsapp_number", label: "WhatsApp Number (Digits, with Country Code)", type: "string", group: "contact" },
+  {
+    key: "support_phone",
+    label: "Support Phone Number (Digits, with Country Code)",
+    type: "string",
+    group: "contact",
+    hint: "Used by the Call button on bookings. Leave blank to use the WhatsApp number.",
+  },
+  {
+    key: "support_email",
+    label: "Support Email for Customers",
+    type: "string",
+    group: "contact",
+    hint: "Used by the Email button on bookings. Leave blank to use the Support email from the Email section.",
+  },
   {
     key: "virtual_puja_enabled",
     label: "Virtual & Online Puja",
@@ -79,56 +98,109 @@ const PLATFORM_KEYS: PlatformKey[] = [
   },
   {
     key: "service_area_unavailable_heading",
-    label: "Unavailable service area heading",
+    label: "Unavailable Service Area Heading",
     type: "string",
     group: "service_area",
     hint: "Short heading shown above the explanation, for example “We’re not in your area yet”.",
   },
   {
     key: "service_area_unavailable_description",
-    label: "Unavailable service area description",
+    label: "Unavailable Service Area Description",
     type: "string",
     group: "service_area",
     multiline: true,
     hint: "Explain that service is unavailable at this location and how the customer can get help or check back later.",
   },
-  { key: "puja_start_otp_before_minutes", label: "Start OTP available minutes before start", type: "number", group: "booking", hint: "Default 15." },
+  { key: "puja_start_otp_before_minutes", label: "Start OTP Available Minutes Before Start", type: "number", group: "booking", hint: "Default 15." },
   {
     key: "pujari_location_tracking_before_minutes",
-    label: "Pujari tracking visible minutes before start",
+    label: "Pujari Tracking Visible Minutes Before Start",
     type: "number",
     group: "booking",
     hint: "Default 15.",
   },
   {
     key: "pujari_full_booking_details_before_hours",
-    label: "Full customer location before (hours)",
+    label: "Full Customer Location Before (Hours)",
     type: "number",
     group: "booking",
     hint: "Default 20. Assigned pujari sees full address/maps after this.",
   },
-  { key: "pujari_gps_update_interval_seconds", label: "Pujari GPS update interval (seconds)", type: "number", group: "booking", hint: "Default 60." },
-  { key: "customer_tracking_refresh_seconds", label: "Customer tracking refresh (seconds)", type: "number", group: "booking", hint: "Default 60." },
-  { key: "pujari_arrival_radius_meters", label: "Arrival geofence radius (meters)", type: "number", group: "booking", hint: "Default 100." },
-  { key: "pujari_arrival_confirm_pings", label: "Arrival confirmation pings", type: "number", group: "booking", hint: "Consecutive in-radius GPS points required. Default 2." },
-  { key: "puja_complete_otp_before_minutes", label: "Completion OTP minutes before expected end", type: "number", group: "booking", hint: "Default 15. Expected end = actual start + service duration." },
-  { key: "puja_otp_expiry_minutes", label: "Start OTP expiry (minutes)", type: "number", group: "booking", hint: "Default 240." },
-  { key: "puja_complete_otp_expiry_minutes", label: "Completion OTP expiry (minutes)", type: "number", group: "booking", hint: "Default 480. Does not auto-complete the puja." },
-  { key: "puja_otp_resend_cooldown_seconds", label: "OTP resend cooldown (seconds)", type: "number", group: "booking", hint: "Default 60." },
-  { key: "puja_otp_max_requests_per_hour", label: "OTP max requests per hour", type: "number", group: "booking", hint: "Default 5." },
-  { key: "puja_otp_max_verify_attempts", label: "OTP max verify attempts", type: "number", group: "booking", hint: "Default 5, then a short lockout." },
+  { key: "pujari_gps_update_interval_seconds", label: "Pujari GPS Update Interval (Seconds)", type: "number", group: "booking", hint: "Default 60." },
+  { key: "customer_tracking_refresh_seconds", label: "Customer Tracking Refresh (Seconds)", type: "number", group: "booking", hint: "Default 60." },
+  { key: "pujari_arrival_radius_meters", label: "Arrival Geofence Radius (Meters)", type: "number", group: "booking", hint: "Default 100." },
+  { key: "pujari_arrival_confirm_pings", label: "Arrival Confirmation Pings", type: "number", group: "booking", hint: "Consecutive in-radius GPS points required. Default 2." },
+  { key: "puja_complete_otp_before_minutes", label: "Completion OTP Minutes Before Expected End", type: "number", group: "booking", hint: "Default 15. Expected end = actual start + service duration." },
+  { key: "puja_otp_expiry_minutes", label: "Start OTP Expiry (Minutes)", type: "number", group: "booking", hint: "Default 240." },
+  { key: "puja_complete_otp_expiry_minutes", label: "Completion OTP Expiry (Minutes)", type: "number", group: "booking", hint: "Default 480. Does not auto-complete the puja." },
+  { key: "puja_otp_resend_cooldown_seconds", label: "OTP Resend Cooldown (Seconds)", type: "number", group: "booking", hint: "Default 60." },
+  { key: "puja_otp_max_requests_per_hour", label: "OTP Max Requests per Hour", type: "number", group: "booking", hint: "Default 5." },
+  { key: "puja_otp_max_verify_attempts", label: "OTP Max Verify Attempts", type: "number", group: "booking", hint: "Default 5, then a short lockout." },
   { key: "puja_otp_lock_minutes", label: "OTP lockout minutes after failed attempts", type: "number", group: "booking", hint: "Default 10." },
-  { key: "pujari_settlement_days", label: "Settlement hold days", type: "number", group: "pujari", hint: "Auto-settle every N days (≈ 2 weeks)." },
+  { key: "pujari_settlement_days", label: "Pujari Payment Cycle (Days)", type: "number", group: "pujari", hint: "Default 3. Paydays repeat every N days from each pujari's joining date." },
+  { key: "reschedule_enabled", label: "Allow Customer Rescheduling", type: "boolean", group: "rescheduling", superOnly: true },
+  {
+    key: "reschedule_cutoff_hours",
+    label: "Rescheduling Cutoff (Hours)",
+    type: "number",
+    group: "rescheduling",
+    superOnly: true,
+    hint: "Customers can reschedule only while the puja is more than this many hours away.",
+  },
+  {
+    key: "reschedule_fee_enabled",
+    label: "Charge Rescheduling Fees",
+    type: "boolean",
+    group: "rescheduling",
+    superOnly: true,
+    hint: "When off, every eligible reschedule is free, whatever the amounts below say.",
+  },
+  { key: "reschedule_first_fee_paise", label: "First Reschedule Fee (₹)", type: "number", group: "rescheduling", superOnly: true, money: true },
+  {
+    key: "reschedule_subsequent_fee_paise",
+    label: "Later Reschedule Fee (₹)",
+    type: "number",
+    group: "rescheduling",
+    superOnly: true,
+    money: true,
+    hint: "Applies from the second reschedule of the same booking.",
+  },
+  {
+    key: "reschedule_performance_rule_enabled",
+    label: "Use Pujari Rating Rule",
+    type: "boolean",
+    group: "rescheduling",
+    superOnly: true,
+    hint: "When on, a booking whose pujari is rated below the minimum pays the fee below instead.",
+  },
+  { key: "reschedule_performance_min_rating", label: "Minimum Pujari Rating (Out of 5)", type: "number", group: "rescheduling", superOnly: true },
+  { key: "reschedule_performance_fee_paise", label: "Fee Below That Rating (₹)", type: "number", group: "rescheduling", superOnly: true, money: true },
+  {
+    key: "customer_platform_fee_paise",
+    label: "Customer Platform Fee (₹)",
+    type: "number",
+    group: "booking",
+    money: true,
+    hint: "Added to every booking and shown on the invoice. Example: 9.",
+  },
+  { key: "payment_gateway_name", label: "Payment Gateway Name", type: "string", group: "booking", hint: "Shown on invoices. Example: Razorpay or Cashfree." },
+  {
+    key: "payment_gateway_fee_percent",
+    label: "Payment Gateway Fee (%)",
+    type: "number",
+    group: "booking",
+    hint: "Percentage added to every booking. Example: 2 for Razorpay or 1.8 for Cashfree.",
+  },
   {
     key: "pujari_joining_fee_enabled",
-    label: "Pujari joining fee",
+    label: "Pujari Joining Fee",
     type: "boolean",
     group: "pujari",
     hint: "When on, new pujaris are asked to pay the joining fee during onboarding.",
   },
   {
     key: "pujari_joining_fee_paise",
-    label: "Pujari joining fee (₹)",
+    label: "Pujari Joining Fee (₹)",
     type: "number",
     group: "pujari",
     money: true,
@@ -136,7 +208,7 @@ const PLATFORM_KEYS: PlatformKey[] = [
   },
   {
     key: "pujari_no_show_penalty_enabled",
-    label: "Pujari no-show penalty",
+    label: "Pujari No-Show Penalty",
     type: "boolean",
     group: "pujari",
     hint: "When on, 100% of that puja’s cost is deducted from the pujari wallet.",
@@ -150,7 +222,7 @@ const PLATFORM_KEYS: PlatformKey[] = [
   },
   {
     key: "pujari_cancel_wallet_negative_limit_paise",
-    label: "Pujari wallet negative limit (₹)",
+    label: "Pujari Wallet Negative Limit (₹)",
     type: "number",
     group: "pujari",
     money: true,
@@ -158,88 +230,88 @@ const PLATFORM_KEYS: PlatformKey[] = [
   },
   {
     key: "assign_distance_rings_km",
-    label: "Reassignment distance rings (km)",
+    label: "Reassignment Distance Rings (Km)",
     type: "json",
     group: "pujari",
     hint: "First number is the default nearby radius (e.g. 10). Reassign shows within that distance first, then farther pujaris.",
   },
   {
     key: "pujari_schedule_buffer_hours",
-    label: "Pujari schedule buffer (hours)",
+    label: "Pujari Schedule Buffer (Hours)",
     type: "number",
     group: "pujari",
     hint: "Unavailable this many hours after a confirmed puja ends, and before the next start. Default 4.",
   },
-  { key: "email_from_support", label: "Support email", type: "string", group: "email" },
-  { key: "email_from_contact", label: "Contact email", type: "string", group: "email" },
-  { key: "email_from_accounts", label: "Accounts email", type: "string", group: "email" },
-  { key: "email_from_admin", label: "Admin email", type: "string", group: "email" },
-  { key: "email_from_info", label: "Info email", type: "string", group: "email" },
-  { key: "invoice_brand_name", label: "Brand name", type: "string", group: "invoices" },
-  { key: "invoice_company_name", label: "Legal company name", type: "string", group: "invoices" },
+  { key: "email_from_support", label: "Support Email", type: "string", group: "email" },
+  { key: "email_from_contact", label: "Contact Email", type: "string", group: "email" },
+  { key: "email_from_accounts", label: "Accounts Email", type: "string", group: "email" },
+  { key: "email_from_admin", label: "Admin Email", type: "string", group: "email" },
+  { key: "email_from_info", label: "Info Email", type: "string", group: "email" },
+  { key: "invoice_brand_name", label: "Brand Name", type: "string", group: "invoices" },
+  { key: "invoice_company_name", label: "Legal Company Name", type: "string", group: "invoices" },
   {
     key: "invoice_company_address",
-    label: "Complete address",
+    label: "Complete Address",
     type: "string",
     group: "invoices",
     hint: "Use commas, e.g. 123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India.",
     multiline: true,
   },
   { key: "invoice_company_state", label: "State", type: "string", group: "invoices" },
-  { key: "invoice_company_pincode", label: "PIN code", type: "string", group: "invoices" },
-  { key: "invoice_company_email", label: "Invoice email", type: "string", group: "invoices" },
+  { key: "invoice_company_pincode", label: "PIN Code", type: "string", group: "invoices" },
+  { key: "invoice_company_email", label: "Invoice Email", type: "string", group: "invoices" },
   { key: "invoice_company_phone", label: "Phone", type: "string", group: "invoices" },
   { key: "invoice_gstin", label: "GSTIN", type: "string", group: "invoices" },
   { key: "invoice_website", label: "Website", type: "string", group: "invoices" },
-  { key: "invoice_prefix_customer", label: "Customer invoice prefix", type: "string", group: "invoices", hint: "Used as BSEVA/2026-27/000001." },
-  { key: "invoice_prefix_settlement", label: "Settlement invoice prefix", type: "string", group: "invoices" },
-  { key: "invoice_signatory_name", label: "Authorized signatory name", type: "string", group: "invoices" },
-  { key: "invoice_signatory_designation", label: "Authorized signatory designation", type: "string", group: "invoices" },
-  { key: "invoice_sac_code", label: "SAC code (services)", type: "string", group: "invoices", hint: "Shown on tax invoices. Default 999799. GST % is set in Pricing — invoices use the rate stored on the booking." },
-  { key: "invoice_hsn_code", label: "HSN code (optional)", type: "string", group: "invoices" },
-  { key: "invoice_terms", label: "Invoice terms & conditions", type: "string", group: "invoices", multiline: true },
-  { key: "invoice_notes", label: "Invoice notes / footer", type: "string", group: "invoices", multiline: true },
+  { key: "invoice_prefix_customer", label: "Customer Invoice Prefix", type: "string", group: "invoices", hint: "Used as BSEVA/2026-27/000001." },
+  { key: "invoice_prefix_settlement", label: "Settlement Invoice Prefix", type: "string", group: "invoices" },
+  { key: "invoice_signatory_name", label: "Authorized Signatory Name", type: "string", group: "invoices" },
+  { key: "invoice_signatory_designation", label: "Authorized Signatory Designation", type: "string", group: "invoices" },
+  { key: "invoice_sac_code", label: "SAC Code (Services)", type: "string", group: "invoices", hint: "Shown on tax invoices. Default 999799. GST % is set in Pricing — invoices use the rate stored on the booking." },
+  { key: "invoice_hsn_code", label: "HSN Code (Optional)", type: "string", group: "invoices" },
+  { key: "invoice_terms", label: "Invoice Terms & Conditions", type: "string", group: "invoices", multiline: true },
+  { key: "invoice_notes", label: "Invoice Notes / Footer", type: "string", group: "invoices", multiline: true },
 ];
 
 const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: string; group: "customer" | "pujari" }[] = [
     {
     key: "customer_cancel_fee_over_48h_percent",
-    label: "Customer fee % when cancelling >48h before",
+    label: "Customer Fee % When Cancelling >48h Before",
     type: "number",
     group: "customer",
     hint: "Default 10. Refund = 100 − this %.",
   },
   {
     key: "customer_cancel_fee_24_48h_percent",
-    label: "Customer fee % when cancelling 24–48h before",
+    label: "Customer Fee % When Cancelling 24–48h Before",
     type: "number",
     group: "customer",
     hint: "Default 50.",
   },
   {
     key: "customer_cancel_fee_under_24h_percent",
-    label: "Customer fee % when cancelling under 24h",
+    label: "Customer Fee % When Cancelling Under 24h",
     type: "number",
     group: "customer",
     hint: "Default 100. Full charge — no refund.",
   },
   {
     key: "pujari_cancel_fee_over_48h_percent",
-    label: "Pujari penalty % when cancelling >48h before",
+    label: "Pujari Penalty % When Cancelling >48h Before",
     type: "number",
     group: "pujari",
     hint: "Charged to pujari wallet. Customer gets full refund.",
   },
   {
     key: "pujari_cancel_fee_24_48h_percent",
-    label: "Pujari penalty % when cancelling 24–48h before",
+    label: "Pujari Penalty % When Cancelling 24–48h Before",
     type: "number",
     group: "pujari",
     hint: "Default 50. Charged to pujari wallet.",
   },
   {
     key: "pujari_cancel_fee_under_24h_percent",
-    label: "Pujari penalty % when cancelling under 24h",
+    label: "Pujari Penalty % When Cancelling Under 24h",
     type: "number",
     group: "pujari",
     hint: "Default 100. Same as no-show: 100% of that puja’s cost is deducted from the pujari wallet. Customer is refunded in full.",
@@ -429,7 +501,7 @@ function DateSurgeEditor({ cfg, onSaved }: { cfg: Record<string, unknown>; onSav
     }
     return (
       <div className="space-y-1">
-        <Label>Surge amount (₹)</Label>
+        <Label>Surge Amount (₹)</Label>
         <div className="relative">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
           <Input className="pl-7" type="number" min={0} step="1" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -440,7 +512,7 @@ function DateSurgeEditor({ cfg, onSaved }: { cfg: Record<string, unknown>; onSav
 
   return (
     <div className="space-y-4 rounded-lg border border-border p-4">
-      <h3 className="font-semibold text-foreground">Date surge</h3>
+      <h3 className="font-semibold text-foreground">Date Surge</h3>
       <p className="text-xs text-muted-foreground">
         Added to the puja total at quote and checkout. If a festival date falls on a weekend, both surges apply.
       </p>
@@ -455,12 +527,12 @@ function DateSurgeEditor({ cfg, onSaved }: { cfg: Record<string, unknown>; onSav
 
       <div className="space-y-3 rounded-md border border-border/70 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-sm font-medium">Festival dates</h4>
+          <h4 className="text-sm font-medium">Festival Dates</h4>
           <ModeToggle value={festivalMode} onChange={setFestivalMode} />
         </div>
         {valueField(festivalMode, festivalPercent, setFestivalPercent, festivalAmount, setFestivalAmount)}
         <div className="space-y-2">
-          <Label>Select festival dates</Label>
+          <Label>Select Festival Dates</Label>
           <p className="text-xs text-muted-foreground">Tap dates on the calendar. Surge applies only on the dates you select.</p>
           <div className="rounded-md border border-border w-fit bg-background">
             <Calendar
@@ -496,7 +568,7 @@ function DateSurgeEditor({ cfg, onSaved }: { cfg: Record<string, unknown>; onSav
                 setAddDate("");
               }}
             >
-              Add date
+              Add Date
             </Button>
           </div>
           {festivalDates.length > 0 && (
@@ -523,7 +595,7 @@ function DateSurgeEditor({ cfg, onSaved }: { cfg: Record<string, unknown>; onSav
       </div>
 
       <Button onClick={() => void save()} disabled={saving}>
-        {saving ? "Saving…" : "Save surge"}
+        {saving ? "Saving…" : "Save Surge"}
       </Button>
     </div>
   );
@@ -770,7 +842,7 @@ export default function Settings() {
         {[
           ...SETTING_GROUPS.map((group) => ({ id: `settings-${group.id}`, title: group.title })),
           { id: "settings-cancellation", title: "Cancellation" },
-          { id: "settings-pujari-roles", title: "Pujari roles" },
+          { id: "settings-pujari-roles", title: "Pujari Roles" },
         ].map((item) => (
           <Button
             key={item.id}
@@ -835,7 +907,7 @@ export default function Settings() {
 
         <Card id="settings-cancellation" className="scroll-mt-24">
           <CardHeader>
-            <CardTitle className="">Cancellation policy</CardTitle>
+            <CardTitle className="">Cancellation Policy</CardTitle>
             <p className="text-sm text-muted-foreground">
               Time-based fees for customer and pujari cancellations. Values are percentages of booking total.
             </p>
@@ -843,8 +915,8 @@ export default function Settings() {
           <CardContent className="space-y-6">
             {(
               [
-                { id: "customer" as const, title: "Customer cancellation" },
-                { id: "pujari" as const, title: "Pujari cancellation (accepted bookings)" },
+                { id: "customer" as const, title: "Customer Cancellation" },
+                { id: "pujari" as const, title: "Pujari Cancellation (Accepted Bookings)" },
               ] as const
             ).map((section) => (
               <div key={section.id} className="space-y-4 rounded-lg border border-border p-4">
@@ -889,7 +961,7 @@ export default function Settings() {
 
         <Card id="settings-pujari-roles" className="scroll-mt-24">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-            <CardTitle className="">Pujari roles</CardTitle>
+            <CardTitle className="">Pujari Roles</CardTitle>
             <Button size="sm" className="gap-2" onClick={openAddRole}>
               <Plus size="1rem" />
               Add role
@@ -993,7 +1065,7 @@ export default function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role-examples">Examples (one per line)</Label>
+              <Label htmlFor="role-examples">Examples (One per Line)</Label>
               <Textarea
                 id="role-examples"
                 placeholder={"Ganapathi Puja\nLakshmi Puja"}
@@ -1008,7 +1080,7 @@ export default function Settings() {
               Cancel
             </Button>
             <Button type="submit" form="role-form" disabled={savingRole}>
-              {savingRole ? "Saving…" : editingRole ? "Save changes" : "Add role"}
+              {savingRole ? "Saving…" : editingRole ? "Save Changes" : "Add Role"}
             </Button>
           </DialogFooter>
         </DialogContent>

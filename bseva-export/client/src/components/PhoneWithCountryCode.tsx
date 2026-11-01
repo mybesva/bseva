@@ -40,7 +40,7 @@ export default function PhoneWithCountryCode({
       </Label>
       <div className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-2 w-full">
         <select
-          aria-label="Country code"
+          aria-label="Country Code"
           value={countryCode}
           disabled={disabled}
           onChange={(e) => onCountryCodeChange(e.target.value as PhoneCountryCode)}

@@ -87,7 +87,7 @@ export function AddressForm({
       <Field label={t("mobile.country")} value={value.country || "India"} onChangeText={(v) => set("country", v)} />
       <Field label={t("mobile.locationLabel")} value={value.location_label || ""} onChangeText={(v) => set("location_label", v)} />
       {includeGstin ? (
-        <Field label="GSTIN (optional)" value={value.gstin || ""} onChangeText={(v) => set("gstin", v)} autoCapitalize="characters" />
+        <Field label="GSTIN (Optional)" value={value.gstin || ""} onChangeText={(v) => set("gstin", v)} autoCapitalize="characters" />
       ) : null}
       {value.latitude != null ? (
         <AppText variant="small">

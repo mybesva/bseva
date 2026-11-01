@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import rate_limit, sensitive_auth as sa
 from app.audit import write_audit
 from app.config import settings
 from app.db import get_db
@@ -62,6 +63,7 @@ def load_wallet(body: WalletLoadIn, user=Depends(current_user), db: Session = De
 def admin_credit_wallet(
     user_id: str,
     body: WalletAdminCreditIn,
+    request: Request,
     admin=Depends(require_super_admin),
     db: Session = Depends(get_db),
 ):
@@ -70,12 +72,26 @@ def admin_credit_wallet(
     The payment reference is mandatory and may be used only once per wallet, so a retried
     request can never credit the same payment twice."""
     reference = body.reference.strip()
+    bound_reference = sa.wallet_credit_reference(user_id, reference)
+    ip = rate_limit.client_ip(request)
     target = db.execute(
         text("SELECT id, role FROM users WHERE id = CAST(:id AS uuid)"),
         {"id": user_id},
     ).mappings().first()
     if not target:
         raise HTTPException(404, "User not found")
+    sa.verify_challenge(
+        db,
+        admin,
+        challenge_id=str(body.challenge_id),
+        otp=body.otp,
+        mpin=body.mpin,
+        action="wallet_credit",
+        audit_action="wallet_credit",
+        ip=ip,
+        amount_paise=body.amount_paise,
+        reference=bound_reference,
+    )
     # Lock the wallet first so two concurrent requests with the same reference serialise here.
     wallet = db.execute(
         text("SELECT id FROM wallets WHERE user_id = CAST(:uid AS uuid) FOR UPDATE"),
@@ -96,6 +112,7 @@ def admin_credit_wallet(
         {"uid": user_id, "ref": reference, "prefix": f"{ADMIN_CREDIT_PREFIX}%"},
     ).first()
     if duplicate:
+        sa.log_failure(db, admin, "wallet_credit", "duplicate_reference", amount_paise=body.amount_paise, reference=bound_reference, ip=ip)
         raise HTTPException(409, "This payment reference has already been credited to this wallet")
     note = (body.note or "").strip() or "Offline payment"
     try:
@@ -108,7 +125,9 @@ def admin_credit_wallet(
             reference=reference,
         )
     except ValueError as e:
+        sa.log_failure(db, admin, "wallet_credit", str(e), amount_paise=body.amount_paise, reference=bound_reference, ip=ip)
         raise HTTPException(400, str(e))
     write_audit(db, str(admin["id"]), "wallet_admin_credit", "user", user_id, reason=reference)
+    sa.log_event(db, admin, "wallet_credit", "success", amount_paise=body.amount_paise, reference=bound_reference, ip=ip)
     db.commit()
     return {"ok": True, "balance_paise": bal}

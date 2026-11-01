@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Ship the compose file + host scripts to the QA or Production host and run deploy.sh through SSM Run Command.
 
-Env: TAG (sha-…), REGISTRY (ECR registry host), AWS_REGION, DEPLOY_ENV (qa|production), DOMAIN. Credentials: the OIDC role.
+Env: TAG (sha-…), REGISTRY (ECR registry host), AWS_REGION, DEPLOY_ENV (qa|production), DOMAIN, EXTRA_DOMAINS,
+MODE (deploy|preflight; preflight only checks the target database and prints the migration plan). Credentials: the OIDC role.
 The instance is found by tags (Project=bseva, Environment=<qa|production>, Name=bseva-<qa|prod>-app). Exits non-zero
 if the remote deploy (including its automatic rollback) fails.
 """
@@ -26,6 +27,12 @@ SHORT = {"qa": "qa", "production": "prod"}[ENV_NAME]  # resource names and paths
 IMAGE_PREFIX = {"qa": "bseva", "production": "bseva-prod"}[ENV_NAME]
 DOMAIN = os.environ.get("DOMAIN") or os.environ.get("QA_DOMAIN", "qa.b-seva.com")
 EXTRA_DOMAINS = os.environ.get("EXTRA_DOMAINS", "").strip()  # e.g. "www.b-seva.com app.b-seva.com" (redirect to DOMAIN)
+MODE = os.environ.get("MODE", "deploy")
+if MODE not in ("deploy", "preflight"):
+    sys.exit(f"MODE must be deploy or preflight, not {MODE!r}")
+# Production must keep serving b-seva.com with www/app redirecting to it; a wrong value here would rewrite Nginx.
+if ENV_NAME == "production" and (DOMAIN != "b-seva.com" or set(EXTRA_DOMAINS.split()) != {"www.b-seva.com", "app.b-seva.com"}):
+    sys.exit(f"production expects DOMAIN=b-seva.com and EXTRA_DOMAINS='www.b-seva.com app.b-seva.com', got {DOMAIN!r} / {EXTRA_DOMAINS!r}")
 
 FILES = {
     "/opt/bseva/compose/compose.yml": REPO / "deploy/compose/compose.yml",
@@ -57,12 +64,12 @@ commands.append(
     "printf 'ENV_NAME=%s\\nIMAGE_PREFIX=%s\\nREGISTRY=%s\\nDOMAIN=%s\\nEXTRA_DOMAINS=\"%s\"\\nAWS_REGION=%s\\n' "
     f"'{SHORT}' '{IMAGE_PREFIX}' '{REGISTRY}' '{DOMAIN}' '{EXTRA_DOMAINS}' '{REGION}' > /opt/bseva/.env && chmod 0644 /opt/bseva/.env"
 )
-commands.append(f"/opt/bseva/bin/deploy.sh '{TAG}'")
+commands.append(f"/opt/bseva/bin/deploy.sh --preflight '{TAG}'" if MODE == "preflight" else f"/opt/bseva/bin/deploy.sh '{TAG}'")
 
 cmd = ssm.send_command(
     InstanceIds=[instance_id],
     DocumentName="AWS-RunShellScript",
-    Comment=f"bseva {ENV_NAME} deploy {TAG}"[:100],
+    Comment=f"bseva {ENV_NAME} {MODE} {TAG}"[:100],
     Parameters={"commands": commands, "executionTimeout": ["1500"]},
     TimeoutSeconds=600,
 )["Command"]["CommandId"]

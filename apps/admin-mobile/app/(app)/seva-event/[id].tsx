@@ -20,7 +20,7 @@ export default function AdminSevaEventDetailScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Event detail" />
+      <ScreenHeader title="Event Detail" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         {manifest.isLoading ? <LoadingBlock /> : null}
         {manifest.data?.event ? (
@@ -39,7 +39,7 @@ export default function AdminSevaEventDetailScreen() {
           </AppText>
         ))}
         <AppText variant="h3" style={{ marginTop: 12 }}>
-          Sankalp manifest
+          Sankalp Manifest
         </AppText>
         {(manifest.data?.participants || []).map((p, i) => (
           <AppText key={String(p.registration_number || i)}>

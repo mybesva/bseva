@@ -89,9 +89,9 @@ function PujariRolesCard({
 
   return (
     <Card style={{ gap: 8 }}>
-      <AppText variant="h3">Pujari roles / levels</AppText>
+      <AppText variant="h3">Pujari Roles / Levels</AppText>
       <Field
-        label="Search roles or levels"
+        label="Search Roles or Levels"
         placeholder="Search roles or levels…"
         value={roleSearch}
         onChangeText={setRoleSearch}
@@ -106,8 +106,8 @@ function PujariRolesCard({
                 <AppText variant="h3">Edit level {role.level}</AppText>
                 <Field label="Title" value={editTitle} onChangeText={setEditTitle} />
                 <Field label="Summary" value={editSummary} onChangeText={setEditSummary} />
-                <Field label="Examples (one per line)" value={editExamplesText} onChangeText={setEditExamplesText} multiline />
-                <PrimaryButton title="Update role" loading={saving} onPress={() => void saveEdit(role.id)} />
+                <Field label="Examples (One per Line)" value={editExamplesText} onChangeText={setEditExamplesText} multiline />
+                <PrimaryButton title="Update Role" loading={saving} onPress={() => void saveEdit(role.id)} />
                 <PrimaryButton
                   title="Cancel"
                   variant="ghost"
@@ -155,11 +155,11 @@ function PujariRolesCard({
           </Card>
         );
       })}
-      <AppText variant="h3">Add role</AppText>
+      <AppText variant="h3">Add Role</AppText>
       <Field label="Title" value={addTitle} onChangeText={setAddTitle} />
       <Field label="Summary" value={addSummary} onChangeText={setAddSummary} />
-      <Field label="Examples (one per line)" value={addExamplesText} onChangeText={setAddExamplesText} multiline />
-      <PrimaryButton title="Add role" loading={saving && !editingId} onPress={() => void saveNew()} />
+      <Field label="Examples (One per Line)" value={addExamplesText} onChangeText={setAddExamplesText} multiline />
+      <PrimaryButton title="Add Role" loading={saving && !editingId} onPress={() => void saveNew()} />
     </Card>
   );
 }
@@ -220,7 +220,7 @@ export default function AdminSettings() {
         {pricing.isLoading || config.isLoading ? <LoadingBlock /> : null}
         <Card>
           <AppText variant="h3">GST %</AppText>
-          <Field label="GST percent" value={gst} onChangeText={setGst} keyboardType="decimal-pad" />
+          <Field label="GST Percent" value={gst} onChangeText={setGst} keyboardType="decimal-pad" />
           <PrimaryButton
             title={t("admin.save")}
             onPress={async () => {
@@ -241,7 +241,7 @@ export default function AdminSettings() {
             }}
           />
         </Card>
-        <Field label="Search platform settings" value={filter} onChangeText={setFilter} placeholder="Filter config keys…" />
+        <Field label="Search Platform Settings" value={filter} onChangeText={setFilter} placeholder="Filter config keys…" />
         <PujariRolesCard setError={setError} setSuccess={setSuccess} />
         {keys.map((k) => {
           const original = config.data?.[k];

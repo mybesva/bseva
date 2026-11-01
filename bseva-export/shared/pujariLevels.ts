@@ -90,7 +90,7 @@ export function cancellationPolicy(hoursUntil: number) {
     window: "<24h" as const,
     feePercent: 100,
     refundPercent: 0,
-    title: "Less than 24 hours",
+    title: "Less than 24 Hours",
     message: "Cancelling less than 24 hours before the puja is a 100% charge (no refund).",
   };
 }

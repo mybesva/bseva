@@ -2,12 +2,18 @@ from datetime import date
 
 from app.invoice_docs import (
     _allocate_gst,
+    _invoice_booking_mode,
     _tax_split,
     amount_in_words,
     format_duration_minutes,
     indian_fy,
     pdf_filename,
 )
+
+
+def test_invoice_booking_mode_reads_as_words():
+    assert _invoice_booking_mode(None, {}, {"booking_mode": "in_person"}) == "In Person"
+    assert _invoice_booking_mode(None, {}, {"booking_mode": "virtual"}) == "Virtual"
 
 
 def test_amount_in_words_matches_indian_invoice_style():

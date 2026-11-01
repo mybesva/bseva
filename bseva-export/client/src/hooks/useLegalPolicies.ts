@@ -32,7 +32,7 @@ const FALLBACK: LegalPolicy[] = [
     version: TERMS_VERSION,
     points: [
       {
-        title: "Booking confirmation",
+        title: "Booking Confirmation",
         body: "Confirming a booking means you accept the selected service, pujari, date, time, package and mode.",
       },
       {
@@ -46,9 +46,9 @@ const FALLBACK: LegalPolicy[] = [
     title: "Cancellation Policy",
     version: TERMS_VERSION,
     points: [
-      { title: "More than 48 hours", body: "10% cancellation charge, 90% refund to Customer Wallet." },
+      { title: "More than 48 Hours", body: "10% cancellation charge, 90% refund to Customer Wallet." },
       { title: "24–48 hours", body: "50% cancellation charge, 50% refund to Customer Wallet." },
-      { title: "Less than 24 hours", body: "100% cancellation charge, no refund. If the pujari cancels in this window, 100% of that puja’s cost is deducted from their wallet (same as no-show) and the customer is refunded in full." },
+      { title: "Less than 24 Hours", body: "100% cancellation charge, no refund. If the pujari cancels in this window, 100% of that puja’s cost is deducted from their wallet (same as no-show) and the customer is refunded in full." },
     ],
   },
   {

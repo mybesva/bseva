@@ -286,20 +286,20 @@ export default function VirtualPuja() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="pending_acceptance">Pending acceptance</SelectItem>
+              <SelectItem value="pending_acceptance">Pending Acceptance</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="in_progress">In progress</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
-              <SelectItem value="needs_reassignment">Needs reassignment</SelectItem>
-              <SelectItem value="waiting_pujari">Waiting for pujari response</SelectItem>
-              <SelectItem value="needs_assignment">Needs pujari assignment</SelectItem>
-              <SelectItem value="date_passed">Puja date passed</SelectItem>
-              <SelectItem value="confirmed_upcoming">Confirmed (upcoming)</SelectItem>
-              <SelectItem value="not_completed">Puja not marked complete</SelectItem>
+              <SelectItem value="needs_reassignment">Needs Reassignment</SelectItem>
+              <SelectItem value="waiting_pujari">Waiting for Pujari Response</SelectItem>
+              <SelectItem value="needs_assignment">Needs Pujari Assignment</SelectItem>
+              <SelectItem value="date_passed">Puja Date Passed</SelectItem>
+              <SelectItem value="confirmed_upcoming">Confirmed (Upcoming)</SelectItem>
+              <SelectItem value="not_completed">Puja Not Marked Complete</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -310,14 +310,14 @@ export default function VirtualPuja() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All assignments</SelectItem>
-              <SelectItem value="unassigned">Needs assignment</SelectItem>
+              <SelectItem value="all">All Assignments</SelectItem>
+              <SelectItem value="unassigned">Needs Assignment</SelectItem>
               <SelectItem value="assigned">Assigned</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Customer date</Label>
+          <Label className="text-xs">Customer Date</Label>
           <Select
             value={rangeFilter}
             onValueChange={(v) => updateFilters({ range: v, from: v === "custom" ? dateFrom : "", to: v === "custom" ? dateTo : "" })}
@@ -326,9 +326,9 @@ export default function VirtualPuja() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All dates</SelectItem>
-              <SelectItem value="last_30">Last 30 days</SelectItem>
-              <SelectItem value="custom">Between dates</SelectItem>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="last_30">Last 30 Days</SelectItem>
+              <SelectItem value="custom">Between Dates</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -390,8 +390,8 @@ export default function VirtualPuja() {
             <TableHead className="sticky top-0 z-20 bg-card border-b">Service</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Customer</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Country / TZ</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">Customer time</TableHead>
-            <TableHead className="sticky top-0 z-20 bg-card border-b">India time</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">Customer Time</TableHead>
+            <TableHead className="sticky top-0 z-20 bg-card border-b">India Time</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Pujari</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Payment</TableHead>
             <TableHead className="sticky top-0 z-20 bg-card border-b">Status</TableHead>
@@ -451,7 +451,7 @@ export default function VirtualPuja() {
                       variant={needsAttention ? "default" : "outline"}
                       onClick={() => void openReassign(b)}
                     >
-                      {!b.pujari_id ? "Assign pujari" : "Reassign"}
+                      {!b.pujari_id ? "Assign Pujari" : "Reassign"}
                     </Button>
                     )}
                     {canManage && canPenalise && b.pujari_id && (
@@ -523,9 +523,9 @@ export default function VirtualPuja() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{p.name}</span>
                             <Badge variant="outline">Level {p.approved_level ?? "—"}</Badge>
-                            {isCurrent && <Badge variant="secondary">Currently assigned</Badge>}
+                            {isCurrent && <Badge variant="secondary">Currently Assigned</Badge>}
                             {p.schedule_conflict && (
-                              <Badge variant="destructive">Schedule conflict</Badge>
+                              <Badge variant="destructive">Schedule Conflict</Badge>
                             )}
                           </div>
                           <div className="text-sm text-muted-foreground">
@@ -555,7 +555,7 @@ export default function VirtualPuja() {
                           {assigningId === p.id
                             ? "Assigning…"
                             : p.schedule_conflict
-                              ? "Assign anyway"
+                              ? "Assign Anyway"
                               : "Assign"}
                         </Button>
                       </div>

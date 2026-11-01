@@ -148,7 +148,7 @@ export default function CustomersPage() {
       <Dialog open={open && canCreate} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="">Add customer</DialogTitle>
+            <DialogTitle className="">Add Customer</DialogTitle>
           </DialogHeader>
           <form id="add-customer-form" onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">
@@ -183,7 +183,7 @@ export default function CustomersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="customer-location">City / area</Label>
+              <Label htmlFor="customer-location">City / Area</Label>
               <Input
                 id="customer-location"
                 placeholder="e.g. Jayanagar, Bangalore"
@@ -209,7 +209,7 @@ export default function CustomersPage() {
               Cancel
             </Button>
             <Button type="submit" form="add-customer-form" disabled={saving}>
-              {saving ? "Adding…" : "Add customer"}
+              {saving ? "Adding…" : "Add Customer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -217,7 +217,7 @@ export default function CustomersPage() {
 
       <div className="flex flex-wrap gap-2 mb-4 items-end">
         <div className="space-y-1">
-          <Label className="text-xs">Status filter</Label>
+          <Label className="text-xs">Status Filter</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
             <SelectTrigger className="w-[11.25rem]">
               <SelectValue />

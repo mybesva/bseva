@@ -12,6 +12,8 @@ import { Calendar, Clock, MapPin, Printer, ArrowLeft, Loader2, Download, Share2 
 import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
+import BookingContactSupport from "@/components/BookingContactSupport";
+import RescheduleCard from "@/components/RescheduleCard";
 import { translatedTokenLabel } from "@bseva/config";
 import { useI18n } from "@/i18n/I18nProvider";
 import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
@@ -181,6 +183,17 @@ export default function BookingReceipt() {
           )}
         </div>
 
+        {user?.role === "customer" ? <BookingContactSupport bookingNumber={String(booking.booking_number || booking.id)} /> : null}
+
+        {user?.role === "customer" && (canCancel || Number(booking.reschedule_count || 0) > 0) ? (
+          <RescheduleCard
+            bookingId={String(booking.id)}
+            customerTimezone={booking.customer_timezone}
+            virtual={booking.mode === "virtual"}
+            onChanged={() => api<any>(`/bookings/${encodeURIComponent(String(booking.id))}`).then(setBooking)}
+          />
+        ) : null}
+
         <Card className="border-2 border-primary/30 shadow-md print:shadow-none print:border">
           <CardHeader className="border-b bg-secondary/20 print:bg-transparent">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -290,10 +303,18 @@ export default function BookingReceipt() {
                   <span>{rupees(booking.peak_fee_paise)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("web.booking.platformFee")}</span>
-                <span>{rupees(booking.platform_fee_paise)}</span>
-              </div>
+              {Number(booking.customer_platform_fee_paise || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("web.booking.platformFee")}</span>
+                  <span>{rupees(booking.customer_platform_fee_paise)}</span>
+                </div>
+              )}
+              {Number(booking.gateway_fee_paise || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{booking.gateway_name || "Payment Gateway"} Transaction Fee</span>
+                  <span>{rupees(booking.gateway_fee_paise)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("booking.gst")} ({booking.gst_percent ?? 18}%)</span>
                 <span>{rupees(booking.gst_amount_paise)}</span>

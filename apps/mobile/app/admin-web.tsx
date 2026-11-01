@@ -17,7 +17,7 @@ export default function AdminUseAdminApp() {
             Admin and Super Admin operations run in the separate B-Seva Admin mobile app (com.bseva.admin) or the web admin console. This Customer + Pujari app will not expose admin tools.
           </AppText>
           <PrimaryButton
-            title="Sign out"
+            title="Sign Out"
             onPress={async () => {
               await logout();
               router.replace("/");

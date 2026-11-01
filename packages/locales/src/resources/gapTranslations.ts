@@ -674,4 +674,49 @@ Object.assign(mr, qaCopy.mr);
 Object.assign(kn, qaCopy.kn);
 Object.assign(ta, qaCopy.ta);
 
+const statusAndInvoiceCopy: Record<Exclude<Lang, "en">, Dict> = {
+  hi: {
+    "status.correction_required": "सुधार आवश्यक",
+    "status.under_review": "समीक्षाधीन",
+    "mobile.invoiceTypeCreditNote": "रिफंड नोट",
+    "mobile.invoiceTypeSettlement": "निपटान",
+  },
+  te: {
+    "status.correction_required": "సవరణ అవసరం",
+    "status.under_review": "సమీక్షలో ఉంది",
+    "mobile.invoiceTypeCreditNote": "రీఫండ్ నోట్",
+    "mobile.invoiceTypeSettlement": "సెటిల్‌మెంట్",
+  },
+  mr: {
+    "status.correction_required": "दुरुस्ती आवश्यक",
+    "status.under_review": "पुनरावलोकनाधीन",
+    "mobile.invoiceTypeCreditNote": "परतावा नोट",
+    "mobile.invoiceTypeSettlement": "सेटलमेंट",
+  },
+  kn: {
+    "status.correction_required": "ತಿದ್ದುಪಡಿ ಅಗತ್ಯ",
+    "status.under_review": "ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ",
+    "mobile.invoiceTypeCreditNote": "ಮರುಪಾವತಿ ಟಿಪ್ಪಣಿ",
+    "mobile.invoiceTypeSettlement": "ಸೆಟಲ್‌ಮೆಂಟ್",
+  },
+  ta: {
+    "status.correction_required": "திருத்தம் தேவை",
+    "status.under_review": "பரிசீலனையில் உள்ளது",
+    "mobile.invoiceTypeCreditNote": "பணத்திரும்பல் குறிப்பு",
+    "mobile.invoiceTypeSettlement": "தீர்வு",
+  },
+  ml: {
+    "status.correction_required": "തിരുത്തൽ ആവശ്യമാണ്",
+    "status.under_review": "അവലോകനത്തിലാണ്",
+    "mobile.invoiceTypeCreditNote": "റീഫണ്ട് നോട്ട്",
+    "mobile.invoiceTypeSettlement": "സെറ്റിൽമെന്റ്",
+  },
+};
+Object.assign(hi, statusAndInvoiceCopy.hi);
+Object.assign(te, statusAndInvoiceCopy.te);
+Object.assign(mr, statusAndInvoiceCopy.mr);
+Object.assign(kn, statusAndInvoiceCopy.kn);
+Object.assign(ta, statusAndInvoiceCopy.ta);
+Object.assign(qaCopy.ml, statusAndInvoiceCopy.ml);
+
 export const gapTranslations: Record<Exclude<Lang, "en">, Dict> = { hi, te, mr, kn, ta, ml: qaCopy.ml };

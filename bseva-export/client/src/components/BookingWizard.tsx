@@ -191,6 +191,9 @@ function buildBookingBill(input: {
       peakFee: Number(quote.peakFee ?? 0),
       subtotal: Number(quote.subtotal ?? 0),
       gstPercent,
+      customerPlatformFee: Number(quote.customerPlatformFee ?? 0),
+      gatewayFee: Number(quote.gatewayFee ?? 0),
+      gatewayName: String(quote.gatewayName ?? ""),
       gstAmount: Number(quote.gstAmount ?? 0),
       totalAmount: Number(quote.totalAmount),
       isPeakDay: Boolean(quote.peakReason || Number(quote.peakFee ?? 0) > 0),
@@ -234,6 +237,9 @@ function buildBookingBill(input: {
     food,
     peakFee,
     subtotal,
+    customerPlatformFee: 0,
+    gatewayFee: 0,
+    gatewayName: "",
     gstPercent,
     gstAmount,
     totalAmount,
@@ -563,6 +569,18 @@ export default function BookingWizard({
           <span className="text-muted-foreground">{t("booking.subtotal")}</span>
           <span className="font-medium tabular-nums">{formatInr(bill.subtotal)}</span>
         </div>
+        {bill.customerPlatformFee > 0 && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">{t("web.booking.platformFee")}</span>
+            <span className="font-medium tabular-nums">{formatInr(bill.customerPlatformFee)}</span>
+          </div>
+        )}
+        {bill.gatewayFee > 0 && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">{bill.gatewayName} Transaction Fee</span>
+            <span className="font-medium tabular-nums">{formatInr(bill.gatewayFee)}</span>
+          </div>
+        )}
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">
             {t("booking.gst")} ({bill.gstPercent}%)
@@ -988,11 +1006,11 @@ export default function BookingWizard({
       }
 
       if (!isVirtual) {
-        const avail = await api<{ service_available: boolean }>(
-          `/service-availability?lat=${lat}&lng=${lng}`
+        const avail = await api<{ service_available: boolean; message?: string }>(
+          `/service-availability?lat=${lat}&lng=${lng}&service_id=${encodeURIComponent(serviceId)}`
         );
         if (!avail.service_available) {
-          toast.error(t(COMING_SOON_TITLE), { description: t(COMING_SOON_BODY) });
+          toast.error(avail.message || t(COMING_SOON_TITLE));
           return;
         }
       }
@@ -1083,7 +1101,9 @@ export default function BookingWizard({
       setIdempotencyKey(newIdempotencyKey());
       setLocation(`/booking/${result.id || result.booking_number}`);
     } catch (error: any) {
-      if (error?.code === "SERVICE_AREA_UNAVAILABLE" || isServiceAreaUnavailableError(error?.message)) {
+      if (error?.code === "PUJA_UNAVAILABLE_AT_ADDRESS") {
+        toast.error(error.message);
+      } else if (error?.code === "SERVICE_AREA_UNAVAILABLE" || isServiceAreaUnavailableError(error?.message)) {
         toast.error(t(COMING_SOON_TITLE), { description: t(COMING_SOON_BODY) });
       } else {
         toast.error(friendlyBookingError(error?.message, t) || t("booking.failed"));

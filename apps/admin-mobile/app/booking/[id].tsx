@@ -99,7 +99,7 @@ export default function AdminBookingDetail() {
                 onPress={() => setPujariId(p.id)}
               />
             ))}
-            <PrimaryButton title={force ? "Force assign ON" : "Force assign OFF"} variant="ghost" onPress={() => setForce((v) => !v)} />
+            <PrimaryButton title={force ? "Force Assign ON" : "Force Assign OFF"} variant="ghost" onPress={() => setForce((v) => !v)} />
             <PrimaryButton title={t("admin.assign")} loading={busy} onPress={() => void assign()} />
             <PrimaryButton
               title="No-show penalty"

@@ -1,4 +1,5 @@
 import { pujariEarningsStats, rupees, translatedTokenLabel } from "@bseva/config";
+import { formatDisplayDateTime } from "@bseva/locales";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,7 +31,7 @@ export default function PujariEarnings() {
       >
         {bookings.isLoading ? <LoadingBlock /> : null}
         <Card>
-          <AppText variant="small">This month</AppText>
+          <AppText variant="small">This Month</AppText>
           <AppText variant="h1" color={colors.primary}>
             {rupees(stats.thisMonth)}
           </AppText>
@@ -52,14 +53,14 @@ export default function PujariEarnings() {
           <AppText variant="h2">{rupees(stats.settled)}</AppText>
         </Card>
         <Card>
-          <AppText variant="small">Settlement pending</AppText>
+          <AppText variant="small">Settlement Pending</AppText>
           <AppText variant="h2">{rupees(stats.settlementPending)}</AppText>
         </Card>
         <AppText variant="h3">{t("mobile.settlements")}</AppText>
         {settleRows.map((s, i) => (
           <Card key={s.id || i}>
             <AppText>{rupees(Number(s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0))}</AppText>
-            <AppText variant="small">{translatedTokenLabel(t(`status.${s.status || ""}`), `status.${s.status || ""}`, s.status, "")} · {s.created_at}</AppText>
+            <AppText variant="small">{translatedTokenLabel(t(`status.${s.status || ""}`), `status.${s.status || ""}`, s.status, "")} · {formatDisplayDateTime(s.created_at)}</AppText>
           </Card>
         ))}
         <AppText variant="small" color={colors.mutedForeground}>

@@ -214,7 +214,7 @@ export default function Reviews() {
           </CardContent>
         </Card>
 
-        <div className="inline-flex rounded-xl border border-border bg-card p-1" role="tablist" aria-label="Rating direction">
+        <div className="inline-flex rounded-xl border border-border bg-card p-1" role="tablist" aria-label="Rating Direction">
           {(
             [
               ["customer_to_pujari", "Customer → Pujari"],
@@ -245,8 +245,8 @@ export default function Reviews() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Booking</TableHead>
-                    <TableHead>{direction === "customer_to_pujari" ? "Customer (rated by)" : "Customer (rated)"}</TableHead>
-                    <TableHead>{direction === "customer_to_pujari" ? "Pujari (rated)" : "Pujari (rated by)"}</TableHead>
+                    <TableHead>{direction === "customer_to_pujari" ? "Customer (Rated By)" : "Customer (Rated)"}</TableHead>
+                    <TableHead>{direction === "customer_to_pujari" ? "Pujari (Rated)" : "Pujari (Rated By)"}</TableHead>
                     <TableHead>Puja Type</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Review</TableHead>
