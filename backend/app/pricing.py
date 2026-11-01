@@ -332,10 +332,8 @@ def compute_quote(
             ("alankaram", "Alankaram", alankaram_charge),
             ("food", "Food / Prasadam", food_charge),
         ],
-        service_id=str(service["id"]),
-        package_type=package_type,
         discount_paise=int(discount_paise or 0) + int(wallet_credit_paise or 0),
-        fallback_rate=float(pricing["gst_percent"]),
+        rate=float(pricing["gst_percent"]),
     )
     fees = customer_fee_settings(db)
     customer_platform_fee = fees["platform_fee_paise"]
@@ -345,10 +343,8 @@ def compute_quote(
         return quote_tax(
             db,
             amounts=[(line_type, description, paise)],
-            service_id=str(service["id"]),
-            package_type=package_type,
             discount_paise=0,
-            fallback_rate=float(pricing["gst_percent"]),
+            rate=float(pricing["gst_percent"]),
         )
 
     platform_tax = fee_tax("platform_fee", "Platform Fee", customer_platform_fee)

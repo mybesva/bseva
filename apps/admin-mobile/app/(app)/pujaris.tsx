@@ -40,6 +40,8 @@ type PujariRow = {
   email?: string;
   phone?: string;
   verification_status?: string;
+  role?: string;
+  is_head_pujari?: boolean;
   requested_level?: number;
   approved_level?: number;
   blocked?: boolean;
@@ -218,6 +220,11 @@ export default function AdminPujaris() {
                   </AppText>
                   <StatusBadge status={displayStatus} />
                 </View>
+                {p.is_head_pujari || p.role === "head_pujari" ? (
+                  <AppText variant="small" color={colors.primary}>
+                    Head Pujari
+                  </AppText>
+                ) : null}
                 <AppText variant="small" color={colors.mutedForeground} style={{ fontFamily: "monospace", marginTop: 2 }}>
                   {p.public_id || "—"}
                 </AppText>

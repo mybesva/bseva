@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { History, Star } from "lucide-react";
+import { CheckCircle2, History, Star, Wallet } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ type Summary = {
   cutoff_hours: number;
   deadline: string;
   next_fee_paise: number;
+  wallet_balance_paise: number;
   lead_hours: number;
   reschedule_count: number;
   pujari_performance?: {
@@ -54,11 +56,13 @@ export default function RescheduleCard({
   virtual: boolean;
   onChanged: () => void | Promise<void>;
 }) {
+  const [, setLocation] = useLocation();
   const [info, setInfo] = useState<Summary | null>(null);
-  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<"closed" | "slot" | "pay" | "done">("closed");
   const [date, setDate] = useState<Date | undefined>();
   const [time, setTime] = useState("10:00");
   const [saving, setSaving] = useState(false);
+  const [doneMessage, setDoneMessage] = useState("");
 
   async function load() {
     setInfo(await api<Summary>(`/bookings/${bookingId}/reschedule`));
@@ -69,23 +73,33 @@ export default function RescheduleCard({
   }, [bookingId]);
 
   async function save() {
-    if (!date) {
+    if (!date || !info) {
       toast.error("Choose a new date");
       return;
     }
+    const fee = info.next_fee_paise;
     setSaving(true);
     try {
       await api(`/bookings/${bookingId}/reschedule`, {
         method: "POST",
-        body: JSON.stringify({ new_date: format(date, "yyyy-MM-dd"), new_start_time: time }),
+        body: JSON.stringify({
+          new_date: format(date, "yyyy-MM-dd"),
+          new_start_time: time,
+          expected_fee_paise: fee,
+        }),
       });
-      toast.success("Puja rescheduled. We are finding a pujari for the new time.");
-      setOpen(false);
+      setDoneMessage(
+        fee
+          ? `${rupees(fee)} was paid from your wallet. We are finding a pujari for the new time.`
+          : "Your puja was rescheduled free of cost. We are finding a pujari for the new time.",
+      );
+      setStep("done");
       setDate(undefined);
       await Promise.all([load(), onChanged()]);
     } catch (e: any) {
       toast.error(e.message);
       await load().catch(() => undefined);
+      setStep("pay");
     } finally {
       setSaving(false);
     }
@@ -94,6 +108,8 @@ export default function RescheduleCard({
   if (!info) return null;
   const performance = info.pujari_performance;
   const rating = performance?.rating;
+  const fee = info.next_fee_paise;
+  const shortfall = Math.max(0, fee - info.wallet_balance_paise);
 
   return (
     <Card className="print:hidden">
@@ -107,12 +123,16 @@ export default function RescheduleCard({
           <div>
             <p className="font-medium">Rescheduled {info.reschedule_count} time{info.reschedule_count === 1 ? "" : "s"}</p>
             <p className="text-muted-foreground">
-              {info.eligible
-                ? `Available until ${formatDisplayDateTime(info.deadline)}. ${info.next_fee_paise ? `Fee: ${rupees(info.next_fee_paise)}` : "Free of charge"}.`
-                : info.blocked_message}
+              {info.eligible ? `Available until ${formatDisplayDateTime(info.deadline)}.` : info.blocked_message}
             </p>
+            {info.eligible ? (
+              <p className="font-medium">
+                Rescheduling Charge: {rupees(fee)}
+                {fee ? "" : " (Free)"}
+              </p>
+            ) : null}
           </div>
-          {info.eligible ? <Button onClick={() => setOpen(true)}>Reschedule Puja</Button> : null}
+          {info.eligible ? <Button onClick={() => setStep("slot")}>Reschedule Puja</Button> : null}
         </div>
 
         {performance ? (
@@ -149,38 +169,107 @@ export default function RescheduleCard({
         ) : null}
       </CardContent>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={step !== "closed"} onOpenChange={(next) => !next && !saving && setStep("closed")}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reschedule Puja</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Your booking and payment stay the same. The current pujari is released and the puja goes out to available
-              pujaris for the new time. Rescheduling {info.next_fee_paise ? `costs ${rupees(info.next_fee_paise)}` : "is free"}.
-            </p>
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              disabled={(day) => isCalendarDayDisabled(day, info.lead_hours)}
-              className="mx-auto rounded-md border"
-            />
-            <div className="space-y-1">
-              <Label htmlFor="reschedule-time">
-                New start time{virtual && customerTimezone ? ` (${customerTimezone})` : ""}
-              </Label>
-              <Input id="reschedule-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void save()} disabled={saving || !date || !time}>
-              {saving ? "Saving…" : "Confirm New Time"}
-            </Button>
-          </DialogFooter>
+          {step === "slot" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Reschedule Puja</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Your booking and payment stay the same. The current pujari is released and the puja goes out to
+                  available pujaris for the new time.
+                </p>
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  disabled={(day) => isCalendarDayDisabled(day, info.lead_hours)}
+                  className="mx-auto rounded-md border"
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="reschedule-time">
+                    New start time{virtual && customerTimezone ? ` (${customerTimezone})` : ""}
+                  </Label>
+                  <Input id="reschedule-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStep("closed")}>
+                  Cancel
+                </Button>
+                <Button onClick={() => setStep("pay")} disabled={!date || !time}>
+                  Continue
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+
+          {step === "pay" && date ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{fee ? "Pay Rescheduling Charge" : "Free Rescheduling"}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">New Time</span>
+                  <span className="font-medium">{slot(format(date, "yyyy-MM-dd"), time)}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Rescheduling Charge</span>
+                  <span className="font-medium">{rupees(fee)}</span>
+                </div>
+                {fee ? (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Wallet Balance</span>
+                    <span className="font-medium">{rupees(info.wallet_balance_paise)}</span>
+                  </div>
+                ) : (
+                  <p className="rounded-lg bg-muted/50 p-3">This reschedule is free of cost. Nothing will be charged.</p>
+                )}
+                {shortfall ? (
+                  <p className="rounded-lg bg-muted/50 p-3">
+                    Your wallet is {rupees(shortfall)} short. Add money to your wallet, then reschedule again.
+                  </p>
+                ) : null}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" disabled={saving} onClick={() => setStep("slot")}>
+                  Back
+                </Button>
+                {shortfall ? (
+                  <Button onClick={() => setLocation("/customer/wallet")}>Add Money to Wallet</Button>
+                ) : (
+                  <Button onClick={() => void save()} disabled={saving}>
+                    {saving ? (
+                      "Saving…"
+                    ) : fee ? (
+                      <>
+                        <Wallet className="size-4" aria-hidden /> Pay {rupees(fee)} from Wallet
+                      </>
+                    ) : (
+                      "Confirm Free Reschedule"
+                    )}
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          ) : null}
+
+          {step === "done" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="size-5 text-emerald-600" aria-hidden /> Puja Rescheduled
+                </DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">{doneMessage}</p>
+              <DialogFooter>
+                <Button onClick={() => setStep("closed")}>OK</Button>
+              </DialogFooter>
+            </>
+          ) : null}
         </DialogContent>
       </Dialog>
     </Card>

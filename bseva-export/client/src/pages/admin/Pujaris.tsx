@@ -1,4 +1,4 @@
-import { displayTokenLabel } from "@bseva/config";
+import { displayTokenLabel, formatIndianPhone } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -143,31 +143,34 @@ function PujariRow({
   const openServices = () => setLocation(`${basePath}/${u.id}#services`);
 
   return (
-    <TableRow className="align-top">
+    <TableRow>
       <TableCell className="font-mono text-xs whitespace-nowrap">{u.public_id || "—"}</TableCell>
-      <TableCell className="min-w-[8.75rem]">
+      <TableCell className="min-w-[9rem] whitespace-normal">
         <button
           type="button"
-          className="text-left font-medium text-primary hover:underline"
+          className="block text-left font-medium text-primary hover:underline"
           onClick={() => setLocation(`${basePath}/${u.id}`)}
         >
           {u.name}
         </button>
+        {u.is_head_pujari || u.role === "head_pujari" ? (
+          <Badge variant="outline" className="mt-1 border-primary/40 font-normal text-primary whitespace-nowrap">
+            Head Pujari
+          </Badge>
+        ) : null}
         <div className="text-xs text-muted-foreground mt-0.5">
           {u.profile_completion_percentage != null ? `${u.profile_completion_percentage}% profile` : ""}
         </div>
       </TableCell>
-      <TableCell className="max-w-[12.5rem] truncate text-sm text-muted-foreground" title={u.email}>
-        {u.email}
-      </TableCell>
-      <TableCell className="max-w-[12.5rem] truncate text-sm" title={personLocation(u)}>
-        {personLocation(u)}
+      <TableCell className="text-sm text-muted-foreground">{formatIndianPhone(u.phone)}</TableCell>
+      <TableCell className="min-w-[8rem] max-w-[10rem] whitespace-normal text-sm" title={personLocation(u)}>
+        <span className="line-clamp-2">{personLocation(u)}</span>
       </TableCell>
       <TableCell>
-        <div className="space-y-1 min-w-[12.5rem] max-w-[15rem]">
+        <div className="space-y-1 w-[10rem]">
           <p className="text-[0.6875rem] text-muted-foreground">Requested level {u.requested_level ?? "—"}</p>
           <Select value={String(level)} onValueChange={(v) => void saveLevel(Number(v))} disabled={saving || !canSetLevel}>
-            <SelectTrigger className="h-9 text-xs" title={canSetLevel ? undefined : "You don't have permission"}>
+            <SelectTrigger className="h-9 w-full text-xs" title={canSetLevel ? undefined : "You don't have permission"}>
               <SelectValue placeholder="Level" />
             </SelectTrigger>
             <SelectContent>
@@ -197,7 +200,7 @@ function PujariRow({
         )}
       </TableCell>
       <TableCell>
-        <div className="flex flex-col gap-2 min-w-[8.125rem]">
+        <div className="flex flex-col gap-1">
           <div className="text-xs leading-relaxed">
             <span className="font-medium text-foreground">{verifiedCount}</span>
             <span className="text-muted-foreground"> verified</span>
@@ -219,20 +222,20 @@ function PujariRow({
         </div>
       </TableCell>
       <TableCell>
-        <Badge
-          variant="outline"
-          className={cn("font-normal whitespace-nowrap", verificationBadgeClass(u.verification_status))}
-        >
-          {formatVerificationStatus(u.verification_status)}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant={u.blocked ? "destructive" : "outline"} className="font-normal">
-          {u.blocked ? "Blocked" : "Active"}
-        </Badge>
+        <div className="flex flex-col items-start gap-1">
+          <Badge
+            variant="outline"
+            className={cn("font-normal whitespace-nowrap", verificationBadgeClass(u.verification_status))}
+          >
+            {formatVerificationStatus(u.verification_status)}
+          </Badge>
+          <Badge variant={u.blocked ? "destructive" : "outline"} className="font-normal">
+            {u.blocked ? "Blocked" : "Active"}
+          </Badge>
+        </div>
       </TableCell>
       <TableCell className="text-right whitespace-nowrap">
-        <div className="inline-flex items-center gap-1">
+        <div className="inline-flex flex-col items-end gap-1">
           <Button size="sm" variant="outline" onClick={() => setLocation(`${basePath}/${u.id}`)}>
             Profile
           </Button>
@@ -449,6 +452,7 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="pending">Pending Verification</SelectItem>
               <SelectItem value="correction_required">Correction Required</SelectItem>
+              <SelectItem value="head_pujari">Head Pujari</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
             </SelectContent>
@@ -572,14 +576,13 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
           <TableRow className="hover:bg-transparent">
             <SortableHead label="ID" column="id" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="w-[6.25rem]" />
             <SortableHead label="Name" column="name" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Email" column="email" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="max-w-[12.5rem]" />
+            <SortableHead label="Phone" column="phone" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="max-w-[12.5rem]" />
             <SortableHead label="Location" column="location" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Approved Level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[12.5rem]" />
+            <SortableHead label="Approved Level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
             <SortableHead label="Experience" column="experience" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Services" column="services" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[8.125rem]" />
-            <SortableHead label="Verification" column="verification" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Account" column="account" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <StaticHead label="Actions" className="text-right min-w-[10rem]" />
+            <SortableHead label="Services" column="services" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <SortableHead label="Status" column="verification" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
+            <StaticHead label="Actions" className="text-right" />
           </TableRow>
         </TableHeader>
         <TableBody>

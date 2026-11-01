@@ -148,6 +148,7 @@ const mr: Record<string, string> = {
   "auth.accountType": "तुम्हाला कोणत्या प्रकारचे खाते हवे आहे?",
   "auth.customer": "ग्राहक",
   "auth.pujari": "पुजारी",
+  "auth.headPujari": "मुख्य पुजारी",
   "auth.blocked": "तुमचे खाते ब्लॉक आहे. BSeva सपोर्टशी संपर्क साधा.",
   "auth.emailOrPhone": "ईमेल किंवा फोन",
   "auth.loginTitle": "BSeva मध्ये लॉगिन",

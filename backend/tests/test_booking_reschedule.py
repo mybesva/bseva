@@ -92,3 +92,45 @@ def test_pujari_stays_hidden_until_the_customer_may_see_them(monkeypatch):
     monkeypatch.setattr(booking_visibility, "can_pujari_see_full", lambda *a: True)
     assert br.pujari_visible_to_customer(None, booking) is True
     assert br.pujari_visible_to_customer(None, {**booking, "status": "pending_acceptance"}) is False
+
+
+class _Db:
+    """Returns the booking for the row lock."""
+
+    def __init__(self, booking):
+        self.booking = booking
+
+    def execute(self, *_args, **_kwargs):
+        booking = self.booking
+
+        class Result:
+            def mappings(self):
+                return self
+
+            def first(self):
+                return booking
+
+        return Result()
+
+
+def test_changed_fee_stops_the_reschedule_before_any_money_moves(monkeypatch):
+    start = datetime.now(timezone.utc) + timedelta(days=10)
+    booking = {
+        "id": "b1",
+        "customer_id": "u1",
+        "status": "confirmed",
+        "payment_status": "paid",
+        "booking_date": start.date(),
+        "start_time": start.time(),
+        "start_at_utc": start,
+        "service_id": "s1",
+        "pujari_id": None,
+        "reschedule_count": 0,
+    }
+    monkeypatch.setattr(br, "reschedule_rules", lambda _db: rules(fee_enabled=True))
+    monkeypatch.setattr(br, "_new_slot", lambda *_a: {})
+    monkeypatch.setattr(br, "pujari_performance", lambda *_a: None)
+    monkeypatch.setattr(br, "apply_wallet", lambda *_a, **_k: pytest.fail("wallet must not be charged"))
+    with pytest.raises(Exception) as err:
+        br.reschedule_booking(_Db(booking), "b1", {"id": "u1"}, start.date(), start.time(), expected_fee_paise=0)
+    assert err.value.status_code == 409

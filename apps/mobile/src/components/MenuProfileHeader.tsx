@@ -14,6 +14,7 @@ import { isAdminRole, isPujariRole } from "@bseva/config";
 function roleLabel(role: string | undefined, t: (k: string) => string) {
   if (role === "super_admin") return "Super Admin";
   if (role === "admin") return "Admin";
+  if (role === "head_pujari") return t("auth.headPujari");
   if (isPujariRole(role)) return t("auth.pujari");
   return t("auth.customer");
 }

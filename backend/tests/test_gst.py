@@ -1,7 +1,7 @@
 """GST rules: tax type, rounding, validation and exclusivity of IGST and CGST/SGST."""
 import pytest
 
-from app import gst
+from app import gst, tax_config
 from app.tax_config import invoice_tax
 
 TELANGANA = "36"
@@ -161,3 +161,25 @@ def test_invoices_issued_before_fees_keep_their_totals():
 
     assert fee_total_rows({"subtotal_paise": 100}) == []
     assert total_label({"subtotal_paise": 100}) == "TOTAL"
+
+
+def test_every_line_uses_the_one_settings_rate_and_code(monkeypatch):
+    monkeypatch.setattr(tax_config, "get_setting", lambda _db, _key, _default=None: "999591")
+    out = tax_config.quote_tax(
+        None,
+        amounts=[("puja", "Puja", 100000), ("samagri", "Samagri", 50000), ("food", "Food", 0)],
+        discount_paise=0,
+        rate=18.0,
+    )
+    assert [(x["line_type"], x["hsn_sac"], x["gst_rate"]) for x in out["lines"]] == [
+        ("puja", "999591", 18.0),
+        ("samagri", "999591", 18.0),
+    ]
+    assert out["tax_paise"] == 27000
+
+
+def test_zero_rate_is_nil_rated(monkeypatch):
+    monkeypatch.setattr(tax_config, "get_setting", lambda _db, _key, _default=None: "999591")
+    out = tax_config.quote_tax(None, amounts=[("puja", "Puja", 100000)], discount_paise=0, rate=0.0)
+    assert out["lines"][0]["classification"] == "nil_rated"
+    assert out["tax_paise"] == 0
