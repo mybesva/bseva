@@ -1,0 +1,19 @@
+{
+  "wait_timer": 0,
+  "prevent_self_review": false,
+  "can_admins_bypass": false,
+  "reviewers": [
+    {
+      "type": "User",
+      "id": 317075826
+    },
+    {
+      "type": "User",
+      "id": 234045771
+    }
+  ],
+  "deployment_branch_policy": {
+    "protected_branches": false,
+    "custom_branch_policies": true
+  }
+}
