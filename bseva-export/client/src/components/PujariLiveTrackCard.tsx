@@ -131,7 +131,7 @@ export default function PujariLiveTrackCard({
           destMarker.current = new google.maps.Marker({
             map: mapRef.current,
             position: dest,
-            title: "Puja location",
+            title: "Puja Location",
             icon: {
               path: google.maps.SymbolPath.CIRCLE,
               scale: 8,
@@ -258,7 +258,7 @@ export default function PujariLiveTrackCard({
       {hasCoords ? (
         <>
           <div className="relative overflow-hidden rounded-md border border-border bg-background">
-            <div ref={mapEl} className="w-full h-56 md:h-72" title="Pujari live location" />
+            <div ref={mapEl} className="w-full h-56 md:h-72" title="Pujari Live Location" />
           </div>
           <div className="flex flex-wrap gap-2 text-xs items-center">
             <Button asChild size="sm" variant="secondary">

@@ -56,14 +56,14 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                     skipped += 1
                 else:
                     if samagri:
-                        title = "Samagri reminder — upcoming puja"
+                        title = "Samagri Reminder — Upcoming Puja"
                         body = (
                             f"Booking {booking_num} ({service_name}): the customer selected Samagri. "
                             f"Please review the Samagri list in your Bookings and arrange materials before the puja."
                         )
                         cat = "samagri_reminder"
                     else:
-                        title = "Upcoming booking reminder"
+                        title = "Upcoming Booking Reminder"
                         body = f"Reminder: {service_name} ({booking_num}) is within {hours_ahead} hours."
                         cat = "booking_reminder"
                     from app.routers.notifications import create_notification, pujari_booking_link
@@ -105,7 +105,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                     create_notification(
                         session,
                         user_id=str(b["customer_id"]),
-                        title="Upcoming puja reminder",
+                        title="Upcoming Puja Reminder",
                         body=(
                             f"Reminder: {service_name} ({booking_num}) starts within "
                             f"{hours_ahead} hours. Your start OTP will appear in the app "
@@ -148,7 +148,7 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                     )
                     notify_ops_staff(
                         session,
-                        title="Call pujari — 24h booking confirmation",
+                        title="Call Pujari — 24h Booking Confirmation",
                         body=(
                             f"Please call the assigned pujari for {service_name} ({booking_num}) "
                             f"to confirm the booking and service details.{sam_bit}"
@@ -324,7 +324,7 @@ def notify_location_unlocked(db: Session | None = None) -> dict:
             create_notification(
                 session,
                 user_id=str(b["pujari_id"]),
-                title="Service location is now available",
+                title="Service Location Is Now Available",
                 body=(
                     f"The customer service location for {b.get('service_name') or 'Puja'} ({num}) "
                     "is now available. Open Bookings for maps and directions."

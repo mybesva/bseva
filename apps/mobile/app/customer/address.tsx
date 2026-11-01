@@ -176,7 +176,7 @@ export function CustomerAddressContent() {
             )}
             <View style={{ height: 20 }} />
             <Field
-              label="GSTIN (optional)"
+              label="GSTIN (Optional)"
               value={gstin}
               onChangeText={setGstin}
               placeholder="If you need GST on invoices"

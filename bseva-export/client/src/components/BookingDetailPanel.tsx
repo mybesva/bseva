@@ -747,7 +747,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="reject-reason">Reason (optional)</Label>
+            <Label htmlFor="reject-reason">Reason (Optional)</Label>
             <Textarea
               id="reject-reason"
               value={rejectReason}
@@ -757,7 +757,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep booking</AlertDialogCancel>
+            <AlertDialogCancel>Keep Booking</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={() =>
@@ -772,7 +772,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 )
               }
             >
-              Confirm reject
+              Confirm Reject
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -786,7 +786,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               : "You can cancel this booking. Under 24 hours the charge is 100% (no refund)."}
           </p>
           <Button variant="destructive" size="sm" disabled={busy} onClick={() => void openCancelDialog()}>
-            Cancel booking
+            Cancel Booking
           </Button>
         </div>
       )}
@@ -842,7 +842,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           )}
           {cancelPreview?.allowed && (
             <div className="space-y-2">
-              <Label htmlFor="cancel-reason">Reason for cancellation *</Label>
+              <Label htmlFor="cancel-reason">Reason for Cancellation *</Label>
               <Textarea
                 id="cancel-reason"
                 value={cancelReason}
@@ -864,7 +864,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep booking</AlertDialogCancel>
+            <AlertDialogCancel>Keep Booking</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               disabled={
@@ -893,7 +893,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                   },
                   viewerRole === "pujari"
                     ? "Booking cancelled. Charges may apply per policy."
-                    : "Booking cancelled",
+                    : "Booking Cancelled",
                   "cancelled"
                 );
               }}
@@ -932,7 +932,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
           </div>
           <div className="flex flex-wrap gap-2 items-end">
             <div className="space-y-1 flex-1 min-w-[8.75rem]">
-              <Label>OTP code</Label>
+              <Label>OTP Code</Label>
               <Input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="Enter OTP" maxLength={8} />
             </div>
             <Button
@@ -948,7 +948,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 )
               }
             >
-              Start puja
+              Start Puja
             </Button>
           </div>
         </div>
@@ -1084,7 +1084,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
 
       {viewerRole === "admin" && status === "confirmed" && (
         <div className="space-y-2 rounded-lg border p-3">
-          <Label>Admin start override reason</Label>
+          <Label>Admin Start Override Reason</Label>
           <Input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
           <Button
             disabled={busy || overrideReason.trim().length < 5}
@@ -1099,14 +1099,14 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               )
             }
           >
-            Admin start puja
+            Admin Start Puja
           </Button>
         </div>
       )}
 
       {viewerRole === "admin" && status === "in_progress" && (
         <div className="space-y-2 rounded-lg border p-3">
-          <Label>Admin complete override reason</Label>
+          <Label>Admin Complete Override Reason</Label>
           <Input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
           <Button
             disabled={busy || overrideReason.trim().length < 5}
@@ -1121,7 +1121,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
               )
             }
           >
-            Admin complete puja
+            Admin Complete Puja
           </Button>
         </div>
       )}
@@ -1144,7 +1144,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
             </select>
           </div>
           <div className="space-y-1">
-            <Label>Comment (optional)</Label>
+            <Label>Comment (Optional)</Label>
             <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1161,7 +1161,7 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
                 )
               }
             >
-              Submit rating
+              Submit Rating
             </Button>
             <Button
               variant="outline"

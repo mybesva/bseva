@@ -264,7 +264,7 @@ def notify_head_pujaris(db: Session, *, pujari_id: str, pujari_name: str) -> int
         create_notification(
             db,
             user_id=str(r["id"]),
-            title="New pujari registered",
+            title="New Pujari Registered",
             body=f"{pujari_name} registered as a pujari. Tap to view their details.",
             category="kyc",
             link=f"/pujari/head/pujaris/{pujari_id}",
@@ -496,7 +496,7 @@ def send_test_fcm(user=Depends(current_user), db: Session = Depends(get_db)):
     result = push_to_user(
         db,
         str(user["id"]),
-        title="BSeva test notification",
+        title="BSeva Test Notification",
         body="Push is working. Open this notification to go to your bookings.",
         data={
             "category": "system",

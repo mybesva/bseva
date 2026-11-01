@@ -60,7 +60,7 @@ export default function AdminTemples() {
             <AppText variant="small">{[temple.city, temple.state, temple.deity, temple.pujari_name].filter(Boolean).join(" · ")}</AppText>
             {can("manage_services") ? (
               <PrimaryButton
-                title="Save edits"
+                title="Save Edits"
                 variant="outline"
                 onPress={() =>
                   void apiClient.api(`/admin/temples/${temple.id}`, {
@@ -102,7 +102,7 @@ export default function AdminTemples() {
         ))}
         {can("manage_services") ? (
           <Card>
-            <AppText variant="h3">Add temple</AppText>
+            <AppText variant="h3">Add Temple</AppText>
             <Field label="Name *" value={name} onChangeText={setName} error={fieldErrors.name} />
             <Field label="City" value={city} onChangeText={setCity} />
             <Field label="State *" value={state} onChangeText={setState} error={fieldErrors.state} />
@@ -110,8 +110,8 @@ export default function AdminTemples() {
             <Field label="Address" value={address} onChangeText={setAddress} />
             <Field label="Deity *" value={deity} onChangeText={setDeity} error={fieldErrors.deity} />
             <Field label="Timings" value={timings} onChangeText={setTimings} />
-            <Field label="Contact phone *" value={contactPhone} onChangeText={setContactPhone} error={fieldErrors.contactPhone} />
-            <Field label="Pujari name" value={pujariName} onChangeText={setPujariName} />
+            <Field label="Contact Phone *" value={contactPhone} onChangeText={setContactPhone} error={fieldErrors.contactPhone} />
+            <Field label="Pujari Name" value={pujariName} onChangeText={setPujariName} />
             <Field label="Description" value={description} onChangeText={setDescription} />
             <PrimaryButton
               title="Create"

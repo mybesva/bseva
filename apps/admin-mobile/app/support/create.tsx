@@ -86,7 +86,7 @@ export default function CreateSupportTicketScreen() {
           <ErrorBanner message={error} />
           <Card style={{ gap: 12 }}>
             <SupportSelect
-              label="Reported by"
+              label="Reported By"
               value={form.reporter_type}
               options={SUPPORT_REPORTER_TYPES.map((o) => ({ id: o.id, label: o.label }))}
               onChange={(reporter_type) => {
@@ -96,7 +96,7 @@ export default function CreateSupportTicketScreen() {
               }}
             />
             <Field
-              label="Find person"
+              label="Find Person"
               value={dirQ}
               onChangeText={setDirQ}
               placeholder="Search customer / pujari / ID…"
@@ -149,22 +149,22 @@ export default function CreateSupportTicketScreen() {
               onChange={(priority) => setForm({ ...form, priority })}
             />
             <SupportSelect
-              label="Contact source *"
+              label="Contact Source *"
               value={form.contact_source}
               options={SUPPORT_CONTACT_SOURCES.map((o) => ({ id: o.id, label: o.label }))}
               onChange={(contact_source) => setForm({ ...form, contact_source })}
             />
             <Field
-              label="Expected resolution"
+              label="Expected Resolution"
               value={form.expected_resolution}
               onChangeText={(expected_resolution) => setForm({ ...form, expected_resolution })}
             />
-            <Field label="Related booking ID" value={bookingId} onChangeText={setBookingId} />
+            <Field label="Related Booking ID" value={bookingId} onChangeText={setBookingId} />
             {form.reporter_type === "other" || form.reporter_type === "temple" ? (
               <>
-                <Field label="Guest name" value={form.guest_name} onChangeText={(guest_name) => setForm({ ...form, guest_name })} />
-                <Field label="Guest phone" value={form.guest_phone} onChangeText={(guest_phone) => setForm({ ...form, guest_phone })} />
-                <Field label="Guest email" value={form.guest_email} onChangeText={(guest_email) => setForm({ ...form, guest_email })} />
+                <Field label="Guest Name" value={form.guest_name} onChangeText={(guest_name) => setForm({ ...form, guest_name })} />
+                <Field label="Guest Phone" value={form.guest_phone} onChangeText={(guest_phone) => setForm({ ...form, guest_phone })} />
+                <Field label="Guest Email" value={form.guest_email} onChangeText={(guest_email) => setForm({ ...form, guest_email })} />
               </>
             ) : null}
             <PrimaryButton title="Create Ticket" loading={creating} onPress={() => void createTicket()} />

@@ -55,10 +55,10 @@ import { serviceImageUrl } from "@/lib/serviceImage";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
 
 const PROVIDERS = [
-  { value: "included", label: "Included in price" },
-  { value: "customer", label: "Customer provides" },
-  { value: "pujari", label: "Pujari provides" },
-  { value: "reimbursable", label: "Pujari provides, reimbursed" },
+  { value: "included", label: "Included in Price" },
+  { value: "customer", label: "Customer Provides" },
+  { value: "pujari", label: "Pujari Provides" },
+  { value: "reimbursable", label: "Pujari Provides, Reimbursed" },
 ];
 
 type CategoryRow = {
@@ -491,7 +491,7 @@ export default function ServicesAdmin() {
             Categories
           </Button>
           <Button variant="outline" onClick={() => setLocation(adminPath("/pricing"))}>
-            Location & surge pricing
+            Location & Surge Pricing
           </Button>
           {canServices && (
             <Button onClick={openAdd} className="gap-2">
@@ -515,7 +515,7 @@ export default function ServicesAdmin() {
       <Dialog open={categoriesOpen} onOpenChange={setCategoriesOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="">Service categories</DialogTitle>
+            <DialogTitle className="">Service Categories</DialogTitle>
           </DialogHeader>
           {canServices && (
           <form id="category-form" onSubmit={handleCategorySave} className="space-y-4">
@@ -541,7 +541,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="cat-sort">Sort order</Label>
+                <Label htmlFor="cat-sort">Sort Order</Label>
                 <Input
                   id="cat-sort"
                   type="number"
@@ -560,7 +560,7 @@ export default function ServicesAdmin() {
               </label>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cat-desc">Description (optional)</Label>
+              <Label htmlFor="cat-desc">Description (Optional)</Label>
               <Textarea
                 id="cat-desc"
                 rows={2}
@@ -570,11 +570,11 @@ export default function ServicesAdmin() {
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={categorySaving}>
-                {categorySaving ? "Saving…" : categoryEditId ? "Update category" : "Add category"}
+                {categorySaving ? "Saving…" : categoryEditId ? "Update Category" : "Add Category"}
               </Button>
               {categoryEditId && (
                 <Button type="button" variant="outline" onClick={openCategoryAdd}>
-                  Cancel edit
+                  Cancel Edit
                 </Button>
               )}
             </div>
@@ -626,10 +626,10 @@ export default function ServicesAdmin() {
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="sticky -top-6 z-20 -mx-6 -mt-6 bg-background px-6 pt-6 pb-3 border-b border-border/70">
             <p className="text-sm font-semibold text-primary">
-              {!editId ? "Add puja service" : canServices ? "Edit puja service" : "Puja samagri"}
+              {!editId ? "Add puja service" : canServices ? "Edit Puja Service" : "Puja Samagri"}
             </p>
             <DialogTitle className="text-xl font-bold text-foreground pr-8 leading-snug">
-              {form.name.trim() || (editId ? "Untitled puja" : "New puja")}
+              {form.name.trim() || (editId ? "Untitled Puja" : "New Puja")}
             </DialogTitle>
           </DialogHeader>
           <form id="add-service-form" onSubmit={handleSave} className="space-y-4">
@@ -653,7 +653,7 @@ export default function ServicesAdmin() {
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Basic Information</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="service-name">Puja / service name</Label>
+                <Label htmlFor="service-name">Puja / Service Name</Label>
                 <Input
                   id="service-name"
                   placeholder="e.g. Satyanarayan Puja"
@@ -663,7 +663,7 @@ export default function ServicesAdmin() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-local">Local name (optional)</Label>
+                <Label htmlFor="service-local">Local Name (Optional)</Label>
                 <Input
                   id="service-local"
                   value={form.local_name}
@@ -677,7 +677,7 @@ export default function ServicesAdmin() {
                 <Input value={form.deity} onChange={(e) => setForm({ ...form, deity: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Languages (comma-separated)</Label>
+                <Label>Languages (Comma-Separated)</Label>
                 <Input
                   value={form.languages_text}
                   onChange={(e) => setForm({ ...form, languages_text: e.target.value })}
@@ -712,7 +712,7 @@ export default function ServicesAdmin() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Catalog categories</Label>
+              <Label>Catalog Categories</Label>
               <div className="rounded-lg border p-3 max-h-36 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {catalogCategories.map((c) => (
                   <label key={c.id} className="flex items-center gap-2 text-sm">
@@ -732,7 +732,7 @@ export default function ServicesAdmin() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-aliases">Search aliases</Label>
+              <Label htmlFor="service-aliases">Search Aliases</Label>
               <Input
                 id="service-aliases"
                 placeholder="Comma-separated, e.g. Satyanarayana, Satya Narayan"
@@ -745,7 +745,7 @@ export default function ServicesAdmin() {
               <TabsContent value="content" className="space-y-4 mt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Content</p>
             <div className="space-y-2">
-              <Label htmlFor="service-short">Short description</Label>
+              <Label htmlFor="service-short">Short Description</Label>
               <Textarea
                 id="service-short"
                 placeholder="One-line summary for listings"
@@ -755,7 +755,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-full">Full description</Label>
+              <Label htmlFor="service-full">Full Description</Label>
               <Textarea
                 id="service-full"
                 placeholder="Detailed description for the service page"
@@ -765,7 +765,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Spiritual meaning / purpose</Label>
+              <Label>Spiritual Meaning / Purpose</Label>
               <textarea
                 className="w-full min-h-[4.375rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.spiritual_meaning}
@@ -773,7 +773,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Common occasions</Label>
+              <Label>Common Occasions</Label>
               <textarea
                 className="w-full min-h-[3.75rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.common_occasions}
@@ -781,7 +781,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-benefits">Benefits / purpose</Label>
+              <Label htmlFor="service-benefits">Benefits / Purpose</Label>
               <Textarea
                 id="service-benefits"
                 value={form.benefits}
@@ -790,7 +790,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>What&apos;s included</Label>
+              <Label>What&apos;s Included</Label>
               <Textarea
                 value={form.whats_included}
                 onChange={(e) => setForm({ ...form, whats_included: e.target.value })}
@@ -798,14 +798,14 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Location notes</Label>
+              <Label>Location Notes</Label>
               <Input
                 value={form.location_notes}
                 onChange={(e) => setForm({ ...form, location_notes: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label>Tradition / regional notes</Label>
+              <Label>Tradition / Regional Notes</Label>
               <Textarea
                 value={form.tradition_notes}
                 onChange={(e) => setForm({ ...form, tradition_notes: e.target.value })}
@@ -813,7 +813,7 @@ export default function ServicesAdmin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-description">Legacy description (optional)</Label>
+              <Label htmlFor="service-description">Legacy Description (Optional)</Label>
               <Textarea
                 id="service-description"
                 placeholder="Fallback if short description is empty"
@@ -827,7 +827,7 @@ export default function ServicesAdmin() {
               <TabsContent value="process" className="space-y-4 mt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Process</p>
             <div className="space-y-2">
-              <Label>Process steps (one per line)</Label>
+              <Label>Process Steps (One per Line)</Label>
               <textarea
                 className="w-full min-h-[6.25rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.process_steps_text}
@@ -836,7 +836,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Priests min</Label>
+                <Label>Priests Min</Label>
                 <Input
                   type="number"
                   value={form.priests_min}
@@ -844,7 +844,7 @@ export default function ServicesAdmin() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Priests max</Label>
+                <Label>Priests Max</Label>
                 <Input
                   type="number"
                   value={form.priests_max}
@@ -858,11 +858,11 @@ export default function ServicesAdmin() {
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Images</p>
             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
               <div className="flex items-center justify-between gap-2">
-                <Label className="text-base">Service image</Label>
+                <Label className="text-base">Service Image</Label>
                 {(form.image_url || form.image_path) ? (
                   <Badge variant="secondary" className="text-xs">Assigned</Badge>
                 ) : (
-                  <Badge variant="outline" className="text-xs">Using placeholder</Badge>
+                  <Badge variant="outline" className="text-xs">Using Placeholder</Badge>
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-4 items-start">
@@ -893,8 +893,8 @@ export default function ServicesAdmin() {
                         {imageUploading
                           ? "Uploading…"
                           : form.image_url || form.image_path
-                            ? "Replace image"
-                            : "Upload image"}
+                            ? "Replace Image"
+                            : "Upload Image"}
                       </Button>
                       <input
                         id="service-image-file"
@@ -963,7 +963,7 @@ export default function ServicesAdmin() {
                             }
                           }}
                         >
-                          Remove image
+                          Remove Image
                         </Button>
                       )}
                     </div>
@@ -985,7 +985,7 @@ export default function ServicesAdmin() {
                 </summary>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
                   <div className="space-y-2">
-                    <Label htmlFor="service-image-path">Image path</Label>
+                    <Label htmlFor="service-image-path">Image Path</Label>
                     <Input
                       id="service-image-path"
                       value={form.image_path}
@@ -1041,7 +1041,7 @@ export default function ServicesAdmin() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-display-order">Display order</Label>
+                  <Label htmlFor="service-display-order">Display Order</Label>
                   <Input
                     id="service-display-order"
                     type="number"
@@ -1050,7 +1050,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="service-home-rank">Homepage rank</Label>
+                  <Label htmlFor="service-home-rank">Homepage Rank</Label>
                   <Input
                     id="service-home-rank"
                     type="number"
@@ -1065,7 +1065,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="service-pricing-status">Pricing status</Label>
+                  <Label htmlFor="service-pricing-status">Pricing Status</Label>
                   <Select
                     value={form.pricing_status}
                     onValueChange={(v: "priced" | "awaiting_pricing") =>
@@ -1076,7 +1076,7 @@ export default function ServicesAdmin() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="awaiting_pricing">Awaiting pricing</SelectItem>
+                      <SelectItem value="awaiting_pricing">Awaiting Pricing</SelectItem>
                       <SelectItem value="priced">Priced</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1102,7 +1102,7 @@ export default function ServicesAdmin() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-dakshina-type">Dakshina (pujari share)</Label>
+                  <Label htmlFor="service-dakshina-type">Dakshina (Pujari Share)</Label>
                   <Select
                     value={form.dakshina_amount_paise != null ? "amount" : "percent"}
                     onValueChange={(v) =>
@@ -1122,15 +1122,15 @@ export default function ServicesAdmin() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="percent">Percentage of puja price (%)</SelectItem>
-                      <SelectItem value="amount">Fixed amount (₹)</SelectItem>
+                      <SelectItem value="percent">Percentage of Puja Price (%)</SelectItem>
+                      <SelectItem value="amount">Fixed Amount (₹)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   {form.dakshina_amount_paise != null ? (
                     <>
-                      <Label htmlFor="service-dakshina">Dakshina amount (₹)</Label>
+                      <Label htmlFor="service-dakshina">Dakshina Amount (₹)</Label>
                       <Input
                         id="service-dakshina"
                         type="number"
@@ -1176,7 +1176,7 @@ export default function ServicesAdmin() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-standard">Standard price (₹)</Label>
+                  <Label htmlFor="service-standard">Standard Price (₹)</Label>
                   <Input
                     id="service-standard"
                     type="number"
@@ -1194,7 +1194,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="service-premium">Premium price (₹)</Label>
+                  <Label htmlFor="service-premium">Premium Price (₹)</Label>
                   <Input
                     id="service-premium"
                     type="number"
@@ -1215,7 +1215,7 @@ export default function ServicesAdmin() {
               <p className="text-sm font-medium pt-2 border-t border-border/60">Pujaris included (team size)</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="puj-default">Default (fallback)</Label>
+                  <Label htmlFor="puj-default">Default (Fallback)</Label>
                   <Input
                     id="puj-default"
                     type="number"
@@ -1227,7 +1227,7 @@ export default function ServicesAdmin() {
                   <p className="text-[0.6875rem] text-muted-foreground">Used when Standard or Premium is left blank below.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="puj-standard">Standard package</Label>
+                  <Label htmlFor="puj-standard">Standard Package</Label>
                   <Input
                     id="puj-standard"
                     type="number"
@@ -1244,7 +1244,7 @@ export default function ServicesAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="puj-premium">Premium package</Label>
+                  <Label htmlFor="puj-premium">Premium Package</Label>
                   <Input
                     id="puj-premium"
                     type="number"
@@ -1274,7 +1274,7 @@ export default function ServicesAdmin() {
                 gets the amount back on top of their earnings.
               </p>
               <div className="space-y-2">
-                <Label htmlFor="service-main">Main puja charge (₹)</Label>
+                <Label htmlFor="service-main">Main Puja Charge (₹)</Label>
                 <Input
                   id="service-main"
                   type="number"
@@ -1292,7 +1292,7 @@ export default function ServicesAdmin() {
               </div>
               {(
                 [
-                  { label: "Food / prasadam", priceKey: "food_price_paise", providerKey: "food_provider" },
+                  { label: "Food / Prasadam", priceKey: "food_price_paise", providerKey: "food_provider" },
                 ] as const
               ).map((row) => (
                 <div key={row.priceKey} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1350,7 +1350,7 @@ export default function ServicesAdmin() {
               <div className="rounded-md border bg-card p-3 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
                   <div className="space-y-2">
-                    <Label htmlFor="addon-samagri-enabled">Samagri on booking</Label>
+                    <Label htmlFor="addon-samagri-enabled">Samagri on Booking</Label>
                     <Select
                       value={form.samagri_available ? "yes" : "no"}
                       onValueChange={(v) => {
@@ -1377,7 +1377,7 @@ export default function ServicesAdmin() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                   <div className="space-y-2">
-                    <Label htmlFor="addon-samagri-price">Samagri price (₹)</Label>
+                    <Label htmlFor="addon-samagri-price">Samagri Price (₹)</Label>
                     <Input
                       id="addon-samagri-price"
                       type="number"
@@ -1393,7 +1393,7 @@ export default function ServicesAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>How it works</Label>
+                    <Label>How It Works</Label>
                     <p className="text-xs text-muted-foreground pt-2">
                       Pujari brings materials; customer reimburses from booking payment.
                     </p>
@@ -1411,7 +1411,7 @@ export default function ServicesAdmin() {
 
               <div className="rounded-md border bg-card p-3 space-y-3">
                 <div className="space-y-2">
-                  <Label htmlFor="addon-alankaram-enabled">Alankaram on booking</Label>
+                  <Label htmlFor="addon-alankaram-enabled">Alankaram on Booking</Label>
                   <Select
                     value={form.alankaram_available ? "yes" : "no"}
                     onValueChange={(v) => {
@@ -1437,7 +1437,7 @@ export default function ServicesAdmin() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                   <div className="space-y-2">
-                    <Label htmlFor="addon-alankaram-price">Alankaram price (₹)</Label>
+                    <Label htmlFor="addon-alankaram-price">Alankaram Price (₹)</Label>
                     <Input
                       id="addon-alankaram-price"
                       type="number"
@@ -1453,7 +1453,7 @@ export default function ServicesAdmin() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>How it works</Label>
+                    <Label>How It Works</Label>
                     <p className="text-xs text-muted-foreground pt-2">
                       Pujari brings flowers / decoration; customer reimburses from booking payment.
                     </p>
@@ -1489,7 +1489,7 @@ export default function ServicesAdmin() {
                 Muhurtham is required before booking
               </label>
               <div className="space-y-2 max-w-xs">
-                <Label htmlFor="service-muhurta-fee">Consultation fee (₹)</Label>
+                <Label htmlFor="service-muhurta-fee">Consultation Fee (₹)</Label>
                 <Input
                   id="service-muhurta-fee"
                   type="number"
@@ -1508,7 +1508,7 @@ export default function ServicesAdmin() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="service-level">Required pujari level</Label>
+                <Label htmlFor="service-level">Required Pujari Level</Label>
                 <Select
                   value={String(form.required_level)}
                   onValueChange={(v) => setForm({ ...form, required_level: Number(v) })}
@@ -1527,7 +1527,7 @@ export default function ServicesAdmin() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-duration">Duration (minutes)</Label>
+                <Label htmlFor="service-duration">Duration (Minutes)</Label>
                 <Input
                   id="service-duration"
                   type="number"
@@ -1559,7 +1559,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Domestic Virtual & Online Puja price (₹)</Label>
+                <Label>Domestic Virtual & Online Puja Price (₹)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -1576,7 +1576,7 @@ export default function ServicesAdmin() {
                 <p className="text-xs text-muted-foreground">Used when the customer’s country is India.</p>
               </div>
               <div className="space-y-2">
-                <Label>International Virtual & Online Puja price (₹)</Label>
+                <Label>International Virtual & Online Puja Price (₹)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -1608,7 +1608,7 @@ export default function ServicesAdmin() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="samagri-tab-enabled">Offer on booking</Label>
+                  <Label htmlFor="samagri-tab-enabled">Offer on Booking</Label>
                   <Select
                     value={form.samagri_available ? "yes" : "no"}
                     onValueChange={(v) => {
@@ -1630,7 +1630,7 @@ export default function ServicesAdmin() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="samagri-tab-price">Kit price for this puja (₹)</Label>
+                  <Label htmlFor="samagri-tab-price">Kit Price for This Puja (₹)</Label>
                   <Input
                     id="samagri-tab-price"
                     type="number"
@@ -1656,7 +1656,7 @@ export default function ServicesAdmin() {
             {editId ? (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label>Samagri items for this puja</Label>
+                  <Label>Samagri Items for This Puja</Label>
                   <Select
                     value={form.samagri_review_status}
                     onValueChange={(v) =>
@@ -1670,9 +1670,9 @@ export default function ServicesAdmin() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="VERIFIED">Ready for customers</SelectItem>
-                      <SelectItem value="UNVERIFIED">Not ready</SelectItem>
-                      <SelectItem value="NEEDS_REVIEW">Needs review</SelectItem>
+                      <SelectItem value="VERIFIED">Ready for Customers</SelectItem>
+                      <SelectItem value="UNVERIFIED">Not Ready</SelectItem>
+                      <SelectItem value="NEEDS_REVIEW">Needs Review</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1680,8 +1680,8 @@ export default function ServicesAdmin() {
                   Customers see this list on their booking receipt only when it is Ready for customers.
                 </p>
                 {[
-                  { title: "Included in kit", items: linked.filter(isKitItem) },
-                  { title: "Customer arranges", items: linked.filter((it) => !isKitItem(it)) },
+                  { title: "Included in Kit", items: linked.filter(isKitItem) },
+                  { title: "Customer Arranges", items: linked.filter((it) => !isKitItem(it)) },
                 ].map((group) => (
                   <div key={group.title} className="space-y-1">
                     <p className="text-xs font-semibold text-muted-foreground">
@@ -1764,8 +1764,8 @@ export default function ServicesAdmin() {
                     <Label>Who provides this?</Label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { label: "Included in kit", kit: true },
-                        { label: "Customer arranges", kit: false },
+                        { label: "Included in Kit", kit: true },
+                        { label: "Customer Arranges", kit: false },
                       ].map((option) => (
                         <Button
                           key={option.label}
@@ -1819,7 +1819,7 @@ export default function ServicesAdmin() {
                       }
                     }}
                   >
-                    {linked.some((it) => String(it.samagri_item_id) === linkItemId) ? "Update item" : "Add item"}
+                    {linked.some((it) => String(it.samagri_item_id) === linkItemId) ? "Update Item" : "Add Item"}
                   </Button>
                 </div>
                 )}
@@ -1831,7 +1831,7 @@ export default function ServicesAdmin() {
 
               <TabsContent value="advanced" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>Admin internal notes</Label>
+              <Label>Admin Internal Notes</Label>
               <Textarea
                 value={form.admin_notes}
                 onChange={(e) => setForm({ ...form, admin_notes: e.target.value })}
@@ -1848,7 +1848,7 @@ export default function ServicesAdmin() {
             </Button>
             {canServices && (
               <Button type="submit" form="add-service-form" disabled={saving}>
-                {saving ? "Saving…" : editId ? "Save changes" : "Add service"}
+                {saving ? "Saving…" : editId ? "Save Changes" : "Add Service"}
               </Button>
             )}
           </DialogFooter>
@@ -1930,7 +1930,7 @@ export default function ServicesAdmin() {
                       ) : Number(s.samagri_price_paise) > 0 ? (
                         rupees(Number(s.samagri_price_paise))
                       ) : (
-                        <span className="text-muted-foreground" title="Platform default on booking">
+                        <span className="text-muted-foreground" title="Platform Default on Booking">
                           Default
                         </span>
                       )}
@@ -1999,7 +1999,7 @@ export default function ServicesAdmin() {
                           variant="secondary"
                           className="gap-1.5"
                           onClick={() => openEdit(s)}
-                          title="Replace image"
+                          title="Replace Image"
                         >
                           <ImageIcon size="0.875rem" />
                           Image

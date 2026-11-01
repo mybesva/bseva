@@ -282,7 +282,7 @@ function CustomerDashboardContent() {
         </div>
 
         {recommendations.length > 0 && (
-          <SectionCard icon={<Sparkles size="1.125rem" />} title="Recommended for you">
+          <SectionCard icon={<Sparkles size="1.125rem" />} title="Recommended for You">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {recommendations.map((rec) => (
                 <div

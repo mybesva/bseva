@@ -178,7 +178,7 @@ export default function RescheduleCard({
               Cancel
             </Button>
             <Button onClick={() => void save()} disabled={saving || !date || !time}>
-              {saving ? "Saving…" : "Confirm new time"}
+              {saving ? "Saving…" : "Confirm New Time"}
             </Button>
           </DialogFooter>
         </DialogContent>

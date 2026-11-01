@@ -105,9 +105,9 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
               Your booking and payment stay the same. The current pujari is released and the puja goes out to available
               pujaris for the new time.
             </AppText>
-            <DatePickerField value={date} onChange={setDate} leadHours={info.lead_hours} label="New date" />
+            <DatePickerField value={date} onChange={setDate} leadHours={info.lead_hours} label="New Date" />
             <TimePicker value={time} onChange={setTime} />
-            <PrimaryButton title="Confirm new time" loading={saving} onPress={() => void save()} />
+            <PrimaryButton title="Confirm New Time" loading={saving} onPress={() => void save()} />
             <PrimaryButton title="Cancel" variant="outline" disabled={saving} onPress={() => setOpen(false)} />
           </>
         ) : null}

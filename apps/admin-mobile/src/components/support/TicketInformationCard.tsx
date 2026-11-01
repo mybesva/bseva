@@ -42,14 +42,14 @@ export function TicketInformationCard({
         value={String(ticket.category_label || CATEGORY_LABELS[String(ticket.category || "")] || ticket.category || "—")}
       />
       <InfoRow label="Created" value={formatDisplayDateTime(ticket.created_at)} />
-      <InfoRow label="Last activity" value={formatDisplayDateTime(ticket.last_activity_at || ticket.updated_at)} />
-      <InfoRow label="SLA / target" value={sla} />
+      <InfoRow label="Last Activity" value={formatDisplayDateTime(ticket.last_activity_at || ticket.updated_at)} />
+      <InfoRow label="SLA / Target" value={sla} />
       <InfoRow
         label="Priority"
         value={String(ticket.priority_label || PRIORITY_LABELS[String(ticket.priority || "")] || ticket.priority || "—")}
       />
       <InfoRow
-        label="Contact source"
+        label="Contact Source"
         value={String(SOURCE_LABELS[String(ticket.contact_source || "")] || ticket.contact_source || "—")}
       />
       <InfoRow label="Agent" value={agentName || (ticket.assigned_admin_id ? "Assigned" : "Unassigned")} />

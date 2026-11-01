@@ -13,7 +13,7 @@ export const TAX_LINE_LABELS: Record<string, string> = {
   samagri: "Samagri kit",
   alankaram: "Alankaram",
   food: "Food / Prasadam",
-  platform_fee: "Platform fee",
+  platform_fee: "Platform Fee",
   gateway_fee: "Payment gateway fee",
 };
 const CLASSIFICATION_LABELS: Record<string, string> = {
@@ -86,7 +86,7 @@ export function TaxRateForm({ serviceId, onSaved }: { serviceId?: string; onSave
     <div className="space-y-3">
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
         <div className="space-y-1">
-          <Label>Applies to</Label>
+          <Label>Applies To</Label>
           <Select value={lineType} onValueChange={setLineType}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -101,11 +101,11 @@ export function TaxRateForm({ serviceId, onSaved }: { serviceId?: string; onSave
           </Select>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="tax-hsn">HSN/SAC code</Label>
+          <Label htmlFor="tax-hsn">HSN/SAC Code</Label>
           <Input id="tax-hsn" inputMode="numeric" placeholder="e.g. 999591" value={hsn} onChange={(e) => setHsn(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <Label>Tax treatment</Label>
+          <Label>Tax Treatment</Label>
           <Select value={classification} onValueChange={setClassification}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -120,7 +120,7 @@ export function TaxRateForm({ serviceId, onSaved }: { serviceId?: string; onSave
           </Select>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="tax-rate">GST rate (%)</Label>
+          <Label htmlFor="tax-rate">GST Rate (%)</Label>
           <Input
             id="tax-rate"
             inputMode="decimal"
@@ -131,7 +131,7 @@ export function TaxRateForm({ serviceId, onSaved }: { serviceId?: string; onSave
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="tax-from">Effective from</Label>
+          <Label htmlFor="tax-from">Effective From</Label>
           <Input id="tax-from" type="date" min={today()} value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
       </div>
@@ -141,7 +141,7 @@ export function TaxRateForm({ serviceId, onSaved }: { serviceId?: string; onSave
         disabled={saving || !hsn.trim() || (classification === "taxable" && !rate.trim())}
         onClick={() => void save()}
       >
-        {saving ? "Saving…" : "Save GST setting"}
+        {saving ? "Saving…" : "Save GST Setting"}
       </Button>
       <div className="space-y-1">
         <p className="text-xs font-semibold text-muted-foreground">History</p>

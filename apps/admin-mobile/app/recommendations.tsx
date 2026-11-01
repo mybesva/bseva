@@ -45,7 +45,7 @@ export default function AdminRecommendations() {
         <Card>
           <AppText variant="h3">Add</AppText>
           <Field label="Title" value={title} onChangeText={setTitle} />
-          <Field label="Service id" value={serviceId} onChangeText={setServiceId} />
+          <Field label="Service ID" value={serviceId} onChangeText={setServiceId} />
           <Field label="Description" value={description} onChangeText={setDescription} />
           <Field label="Audience" value={audience} onChangeText={setAudience} />
           <PrimaryButton

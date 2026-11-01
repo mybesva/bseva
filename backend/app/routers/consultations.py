@@ -300,7 +300,7 @@ def create_muhurta_consultation(
 
     notify_ops_staff(
         db,
-        title="New Muhurtham consultation",
+        title="New Muhurtham Consultation",
         body=f"{cnum} — {svc.get('name') or 'Muhurtham'} on {body.appointment_date.isoformat()} at {raw_time[:5]}.",
         category="muhurtham",
         link="/admin/muhurtham",

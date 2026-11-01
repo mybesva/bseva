@@ -168,7 +168,7 @@ function CustomerManageModal({
               <Pressable
                 onPress={() =>
                   showAdminActionSheet(
-                    "Preferred language",
+                    "Preferred Language",
                     PREFERRED_LANGUAGES.map((l) => ({
                       label: l.label,
                       onPress: () => void updateLanguage(l.code),
@@ -383,7 +383,7 @@ export default function AdminCustomers() {
                 <Pressable
                   onPress={() =>
                     showAdminActionSheet(
-                      "Preferred language",
+                      "Preferred Language",
                       PREFERRED_LANGUAGES.map((l) => ({
                         label: l.label,
                         onPress: () => {
@@ -451,16 +451,16 @@ export default function AdminCustomers() {
 
       <AdminFormModal
         visible={addOpen}
-        title="Add customer"
+        title="Add Customer"
         onClose={() => setAddOpen(false)}
-        submitLabel={creating ? "Adding…" : "Add customer"}
+        submitLabel={creating ? "Adding…" : "Add Customer"}
         onSubmit={() => void handleAdd()}
         loading={creating}
       >
         <Field label="Name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} error={fieldErrors.name} />
         <Field label="Email" value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} autoCapitalize="none" keyboardType="email-address" error={fieldErrors.email} />
         <Field label="Phone" value={form.phone} onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))} keyboardType="phone-pad" error={fieldErrors.phone} />
-        <Field label="City / area" value={form.location} onChangeText={(v) => setForm((f) => ({ ...f, location: v }))} error={fieldErrors.location} />
+        <Field label="City / Area" value={form.location} onChangeText={(v) => setForm((f) => ({ ...f, location: v }))} error={fieldErrors.location} />
         <Field label="Password" value={form.password} onChangeText={(v) => setForm((f) => ({ ...f, password: v }))} secureTextEntry error={fieldErrors.password} />
       </AdminFormModal>
     </Screen>

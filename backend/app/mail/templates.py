@@ -302,7 +302,7 @@ def payment_confirmation_email(data: BookingEmailData, *, transaction_id: str = 
     )
     extra = list(data.extra_rows)
     if method:
-        extra.append(("Payment method", method))
+        extra.append(("Payment Method", method))
     if transaction_id:
         extra.append(("Transaction / reference", transaction_id))
     payload = BookingEmailData(**{**data.__dict__, "extra_rows": extra})
@@ -336,15 +336,15 @@ def invoice_receipt_email(data: InvoiceEmailData) -> EmailContent:
         line_rows.append(("Taxes / GST", format_inr_paise(data.tax_paise)))
     line_rows.extend(
         [
-            ("Total paid", format_inr_paise(data.total_paid_paise)),
-            ("Payment status", data.payment_status),
-            ("Invoice number", data.invoice_number),
+            ("Total Paid", format_inr_paise(data.total_paid_paise)),
+            ("Payment Status", data.payment_status),
+            ("Invoice Number", data.invoice_number),
             ("Booking ID", data.booking_number or data.booking_id),
             ("Customer", data.customer_name),
             ("Service", data.service_name),
-            ("Booking date", data.booking_date),
-            ("Payment date", data.payment_date),
-            ("Payment method", data.payment_method or "—"),
+            ("Booking Date", data.booking_date),
+            ("Payment Date", data.payment_date),
+            ("Payment Method", data.payment_method or "—"),
             ("Transaction / reference", data.transaction_id or "—"),
         ]
     )
@@ -431,8 +431,8 @@ def refund_confirmation_email(
         " [TEST]" if data.test_mode else ""
     )
     extra = list(data.extra_rows) + [
-        ("Refund amount", format_inr_paise(refund_paise)),
-        ("Refund method", refund_method),
+        ("Refund Amount", format_inr_paise(refund_paise)),
+        ("Refund Method", refund_method),
     ]
     payload = BookingEmailData(**{**data.__dict__, "extra_rows": extra})
     body = (
@@ -469,7 +469,7 @@ def booking_rescheduled_email(
     )
     extra = list(data.extra_rows)
     if previous_date or previous_time:
-        extra.append(("Previous schedule", f"{previous_date} {previous_time}".strip()))
+        extra.append(("Previous Schedule", f"{previous_date} {previous_time}".strip()))
     payload = BookingEmailData(**{**data.__dict__, "extra_rows": extra})
     body = (
         heading("Booking Rescheduled / Updated")
@@ -559,7 +559,7 @@ def sample_invoice_data(*, test_mode: bool = True) -> InvoiceEmailData:
         payment_method="Wallet",
         transaction_id="TXN-TEST-998877",
         lines=[
-            ("Main puja", b.main_puja_paise),
+            ("Main Puja", b.main_puja_paise),
             ("Samagri", b.samagri_paise),
             ("Alankaram", b.alankaram_paise),
             ("Food / Prasadam", b.food_prasadam_paise),

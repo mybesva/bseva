@@ -283,16 +283,16 @@ export default function AdminPujaris() {
 
       <AdminFormModal
         visible={addOpen}
-        title="Add pujari"
+        title="Add Pujari"
         onClose={() => setAddOpen(false)}
-        submitLabel={creating ? "Adding…" : "Add pujari"}
+        submitLabel={creating ? "Adding…" : "Add Pujari"}
         onSubmit={() => void handleAdd()}
         loading={creating}
       >
         <Field label="Name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} error={fieldErrors.name} />
         <Field label="Email" value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} autoCapitalize="none" keyboardType="email-address" error={fieldErrors.email} />
         <Field label="Phone" value={form.phone} onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))} keyboardType="phone-pad" error={fieldErrors.phone} />
-        <Field label="City / area" value={form.location} onChangeText={(v) => setForm((f) => ({ ...f, location: v }))} error={fieldErrors.location} />
+        <Field label="City / Area" value={form.location} onChangeText={(v) => setForm((f) => ({ ...f, location: v }))} error={fieldErrors.location} />
         <AppText variant="small" color={colors.mutedForeground}>
           Level
         </AppText>

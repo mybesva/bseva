@@ -200,24 +200,24 @@ export default function Payments() {
 
       <div className="flex flex-wrap gap-2 mb-3 items-end">
         <div className="space-y-1">
-          <Label className="text-xs">Payment status</Label>
+          <Label className="text-xs">Payment Status</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
             <SelectTrigger className="w-[11.25rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="refund_requested">Refund requested</SelectItem>
-              <SelectItem value="refund_pending">Refund pending</SelectItem>
+              <SelectItem value="refund_requested">Refund Requested</SelectItem>
+              <SelectItem value="refund_pending">Refund Pending</SelectItem>
               <SelectItem value="refunded">Refunded</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Customer date</Label>
+          <Label className="text-xs">Customer Date</Label>
           <Select
             value={rangeFilter}
             onValueChange={(v) =>
@@ -228,9 +228,9 @@ export default function Payments() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All dates</SelectItem>
-              <SelectItem value="last_30">Last 30 days</SelectItem>
-              <SelectItem value="custom">Between dates</SelectItem>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="last_30">Last 30 Days</SelectItem>
+              <SelectItem value="custom">Between Dates</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -283,8 +283,8 @@ export default function Payments() {
             <TableHead className={TH}>Customer</TableHead>
             <TableHead className={TH}>Service</TableHead>
             <TableHead className={TH}>Amount</TableHead>
-            <TableHead className={TH}>Platform fee</TableHead>
-            <TableHead className={TH}>Pujari payout</TableHead>
+            <TableHead className={TH}>Platform Fee</TableHead>
+            <TableHead className={TH}>Pujari Payout</TableHead>
             <TableHead className={TH}>Date</TableHead>
             <TableHead className={TH}>Status</TableHead>
           </TableRow>

@@ -101,7 +101,7 @@ export default function NotificationBell({ inboxHref }: { inboxHref: string }) {
       </Button>
       {open && (
         <>
-          <button type="button" className="fixed inset-0 z-40" aria-label="Close notifications" onClick={() => setOpen(false)} />
+          <button type="button" className="fixed inset-0 z-40" aria-label="Close Notifications" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-2 w-80 max-w-[90vw] z-50 rounded-lg border bg-background shadow-lg">
             <div className="flex items-center justify-between px-3 py-2 border-b">
               <p className="text-sm font-semibold">Notifications</p>

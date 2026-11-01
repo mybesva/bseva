@@ -261,7 +261,7 @@ export default function PujariOnboarding() {
               </Card>
             ))}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <AppText>Driving licence</AppText>
+              <AppText>Driving Licence</AppText>
               <Switch
                 value={String(profile.licence_type || "").toLowerCase() === "driving_licence"}
                 onValueChange={(on) => set("licence_type", on ? "driving_licence" : "none")}

@@ -47,7 +47,7 @@ function CalendarSegment({
     <div
       className="inline-flex w-full max-w-md rounded-lg border border-primary/30 bg-white p-0.5"
       role="group"
-      aria-label="Calendar type"
+      aria-label="Calendar Type"
     >
       {options.map((opt) => {
         const active = value === opt.id;

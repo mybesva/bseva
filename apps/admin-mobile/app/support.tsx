@@ -51,7 +51,7 @@ export default function AdminSupport() {
         <PrimaryButton title="+ Create Ticket" onPress={() => router.push("/support/create")} />
         <View style={{ gap: 8 }}>
           <AppText variant="small" style={{ fontWeight: "700" }}>
-            Filter tickets
+            Filter Tickets
           </AppText>
           <SupportFilter value={statusFilter} onChange={setStatusFilter} />
         </View>

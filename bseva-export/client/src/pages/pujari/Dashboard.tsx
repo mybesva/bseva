@@ -500,7 +500,7 @@ function PujariDashboardContent() {
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <CardTitle className="text-foreground text-lg leading-tight">
-                  New booking requests
+                  New Booking Requests
                 </CardTitle>
                 <p className="text-sm text-muted-foreground font-normal">
                   {isLoading
@@ -539,7 +539,7 @@ function PujariDashboardContent() {
               <>
                 <div
                   className="max-h-[26rem] overflow-y-auto space-y-3 pr-1 overscroll-contain"
-                  aria-label="New booking requests list"
+                  aria-label="New Booking Requests List"
                 >
                   {pendingAcceptance.map((row) => (
                     <BookingListItem key={row.booking.id} row={row} showAcceptReject />
@@ -564,7 +564,7 @@ function PujariDashboardContent() {
         {!isLoading && readyToStart.length > 0 && (
           <Card className="rounded-3xl border border-[#BFD3EE] bg-[#F1F6FD] dark:border-white/10 dark:bg-white/5">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-foreground">Ready to start (OTP)</CardTitle>
+              <CardTitle className="text-base text-foreground">Ready to Start (OTP)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {readyToStart.slice(0, DASHBOARD_LIST_LIMIT).map((row) => (
@@ -631,7 +631,7 @@ function PujariDashboardContent() {
               <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-foreground">Your Bookings</CardTitle>
                 <Button variant="outline" size="sm" onClick={() => setLocation("/pujari/bookings")}>
-                  View all
+                  View All
                 </Button>
               </CardHeader>
               <CardContent>
@@ -782,7 +782,7 @@ function PujariDashboardContent() {
             <DialogHeader className="text-left">
               <DialogTitle className="text-foreground">
                 {detailIntent === "reject" ? (
-                  "Reject booking"
+                  "Reject Booking"
                 ) : selectedBooking ? (
                   <PujaTitle name={selectedBooking.pujaType.name} as="span" />
                 ) : null}

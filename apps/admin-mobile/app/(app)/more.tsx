@@ -55,7 +55,7 @@ export default function AdminMore() {
     { href: "/reviews", label: t("admin.reviews"), show: can(["view_reviews", "manage_reviews"]), icon: "chatbubbles-outline" },
     { href: "/promos", label: t("admin.promos"), show: can(["view_promotions", "manage_promotions"]), icon: "megaphone-outline" },
     { href: "/reports", label: t("admin.reports"), show: can("view_reports"), icon: "stats-chart-outline" },
-    { href: "/bulk-import", label: "Bulk import", show: can("manage_temples"), icon: "cloud-upload-outline" },
+    { href: "/bulk-import", label: "Bulk Import", show: can("manage_temples"), icon: "cloud-upload-outline" },
     { href: "/settings", label: t("admin.settings"), show: can("manage_config"), icon: "settings-outline" },
     { href: "/support", label: t("admin.support"), show: can("manage_support"), icon: "help-circle-outline" },
     { href: "/legal", label: t("admin.legal"), show: can("manage_legal"), icon: "book-outline" },

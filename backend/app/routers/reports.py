@@ -44,12 +44,12 @@ def period_bounds(
     if key == "today":
         return today, today, "Today"
     if key == "last_7_days":
-        return today - timedelta(days=6), today, "Last 7 days"
+        return today - timedelta(days=6), today, "Last 7 Days"
     if key == "last_90_days":
-        return today - timedelta(days=89), today, "Last 90 days"
+        return today - timedelta(days=89), today, "Last 90 Days"
     if key == "this_year":
         return date(today.year, 1, 1), today, str(today.year)
-    return today - timedelta(days=29), today, "Last 30 days"
+    return today - timedelta(days=29), today, "Last 30 Days"
 
 
 def _pct_change(current: float, previous: float) -> float | None:

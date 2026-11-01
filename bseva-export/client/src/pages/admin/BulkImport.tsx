@@ -380,7 +380,7 @@ export default function BulkImportPage() {
             {previewData.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Data Preview (First 5 rows)</CardTitle>
+                  <CardTitle>Data Preview (First 5 Rows)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">

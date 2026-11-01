@@ -79,7 +79,7 @@ function previewRoles(audience?: string): Array<"customer" | "pujari"> {
 }
 
 function roleLabel(role: "customer" | "pujari") {
-  return role === "pujari" ? "Pujari home" : "Customer home";
+  return role === "pujari" ? "Pujari Home" : "Customer Home";
 }
 
 function Field({
@@ -154,7 +154,7 @@ function PromoImageField({
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
         >
-          {uploading ? "Uploading…" : value ? "Replace image" : "Upload image"}
+          {uploading ? "Uploading…" : value ? "Replace Image" : "Upload Image"}
         </Button>
         {value ? (
           <Button type="button" variant="ghost" size="sm" disabled={uploading} onClick={() => onChange("")}>
@@ -188,7 +188,7 @@ function AudienceSelect({
     >
       <option value="customer">Customer</option>
       <option value="pujari">Pujari</option>
-      <option value="all">Customers & pujaris</option>
+      <option value="all">Customers & Pujaris</option>
     </select>
   );
 }
@@ -243,7 +243,7 @@ function DraftPanel({
         ) : saved ? (
           <Badge variant="secondary">Draft</Badge>
         ) : (
-          <Badge variant="outline">Not saved</Badge>
+          <Badge variant="outline">Not Saved</Badge>
         )}
       </div>
       <p className="text-xs text-muted-foreground">
@@ -455,7 +455,7 @@ export default function PromosAdmin() {
       <Tabs defaultValue="banners">
         <TabsList>
           <TabsTrigger value="banners">Banners</TabsTrigger>
-          <TabsTrigger value="popups">Seasonal popups</TabsTrigger>
+          <TabsTrigger value="popups">Seasonal Popups</TabsTrigger>
         </TabsList>
         <TabsContent value="banners" className="space-y-6 mt-4">
           {canManage && (
@@ -472,7 +472,7 @@ export default function PromosAdmin() {
                   Editing {bannerPublished ? "published banner" : "draft"}: <span className="font-medium text-foreground">{bannerForm.title || "Untitled"}</span>
                 </p>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setBannerForm(emptyBanner)}>
-                  New banner
+                  New Banner
                 </Button>
               </div>
             ) : null}
@@ -506,7 +506,7 @@ export default function PromosAdmin() {
               />
             </Field>
             <Field
-              label="Display order"
+              label="Display Order"
               hint="Lower numbers appear first when multiple banners are active."
             >
               <Input
@@ -523,7 +523,7 @@ export default function PromosAdmin() {
               hint="The picture on the home-page banner. JPG, PNG, WebP, or GIF up to 8MB."
             />
             <Field
-              label="Tap link"
+              label="Tap Link"
               hint="Optional. Page that opens when someone taps the banner. Example: /services"
             >
               <Input
@@ -539,7 +539,7 @@ export default function PromosAdmin() {
             ) : null}
             <div className="md:col-span-2 flex flex-wrap gap-2">
               <Button type="submit" disabled={saving} variant={bannerPublished ? "default" : "outline"} className={bannerPublished ? "bg-primary" : ""}>
-                {saving ? "Saving…" : bannerPublished ? "Save changes" : bannerForm.id ? "Save draft" : "Save as draft"}
+                {saving ? "Saving…" : bannerPublished ? "Save Changes" : bannerForm.id ? "Save Draft" : "Save as Draft"}
               </Button>
               {!bannerPublished ? (
                 <Button type="button" disabled={saving} className="bg-primary" onClick={() => void saveBanner(true)}>
@@ -557,7 +557,7 @@ export default function PromosAdmin() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Who sees it</TableHead>
+                <TableHead>Who Sees It</TableHead>
                 <TableHead>Order</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
@@ -621,7 +621,7 @@ export default function PromosAdmin() {
                   Editing {popupPublished ? "published popup" : "draft"}: <span className="font-medium text-foreground">{popupForm.title || "Untitled"}</span>
                 </p>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setPopupForm(emptyPopup)}>
-                  New popup
+                  New Popup
                 </Button>
               </div>
             ) : null}
@@ -689,7 +689,7 @@ export default function PromosAdmin() {
             ) : null}
             <div className="md:col-span-2 flex flex-wrap gap-2">
               <Button type="submit" disabled={saving} variant={popupPublished ? "default" : "outline"} className={popupPublished ? "bg-primary" : ""}>
-                {saving ? "Saving…" : popupPublished ? "Save changes" : popupForm.id ? "Save draft" : "Save as draft"}
+                {saving ? "Saving…" : popupPublished ? "Save Changes" : popupForm.id ? "Save Draft" : "Save as Draft"}
               </Button>
               {!popupPublished ? (
                 <Button type="button" disabled={saving} className="bg-primary" onClick={() => void savePopup(true)}>
@@ -707,7 +707,7 @@ export default function PromosAdmin() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Who sees it</TableHead>
+                <TableHead>Who Sees It</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>

@@ -100,7 +100,7 @@ function PolicyEditor({
         <CardTitle className="">{policy.title}</CardTitle>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label>Section title</Label>
+            <Label>Section Title</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="space-y-1">
@@ -126,7 +126,7 @@ function PolicyEditor({
               </Button>
             </div>
             <div className="space-y-1">
-              <Label>Point title (optional)</Label>
+              <Label>Point Title (Optional)</Label>
               <Input
                 value={point.title}
                 onChange={(e) => updatePoint(index, { title: e.target.value })}
@@ -134,7 +134,7 @@ function PolicyEditor({
               />
             </div>
             <div className="space-y-1">
-              <Label>Point text</Label>
+              <Label>Point Text</Label>
               <Textarea
                 value={point.body}
                 onChange={(e) => updatePoint(index, { body: e.target.value })}
@@ -153,7 +153,7 @@ function PolicyEditor({
           {dirty && (
             <>
               <Button type="button" onClick={() => void save()} disabled={saving}>
-                {saving ? "Saving…" : "Save section"}
+                {saving ? "Saving…" : "Save Section"}
               </Button>
               <Button
                 type="button"

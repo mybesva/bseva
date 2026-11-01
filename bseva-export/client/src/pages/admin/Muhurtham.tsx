@@ -150,8 +150,8 @@ export default function Muhurtham() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="actionable">Action required</SelectItem>
-            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="actionable">Action Required</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             {STATUSES.map((item) => (
               <SelectItem key={item} value={item}>{displayTokenLabel(item)}</SelectItem>
             ))}
@@ -175,7 +175,7 @@ export default function Muhurtham() {
               <TableHead>Customer</TableHead>
               <TableHead>Service</TableHead>
               <TableHead>Appointment</TableHead>
-              <TableHead>Preferred dates</TableHead>
+              <TableHead>Preferred Dates</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Requested</TableHead>
@@ -233,11 +233,11 @@ export default function Muhurtham() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Guidance notes</Label>
+              <Label>Guidance Notes</Label>
               <Textarea rows={5} value={notes} disabled={!canManage} onChange={(event) => setNotes(event.target.value)} placeholder="Record Muhurtham guidance and follow-up details." />
             </div>
             <div className="space-y-1">
-              <Label>Linked booking ID (optional)</Label>
+              <Label>Linked Booking ID (Optional)</Label>
               <Input value={linkedBookingId} disabled={!canManage} onChange={(event) => setLinkedBookingId(event.target.value)} placeholder="Booking UUID" />
               <p className="text-xs text-muted-foreground">Link the booking created after guidance. Existing links are preserved unless changed.</p>
             </div>
@@ -245,7 +245,7 @@ export default function Muhurtham() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button>
             {canManage && (
-              <Button onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+              <Button onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save Changes"}</Button>
             )}
           </DialogFooter>
         </DialogContent>

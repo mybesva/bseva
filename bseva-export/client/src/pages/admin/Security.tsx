@@ -31,7 +31,7 @@ type AuditRow = {
 
 const MODE_TEXT: Record<Mode, { title: string; hint: string; button: string }> = {
   create: {
-    title: "Create your MPIN",
+    title: "Create Your MPIN",
     hint: "A 6-digit MPIN is required, with an emailed OTP, before any settlement can be processed.",
     button: "Create MPIN",
   },
@@ -151,11 +151,11 @@ function ManageMpin() {
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">MPIN status</CardTitle>
+          <CardTitle className="text-base">MPIN Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <Badge variant={status?.locked ? "destructive" : status?.has_mpin ? "default" : "secondary"}>
-            {status?.locked ? "Locked" : status?.has_mpin ? "Active" : "Not created"}
+            {status?.locked ? "Locked" : status?.has_mpin ? "Active" : "Not Created"}
           </Badge>
           {status?.locked && status.locked_until ? (
             <p className="text-muted-foreground">Locked until {formatDisplayDateTime(status.locked_until)}. Reset it to unlock now.</p>
@@ -201,12 +201,12 @@ function ManageMpin() {
               {mode === "change" ? <MpinField id="mpin-current" label="Current MPIN" value={current} onChange={setCurrent} /> : null}
               {mode === "reset" ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="mpin-password">Account password</Label>
+                  <Label htmlFor="mpin-password">Account Password</Label>
                   <PasswordInput id="mpin-password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
                 </div>
               ) : null}
-              <MpinField id="mpin-new" label="New 6-digit MPIN" value={next} onChange={setNext} />
-              <MpinField id="mpin-confirm" label="Confirm new MPIN" value={confirm} onChange={setConfirm} />
+              <MpinField id="mpin-new" label="New 6-Digit MPIN" value={next} onChange={setNext} />
+              <MpinField id="mpin-confirm" label="Confirm New MPIN" value={confirm} onChange={setConfirm} />
               <div className="flex gap-2 sm:col-span-2">
                 <Button type="submit" disabled={busy || !ready}>
                   {busy ? "Saving…" : text.button}
@@ -237,7 +237,7 @@ function AuditLog() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Security audit log</CardTitle>
+        <CardTitle className="text-base">Security Audit Log</CardTitle>
         <CardDescription>Permanent record of Super Admin sign-ins, MPIN changes and settlement actions, including failed attempts.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -295,7 +295,7 @@ export default function AdminSecurity() {
       <Tabs defaultValue="mpin">
         <TabsList>
           <TabsTrigger value="mpin">Manage MPIN</TabsTrigger>
-          <TabsTrigger value="audit">Audit log</TabsTrigger>
+          <TabsTrigger value="audit">Audit Log</TabsTrigger>
         </TabsList>
         <TabsContent value="mpin">
           <ManageMpin />

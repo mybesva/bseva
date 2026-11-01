@@ -194,10 +194,10 @@ export const PUJARI_SPECS = [
 /** Backend Literal: smartha | madhwa | vaishnava */
 export const SAMPRADAYA_OPTS = ["smartha", "madhwa", "vaishnava"] as const;
 export const PUJARI_DOC_TYPES = [
-  { id: "identity", label: "Aadhaar (required)" },
+  { id: "identity", label: "Aadhaar (Required)" },
   { id: "driving_licence", label: "Driving Licence" },
-  { id: "certificate", label: "Professional certificate" },
-  { id: "supporting", label: "Additional documents" },
+  { id: "certificate", label: "Professional Certificate" },
+  { id: "supporting", label: "Additional Documents" },
 ] as const;
 export const CUSTOMER_SUPPORT_CATS = [
   "booking",

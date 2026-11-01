@@ -1287,7 +1287,7 @@ def create_booking(
         create_notification(
             db,
             user_id=str(user["id"]),
-            title="Booking created",
+            title="Booking Created",
             body=f"Your booking {number} is confirmed. We will update you as it progresses.",
             category="booking",
             link=customer_booking_link(booking_id),
@@ -1297,7 +1297,7 @@ def create_booking(
         )
         notify_ops_staff(
             db,
-            title="New virtual puja booking" if is_virtual else "New booking",
+            title="New Virtual Puja Booking" if is_virtual else "New Booking",
             body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date} ({body.mode}).",
             category="booking",
             link="/admin/virtual-puja" if is_virtual else "/admin/bookings",
@@ -1306,7 +1306,7 @@ def create_booking(
             create_notification(
                 db,
                 user_id=str(body.pujari_id),
-                title="New booking request",
+                title="New Booking Request",
                 body=f"New booking {number} awaiting your acceptance.",
                 category="booking",
                 link=pujari_booking_link(booking_id),
@@ -1327,7 +1327,7 @@ def create_booking(
             else:
                 notify_ops_staff(
                     db,
-                    title="Booking needs pujari assignment",
+                    title="Booking Needs Pujari Assignment",
                     body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date}. No eligible pujari in range — assign manually.",
                     category="booking",
                     link="/admin/bookings?status=needs_reassignment",
@@ -1335,7 +1335,7 @@ def create_booking(
         else:
             notify_ops_staff(
                 db,
-                title="Virtual Puja needs pujari assignment",
+                title="Virtual Puja Needs Pujari Assignment",
                 body=f"{number} — assign a pujari using India time for this Virtual Puja.",
                 category="booking",
                 link="/admin/virtual-puja",
@@ -1863,7 +1863,7 @@ def _pujari_cancel_release(db, b, booking_id: str, user: dict, reason: str, fee:
         create_notification(
             db,
             user_id=str(b["customer_id"]),
-            title="Finding another pujari",
+            title="Finding Another Pujari",
             body=f"The pujari for booking {num} is no longer available. We are arranging another pujari for you.",
             category="booking",
             link=customer_booking_link(booking_id),
@@ -1880,7 +1880,7 @@ def _pujari_cancel_release(db, b, booking_id: str, user: dict, reason: str, fee:
             )
         notify_ops_staff(
             db,
-            title="Pujari cancelled a booking",
+            title="Pujari Cancelled a Booking",
             body=(
                 f"{num} was cancelled by the pujari and sent to {len(invited)} pujari(s)."
                 if invited
@@ -2038,7 +2038,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
         create_notification(
             db,
             user_id=str(b["customer_id"]),
-            title="Booking cancelled",
+            title="Booking Cancelled",
             body=f"Booking {num} was cancelled.{refund_note}",
             category="booking",
             link=customer_booking_link(booking_id),
@@ -2050,7 +2050,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             create_notification(
                 db,
                 user_id=str(b["pujari_id"]),
-                title="Booking cancelled",
+                title="Booking Cancelled",
                 body=f"Booking {num} was cancelled.",
                 category="booking",
                 link=pujari_booking_link(booking_id),
@@ -2190,7 +2190,7 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
         create_notification(
             db,
             user_id=str(user["id"]),
-            title="Payment received",
+            title="Payment Received",
             body=f"Payment for booking {b.get('booking_number') or booking_id[:8]} was successful.",
             category="payment",
             link=customer_booking_link(booking_id),

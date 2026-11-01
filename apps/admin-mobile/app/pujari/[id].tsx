@@ -132,7 +132,7 @@ export default function AdminPujariDetail() {
         </Card>
         {offerServices.length ? (
           <Card compact>
-            <AppText variant="h3">Verified services</AppText>
+            <AppText variant="h3">Verified Services</AppText>
             <AppText variant="small" color={colors.mutedForeground}>
               {verifiedIds.length} verified · {offerServices.length} applied
             </AppText>
@@ -166,7 +166,7 @@ export default function AdminPujariDetail() {
               })}
             </View>
             <PrimaryButton
-              title="Save verified services"
+              title="Save Verified Services"
               onPress={() =>
                 void act(async () => {
                   const out = await apiClient.api<{ verified_service_ids?: string[] }>(`/admin/pujaris/${id}/verified-services`, {
@@ -190,7 +190,7 @@ export default function AdminPujariDetail() {
                 {d.status ? ` · ${displayTokenLabel(d.status)}` : ""}
               </AppText>
               <PrimaryButton
-                title="View / share"
+                title="View / Share"
                 variant="outline"
                 onPress={() =>
                   void downloadAuthorizedFile(
@@ -262,8 +262,8 @@ export default function AdminPujariDetail() {
         {can(["verify_pujaris", "edit_pujaris"]) ? (
           <Card compact>
             <AppText variant="h3">Verification</AppText>
-            <Field label="Approved level" value={level} onChangeText={setLevel} keyboardType="number-pad" />
-            <Field label="Rejection / notes" value={reason} onChangeText={setReason} />
+            <Field label="Approved Level" value={level} onChangeText={setLevel} keyboardType="number-pad" />
+            <Field label="Rejection / Notes" value={reason} onChangeText={setReason} />
             <PrimaryButton
               title={t("admin.approve")}
               onPress={() =>
@@ -288,7 +288,7 @@ export default function AdminPujariDetail() {
               }
             />
             <PrimaryButton
-              title="Under review"
+              title="Under Review"
               variant="ghost"
               onPress={() =>
                 void act(() =>
@@ -300,7 +300,7 @@ export default function AdminPujariDetail() {
               }
             />
             <PrimaryButton
-              title="Request correction"
+              title="Request Correction"
               variant="ghost"
               onPress={() =>
                 void act(() =>

@@ -181,7 +181,7 @@ def register_for_event(
         create_notification(
             db,
             user_id=str(user["id"]),
-            title="Registration confirmed",
+            title="Registration Confirmed",
             body=f"Your registration {reg.get('registration_number')} is confirmed.",
             category="booking",
             link=f"/customer/bookings?type={'chadhava' if stype == 'chadhava' else 'pravachan' if stype == 'pravachan' else 'seva_puja'}",

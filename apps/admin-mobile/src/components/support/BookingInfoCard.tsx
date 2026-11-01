@@ -37,7 +37,7 @@ export function BookingInfoCard({ ticket }: { ticket: SupportTicketRow }) {
         value={String(booking.location_label || booking.address || ticket.booking_location || "—")}
       />
       <InfoRow label="Customer" value={String(booking.customer_name || ticket.booking_customer_name || "—")} />
-      <InfoRow label="Assigned pujari" value={String(booking.pujari_name || ticket.booking_pujari_name || "—")} />
+      <InfoRow label="Assigned Pujari" value={String(booking.pujari_name || ticket.booking_pujari_name || "—")} />
     </Card>
   );
 }

@@ -89,7 +89,7 @@ export default function AdminReports() {
             <PrimaryButton title="Generate" variant="outline" onPress={() => void q.refetch()} />
           </>
         ) : null}
-        <PrimaryButton title="Share Excel workbook" onPress={() => void shareExcel()} />
+        <PrimaryButton title="Share Excel Workbook" onPress={() => void shareExcel()} />
         <ChoiceChips
           options={[
             { id: "overview", label: "Overview" },

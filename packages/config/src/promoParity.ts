@@ -62,7 +62,7 @@ export const PROMO_AUDIENCES = [
 ] as const;
 
 export const PROMO_PLACEMENTS = [
-  { id: "post_login", label: "Post login" },
+  { id: "post_login", label: "Post Login" },
   { id: "home", label: "Home" },
 ] as const;
 

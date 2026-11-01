@@ -258,7 +258,7 @@ function RatingsForm({ canSubmit = true }: { canSubmit?: boolean }) {
                 <SelectValue placeholder="Rating" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All ratings</SelectItem>
+                <SelectItem value="all">All Ratings</SelectItem>
                 {[5, 4, 3, 2, 1].map((n) => (
                   <SelectItem key={n} value={String(n)}>
                     {n} stars
@@ -271,8 +271,8 @@ function RatingsForm({ canSubmit = true }: { canSubmit?: boolean }) {
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Newest first</SelectItem>
-                <SelectItem value="oldest">Oldest first</SelectItem>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
               </SelectContent>
             </Select>
           </div>

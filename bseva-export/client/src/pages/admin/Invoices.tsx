@@ -103,7 +103,7 @@ export default function AdminInvoices() {
         description="Official tax invoices issued after payment. Issued numbers never change. Company details for new invoices are configured in Settings."
         actions={
           <Link href={adminPath("/settings")}>
-            <Button variant="outline" size="sm">Invoice settings</Button>
+            <Button variant="outline" size="sm">Invoice Settings</Button>
           </Link>
         }
       />
@@ -138,9 +138,9 @@ export default function AdminInvoices() {
               <TableHead className="sticky top-0 z-20 bg-card border-b">Type</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Booking</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Customer</TableHead>
-              <TableHead className="sticky top-0 z-20 bg-card border-b">Total invoice</TableHead>
-              <TableHead className="sticky top-0 z-20 bg-card border-b">Platform fee</TableHead>
-              <TableHead className="sticky top-0 z-20 bg-card border-b">Gateway fee</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Total Invoice</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Platform Fee</TableHead>
+              <TableHead className="sticky top-0 z-20 bg-card border-b">Gateway Fee</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Payment</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Email</TableHead>
               <TableHead className="sticky top-0 z-20 bg-card border-b">Issued</TableHead>

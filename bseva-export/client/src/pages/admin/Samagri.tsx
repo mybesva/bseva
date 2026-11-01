@@ -115,7 +115,7 @@ export default function AdminSamagri() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Puja preparation items</CardTitle>
+          <CardTitle className="text-base">Puja Preparation Items</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -148,7 +148,7 @@ export default function AdminSamagri() {
       <Dialog open={open && canManage} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add samagri item</DialogTitle>
+            <DialogTitle>Add Samagri Item</DialogTitle>
           </DialogHeader>
           <form className="space-y-3" onSubmit={createItem}>
             <div className="space-y-1">
@@ -167,7 +167,7 @@ export default function AdminSamagri() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label>Item key</Label>
+                <Label>Item Key</Label>
                 <Input
                   value={itemKey}
                   onChange={(e) => setItemKey(e.target.value)}

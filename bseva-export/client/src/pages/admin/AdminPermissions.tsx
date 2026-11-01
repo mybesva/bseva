@@ -195,7 +195,7 @@ function PermissionsWorkspace() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search admins"
-              aria-label="Search admins"
+              aria-label="Search Admins"
               className="h-10 w-full rounded-xl border border-[#EFE2CF] bg-[#FFFCF7] pl-9 pr-3 text-sm outline-none focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00]/20 dark:border-white/10 dark:bg-white/5"
             />
           </div>
@@ -265,7 +265,7 @@ function PermissionsWorkspace() {
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF1E4] text-[#E86A00] dark:bg-[#FF7A00]/15">
                 <UserCog size="1.625rem" />
               </span>
-              <h2 className="mt-4 text-lg font-bold text-[#0E1830] dark:text-white">Select an admin</h2>
+              <h2 className="mt-4 text-lg font-bold text-[#0E1830] dark:text-white">Select an Admin</h2>
               <p className="mt-1 max-w-sm text-sm text-[#5B6478] dark:text-white/60">
                 Pick an account on the left to review and change the modules they can access.
               </p>
@@ -353,7 +353,7 @@ function PermissionsWorkspace() {
                           checked={state}
                           disabled={saving}
                           onCheckedChange={(v) => setGroup(keys, v === true)}
-                          aria-label={`Select all ${g.label} permissions`}
+                          aria-label={`Select All ${g.label} Permissions`}
                         />
                         <span className="min-w-0 flex-1 text-sm font-bold text-[#0E1830] dark:text-white">{g.label}</span>
                         <span
@@ -461,7 +461,7 @@ function PermissionsWorkspace() {
                 setStatusFor(null);
               }}
             >
-              {statusFor?.blocked ? "Enable admin" : "Disable admin"}
+              {statusFor?.blocked ? "Enable Admin" : "Disable Admin"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -475,14 +475,14 @@ function PermissionsWorkspace() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogCancel>Keep Editing</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (pendingSwitch) select(pendingSwitch);
                 setPendingSwitch(null);
               }}
             >
-              Discard changes
+              Discard Changes
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

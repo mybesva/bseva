@@ -7,7 +7,7 @@ def test_period_bounds_default_last_30_days():
     start, end, label = period_bounds("last_30_days", today=date(2026, 9, 15))
     assert end == date(2026, 9, 15)
     assert start == date(2026, 8, 17)
-    assert label == "Last 30 days"
+    assert label == "Last 30 Days"
 
 
 def test_period_bounds_custom_swaps_if_reversed():

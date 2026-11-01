@@ -80,7 +80,7 @@ export default function CustomerRewardsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">My referrals</CardTitle>
+            <CardTitle className="text-base">My Referrals</CardTitle>
           </CardHeader>
           <CardContent>
             {myReferrals.length === 0 ? (

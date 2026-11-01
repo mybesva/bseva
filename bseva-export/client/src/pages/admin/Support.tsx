@@ -314,7 +314,7 @@ export default function AdminSupport() {
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
                       <SelectItem key={id} value={id}>
                         {label}
@@ -327,7 +327,7 @@ export default function AdminSupport() {
                     <SelectValue placeholder="Reporter" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All reporters</SelectItem>
+                    <SelectItem value="all">All Reporters</SelectItem>
                     {Object.entries(REPORTER_LABELS).map(([id, label]) => (
                       <SelectItem key={id} value={id}>
                         {label}
@@ -340,7 +340,7 @@ export default function AdminSupport() {
               </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => go({ q, from: fromDate, to: toDate, page: 1 })}>
-                  Apply filters
+                  Apply Filters
                 </Button>
                 <Button
                   size="sm"
@@ -360,7 +360,7 @@ export default function AdminSupport() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Live chat (in-app)</CardTitle>
+              <CardTitle className="text-base">Live Chat (In-App)</CardTitle>
               <Button size="sm" variant="ghost" onClick={() => setChatOpen((v) => !v)}>
                 {chatOpen ? "Hide" : `Show · ${openChats.length} open`}
               </Button>
@@ -405,7 +405,7 @@ export default function AdminSupport() {
                           Send
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => void convertChat()}>
-                          Convert / link ticket
+                          Convert / Link Ticket
                         </Button>
                       </div>
                     </>

@@ -62,7 +62,7 @@ export default function TaxSettings() {
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Supplier registration</CardTitle>
+            <CardTitle className="text-base">Supplier Registration</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <div className="space-y-1">
@@ -126,7 +126,7 @@ export default function TaxSettings() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Change history</CardTitle>
+            <CardTitle className="text-base">Change History</CardTitle>
           </CardHeader>
           <CardContent>
             {audit.length === 0 ? (

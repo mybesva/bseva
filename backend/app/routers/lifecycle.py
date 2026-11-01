@@ -365,7 +365,7 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
         create_notification(
             db,
             user_id=str(b["customer_id"]),
-            title="Booking confirmed",
+            title="Booking Confirmed",
             body=f"Your booking {b.get('booking_number') or booking_id[:8]} was accepted by the pujari.{meet_note}",
             category="booking",
             link=customer_booking_link(booking_id),
@@ -377,7 +377,7 @@ def accept_booking(booking_id: str, body: AcceptIn, user=Depends(require_roles("
             create_notification(
                 db,
                 user_id=pid,
-                title="Rescheduled puja assigned",
+                title="Rescheduled Puja Assigned",
                 body=(
                     f"Booking {b.get('booking_number') or booking_id[:8]} is assigned to you for "
                     f"{b['booking_date'].strftime('%d-%m-%Y')} at {b['start_time'].strftime('%H:%M')}."
@@ -468,7 +468,7 @@ def reject_booking(
 
                 notify_ops_staff(
                     db,
-                    title="Booking needs pujari assignment",
+                    title="Booking Needs Pujari Assignment",
                     body=f"{b.get('booking_number') or booking_id[:8]} — all nearby pujaris declined.",
                     category="ops",
                     link="/admin/bookings?status=needs_reassignment",
@@ -499,7 +499,7 @@ def reject_booking(
         create_notification(
             db,
             user_id=str(b["customer_id"]),
-            title="Booking declined",
+            title="Booking Declined",
             body=f"Booking {b.get('booking_number') or booking_id[:8]} was declined by the pujari. We will reassign shortly.",
             category="booking",
             link=customer_booking_link(booking_id),
@@ -507,7 +507,7 @@ def reject_booking(
         )
         notify_super_admins(
             db,
-            title="Booking needs reassignment",
+            title="Booking Needs Reassignment",
             body=f"{b.get('booking_number') or booking_id} was rejected by pujari.",
             category="ops",
             link="/admin/bookings?status=needs_reassignment",
@@ -658,7 +658,7 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
         create_notification(
             db,
             user_id=str(b["customer_id"]),
-            title="Puja started",
+            title="Puja Started",
             body=f"Your puja {num} has started.",
             category="booking",
             link=customer_booking_link(booking_id),
@@ -669,7 +669,7 @@ def verify_start_otp(booking_id: str, body: StartOtpVerifyIn, user=Depends(requi
         create_notification(
             db,
             user_id=str(b["pujari_id"]),
-            title="Puja started",
+            title="Puja Started",
             body=f"Booking {num} is now in progress.",
             category="booking",
             link=pujari_booking_link(booking_id),
@@ -774,7 +774,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
         create_notification(
             db,
             user_id=str(b["customer_id"]),
-            title="Puja completed",
+            title="Puja Completed",
             body=f"Your puja {num} is complete. Thank you for booking with BSeva.",
             category="booking",
             link="/customer/history",
@@ -786,7 +786,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
             create_notification(
                 db,
                 user_id=str(b["pujari_id"]),
-                title="Booking completed",
+                title="Booking Completed",
                 body=f"Booking {num} was marked complete.",
                 category="booking",
                 link=pujari_booking_link(booking_id),
@@ -1223,7 +1223,7 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
             create_notification(
                 db,
                 user_id=str(b["customer_id"]),
-                title="Pujari is on the way",
+                title="Pujari Is on the Way",
                 body=f"Live tracking is available for booking {num}.",
                 category="pujari_arriving",
                 link=f"/booking/{booking_id}",
@@ -1250,7 +1250,7 @@ def ping_location(booking_id: str, body: LocationPingIn, user=Depends(require_ro
                 create_notification(
                     db,
                     user_id=str(b["customer_id"]),
-                    title="Pujari has arrived",
+                    title="Pujari Has Arrived",
                     body=f"Your pujari has reached the puja location for booking {num}.",
                     category="pujari_arrived",
                     link=f"/booking/{booking_id}",

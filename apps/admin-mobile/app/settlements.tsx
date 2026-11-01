@@ -62,7 +62,7 @@ export default function AdminSettlements() {
                 <Field label="MPIN" value={mpin} onChangeText={setMpin} secureTextEntry keyboardType="number-pad" maxLength={6} />
                 <Field label="Email OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
                 <PrimaryButton
-                  title="Confirm payment"
+                  title="Confirm Payment"
                   onPress={async () => {
                     setError(null);
                     try {
@@ -92,8 +92,8 @@ export default function AdminSettlements() {
               </>
             ) : (
               <>
-                <Field label="Override reason" value={reason} onChangeText={setReason} />
-                <Field label="Payment reference" value={paymentRef} onChangeText={setPaymentRef} />
+                <Field label="Override Reason" value={reason} onChangeText={setReason} />
+                <Field label="Payment Reference" value={paymentRef} onChangeText={setPaymentRef} />
                 <PrimaryButton
                   title="Send OTP"
                   variant="outline"

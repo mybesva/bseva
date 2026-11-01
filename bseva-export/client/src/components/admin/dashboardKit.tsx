@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils";
 export const STATUS_META: Record<string, { label: string; bar: string; chip: string }> = {
   pending: { label: "Pending", bar: "bg-amber-400", chip: "bg-amber-50 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300" },
   pending_acceptance: {
-    label: "Awaiting pujari",
+    label: "Awaiting Pujari",
     bar: "bg-orange-400",
     chip: "bg-orange-50 text-orange-700 dark:bg-orange-400/15 dark:text-orange-300",
   },
   confirmed: { label: "Confirmed", bar: "bg-sky-500", chip: "bg-sky-50 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300" },
   in_progress: {
-    label: "In progress",
+    label: "In Progress",
     bar: "bg-violet-500",
     chip: "bg-violet-50 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
   },
@@ -25,14 +25,14 @@ export const STATUS_META: Record<string, { label: string; bar: string; chip: str
   },
   cancelled: { label: "Cancelled", bar: "bg-slate-400", chip: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300" },
   rejected: { label: "Rejected", bar: "bg-rose-500", chip: "bg-rose-50 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300" },
-  needs_assignment: { label: "Needs pujari assignment", bar: "bg-rose-500", chip: "" },
-  waiting_pujari: { label: "Waiting for pujari response", bar: "bg-orange-400", chip: "" },
-  confirmed_upcoming: { label: "Confirmed (upcoming)", bar: "bg-sky-500", chip: "" },
-  puja_in_progress: { label: "In progress", bar: "bg-violet-500", chip: "" },
+  needs_assignment: { label: "Needs Pujari Assignment", bar: "bg-rose-500", chip: "" },
+  waiting_pujari: { label: "Waiting for Pujari Response", bar: "bg-orange-400", chip: "" },
+  confirmed_upcoming: { label: "Confirmed (Upcoming)", bar: "bg-sky-500", chip: "" },
+  puja_in_progress: { label: "In Progress", bar: "bg-violet-500", chip: "" },
   puja_completed: { label: "Completed", bar: "bg-emerald-500", chip: "" },
   puja_closed: { label: "Cancelled", bar: "bg-slate-400", chip: "" },
-  date_passed: { label: "Date passed, no confirmed pujari", bar: "bg-amber-400", chip: "" },
-  not_completed: { label: "Date passed, not marked complete", bar: "bg-fuchsia-500", chip: "" },
+  date_passed: { label: "Date Passed, No Confirmed Pujari", bar: "bg-amber-400", chip: "" },
+  not_completed: { label: "Date Passed, Not Marked Complete", bar: "bg-fuchsia-500", chip: "" },
 };
 
 export const statusMeta = (s: string) =>
@@ -77,7 +77,7 @@ export function timeAgo(iso: string) {
 
 export function greeting() {
   const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  return h < 12 ? "Good morning" : h < 17 ? "Good Afternoon" : "Good Evening";
 }
 
 export const CARD =

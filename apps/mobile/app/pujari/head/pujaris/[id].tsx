@@ -75,7 +75,7 @@ export default function HeadPujariDetails() {
   const services = (list?: { name?: string }[]) => (list || []).map((s) => s.name).filter(Boolean);
   return (
     <Screen>
-      <ScreenHeader title="Pujari details" back />
+      <ScreenHeader title="Pujari Details" back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error || (details.error instanceof Error ? details.error.message : null)} />
         {details.isLoading ? <LoadingBlock /> : null}
@@ -90,28 +90,28 @@ export default function HeadPujariDetails() {
               </AppText>
             </Card>
             <Card style={{ gap: 8 }}>
-              <AppText variant="h3">Contact and location</AppText>
+              <AppText variant="h3">Contact and Location</AppText>
               <Row name="Phone" value={p.phone || p.mobile_number} />
               <Row name="Email" value={p.email} />
               <Row name="Address" value={p.address || p.location_label} />
               <Row name="City" value={p.city} />
               <Row name="District" value={p.district} />
               <Row name="State" value={p.state} />
-              <Row name="Service radius (km)" value={p.service_radius_km} />
+              <Row name="Service Radius (Km)" value={p.service_radius_km} />
             </Card>
             <Card style={{ gap: 8 }}>
               <AppText variant="h3">Profile</AppText>
-              <Row name="Experience (years)" value={p.experience_years} />
+              <Row name="Experience (Years)" value={p.experience_years} />
               <Row name="Languages" value={p.languages} />
               <Row name="Specializations" value={p.specializations} />
-              <Row name="Requested level" value={p.requested_level} />
-              <Row name="Approved level" value={p.approved_level} />
-              <Row name="Profile completion" value={`${p.profile_completion_percentage ?? 0}%`} />
+              <Row name="Requested Level" value={p.requested_level} />
+              <Row name="Approved Level" value={p.approved_level} />
+              <Row name="Profile Completion" value={`${p.profile_completion_percentage ?? 0}%`} />
             </Card>
             <Card style={{ gap: 8 }}>
               <AppText variant="h3">Services</AppText>
               <Row name="Verified" value={services(offers.data?.verified_services)} />
-              <Row name="Waiting for review" value={services(offers.data?.pending_review_services)} />
+              <Row name="Waiting for Review" value={services(offers.data?.pending_review_services)} />
             </Card>
             <Card style={{ gap: 8 }}>
               <AppText variant="h3">Documents</AppText>
@@ -126,7 +126,7 @@ export default function HeadPujariDetails() {
               ))}
             </Card>
             <Card style={{ gap: 8 }}>
-              <AppText variant="h3">Verification history</AppText>
+              <AppText variant="h3">Verification History</AppText>
               {data.verification_history.length === 0 ? <AppText color={colors.mutedForeground}>No history yet.</AppText> : null}
               {data.verification_history.map((row, i) => (
                 <Row key={`${row.created_at}-${i}`} name={new Date(row.created_at).toLocaleString("en-IN")} value={`${label(row.action)} by ${row.actor_name || "System"}`} />

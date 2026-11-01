@@ -133,42 +133,42 @@ function SuperAdminDashboard() {
 
   const attention = [
     {
-      label: "Waiting for pujari response",
+      label: "Waiting for Pujari Response",
       value: a?.waitingPujari,
       icon: Clock,
       tone: "amber",
       href: adminPath("/bookings?status=waiting_pujari"),
     },
     {
-      label: "Needs pujari assignment",
+      label: "Needs Pujari Assignment",
       value: a?.needsAssignment,
       icon: UserX,
       tone: "rose",
       href: adminPath("/bookings?status=needs_assignment"),
     },
     {
-      label: "Puja date passed",
+      label: "Puja Date Passed",
       value: a?.datePassed,
       icon: CalendarX,
       tone: "rose",
       href: adminPath("/bookings?status=date_passed"),
     },
     {
-      label: "Puja not marked complete",
+      label: "Puja Not Marked Complete",
       value: a?.notCompleted,
       icon: CalendarClock,
       tone: "amber",
       href: adminPath("/bookings?status=not_completed"),
     },
     {
-      label: "Pujas in progress",
+      label: "Pujas in Progress",
       value: a?.inProgress,
       icon: Loader2,
       tone: "violet",
       href: adminPath("/bookings?status=in_progress"),
     },
     {
-      label: "Open support tickets",
+      label: "Open Support Tickets",
       value: a?.openTickets,
       sub: a?.overdueTickets ? `${a.overdueTickets} past SLA` : undefined,
       icon: LifeBuoy,
@@ -261,9 +261,9 @@ function SuperAdminDashboard() {
             </div>
             <div className="grid grid-cols-3 gap-2 lg:min-w-[27rem]">
               {[
-                { label: "Today's pujas", value: fmt(ov?.todayBookings), icon: CalendarCheck },
-                { label: "In progress", value: fmt(a?.inProgress), icon: Loader2 },
-                { label: "Open tickets", value: fmt(a?.openTickets), icon: LifeBuoy },
+                { label: "Today's Pujas", value: fmt(ov?.todayBookings), icon: CalendarCheck },
+                { label: "In Progress", value: fmt(a?.inProgress), icon: Loader2 },
+                { label: "Open Tickets", value: fmt(a?.openTickets), icon: LifeBuoy },
               ].map((s) => (
                 <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.06] px-2.5 py-1.5 backdrop-blur-sm">
                   <div className="flex items-center gap-1.5">
@@ -280,7 +280,7 @@ function SuperAdminDashboard() {
             onClick={() => void load()}
             disabled={loading}
             className="absolute right-2 top-2 rounded-full p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
-            aria-label="Refresh dashboard"
+            aria-label="Refresh Dashboard"
             title="Refresh"
           >
             <RefreshCw size="1rem" className={cn(loading && "animate-spin")} />
@@ -290,7 +290,7 @@ function SuperAdminDashboard() {
         {/* ── KPIs ── */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Kpi
-            label="Revenue this month"
+            label="Revenue This Month"
             value={ov ? compactRupees(ov.month.revenue) : "—"}
             trend={ov ? pctChange(ov.month.revenue, ov.month.revenueLastMonth) : undefined}
             sub={ov ? `vs ${compactRupees(ov.month.revenueLastMonth)} last month` : undefined}
@@ -298,7 +298,7 @@ function SuperAdminDashboard() {
             href={adminPath("/payments")}
           />
           <Kpi
-            label="Bookings this month"
+            label="Bookings This Month"
             value={fmt(ov?.month.bookings)}
             trend={ov ? pctChange(ov.month.bookings, ov.month.bookingsLastMonth) : undefined}
             sub={stats ? `${fmt(stats.totalBookings)} all time` : undefined}
@@ -313,7 +313,7 @@ function SuperAdminDashboard() {
             href={adminPath("/customers")}
           />
           <Kpi
-            label="Active pujaris"
+            label="Active Pujaris"
             value={fmt(stats?.activePriests)}
             sub={a ? `${fmt(a.pendingVerification)} awaiting verification` : undefined}
             icon={UserCog}
@@ -323,7 +323,7 @@ function SuperAdminDashboard() {
 
         {/* ── Attention + today's schedule ── */}
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <Panel title="Needs attention" icon={AlertTriangle}>
+          <Panel title="Needs Attention" icon={AlertTriangle}>
             <ul className="grid gap-x-3 gap-y-1 sm:grid-cols-2">
               {attention.map((it) => {
                 const zero = !it.value;
@@ -358,7 +358,7 @@ function SuperAdminDashboard() {
           <Panel
             title={`Today's schedule${ov ? ` · ${fmt(ov.todayBookings)}` : ""}`}
             icon={CalendarCheck}
-            action={{ label: "All bookings", href: adminPath("/bookings") }}
+            action={{ label: "All Bookings", href: adminPath("/bookings") }}
           >
             {ov && ov.todaySchedule.length === 0 ? (
               <p className="flex flex-1 items-center justify-center rounded-xl bg-[#FFF8EE] py-4 text-sm text-[#5B6478] dark:bg-white/5 dark:text-white/60">
@@ -402,7 +402,7 @@ function SuperAdminDashboard() {
 
         {/* ── Trend · status breakdown · pujari status ── */}
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          <Panel title="Bookings · last 7 days" icon={TrendingUp}>
+          <Panel title="Bookings · Last 7 Days" icon={TrendingUp}>
             <p className="-mt-1.5 mb-1.5 text-xs text-[#5B6478] dark:text-white/55">{fmt(trendTotal)} new bookings this week</p>
             <div className="flex h-24 items-end gap-2">
               {trend.map((d) => {
@@ -427,7 +427,7 @@ function SuperAdminDashboard() {
             </div>
           </Panel>
 
-          <Panel title="Booking status" icon={CalendarClock} action={{ label: "View", href: adminPath("/bookings") }}>
+          <Panel title="Booking Status" icon={CalendarClock} action={{ label: "View", href: adminPath("/bookings") }}>
             <div className="mb-2.5 flex h-2 overflow-hidden rounded-full bg-[#F3E8D8] dark:bg-white/10">
               {breakdown.map(([s, n]) => (
                 <div key={s} className={statusMeta(s).bar} style={{ width: `${(n / breakdownTotal) * 100}%` }} title={`${statusMeta(s).label}: ${n}`} />
@@ -449,7 +449,7 @@ function SuperAdminDashboard() {
           </Panel>
 
           <Panel
-            title="Pujari verification"
+            title="Pujari Verification"
             icon={ShieldCheck}
             action={{ label: "Manage", href: adminPath("/pujaris") }}
             className="lg:col-span-2 xl:col-span-1"
@@ -472,14 +472,14 @@ function SuperAdminDashboard() {
 
         {/* ── Recent bookings · top services ── */}
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <Panel title="Recent bookings" icon={UserPlus} action={{ label: "All bookings", href: adminPath("/bookings") }}>
+          <Panel title="Recent Bookings" icon={UserPlus} action={{ label: "All Bookings", href: adminPath("/bookings") }}>
             <div className="-mx-2 overflow-x-auto">
               <table className="w-full min-w-[34rem] text-sm">
                 <thead>
                   <tr className="text-left text-[0.7rem] uppercase tracking-wider text-[#8A7F70] dark:text-white/45">
                     <th className="px-2 pb-1 font-semibold">Booking</th>
                     <th className="px-2 pb-1 font-semibold">Customer</th>
-                    <th className="px-2 pb-1 font-semibold">Puja date</th>
+                    <th className="px-2 pb-1 font-semibold">Puja Date</th>
                     <th className="px-2 pb-1 font-semibold">Status</th>
                     <th className="px-2 pb-1 text-right font-semibold">Amount</th>
                   </tr>
@@ -515,7 +515,7 @@ function SuperAdminDashboard() {
             </div>
           </Panel>
 
-          <Panel title="Top pujas · 30 days" icon={TrendingUp} action={{ label: "Services", href: adminPath("/services") }}>
+          <Panel title="Top Pujas · 30 Days" icon={TrendingUp} action={{ label: "Services", href: adminPath("/services") }}>
             <ol className="space-y-2">
               {(ov?.topServices || []).map((s, i) => (
                 <li key={s.name}>

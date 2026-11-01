@@ -413,7 +413,7 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
         if body.account_type == "pujari":
             notify_ops_staff(
                 db,
-                title="New pujari registration",
+                title="New Pujari Registration",
                 body=f"{display_name} registered as a pujari.",
                 category="kyc",
                 link="/admin/pujaris",
@@ -422,7 +422,7 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
         else:
             notify_ops_staff(
                 db,
-                title="New customer",
+                title="New Customer",
                 body=f"{display_name} created a customer account.",
                 category="ops",
                 link="/admin/customers",

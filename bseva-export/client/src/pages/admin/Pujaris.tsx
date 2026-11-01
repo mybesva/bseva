@@ -213,7 +213,7 @@ function PujariRow({
               className="text-xs text-primary font-medium hover:underline w-fit text-left"
               onClick={openServices}
             >
-              Open services
+              Open Services
             </button>
           )}
         </div>
@@ -247,15 +247,15 @@ function PujariRow({
             <DropdownMenuContent align="end" className="w-48">
               {canVerify && (
                 <>
-                  <DropdownMenuItem onClick={() => void setVerification("approved")}>Approve profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void setVerification("approved")}>Approve Profile</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => void setVerification("correction_required")}>
-                    Request correction
+                    Request Correction
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void setVerification("rejected")}>Reject profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void setVerification("rejected")}>Reject Profile</DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem onClick={openServices}>Review services</DropdownMenuItem>
+              <DropdownMenuItem onClick={openServices}>Review Services</DropdownMenuItem>
               {(canHead || canBlock) && <DropdownMenuSeparator />}
               {!canHead ? null : u.is_head_pujari || u.role === "head_pujari" ? (
                 <DropdownMenuItem
@@ -268,7 +268,7 @@ function PujariRow({
                     await onChanged();
                   }}
                 >
-                  Remove head pujari
+                  Remove Head Pujari
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
@@ -281,7 +281,7 @@ function PujariRow({
                     await onChanged();
                   }}
                 >
-                  Make head pujari
+                  Make Head Pujari
                 </DropdownMenuItem>
               )}
               {canBlock && (
@@ -295,7 +295,7 @@ function PujariRow({
                   await onChanged();
                 }}
               >
-                {u.blocked ? "Unblock account" : "Block account"}
+                {u.blocked ? "Unblock Account" : "Block Account"}
               </DropdownMenuItem>
               )}
               {canBlock && (
@@ -439,7 +439,7 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
 
       <div className="flex flex-wrap gap-2 mb-4 items-end">
         <div className="space-y-1">
-          <Label className="text-xs">Status filter</Label>
+          <Label className="text-xs">Status Filter</Label>
           <Select value={statusFilter} onValueChange={(v) => updateFilters({ status: v })}>
             <SelectTrigger className="w-[13.75rem]">
               <SelectValue />
@@ -447,8 +447,8 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="pending">Pending verification</SelectItem>
-              <SelectItem value="correction_required">Correction required</SelectItem>
+              <SelectItem value="pending">Pending Verification</SelectItem>
+              <SelectItem value="correction_required">Correction Required</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
             </SelectContent>
@@ -482,7 +482,7 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
       <Dialog open={open && canCreate} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="">Add pujari</DialogTitle>
+            <DialogTitle className="">Add Pujari</DialogTitle>
           </DialogHeader>
           <form id="add-pujari-form" onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">
@@ -517,7 +517,7 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pujari-location">City / area</Label>
+              <Label htmlFor="pujari-location">City / Area</Label>
               <Input
                 id="pujari-location"
                 placeholder="e.g. Jayanagar, Bangalore"
@@ -561,7 +561,7 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
               Cancel
             </Button>
             <Button type="submit" form="add-pujari-form" disabled={saving}>
-              {saving ? "Adding…" : "Add pujari"}
+              {saving ? "Adding…" : "Add Pujari"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -574,7 +574,7 @@ export default function PujarisPage({ headView = false }: { headView?: boolean }
             <SortableHead label="Name" column="name" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
             <SortableHead label="Email" column="email" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="max-w-[12.5rem]" />
             <SortableHead label="Location" column="location" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
-            <SortableHead label="Approved level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[12.5rem]" />
+            <SortableHead label="Approved Level" column="approved_level" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[12.5rem]" />
             <SortableHead label="Experience" column="experience" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />
             <SortableHead label="Services" column="services" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} className="min-w-[8.125rem]" />
             <SortableHead label="Verification" column="verification" sortBy={sortBy} sortDir={sortDir} onSort={(c) => updateFilters(nextSort(sortBy, sortDir, c))} />

@@ -235,7 +235,7 @@ export function CustomerAddressPanel() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <Label htmlFor="customer-gstin">GSTIN (optional)</Label>
+            <Label htmlFor="customer-gstin">GSTIN (Optional)</Label>
             <Input
               id="customer-gstin"
               value={gstin}

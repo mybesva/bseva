@@ -36,7 +36,7 @@ function PasswordField({
         />
         <button
           type="button"
-          aria-label={show ? "Hide password" : "Show password"}
+          aria-label={show ? "Hide Password" : "Show Password"}
           onClick={() => setShow((s) => !s)}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
         >
@@ -83,11 +83,11 @@ export function AddAdminDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add admin</DialogTitle>
+          <DialogTitle>Add Admin</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label htmlFor="admin-name">Full name</Label>
+            <Label htmlFor="admin-name">Full Name</Label>
             <Input id="admin-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div className="space-y-1">
@@ -101,7 +101,7 @@ export function AddAdminDialog({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="admin-phone">Mobile number</Label>
+            <Label htmlFor="admin-phone">Mobile Number</Label>
             <Input
               id="admin-phone"
               inputMode="tel"
@@ -123,7 +123,7 @@ export function AddAdminDialog({
             Cancel
           </Button>
           <Button disabled={saving || !ready} onClick={() => void save()}>
-            {saving ? "Creating…" : "Create admin"}
+            {saving ? "Creating…" : "Create Admin"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -166,14 +166,14 @@ export function AdminPasswordDialog({
     <Dialog open={!!admin} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Change password</DialogTitle>
+          <DialogTitle>Change Password</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           For {admin?.name || admin?.email}. They will be signed out everywhere and must use the new password.
         </p>
-        <PasswordField id="admin-new-password" label="New password" value={password} onChange={setPassword} />
+        <PasswordField id="admin-new-password" label="New Password" value={password} onChange={setPassword} />
         <div className="space-y-1">
-          <PasswordField id="admin-confirm-password" label="Confirm new password" placeholder="Type it again" value={confirm} onChange={setConfirm} />
+          <PasswordField id="admin-confirm-password" label="Confirm New Password" placeholder="Type it again" value={confirm} onChange={setConfirm} />
           {mismatch && (
             <p className="text-xs font-medium text-destructive" role="alert">
               Passwords do not match
@@ -185,7 +185,7 @@ export function AdminPasswordDialog({
             Cancel
           </Button>
           <Button disabled={saving || password.length < 8 || confirm !== password} onClick={() => void save()}>
-            {saving ? "Saving…" : "Change password"}
+            {saving ? "Saving…" : "Change Password"}
           </Button>
         </DialogFooter>
       </DialogContent>

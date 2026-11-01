@@ -88,7 +88,7 @@ export default function AdminLogin() {
               {challenge ? (
                 <>
                   <AppText color={colors.mutedForeground}>Enter the 6-digit OTP sent to {challenge.emailHint}.</AppText>
-                  <Field label="One-time password" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
+                  <Field label="One-Time Password" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />
                   <PrimaryButton title="Verify OTP" loading={pending} onPress={onSubmitOtp} />
                   <PrimaryButton
                     title="Resend OTP"

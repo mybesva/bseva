@@ -181,7 +181,7 @@ export default function Reports() {
                   <SelectItem value="last_30_days">Last 30 Days</SelectItem>
                   <SelectItem value="last_90_days">Last 90 Days</SelectItem>
                   <SelectItem value="this_year">This Year</SelectItem>
-                  <SelectItem value="custom">Custom dates</SelectItem>
+                  <SelectItem value="custom">Custom Dates</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -305,7 +305,7 @@ export default function Reports() {
             <div className="grid flex-1 grid-cols-1 lg:grid-cols-2 gap-3">
               <Card className={PANEL}>
                 <CardHeader className={HEADER}>
-                  <CardTitle className="text-sm font-semibold">Booking trend</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Booking Trend</CardTitle>
                   <CardDescription className="text-xs">Bookings created in the selected period</CardDescription>
                 </CardHeader>
                 <CardContent className={`${BODY} flex flex-1 flex-col`}>
@@ -337,7 +337,7 @@ export default function Reports() {
               <div className="flex flex-col gap-3">
                 <Card className={PANEL}>
                   <CardHeader className={HEADER}>
-                    <CardTitle className="text-sm font-semibold">Payment methods</CardTitle>
+                    <CardTitle className="text-sm font-semibold">Payment Methods</CardTitle>
                   </CardHeader>
                   <CardContent className={BODY}>
                     {loading && !report ? (
@@ -367,7 +367,7 @@ export default function Reports() {
                 </Card>
                 <Card className={`${PANEL} flex-1`}>
                   <CardHeader className={HEADER}>
-                    <CardTitle className="text-sm font-semibold">Booking status</CardTitle>
+                    <CardTitle className="text-sm font-semibold">Booking Status</CardTitle>
                   </CardHeader>
                   <CardContent className={`${BODY} grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4`}>
                     {[
@@ -391,7 +391,7 @@ export default function Reports() {
             </div>
             <Card className={PANEL}>
               <CardHeader className={HEADER}>
-                <CardTitle className="text-sm font-semibold">Top performing services</CardTitle>
+                <CardTitle className="text-sm font-semibold">Top Performing Services</CardTitle>
               </CardHeader>
               <CardContent className={BODY}>
                 {!ov?.top_services.length ? (
@@ -403,7 +403,7 @@ export default function Reports() {
                         <TableHead>Service</TableHead>
                         <TableHead className="text-center">Bookings</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-center">Avg duration</TableHead>
+                        <TableHead className="text-center">Avg Duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -425,7 +425,7 @@ export default function Reports() {
           <TabsContent value="pujari" className="flex flex-col">
             <Card className={`${PANEL} flex-1`}>
               <CardHeader className={HEADER}>
-                <CardTitle className="text-sm font-semibold">Pujari performance</CardTitle>
+                <CardTitle className="text-sm font-semibold">Pujari Performance</CardTitle>
                 <CardDescription className="text-xs">Approved pujaris who had bookings in this period</CardDescription>
               </CardHeader>
               <CardContent className={BODY}>
@@ -438,7 +438,7 @@ export default function Reports() {
                         <TableHead>Pujari</TableHead>
                         <TableHead className="text-right">Bookings</TableHead>
                         <TableHead className="text-right">Rating</TableHead>
-                        <TableHead className="text-right" title="Completed pujas only">Earned</TableHead>
+                        <TableHead className="text-right" title="Completed Pujas Only">Earned</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -501,7 +501,7 @@ export default function Reports() {
             </div>
             <Card className={`${PANEL} flex-1`}>
               <CardHeader className={HEADER}>
-                <CardTitle className="text-sm font-semibold">Top customers</CardTitle>
+                <CardTitle className="text-sm font-semibold">Top Customers</CardTitle>
               </CardHeader>
               <CardContent className={BODY}>
                 {!report?.customers.top.length ? (
@@ -535,7 +535,7 @@ export default function Reports() {
           <TabsContent value="temple" className="flex flex-col gap-3">
             <Card className={PANEL}>
               <CardHeader className={HEADER}>
-                <CardTitle className="text-sm font-semibold">By service mode</CardTitle>
+                <CardTitle className="text-sm font-semibold">By Service Mode</CardTitle>
               </CardHeader>
               <CardContent className={BODY}>
                 {!report?.modes.length ? (
@@ -604,7 +604,7 @@ export default function Reports() {
           <TabsContent value="service" className="flex flex-col">
             <Card className={`${PANEL} flex-1`}>
               <CardHeader className={HEADER}>
-                <CardTitle className="text-sm font-semibold">Service / puja analytics</CardTitle>
+                <CardTitle className="text-sm font-semibold">Service / Puja Analytics</CardTitle>
               </CardHeader>
               <CardContent className={BODY}>
                 {!report?.services.length ? (
@@ -616,7 +616,7 @@ export default function Reports() {
                         <TableHead>Service</TableHead>
                         <TableHead className="text-center">Bookings</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-center">Avg duration</TableHead>
+                        <TableHead className="text-center">Avg Duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -643,7 +643,7 @@ export default function Reports() {
           <TabsContent value="samagri" className="flex flex-col">
             <Card className={`${PANEL} flex-1`}>
               <CardHeader className={HEADER}>
-                <CardTitle className="text-sm font-semibold">Samagri usage</CardTitle>
+                <CardTitle className="text-sm font-semibold">Samagri Usage</CardTitle>
                 <CardDescription className="text-xs">
                   {report?.samagri_bookings ?? 0} bookings in this period included a samagri kit
                 </CardDescription>
@@ -656,8 +656,8 @@ export default function Reports() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Item</TableHead>
-                        <TableHead className="text-right">Bookings used</TableHead>
-                        <TableHead className="text-right">Times listed</TableHead>
+                        <TableHead className="text-right">Bookings Used</TableHead>
+                        <TableHead className="text-right">Times Listed</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -716,7 +716,7 @@ export default function Reports() {
             </div>
             <Card className={`${PANEL} flex-1`}>
               <CardHeader className={HEADER}>
-                <CardTitle className="text-sm font-semibold">Payment method breakdown</CardTitle>
+                <CardTitle className="text-sm font-semibold">Payment Method Breakdown</CardTitle>
               </CardHeader>
               <CardContent className={BODY}>
                 {!report?.payments.by_method.length ? (

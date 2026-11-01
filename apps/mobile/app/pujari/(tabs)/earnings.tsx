@@ -31,7 +31,7 @@ export default function PujariEarnings() {
       >
         {bookings.isLoading ? <LoadingBlock /> : null}
         <Card>
-          <AppText variant="small">This month</AppText>
+          <AppText variant="small">This Month</AppText>
           <AppText variant="h1" color={colors.primary}>
             {rupees(stats.thisMonth)}
           </AppText>
@@ -53,7 +53,7 @@ export default function PujariEarnings() {
           <AppText variant="h2">{rupees(stats.settled)}</AppText>
         </Card>
         <Card>
-          <AppText variant="small">Settlement pending</AppText>
+          <AppText variant="small">Settlement Pending</AppText>
           <AppText variant="h2">{rupees(stats.settlementPending)}</AppText>
         </Card>
         <AppText variant="h3">{t("mobile.settlements")}</AppText>

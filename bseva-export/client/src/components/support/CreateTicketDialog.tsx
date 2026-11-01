@@ -150,12 +150,12 @@ export default function CreateTicketDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create support ticket</DialogTitle>
+          <DialogTitle>Create Support Ticket</DialogTitle>
         </DialogHeader>
         <form id="create-ticket-form" className="space-y-4" onSubmit={submit}>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Reported by</Label>
+              <Label>Reported By</Label>
               <Select
                 value={form.reporter_type}
                 onValueChange={(v) => {
@@ -176,7 +176,7 @@ export default function CreateTicketDialog({
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Contact source</Label>
+              <Label>Contact Source</Label>
               <Select value={form.contact_source} onValueChange={(v) => setForm({ ...form, contact_source: v })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -272,7 +272,7 @@ export default function CreateTicketDialog({
 
           {bookings.length > 0 && (
             <div className="space-y-1">
-              <Label>Related booking</Label>
+              <Label>Related Booking</Label>
               <Select value={bookingId || "none"} onValueChange={(v) => setBookingId(v === "none" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Optional" />
@@ -333,7 +333,7 @@ export default function CreateTicketDialog({
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Assign agent</Label>
+              <Label>Assign Agent</Label>
               <Select value={form.assigned_admin_id || "none"} onValueChange={(v) => setForm({ ...form, assigned_admin_id: v === "none" ? "" : v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Unassigned" />
@@ -355,16 +355,16 @@ export default function CreateTicketDialog({
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Expected resolution</Label>
+              <Label>Expected Resolution</Label>
               <Textarea rows={2} value={form.expected_resolution} onChange={(e) => setForm({ ...form, expected_resolution: e.target.value })} />
             </div>
             <div className="space-y-1">
-              <Label>Additional information</Label>
+              <Label>Additional Information</Label>
               <Textarea rows={2} value={form.additional_info} onChange={(e) => setForm({ ...form, additional_info: e.target.value })} />
             </div>
           </div>
           <div className="space-y-1 max-w-[10rem]">
-            <Label>SLA hours</Label>
+            <Label>SLA Hours</Label>
             <Input type="number" min={1} max={720} value={form.sla_hours} onChange={(e) => setForm({ ...form, sla_hours: e.target.value })} placeholder="Auto" />
           </div>
         </form>
@@ -373,7 +373,7 @@ export default function CreateTicketDialog({
             Cancel
           </Button>
           <Button type="submit" form="create-ticket-form" disabled={saving}>
-            {saving ? "Creating…" : "Create ticket"}
+            {saving ? "Creating…" : "Create Ticket"}
           </Button>
         </DialogFooter>
       </DialogContent>

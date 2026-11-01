@@ -158,13 +158,13 @@ export default function AdminPromos() {
               </Card>
             ))}
             <Card style={{ gap: 8 }}>
-              <AppText variant="h3">{bannerForm.id ? "Edit banner" : "New banner"}</AppText>
+              <AppText variant="h3">{bannerForm.id ? "Edit Banner" : "New Banner"}</AppText>
               <Field label="Title *" value={bannerForm.title} onChangeText={(title) => setBannerForm({ ...bannerForm, title })} />
               <Field label="Subtitle" value={bannerForm.subtitle || ""} onChangeText={(subtitle) => setBannerForm({ ...bannerForm, subtitle })} />
               <Field label="Target URL" value={bannerForm.target_url || ""} onChangeText={(target_url) => setBannerForm({ ...bannerForm, target_url })} />
               <Field label="Advertiser" value={bannerForm.advertiser || ""} onChangeText={(advertiser) => setBannerForm({ ...bannerForm, advertiser })} />
               <Field
-                label="Display order"
+                label="Display Order"
                 value={String(bannerForm.display_order)}
                 onChangeText={(v) => setBannerForm({ ...bannerForm, display_order: Number(v) || 0 })}
                 keyboardType="number-pad"
@@ -184,14 +184,14 @@ export default function AdminPromos() {
                 onChange={(v) => setBannerForm({ ...bannerForm, placement: String(v) })}
               />
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <AppText>Third party</AppText>
+                <AppText>Third Party</AppText>
                 <Switch value={bannerForm.is_third_party} onValueChange={(is_third_party) => setBannerForm({ ...bannerForm, is_third_party })} />
               </View>
               <AppText variant="small">{bannerForm.image_url ? "Image uploaded" : "No image"}</AppText>
-              <PrimaryButton title="Upload image" variant="outline" onPress={() => void pickImage("banner")} />
-              <PrimaryButton title={saving ? "Saving" : "Save draft"} loading={saving} onPress={() => void saveBanner(false)} />
+              <PrimaryButton title="Upload Image" variant="outline" onPress={() => void pickImage("banner")} />
+              <PrimaryButton title={saving ? "Saving" : "Save Draft"} loading={saving} onPress={() => void saveBanner(false)} />
               <PrimaryButton title="Publish" onPress={() => void saveBanner(true)} />
-              <PrimaryButton title="Reset form" variant="ghost" onPress={() => setBannerForm(EMPTY_PROMO_BANNER)} />
+              <PrimaryButton title="Reset Form" variant="ghost" onPress={() => setBannerForm(EMPTY_PROMO_BANNER)} />
             </Card>
           </>
         ) : (
@@ -231,10 +231,10 @@ export default function AdminPromos() {
               </Card>
             ))}
             <Card style={{ gap: 8 }}>
-              <AppText variant="h3">{popupForm.id ? "Edit popup" : "New popup"}</AppText>
+              <AppText variant="h3">{popupForm.id ? "Edit Popup" : "New Popup"}</AppText>
               <Field label="Title *" value={popupForm.title} onChangeText={(title) => setPopupForm({ ...popupForm, title })} />
               <Field label="Message *" value={popupForm.description || ""} onChangeText={(description) => setPopupForm({ ...popupForm, description })} />
-              <Field label="CTA label" value={popupForm.cta_label || ""} onChangeText={(cta_label) => setPopupForm({ ...popupForm, cta_label })} />
+              <Field label="CTA Label" value={popupForm.cta_label || ""} onChangeText={(cta_label) => setPopupForm({ ...popupForm, cta_label })} />
               <Field label="CTA URL" value={popupForm.cta_url || ""} onChangeText={(cta_url) => setPopupForm({ ...popupForm, cta_url })} />
               <Field label="Service ID" value={popupForm.service_id || ""} onChangeText={(service_id) => setPopupForm({ ...popupForm, service_id })} />
               <Field label="Languages" value={popupForm.languages} onChangeText={(languages) => setPopupForm({ ...popupForm, languages })} />
@@ -246,10 +246,10 @@ export default function AdminPromos() {
                 onChange={(v) => setPopupForm({ ...popupForm, audience: String(v) })}
               />
               <AppText variant="small">{popupForm.image_url ? "Image uploaded" : "No image"}</AppText>
-              <PrimaryButton title="Upload image" variant="outline" onPress={() => void pickImage("popup")} />
-              <PrimaryButton title={saving ? "Saving" : "Save draft"} loading={saving} onPress={() => void savePopup(false)} />
+              <PrimaryButton title="Upload Image" variant="outline" onPress={() => void pickImage("popup")} />
+              <PrimaryButton title={saving ? "Saving" : "Save Draft"} loading={saving} onPress={() => void savePopup(false)} />
               <PrimaryButton title="Publish" onPress={() => void savePopup(true)} />
-              <PrimaryButton title="Reset form" variant="ghost" onPress={() => setPopupForm(EMPTY_PROMO_POPUP)} />
+              <PrimaryButton title="Reset Form" variant="ghost" onPress={() => setPopupForm(EMPTY_PROMO_POPUP)} />
             </Card>
           </>
         )}

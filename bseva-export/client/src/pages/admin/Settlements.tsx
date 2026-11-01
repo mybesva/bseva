@@ -292,8 +292,8 @@ export default function AdminSettlements() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="awaiting">Awaiting cycle</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="awaiting">Awaiting Cycle</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="eligible">Eligible</SelectItem>
               <SelectItem value="settled">Settled</SelectItem>
@@ -302,7 +302,7 @@ export default function AdminSettlements() {
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Due date</Label>
+          <Label className="text-xs">Due Date</Label>
           <Select
             value={rangeFilter}
             onValueChange={(v) =>
@@ -313,9 +313,9 @@ export default function AdminSettlements() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All dates</SelectItem>
-              <SelectItem value="last_30">Last 30 days</SelectItem>
-              <SelectItem value="custom">Between dates</SelectItem>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="last_30">Last 30 Days</SelectItem>
+              <SelectItem value="custom">Between Dates</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -372,12 +372,12 @@ export default function AdminSettlements() {
               <TableHead className={TH}>Customer</TableHead>
               <TableHead className={TH}>Status</TableHead>
               <TableHead className={TH}>Due</TableHead>
-              <TableHead className={TH}>Customer paid</TableHead>
-              <TableHead className={TH}>Platform fee</TableHead>
-              <TableHead className={TH}>Pujari payable</TableHead>
+              <TableHead className={TH}>Customer Paid</TableHead>
+              <TableHead className={TH}>Platform Fee</TableHead>
+              <TableHead className={TH}>Pujari Payable</TableHead>
               <TableHead className={TH}>Blocked</TableHead>
-              <TableHead className={TH}>Processed by</TableHead>
-              <TableHead className={TH}>Approved by</TableHead>
+              <TableHead className={TH}>Processed By</TableHead>
+              <TableHead className={TH}>Approved By</TableHead>
               <TableHead className={TH} />
             </TableRow>
           </TableHeader>
@@ -405,7 +405,7 @@ export default function AdminSettlements() {
                 <TableCell>
                   {s.status !== "settled" && s.status !== "blocked" && (
                     <Button size="sm" variant="outline" onClick={() => setActive(s)}>
-                      Settle / override
+                      Settle / Override
                     </Button>
                   )}
                 </TableCell>
@@ -425,7 +425,7 @@ export default function AdminSettlements() {
       <Dialog open={!!active} onOpenChange={(o) => !o && closeDialog()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Override — settle early</DialogTitle>
+            <DialogTitle>Override — Settle Early</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
@@ -437,7 +437,7 @@ export default function AdminSettlements() {
               <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} disabled={!!challengeId} />
             </div>
             <div className="space-y-1">
-              <Label>Payment reference (optional)</Label>
+              <Label>Payment Reference (Optional)</Label>
               <Input value={ref} onChange={(e) => setRef(e.target.value)} disabled={!!challengeId} />
             </div>
             {challengeId ? (
@@ -476,7 +476,7 @@ export default function AdminSettlements() {
                   Resend OTP
                 </Button>
                 <Button onClick={() => void settle()} disabled={saving || mpin.length !== 6 || otp.length !== 6}>
-                  {saving ? "Verifying…" : "Confirm payment"}
+                  {saving ? "Verifying…" : "Confirm Payment"}
                 </Button>
               </>
             ) : (

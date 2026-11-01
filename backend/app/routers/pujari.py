@@ -627,7 +627,7 @@ def submit_profile(body: PujariProfileSubmitIn, user=Depends(require_roles("puja
 
         notify_super_admins(
             db,
-            title="KYC awaiting review",
+            title="KYC Awaiting Review",
             body=f"Pujari {user.get('name') or user['id']} submitted profile for verification.",
             category="kyc",
             link="/admin/pujaris?status=pending",

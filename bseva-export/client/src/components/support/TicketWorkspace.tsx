@@ -145,16 +145,16 @@ export default function TicketWorkspace({
         <div className="xl:col-span-2 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Ticket information</CardTitle>
+              <CardTitle className="text-base">Ticket Information</CardTitle>
             </CardHeader>
             <CardContent className="grid sm:grid-cols-3 gap-3">
               <Field label="Ticket ID" value={ticket.ticket_number} />
               <Field label="Category" value={ticket.category_label || CATEGORY_LABELS[ticket.category]} />
-              <Field label="Contact source" value={SOURCE_LABELS[ticket.contact_source] || ticket.contact_source} />
+              <Field label="Contact Source" value={SOURCE_LABELS[ticket.contact_source] || ticket.contact_source} />
               <Field label="Created" value={formatDisplayDateTime(ticket.created_at)} />
-              <Field label="Last activity" value={formatDisplayDateTime(ticket.last_activity_at || ticket.updated_at)} />
+              <Field label="Last Activity" value={formatDisplayDateTime(ticket.last_activity_at || ticket.updated_at)} />
               <Field
-                label="SLA / target"
+                label="SLA / Target"
                 value={
                   ticket.sla_due_at
                     ? `${formatDisplayDateTime(ticket.sla_due_at)}${ticket.sla_hours ? ` (${ticket.sla_hours}h)` : ""}`
@@ -177,7 +177,7 @@ export default function TicketWorkspace({
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Assigned agent</Label>
+                <Label className="text-xs">Assigned Agent</Label>
                 <Select
                   value={ticket.assigned_admin_id || "none"}
                   onValueChange={(v) => void patch(v === "none" ? { unassign: true } : { assigned_admin_id: v })}
@@ -195,13 +195,13 @@ export default function TicketWorkspace({
                   </SelectContent>
                 </Select>
               </div>
-              <Field label="Assigned at" value={formatDisplayDateTime(ticket.assigned_at)} />
+              <Field label="Assigned At" value={formatDisplayDateTime(ticket.assigned_at)} />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Issue details</CardTitle>
+              <CardTitle className="text-base">Issue Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p className="whitespace-pre-wrap">{ticket.description}</p>
@@ -222,7 +222,7 @@ export default function TicketWorkspace({
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Conversation / activity</CardTitle>
+              <CardTitle className="text-base">Conversation / Activity</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="max-h-[42vh] overflow-y-auto space-y-3 pr-1">
@@ -252,16 +252,16 @@ export default function TicketWorkspace({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="reply">Reply</SelectItem>
-                    <SelectItem value="internal_note">Internal note</SelectItem>
-                    <SelectItem value="call_note">Call note</SelectItem>
-                    <SelectItem value="whatsapp_note">WhatsApp note</SelectItem>
-                    <SelectItem value="email_note">Email note</SelectItem>
+                    <SelectItem value="internal_note">Internal Note</SelectItem>
+                    <SelectItem value="call_note">Call Note</SelectItem>
+                    <SelectItem value="whatsapp_note">WhatsApp Note</SelectItem>
+                    <SelectItem value="email_note">Email Note</SelectItem>
                   </SelectContent>
                 </Select>
                 <Textarea rows={3} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Write a reply or note…" />
               </div>
               <Button disabled={busy || !reply.trim()} onClick={() => void post(`/support/tickets/${ticket.id}/messages`, { body: reply.trim(), kind: noteKind }, "Posted")}>
-                {noteKind === "reply" ? "Send reply" : "Add note"}
+                {noteKind === "reply" ? "Send Reply" : "Add Note"}
               </Button>
             </CardContent>
           </Card>
@@ -290,11 +290,11 @@ export default function TicketWorkspace({
               {ticket.related_booking_id ? (
                 <>
                   <Field label="Booking ID" value={booking.booking_number || ticket.booking_number} />
-                  <Field label="Puja / service" value={booking.service_name || ticket.service_name} />
-                  <Field label="Date & time" value={`${booking.booking_date || ticket.booking_date || "—"} ${booking.start_time || ticket.start_time || ""}`} />
+                  <Field label="Puja / Service" value={booking.service_name || ticket.service_name} />
+                  <Field label="Date & Time" value={`${booking.booking_date || ticket.booking_date || "—"} ${booking.start_time || ticket.start_time || ""}`} />
                   <Field label="Location" value={booking.location_label || booking.address || ticket.booking_location} />
                   <Field label="Customer" value={booking.customer_name || ticket.booking_customer_name} />
-                  <Field label="Assigned pujari" value={booking.pujari_name || ticket.booking_pujari_name} />
+                  <Field label="Assigned Pujari" value={booking.pujari_name || ticket.booking_pujari_name} />
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">No booking linked.</p>
@@ -394,7 +394,7 @@ export default function TicketWorkspace({
                   )
                 }
               >
-                Mark resolved
+                Mark Resolved
               </Button>
             </CardContent>
           </Card>
