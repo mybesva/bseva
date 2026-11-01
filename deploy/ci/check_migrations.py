@@ -20,7 +20,8 @@ REVIEWED = re.compile(r"--\s*migration-safety:\s*reviewed\s+\S", re.IGNORECASE)
 DESTRUCTIVE = [
     (re.compile(r"\bDROP\s+(TABLE|SCHEMA|TYPE|VIEW|MATERIALIZED\s+VIEW|FUNCTION)\b", re.I), "drops an object"),
     (re.compile(r"\bDROP\s+COLUMN\b", re.I), "drops a column"),
-    (re.compile(r"\bTRUNCATE\b", re.I), "truncates data"),
+    # `ON` follows the word only in a trigger or GRANT, which remove no data.
+    (re.compile(r"\bTRUNCATE\b(?!\s+ON\b)", re.I), "truncates data"),
     (re.compile(r"\bRENAME\s+(COLUMN\s+\w+\s+)?TO\b", re.I), "renames (old code still uses the old name)"),
     (re.compile(r"\bALTER\s+COLUMN\s+\w+\s+(SET\s+DATA\s+)?TYPE\b", re.I), "changes a column type"),
     (re.compile(r"\bALTER\s+COLUMN\s+\w+\s+SET\s+NOT\s+NULL\b", re.I), "adds NOT NULL (old code may insert NULL)"),
