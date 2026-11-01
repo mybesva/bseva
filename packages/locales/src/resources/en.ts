@@ -681,6 +681,10 @@ const en: Record<string, string> = {
   "status.unpaid": "Unpaid",
   "status.requested": "Requested",
   "status.guided": "Guided",
+  "status.correction_required": "Correction required",
+  "status.under_review": "Under review",
+  "mobile.invoiceTypeCreditNote": "Refund note",
+  "mobile.invoiceTypeSettlement": "Settlement",
 
   "payment.total": "Total",
   "payment.payNow": "Pay now",

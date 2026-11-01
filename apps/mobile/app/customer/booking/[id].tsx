@@ -206,6 +206,11 @@ function LiveTrackCard({ bookingId, role }: { bookingId: string; role: "customer
   );
 }
 
+/** "Checklist will be confirmed shortly" only makes sense while the puja is still ahead. */
+function prepPendingOver(status?: string | null) {
+  return ["completed", "cancelled", "rejected"].includes(String(status));
+}
+
 function prepItemLabel(item: PreparationItem) {
   const name = item.label || item.name || "";
   return item.quantity != null ? `${name} — ${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : name;
@@ -399,7 +404,7 @@ export default function BookingDetail() {
       for (const item of items) lines.push(`• ${prepItemLabel(item)}${item.notes ? ` — ${item.notes}` : ""}`);
       lines.push("");
     }
-    if (!preparation.verified) lines.push(preparation.pending_message || t("web.preparation.pending"));
+    if (!preparation.verified && !prepPendingOver(b!.status)) lines.push(preparation.pending_message || t("web.preparation.pending"));
     try {
       const uri = `${FileSystem.cacheDirectory}samagri-${b!.booking_number || b!.id}.txt`;
       await FileSystem.writeAsStringAsync(uri, lines.filter(Boolean).join("\n"));
@@ -545,7 +550,7 @@ export default function BookingDetail() {
                 </View>
               ) : null
             )}
-            {!preparation.verified && preparation.pending_message ? (
+            {!preparation.verified && preparation.pending_message && !prepPendingOver(b.status) ? (
               <AppText variant="small" color={colors.mutedForeground}>{preparation.pending_message}</AppText>
             ) : null}
             <PrimaryButton title={`${t("mobile.share")} / ${t("web.preparation.print")}`} variant="outline" onPress={() => void sharePreparation()} />

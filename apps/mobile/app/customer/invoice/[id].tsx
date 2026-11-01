@@ -25,6 +25,7 @@ function InvoiceActionButton({
   loading,
   disabled,
   primary,
+  fullRow,
 }: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -32,6 +33,7 @@ function InvoiceActionButton({
   loading?: boolean;
   disabled?: boolean;
   primary?: boolean;
+  fullRow?: boolean;
 }) {
   const { colors } = useAppTheme();
   return (
@@ -42,6 +44,7 @@ function InvoiceActionButton({
       accessibilityLabel={label}
       style={({ pressed }) => ({
         flex: 1,
+        flexBasis: fullRow ? "100%" : undefined,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
@@ -135,6 +138,7 @@ export default function InvoiceHtmlScreen() {
             label={t("mobile.printSavePdf")}
             icon="print-outline"
             primary
+            fullRow={!stackActions}
             loading={busy === "print"}
             disabled={busy != null || !q.data}
             onPress={() => void printSave()}

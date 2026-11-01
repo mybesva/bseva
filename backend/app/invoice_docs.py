@@ -714,7 +714,7 @@ def _invoice_duration_minutes(db: Session, inv: dict[str, Any], snap: dict[str, 
 def _invoice_booking_mode(db: Session, inv: dict[str, Any], snap: dict[str, Any]) -> str:
     mode = str(snap.get("booking_mode") or "").strip()
     if mode:
-        return mode.title()
+        return mode.replace("_", " ").title()
     bid = inv.get("booking_id") or snap.get("booking_id")
     if not bid:
         return ""
@@ -722,7 +722,7 @@ def _invoice_booking_mode(db: Session, inv: dict[str, Any], snap: dict[str, Any]
         text("SELECT mode FROM bookings WHERE CAST(id AS text) = :id"),
         {"id": str(bid)},
     ).first()
-    return str(row[0] or "").title() if row and row[0] else ""
+    return str(row[0] or "").replace("_", " ").title() if row and row[0] else ""
 
 
 _LEGACY_TABLE_HEAD = (

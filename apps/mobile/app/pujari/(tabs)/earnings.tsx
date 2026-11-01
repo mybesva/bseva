@@ -1,4 +1,5 @@
 import { pujariEarningsStats, rupees, translatedTokenLabel } from "@bseva/config";
+import { formatDisplayDateTime } from "@bseva/locales";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -59,7 +60,7 @@ export default function PujariEarnings() {
         {settleRows.map((s, i) => (
           <Card key={s.id || i}>
             <AppText>{rupees(Number(s.settlement_amount_paise || s.amount_paise || s.pujari_amount_paise || 0))}</AppText>
-            <AppText variant="small">{translatedTokenLabel(t(`status.${s.status || ""}`), `status.${s.status || ""}`, s.status, "")} · {s.created_at}</AppText>
+            <AppText variant="small">{translatedTokenLabel(t(`status.${s.status || ""}`), `status.${s.status || ""}`, s.status, "")} · {formatDisplayDateTime(s.created_at)}</AppText>
           </Card>
         ))}
         <AppText variant="small" color={colors.mutedForeground}>

@@ -1,4 +1,5 @@
 import { rupees } from "@bseva/config";
+import { formatDisplayDateTime } from "@bseva/locales";
 import { walletLoadSchema } from "@bseva/validation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -102,11 +103,12 @@ export default function WalletScreen() {
         {txns.map((t) => (
           <Card key={t.id || `${t.created_at}-${t.amount_paise}`}>
             <AppText>{publicWalletDescription(t.note || t.description || t.type || t.kind, tr("mobile.transaction"))}</AppText>
-            <AppText color={Number(t.amount_paise) < 0 ? colors.destructive : colors.success}>
+            <AppText color={t.type === "credit" ? colors.success : colors.destructive}>
+              {t.type === "credit" ? "+" : "-"}
               {rupees(t.amount_paise)}
             </AppText>
             <AppText variant="small" color={colors.mutedForeground}>
-              {t.created_at}
+              {formatDisplayDateTime(t.created_at)}
             </AppText>
           </Card>
         ))}

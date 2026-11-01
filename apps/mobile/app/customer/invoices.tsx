@@ -1,4 +1,5 @@
 import { rupees } from "@bseva/config";
+import { formatDisplayDateTime } from "@bseva/locales";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { ScrollView } from "react-native";
@@ -7,6 +8,11 @@ import { AppText, Card, EmptyState, LoadingBlock, PrimaryButton, Screen } from "
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
+
+const INVOICE_TYPE_LABELS: Record<string, string> = {
+  credit_note: "mobile.invoiceTypeCreditNote",
+  settlement: "mobile.invoiceTypeSettlement",
+};
 
 export default function InvoicesScreen() {
   const { colors } = useAppTheme();
@@ -21,9 +27,9 @@ export default function InvoicesScreen() {
         {!q.isLoading && (q.data || []).length === 0 ? <EmptyState title={t("mobile.noInvoices")} /> : null}
         {(q.data || []).map((inv) => (
           <Card key={inv.id}>
-            <AppText variant="h3">{String(inv.invoice_number || inv.type || t("mobile.invoice"))}</AppText>
+            <AppText variant="h3">{String(inv.invoice_number || t("mobile.invoice"))}</AppText>
             <AppText variant="small" color={colors.mutedForeground}>
-              {String(inv.type || "")} · {inv.created_at}
+              {t(INVOICE_TYPE_LABELS[String(inv.invoice_type)] || "mobile.invoice")} · {formatDisplayDateTime(inv.created_at)}
             </AppText>
             {inv.total_paise != null ? <AppText color={colors.primary}>{rupees(Number(inv.total_paise))}</AppText> : null}
             <PrimaryButton title={t("mobile.view")} variant="outline" onPress={() => router.push(`/customer/invoice/${inv.id}`)} />

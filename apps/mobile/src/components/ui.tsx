@@ -237,6 +237,8 @@ export function StatusBadge({ status }: { status: string }) {
     completed: colors.mutedForeground,
     pending: colors.warning,
     pending_acceptance: colors.warning,
+    correction_required: colors.warning,
+    under_review: colors.info,
     in_progress: colors.info,
     cancelled: colors.destructive,
     rejected: colors.destructive,
