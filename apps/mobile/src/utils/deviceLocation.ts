@@ -31,8 +31,19 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-export async function getDeviceCoordinates(): Promise<DeviceCoords> {
+/**
+ * Asks only when needed. On Android, a request with nothing to show can never resolve: React Native
+ * delivers the result on the next onResume, and no dialog means no resume.
+ */
+export async function ensureForegroundLocation() {
+  const current = await Location.getForegroundPermissionsAsync();
+  if (current.granted) return current.status;
   const { status } = await Location.requestForegroundPermissionsAsync();
+  return status;
+}
+
+export async function getDeviceCoordinates(): Promise<DeviceCoords> {
+  const status = await ensureForegroundLocation();
   if (status !== "granted") throw new LocationPermissionError();
 
   const enabled = await Location.hasServicesEnabledAsync().catch(() => true);
