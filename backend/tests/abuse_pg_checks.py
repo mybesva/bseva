@@ -13,10 +13,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from fastapi import HTTPException  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
-from app import otp_service  # noqa: E402
+from app import captcha, otp_service  # noqa: E402
 from app.config import settings  # noqa: E402
 from app.db import SessionLocal, engine  # noqa: E402
 from app.mail import senders, smtp_client  # noqa: E402
@@ -35,6 +36,10 @@ def _fake_send(**kw):
 smtp_client.send_email = _fake_send
 senders.send_email = _fake_send
 otp_service.generate_otp_code = lambda: CODE
+# Every CAPTCHA in these checks shows this answer, so a check can solve it like a person would.
+CAPTCHA_ANSWER = "K7M4P"
+REAL_NEW_ANSWER = captcha._new_answer
+captcha._new_answer = lambda: CAPTCHA_ANSWER
 client = TestClient(app)
 
 
@@ -44,12 +49,29 @@ def sql(statement: str, **params):
 
 
 def reset_state():
-    sql("TRUNCATE otp_send_events, security_rate_limits, contact_submissions")
+    sql("TRUNCATE otp_send_events, security_rate_limits, contact_submissions, captcha_challenges")
     sql("UPDATE otp_codes SET consumed = TRUE")
     SENT.clear()
 
 
+def new_captcha(purpose: str, ip: str = "198.51.100.10", replaces: str | None = None):
+    return client.post(
+        "/api/v1/captcha", json={"purpose": purpose, "replaces": replaces}, headers={"x-real-ip": ip, "user-agent": "abuse-check/1.0"}
+    )
+
+
+def solved(purpose: str, ip: str = "198.51.100.10", answer: str = CAPTCHA_ANSWER) -> dict:
+    r = new_captcha(purpose, ip)
+    assert r.status_code == 200, r.text
+    return {"captcha_id": r.json()["captcha_id"], "captcha_answer": answer}
+
+
 def post(path: str, body: dict, ip: str = "198.51.100.10", token: str | None = None):
+    # Anonymous contact submissions answer the CAPTCHA the way the web form does, unless a check sets its own.
+    if path == "/support/contact" and not token and "captcha_id" not in body:
+        r = new_captcha("contact", ip)
+        if r.status_code == 200:
+            body = dict(body, captcha_id=r.json()["captcha_id"], captcha_answer=CAPTCHA_ANSWER)
     headers = {"x-real-ip": ip, "user-agent": "abuse-check/1.0"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -656,37 +678,186 @@ def check_datastore_failure_fails_closed():
         sql("ALTER TABLE otp_send_events_off RENAME TO otp_send_events")
 
 
-def check_bot_check_modes():
-    from app import bot_check
+# ------------------------------------------------------------------------------------------------- captcha
 
+
+def check_captcha_contact_enforced():
     reset_state()
-    calls = []
-
-    def fake_verify(token, *, ip, action):
-        calls.append((token, action))
-        return (token == "good"), ("ok" if token == "good" else "rejected:invalid-input-response")
-
-    bot_check.verify_turnstile = fake_verify
-    settings.turnstile_secret_key = "test-secret"
-    settings.turnstile_site_key = "test-site"
-    settings.contact_bot_check = "enforce"
-    r = post("/support/contact", dict(CONTACT, bot_token="bad"))
-    assert r.status_code == 400 and r.json()["detail"]["code"] == "BOT_CHECK_FAILED", r.text
+    # Missing: a direct API call without a CAPTCHA is refused and nothing is stored or sent.
+    r = post("/support/contact", dict(CONTACT, captcha_id=None))
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
+    # Wrong answer: refused.
+    r = post("/support/contact", dict(CONTACT, **solved("contact", answer="ZZZZZ")))
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_INVALID", r.text
     assert _contact_rows() == [] and SENT == []
-    assert post("/support/contact", dict(CONTACT, bot_token="good"), ip="198.51.100.12").status_code == 200
-    # Signed-in app users have no Turnstile and are not asked for it.
+    # Correct answer, typed in lower case with spaces: accepted, stored and sent.
+    r = post("/support/contact", dict(CONTACT, **solved("contact", answer=" k7m 4p ")))
+    assert r.status_code == 200, r.text
+    assert [x["status"] for x in _contact_rows()] == ["accepted"]
+    # Signed-in users (the mobile apps) are not asked.
     token = register("customer", "appuser@example.org", "9000000005", "App User")["access_token"]
     body = dict(CONTACT, email="appuser@example.org", message="Message from the mobile app please")
     body.pop("elapsed_ms")
     r = post("/support/contact", body, ip="198.51.100.13", token=token)
     assert r.status_code == 200, r.text
     assert _contact_rows()[-1]["user_id"] is not None
-    # OTP requests stay in monitor mode: no token (the mobile apps) still works.
-    settings.otp_bot_check = "monitor"
-    assert post("/auth/otp/request", {"email": "mon@example.org", "purpose": "register"}, ip="198.51.100.14").status_code == 200
+
+
+def check_captcha_answer_never_exposed():
+    reset_state()
+    r = new_captcha("contact")
+    assert r.status_code == 200 and r.headers.get("cache-control") == "no-store", r.headers
+    out = r.json()
+    assert set(out) == {"captcha_id", "image", "length", "expires_in_seconds"}, out
+    assert out["image"].startswith("data:image/png;base64,") and out["length"] == 5 and out["expires_in_seconds"] == 300
+    assert CAPTCHA_ANSWER not in r.text.upper()
+    row = sql("SELECT * FROM captcha_challenges").mappings().one()
+    assert out["captcha_id"] not in str(dict(row)) and CAPTCHA_ANSWER not in str(dict(row)), row
+    assert (row["expires_at"] - row["created_at"]).total_seconds() == 300
+    # Real answers use only unambiguous characters.
+    answers = [REAL_NEW_ANSWER() for _ in range(200)]
+    assert all(len(a) == 5 and a.isalnum() and a == a.upper() and not set(a) & set("O0I1L") for a in answers), answers
+    assert len(set(answers)) > 190  # unpredictable, not a fixed list
     cfg = client.get("/api/v1/config/public").json()
-    assert cfg["turnstile_site_key"] == "test-site" and cfg["contact_bot_check"] == "enforce"
-    assert "turnstile_secret_key" not in cfg and "test-secret" not in str(cfg)
+    assert cfg["captcha"] == {"contact": True, "register_otp": False, "login_after_failures": 0}, cfg["captcha"]
+    for gone in ("turnstile_site_key", "contact_bot_check", "otp_bot_check", "recaptcha_site_key", "registration_captcha_enabled"):
+        assert gone not in cfg, gone
+
+
+def check_captcha_single_use_expiry_refresh_tamper():
+    reset_state()
+    n = iter(range(200, 255))
+
+    def send(extra: dict, *, email: str | None = None):
+        # A fresh client address and sender each time, so the form's own rate limits never interfere.
+        i = next(n)
+        body = dict(
+            CONTACT, email=email or f"cap{i}@example.org", phone=f"98765{i:05d}", message=f"Captcha check message number {i}", **extra
+        )
+        return post("/support/contact", body, ip=f"198.51.101.{i}")
+
+    used = solved("contact", ip="198.51.101.1")
+    assert send(used).status_code == 200
+    # Reused: the same solved challenge cannot be sent again.
+    r = send(used)
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_INVALID", r.text
+    # Expired.
+    expired = solved("contact", ip="198.51.101.2")
+    sql("UPDATE captcha_challenges SET expires_at = NOW() - INTERVAL '1 second' WHERE used_at IS NULL")
+    assert send(expired).status_code == 400
+    # Refresh: the replaced challenge stops working, the new one works.
+    old = new_captcha("contact", ip="198.51.101.3").json()["captcha_id"]
+    new = new_captcha("contact", ip="198.51.101.3", replaces=old).json()["captcha_id"]
+    assert send({"captcha_id": old, "captcha_answer": CAPTCHA_ANSWER}).status_code == 400
+    assert send({"captcha_id": new, "captcha_answer": CAPTCHA_ANSWER}).status_code == 200
+    # Modified requests: an invented id, an id for another form, or a truncated id are all refused.
+    for bad_id in ("x" * 43, solved("register", ip="198.51.101.4")["captcha_id"], solved("contact", ip="198.51.101.5")["captcha_id"][:-2]):
+        r = send({"captcha_id": bad_id, "captcha_answer": CAPTCHA_ANSWER})
+        assert r.status_code == 400, (bad_id, r.text)
+    # Three wrong answers burn a challenge: the right answer is then refused too.
+    burn = solved("contact", ip="198.51.101.6")["captcha_id"]
+    for _ in range(3):
+        assert send({"captcha_id": burn, "captcha_answer": "ZZZZZ"}).status_code == 400
+    assert send({"captcha_id": burn, "captcha_answer": CAPTCHA_ANSWER}).status_code == 400
+    assert len([x for x in _contact_rows() if x["status"] == "accepted"]) == 2
+
+
+def check_captcha_concurrent_use():
+    reset_state()
+    cid = solved("contact")["captcha_id"]
+    wins = _race(10, lambda db: captcha._consume(db, cid, CAPTCHA_ANSWER, "contact"))
+    assert wins.count(True) == 1, wins
+
+
+def check_captcha_rate_limits():
+    reset_state()
+    codes = [new_captcha("contact", ip="198.51.100.140").status_code for _ in range(31)]
+    assert codes[:30] == [200] * 30 and codes[30] == 429, codes
+    # Too many wrong answers from one client: refused even when the next answer is right.
+    reset_state()
+    db = SessionLocal()
+    try:
+        for i in range(20):
+            cid = solved("contact", ip=f"198.51.101.{i + 10}")["captcha_id"]
+            try:
+                captcha.require(db, cid, "ZZZZZ", purpose="contact", ip="198.51.100.141")
+                raise AssertionError("wrong answer accepted")
+            except HTTPException as exc:
+                assert exc.status_code == 400, exc.detail
+        cid = solved("contact", ip="198.51.101.40")["captcha_id"]
+        try:
+            captcha.require(db, cid, CAPTCHA_ANSWER, purpose="contact", ip="198.51.100.141")
+            raise AssertionError("blocked client accepted")
+        except HTTPException as exc:
+            assert exc.status_code == 429, exc.detail
+    finally:
+        db.close()
+    assert new_captcha("nonsense").status_code in (400, 422)
+
+
+def check_captcha_fails_closed():
+    reset_state()
+    sql("ALTER TABLE captcha_challenges RENAME TO captcha_challenges_off")
+    try:
+        assert new_captcha("contact").status_code == 503
+        r = post("/support/contact", dict(CONTACT, captcha_id="x" * 43, captcha_answer=CAPTCHA_ANSWER))
+        assert r.status_code == 503, r.text
+    finally:
+        sql("ALTER TABLE captcha_challenges_off RENAME TO captcha_challenges")
+    assert _contact_rows() == [] and SENT == []
+
+
+def check_captcha_registration_otp_switch():
+    reset_state()
+    # Off by default: the mobile apps (no CAPTCHA) keep requesting registration codes.
+    assert post("/auth/otp/request", {"email": "app-reg@example.org", "purpose": "register"}).status_code == 200
+    settings.register_otp_captcha = "enforce"
+    r = post("/auth/otp/request", {"email": "web-reg@example.org", "purpose": "register"}, ip="198.51.100.150")
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
+    r = post(
+        "/auth/otp/request", {"email": "web-reg@example.org", "purpose": "register", **solved("register", ip="198.51.100.150")},
+        ip="198.51.100.150",
+    )
+    assert r.status_code == 200, r.text
+    # A contact-form CAPTCHA does not unlock registration.
+    r = post(
+        "/auth/otp/request", {"email": "web-reg2@example.org", "purpose": "register", **solved("contact", ip="198.51.100.151")},
+        ip="198.51.100.151",
+    )
+    assert r.status_code == 400, r.text
+    # Sign-in codes are never asked for a CAPTCHA.
+    assert post("/auth/otp/request", {"email": "someone@example.org", "purpose": "login"}, ip="198.51.100.152").status_code == 200
+
+
+def check_captcha_login_after_failures():
+    reset_state()
+    email = "loginc@example.org"
+    register("customer", email, "9000000020", "Login Captcha")
+    # Off by default: failures never trigger a CAPTCHA (the mobile apps keep working).
+    for _ in range(4):
+        assert post("/auth/login", {"identifier": email, "password": "wrong-pass1"}, ip="198.51.100.160").status_code == 401
+    assert post("/auth/login", {"identifier": email, "password": "Str0ng!pass"}, ip="198.51.100.160").status_code == 200
+    reset_state()
+    settings.login_captcha_after_failures = 3
+    for _ in range(3):
+        assert post("/auth/login", {"identifier": email, "password": "wrong-pass1"}, ip="198.51.100.161").status_code == 401
+    # After three failures even the right password needs the CAPTCHA.
+    r = post("/auth/login", {"identifier": email, "password": "Str0ng!pass"}, ip="198.51.100.162")
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
+    r = post(
+        "/auth/login", {"identifier": email, "password": "Str0ng!pass", **solved("login", ip="198.51.100.162")}, ip="198.51.100.162"
+    )
+    assert r.status_code == 200 and r.json()["access_token"], r.text
+    # Super Admin sign-in is never asked for a CAPTCHA and keeps its emailed second step.
+    sql(
+        "INSERT INTO users (id, name, email, phone, password_hash, role) "
+        "VALUES (gen_random_uuid(), 'Captcha Root', 'root-captcha@example.org', '9000000096', :pw, 'super_admin')",
+        pw=hash_password("Sup3r!admin"),
+    )
+    for _ in range(3):
+        post("/auth/login", {"identifier": "root-captcha@example.org", "password": "wrong-pass1"}, ip="198.51.100.163")
+    r = post("/auth/login", {"identifier": "root-captcha@example.org", "password": "Sup3r!admin"}, ip="198.51.100.164")
+    assert r.status_code == 200 and r.json()["otp_required"] is True, r.text
 
 
 CHECKS = {name[len("check_"):]: fn for name, fn in globals().items() if name.startswith("check_")}

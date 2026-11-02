@@ -40,7 +40,14 @@ CHECKS = [
     "contact_limits",
     "contact_global_cap",
     "datastore_failure_fails_closed",
-    "bot_check_modes",
+    "captcha_contact_enforced",
+    "captcha_answer_never_exposed",
+    "captcha_single_use_expiry_refresh_tamper",
+    "captcha_concurrent_use",
+    "captcha_rate_limits",
+    "captcha_fails_closed",
+    "captcha_registration_otp_switch",
+    "captcha_login_after_failures",
     "account_codes_five_then_sixth_and_cooldown",
     "account_codes_no_enumeration",
     "account_codes_ip_limits",
@@ -56,7 +63,7 @@ BLANKED = (
     "ZOHO_SMTP_HOST", "ZOHO_SMTP_PORT", "ZOHO_SMTP_USERNAME", "ZOHO_SMTP_PASSWORD", "ZOHO_FROM_EMAIL",
     "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM", "CRON_SECRET",
     "GOOGLE_APPLICATION_CREDENTIALS", "FIREBASE_SERVICE_ACCOUNT_FILE", "FIREBASE_SERVICE_ACCOUNT_JSON",
-    "TURNSTILE_SECRET_KEY", "TURNSTILE_SITE_KEY", "RECAPTCHA_SECRET_KEY", "EMAIL_ALLOWLIST",
+    "EMAIL_ALLOWLIST",
 )
 
 

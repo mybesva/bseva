@@ -1581,10 +1581,6 @@ def public_config(db: Session = Depends(get_db)):
         "pujari_arrival_radius_meters": int(get_setting(db, "pujari_arrival_radius_meters", 100)),
         "puja_complete_otp_before_minutes": int(get_setting(db, "puja_complete_otp_before_minutes", 15)),
         "puja_otp_resend_cooldown_seconds": int(get_setting(db, "puja_otp_resend_cooldown_seconds", 60)),
-        "registration_captcha_enabled": bool(get_setting(db, "registration_captcha_enabled", False)),
-        "recaptcha_site_key": __import__("os").environ.get("VITE_RECAPTCHA_SITE_KEY")
-        or __import__("os").environ.get("RECAPTCHA_SITE_KEY")
-        or "",
         "customer_cancel_fee_over_48h_percent": int(get_setting(db, "customer_cancel_fee_over_48h_percent", 10)),
         "customer_cancel_fee_24_48h_percent": int(get_setting(db, "customer_cancel_fee_24_48h_percent", 50)),
         "customer_cancel_fee_under_24h_percent": int(get_setting(db, "customer_cancel_fee_under_24h_percent", 100)),
@@ -1593,6 +1589,6 @@ def public_config(db: Session = Depends(get_db)):
         "email_from_support": str(get_setting(db, "email_from_support", "support@b-seva.com")),
         # Public: whether mail works, not which host or mailbox sends it (admins see the details elsewhere).
         "email_delivery": {"configured": bool(smtp_status().get("configured"))},
-        # Turnstile site key and modes for the web forms (empty / "off" until both keys are configured).
-        **__import__("app.bot_check", fromlist=["public_config"]).public_config(),
+        # Which web forms show the self-hosted CAPTCHA.
+        **__import__("app.captcha", fromlist=["public_config"]).public_config(),
     }

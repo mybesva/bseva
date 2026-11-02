@@ -5,7 +5,8 @@ import { MandalaOutline } from "@/components/landing/DevotionalPatterns";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, telHref, whatsappHref } from "@/hooks/usePublicConfig";
 import { api } from "@/lib/api";
-import { HoneypotField, TurnstileWidget, useFormTimer, type TurnstileHandle } from "@/components/BotProtection";
+import { CaptchaField, HoneypotField, useFormTimer, type CaptchaHandle } from "@/components/BotProtection";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { CATEGORY_LABELS } from "@/lib/supportTickets";
 import { CUSTOMER_SUPPORT_CATS } from "@bseva/config";
 import {
@@ -148,8 +149,10 @@ export default function Contact() {
   const formCardRef = useRef<HTMLDivElement>(null);
   const [highlightForm, setHighlightForm] = useState(false);
   const [honeypot, setHoneypot] = useState("");
-  const [botToken, setBotToken] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileHandle>(null);
+  const captchaRef = useRef<CaptchaHandle>(null);
+  const { user } = useAuth();
+  // Signed-in users are exempt on the server, so only signed-out visitors see the image.
+  const showCaptcha = Boolean(config.captcha?.contact) && !user;
   const formTimer = useFormTimer();
 
   useEffect(() => {
@@ -203,6 +206,10 @@ export default function Contact() {
     }
     const subjectLabel =
       form.subject === CUSTOM_PUJA_SUBJECT ? "Custom puja request" : CATEGORY_LABELS[form.subject] || form.subject;
+    if (showCaptcha && !captchaRef.current?.values().captcha_answer) {
+      toast.error("Please type the characters shown in the security image.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await api<{ ok: boolean; message?: string }>("/support/contact", {
@@ -216,7 +223,7 @@ export default function Contact() {
           message: form.message.trim(),
           website: honeypot,
           elapsed_ms: formTimer.elapsedMs(),
-          bot_token: botToken || undefined,
+          ...(showCaptcha ? captchaRef.current?.values() : {}),
           source: "web_contact",
         }),
       });
@@ -227,8 +234,8 @@ export default function Contact() {
     } catch (err: any) {
       toast.error(err?.message || t("contact.errSend"));
     } finally {
-      // Turnstile tokens are single use.
-      turnstileRef.current?.reset();
+      // Each CAPTCHA image works once: show a fresh one after every attempt.
+      if (showCaptcha) captchaRef.current?.refresh();
       setSubmitting(false);
     }
   }
@@ -523,13 +530,7 @@ export default function Contact() {
                   ) : null}
                 </div>
 
-                <TurnstileWidget
-                  ref={turnstileRef}
-                  siteKey={config.turnstile_site_key}
-                  action="contact"
-                  onToken={setBotToken}
-                  className="flex justify-center"
-                />
+                {showCaptcha ? <CaptchaField ref={captchaRef} purpose="contact" disabled={submitting} /> : null}
                 <button
                   type="submit"
                   disabled={submitting}

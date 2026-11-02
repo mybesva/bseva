@@ -209,7 +209,8 @@ class ContactFormIn(BaseModel):
     # Abuse signals. All optional, so older web bundles and app builds keep working.
     website: str | None = Field(default=None, max_length=500)  # honeypot: hidden from people, filled by bots
     elapsed_ms: int | None = Field(default=None, ge=0, le=86_400_000)  # time from first render to submit
-    bot_token: str | None = Field(default=None, max_length=2048)  # Cloudflare Turnstile
+    captcha_id: str | None = Field(default=None, max_length=128)  # self-hosted CAPTCHA (app.captcha)
+    captcha_answer: str | None = Field(default=None, max_length=16)
     source: str | None = Field(default=None, max_length=32)
 
 

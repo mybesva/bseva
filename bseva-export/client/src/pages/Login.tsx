@@ -9,7 +9,8 @@ import { ACCOUNT_DELETION_PENDING, dashboardPath, loginApi, type AuthUser } from
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { errorKeyForCode } from "@bseva/locales";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CaptchaField, isCaptchaError, type CaptchaHandle } from "@/components/BotProtection";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
@@ -29,6 +30,9 @@ export default function Login() {
   const [pending, setPending] = useState(false);
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const [deletionPending, setDeletionPending] = useState<string | null>(null);
+  // Shown only after the server asks for it (repeated failed sign-ins).
+  const [needCaptcha, setNeedCaptcha] = useState(false);
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   function goAfterLogin(role: string) {
     if (returnUrl && (role === "customer" || !roleHint || roleHint === "customer")) {
@@ -67,7 +71,7 @@ export default function Login() {
     setPending(true);
     setDeletionPending(null);
     try {
-      const out = await loginApi(identifier, password);
+      const out = await loginApi(identifier, password, needCaptcha ? captchaRef.current?.values() : undefined);
       if (out.otp_required && out.challenge_token) {
         setPassword("");
         setChallenge({ token: out.challenge_token, emailHint: out.email_hint || "your email" });
@@ -81,6 +85,8 @@ export default function Login() {
         setDeletionPending((err as Error)?.message || "This account is scheduled for deletion.");
         return;
       }
+      if (needCaptcha) captchaRef.current?.refresh();
+      if (isCaptchaError(code)) setNeedCaptcha(true);
       const key = errorKeyForCode(code);
       toast.error(key ? t(key) : (err as Error)?.message || t("errors.loginFailed"));
     } finally {
@@ -160,6 +166,7 @@ export default function Login() {
                   </Link>
                 </div>
               ) : null}
+              {needCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
                 <LogIn className="w-4 h-4 mr-2" />
                 {pending ? t("auth.loggingIn") : t("auth.login")}

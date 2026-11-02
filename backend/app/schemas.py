@@ -30,7 +30,6 @@ class RegisterIn(BaseModel):
     phone: str = Field(min_length=10, max_length=15)
     password: str = Field(min_length=8, max_length=128)
     otp: str = Field(min_length=4, max_length=8)
-    captcha_token: Optional[str] = None
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -122,14 +121,18 @@ class CustomerAddressPatchIn(BaseModel):
 class LoginIn(BaseModel):
     identifier: str
     password: str
+    # Self-hosted CAPTCHA, asked for only after repeated failures when LOGIN_CAPTCHA_AFTER_FAILURES > 0.
+    captcha_id: Optional[str] = Field(default=None, max_length=128)
+    captcha_answer: Optional[str] = Field(default=None, max_length=16)
 
 
 class OtpRequestIn(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     purpose: Literal["register", "login", "verify"] = "register"
-    # Cloudflare Turnstile token from the web client; the mobile apps send none.
-    bot_token: Optional[str] = Field(default=None, max_length=2048)
+    # Self-hosted CAPTCHA (only checked when REGISTER_OTP_CAPTCHA=enforce); the mobile apps send none.
+    captcha_id: Optional[str] = Field(default=None, max_length=128)
+    captcha_answer: Optional[str] = Field(default=None, max_length=16)
 
 
 class OtpVerifyIn(BaseModel):

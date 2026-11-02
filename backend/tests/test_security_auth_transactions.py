@@ -425,20 +425,6 @@ def test_local_development_unaffected():
     assert insecure_settings_problems(_settings(environment="development"), env={}) == []
 
 
-def test_recaptcha_dev_bypass_ignored_in_production(monkeypatch):
-    monkeypatch.setenv("RECAPTCHA_SECRET_KEY", "dev-bypass")
-    monkeypatch.setattr(auth, "get_setting", lambda db, k, d=None: True)
-    import urllib.request
-
-    def _no_network(*a, **k):
-        raise OSError("network disabled in test")
-
-    monkeypatch.setattr(urllib.request, "urlopen", _no_network)
-    with pytest.raises(HTTPException) as exc:
-        auth._verify_registration_captcha(FakeDB(), "dev-bypass")
-    assert exc.value.status_code == 502  # went to real verification instead of bypassing
-
-
 def test_cron_requires_secret_outside_development(monkeypatch):
     monkeypatch.delenv("CRON_SECRET", raising=False)
     monkeypatch.delenv("VERCEL_CRON_SECRET", raising=False)

@@ -96,7 +96,6 @@ _DEFAULTS: dict[str, Any] = {
     "pujari_cancel_fee_under_24h_percent": 100,
     "pujari_cancel_min_hours": 24,
     # CAPTCHA (public registration) — keys via env, not stored as secrets in DB
-    "registration_captcha_enabled": False,
     # Suggested puja package list prices (paise) — Admin overrides per service
     "default_package_basic_paise": 249900,
     "default_package_standard_paise": 349900,
