@@ -37,6 +37,19 @@ def current_user(
     return dict(row)
 
 
+def optional_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer),
+    db: Session = Depends(get_db),
+):
+    """The signed-in user, or None for anonymous callers and for any token current_user would refuse."""
+    if not creds:
+        return None
+    try:
+        return current_user(creds=creds, db=db)
+    except HTTPException:
+        return None
+
+
 def require_roles(*roles: str):
     def inner(user=Depends(current_user)):
         effective = set(roles)

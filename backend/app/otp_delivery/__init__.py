@@ -15,6 +15,7 @@ class OtpDeliveryProvider(Protocol):
         purpose: str,
         customer_name: str = "",
         language: str = "en",
+        ttl_minutes: int = 5,
     ) -> dict:
         ...
 
@@ -30,6 +31,7 @@ class EmailOtpProvider:
         purpose: str,
         customer_name: str = "",
         language: str = "en",
+        ttl_minutes: int = 5,
     ) -> dict:
         from app.mail.senders import send_login_otp_email
 
@@ -41,6 +43,7 @@ class EmailOtpProvider:
             language=language,
             test_mode=False,
             purpose=purpose,
+            ttl_minutes=ttl_minutes,
         )
 
 
@@ -57,6 +60,7 @@ class SmsOtpProvider:
         purpose: str,
         customer_name: str = "",
         language: str = "en",
+        ttl_minutes: int = 5,
     ) -> dict:
         return {
             "ok": False,

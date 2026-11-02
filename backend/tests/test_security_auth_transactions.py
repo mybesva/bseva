@@ -370,10 +370,13 @@ def test_contact_form_refused_over_limit():
     from app.routers import support
 
     db = FakeDB([("INSERT INTO security_rate_limits", rate_limit.CONTACT_IP[1] + 1)])
-    body = SimpleNamespace(name="A", email="a@b.in", subject="Hi", message="Hello there", country_code="+91", phone="")
+    body = SimpleNamespace(
+        name="Asha", email="a@b.in", subject="Hello", message="Hello there team", country_code="+91", phone="9876543210"
+    )
     with pytest.raises(HTTPException) as exc:
-        support.submit_contact_form(body, request=_request(), db=db)
+        support.submit_contact_form(body, request=_request(), db=db, user=None)
     assert exc.value.status_code == 429
+    assert db.writes("contact_submissions") == []
 
 
 def test_rate_limit_fails_open_if_table_missing():

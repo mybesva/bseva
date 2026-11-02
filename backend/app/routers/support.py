@@ -12,9 +12,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import rate_limit
 from app.db import get_db
-from app.deps import current_user, require_roles
+from app.deps import current_user, optional_user, require_roles
 from app.rbac import ensure_admin_permission, require_permission
 from app.domain import row_dict
 
@@ -207,143 +206,46 @@ class ContactFormIn(BaseModel):
     phone: str = Field(min_length=6, max_length=20)
     subject: str = Field(min_length=3, max_length=200)
     message: str = Field(min_length=10, max_length=4000)
-
-
-def _normalize_country_code(raw: str) -> str:
-    code = (raw or "+91").strip().replace(" ", "")
-    if not code.startswith("+"):
-        code = f"+{code}"
-    digits = "".join(ch for ch in code[1:] if ch.isdigit())
-    if not digits or len(digits) > 4:
-        raise HTTPException(400, "Enter a valid country code (e.g. +91)")
-    return f"+{digits}"
-
-
-def _normalize_contact_phone(country_code: str, phone: str) -> tuple[str, str]:
-    """Return (display phone, e164-ish). For +91 require any 10 digits only."""
-    import re
-
-    code = _normalize_country_code(country_code)
-    digits = re.sub(r"\D", "", phone or "")
-    if code == "+91":
-        if len(digits) == 12 and digits.startswith("91"):
-            digits = digits[2:]
-        if len(digits) == 11 and digits.startswith("0"):
-            digits = digits[1:]
-        if len(digits) != 10 or not digits.isdigit():
-            raise HTTPException(400, "Enter a 10-digit mobile number")
-        return f"+91 {digits}", f"+91{digits}"
-    if len(digits) < 6 or len(digits) > 15:
-        raise HTTPException(400, "Enter a valid phone number for the selected country code")
-    return f"{code} {digits}", f"{code}{digits}"
+    # Abuse signals. All optional, so older web bundles and app builds keep working.
+    website: str | None = Field(default=None, max_length=500)  # honeypot: hidden from people, filled by bots
+    elapsed_ms: int | None = Field(default=None, ge=0, le=86_400_000)  # time from first render to submit
+    bot_token: str | None = Field(default=None, max_length=2048)  # Cloudflare Turnstile
+    source: str | None = Field(default=None, max_length=32)
 
 
 @router.post("/contact")
-def submit_contact_form(body: ContactFormIn, request: Request, db: Session = Depends(get_db)):
-    """Public contact form — emails BSeva inboxes via Zoho SMTP + visitor confirmation."""
-    import re
+def submit_contact_form(
+    body: ContactFormIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    user=Depends(optional_user),
+):
+    """Public contact form: stored, checked for abuse, then emailed to the BSeva inboxes (app.contact_form)."""
+    from app.contact_form import submit
 
-    from app.mail.smtp_client import send_email, smtp_configured
-    from app.mail.smtp_config import load_smtp_config
-    from app.mail.templates import admin_notification_email
-    from app.platform_config import get_setting
+    return submit(db, body, request, user)
 
-    name = body.name.strip()
-    email = body.email.strip().lower()
-    subject = body.subject.strip()
-    message = body.message.strip()
-    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-        raise HTTPException(400, "Enter a valid email address")
-    # Public endpoint that sends mail (including an acknowledgement to the given address): cap it.
-    busy = "Too many messages sent. Please try again in an hour or email us directly."
-    rate_limit.enforce(db, rate_limit.CONTACT_IP, rate_limit.client_ip(request), busy)
-    rate_limit.enforce(db, rate_limit.CONTACT_EMAIL, email, busy)
-    phone_display, phone_e164 = _normalize_contact_phone(body.country_code, body.phone)
 
-    cfg = load_smtp_config()
-    contact_inbox = str(get_setting(db, "email_from_contact", "") or "").strip()
-    support_inbox = str(get_setting(db, "email_from_support", "") or "").strip()
-    # Always include authenticated Zoho mailbox so mail is visible even if aliases lag
-    recipients: list[str] = []
-    for addr in (
-        contact_inbox,
-        support_inbox,
-        (cfg.from_email if cfg else "") or "",
-        "admin@b-seva.com",
-    ):
-        a = (addr or "").strip().lower()
-        if a and "@" in a and a not in recipients:
-            recipients.append(a)
-    if not recipients:
-        recipients = ["admin@b-seva.com"]
-
-    content = admin_notification_email(
-        title=f"Website contact: {subject}",
-        message=message,
-        details=[
-            ("Name", name),
-            ("Email", email),
-            ("Phone", phone_display),
-            ("Subject", subject),
-        ],
-    )
-    # Do not override From — Zoho only accepts the authenticated mailbox.
-    # Send per recipient so one bad alias does not block the others.
-    delivered: list[str] = []
-    last_fail: dict | None = None
-    for inbox in recipients:
-        team_result = send_email(
-            to=inbox,
-            subject=content.subject,
-            text_body=content.text,
-            html_body=content.html,
-            reply_to=email,
-        )
-        if team_result.get("ok"):
-            delivered.append(inbox)
-        else:
-            last_fail = team_result
-    if not delivered:
-        if not smtp_configured():
-            return {
-                "ok": True,
-                "message": "Thank you. Your message was received. Our team will contact you soon.",
-                "queued": True,
-            }
-        raise HTTPException(
-            502,
-            "Unable to send your message right now. Please try again or email us directly.",
-        )
-
-    # Confirmation to the visitor (best-effort; team mail already succeeded)
-    confirm_subject = f"We received your message — {subject}"
-    confirm_text = (
-        f"Namaste {name},\n\n"
-        f"Thank you for contacting BSeva. We have received your message and typically respond within 24 hours.\n\n"
-        f"Subject: {subject}\n"
-        f"Phone: {phone_display}\n\n"
-        f"Your message:\n{message}\n\n"
-        f"With devotion,\nBSeva Team\n"
-    )
-    confirm_html = (
-        f"<p>Namaste <strong>{name}</strong>,</p>"
-        f"<p>Thank you for contacting BSeva. We have received your message and typically respond within 24 hours.</p>"
-        f"<p><strong>Subject:</strong> {subject}<br/>"
-        f"<strong>Phone:</strong> {phone_display}</p>"
-        f"<p><strong>Your message:</strong><br/>{message.replace(chr(10), '<br/>')}</p>"
-        f"<p>With devotion,<br/>BSeva Team</p>"
-    )
-    visitor_result = send_email(
-        to=email,
-        subject=confirm_subject,
-        text_body=confirm_text,
-        html_body=confirm_html,
-    )
-
-    return {
-        "ok": True,
-        "message": "Thank you. Your message has been sent. We will get back to you soon.",
-        "phone": phone_e164,
-        "team_to": delivered,
-        "visitor_confirmation": bool(visitor_result.get("ok")),
-    }
+@router.get("/contact/submissions")
+def list_contact_submissions(
+    status: str | None = None,
+    limit: int = 100,
+    user=Depends(require_permission("manage_support")),
+    db: Session = Depends(get_db),
+):
+    """Admin review of website contact messages, including ones held back by the volume limit or marked spam."""
+    where = "WHERE status = :status" if status in ("accepted", "held", "duplicate", "spam") else ""
+    rows = db.execute(
+        text(
+            f"""
+            SELECT id, created_at, user_id, source, name, email, phone, subject, message, status, spam_reason,
+                   team_emailed_at, reviewed_at
+            FROM contact_submissions
+            {where}
+            ORDER BY created_at DESC
+            LIMIT :lim
+            """
+        ),
+        {"status": status, "lim": max(1, min(int(limit or 100), 500))},
+    ).mappings().all()
+    return [row_dict(r) for r in rows]

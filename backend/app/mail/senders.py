@@ -49,6 +49,7 @@ def send_login_otp_email(
     test_mode: bool = False,
     purpose: str = "login",
     from_addr: str | None = None,
+    ttl_minutes: int = 5,
 ) -> dict[str, Any]:
     return _dispatch(
         to,
@@ -58,6 +59,7 @@ def send_login_otp_email(
             language=language,
             test_mode=test_mode,
             purpose=purpose,
+            ttl_minutes=ttl_minutes,
         ),
         from_addr=from_addr,
     )

@@ -10,11 +10,12 @@ import { api, registerApi } from "@/lib/api";
 import { REGISTRATION_CONSENT_LABEL, TERMS_VERSION, PRIVACY_VERSION } from "@/lib/legal";
 import { useI18n } from "@/i18n/I18nProvider";
 import { PREFERRED_LANGUAGES, uiLangFromPreferred, type PreferredLang } from "@/lib/languages";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { TurnstileWidget, type TurnstileHandle } from "@/components/BotProtection";
 import { useAuth } from "@/_core/hooks/useAuth";
 import BSevaLogo from "@/components/BSevaLogo";
 
@@ -24,7 +25,8 @@ import { composeDisplayName, validatePersonNameParts, type PersonNameParts } fro
 import { toE164, validatePhoneNational } from "@/lib/phone";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const OTP_VALIDITY_SEC = 10 * 60;
+// The server sends the real validity; it allows a new code 60 seconds after the last one.
+const OTP_RESEND_AFTER_SEC = 60;
 
 function formatMmSs(totalSec: number) {
   const m = Math.floor(totalSec / 60);
@@ -75,9 +77,12 @@ export default function Register() {
   });
   const [language, setLanguage] = useState<PreferredLang>(lang);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string; otp?: string }>({});
+  const [otpWindowSec, setOtpWindowSec] = useState(5 * 60);
+  const [otpBotToken, setOtpBotToken] = useState<string | null>(null);
+  const otpTurnstileRef = useRef<TurnstileHandle>(null);
 
   const otpExpired = otpSent && otpSecondsLeft <= 0;
-  const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= OTP_VALIDITY_SEC - 30);
+  const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= otpWindowSec - OTP_RESEND_AFTER_SEC);
 
   useEffect(() => {
     if (!otpExpiresAt) {
@@ -136,9 +141,15 @@ export default function Register() {
         dev_hint?: string;
       }>("/auth/otp/request", {
         method: "POST",
-        body: JSON.stringify({ phone: phoneE164, email: emailNorm, purpose: "register" }),
+        body: JSON.stringify({
+          phone: phoneE164,
+          email: emailNorm,
+          purpose: "register",
+          bot_token: otpBotToken || undefined,
+        }),
       });
-      const mins = out.expires_in_minutes ?? 10;
+      const mins = out.expires_in_minutes ?? 5;
+      setOtpWindowSec(mins * 60);
       const sentTo = out.email || emailNorm;
       setOtpSent(true);
       setOtpExpiresAt(Date.now() + mins * 60 * 1000);
@@ -154,6 +165,7 @@ export default function Register() {
     } catch (err: any) {
       toast.error(err.message || "Could not send OTP");
     } finally {
+      otpTurnstileRef.current?.reset();
       setOtpSending(false);
     }
   }
@@ -411,6 +423,12 @@ export default function Register() {
                     {otpSending ? "Sending…" : otpSent ? "Resend" : t("auth.emailOtp.send")}
                   </Button>
                 </div>
+                <TurnstileWidget
+                  ref={otpTurnstileRef}
+                  siteKey={publicConfig.turnstile_site_key}
+                  action="otp_request"
+                  onToken={setOtpBotToken}
+                />
                 {fieldErrors.otp && <p className="text-xs text-destructive">{fieldErrors.otp}</p>}
                 {otpSent && otpMessage && (
                   <div

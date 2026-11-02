@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
+import { HoneypotField, TurnstileWidget, useFormTimer, type TurnstileHandle } from "@/components/BotProtection";
 import { toast } from "sonner";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,6 +63,10 @@ export function ContactPortalContent() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const [botToken, setBotToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
+  const formTimer = useFormTimer();
 
   function validate(values: FormState): FormErrors {
     const next: FormErrors = {};
@@ -106,6 +111,10 @@ export function ContactPortalContent() {
           phone: form.phone.trim(),
           subject: form.subject.trim(),
           message: form.message.trim(),
+          website: honeypot,
+          elapsed_ms: formTimer.elapsedMs(),
+          bot_token: botToken || undefined,
+          source: "web_support",
         }),
       });
       setSubmitted(true);
@@ -115,6 +124,8 @@ export function ContactPortalContent() {
     } catch (err: any) {
       toast.error(err?.message || t("contact.errSend"));
     } finally {
+      // Turnstile tokens are single use.
+      turnstileRef.current?.reset();
       setSubmitting(false);
     }
   }
@@ -189,12 +200,16 @@ export function ContactPortalContent() {
                       <p className="text-muted-foreground mt-1">{t("contact.success")}</p>
                     </div>
                   </div>
-                  <Button type="button" variant="outline" onClick={() => setSubmitted(false)} className="font-semibold">
+                  <Button type="button" variant="outline" onClick={() => {
+                      formTimer.restart();
+                      setSubmitted(false);
+                    }} className="font-semibold">
                     {t("contact.sendAnother")}
                   </Button>
                 </div>
               ) : (
-                <form className="space-y-5" onSubmit={onSubmit} noValidate>
+                <form className="relative space-y-5" onSubmit={onSubmit} noValidate>
+                  <HoneypotField value={honeypot} onChange={setHoneypot} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="portal-contact-name">
@@ -291,6 +306,7 @@ export function ContactPortalContent() {
                     />
                     {errors.message && <p className="text-xs text-destructive">{errors.message}</p>}
                   </div>
+                  <TurnstileWidget ref={turnstileRef} siteKey={config.turnstile_site_key} action="contact" onToken={setBotToken} />
                   <Button
                     type="submit"
                     disabled={submitting}
