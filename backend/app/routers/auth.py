@@ -143,17 +143,7 @@ def _otp_refused(reason: str | None, retry_after: int | None):
 
 def _public_otp_circuit(db: Session) -> None:
     """Whole-deployment cap on OTP mail anonymous callers can trigger; refuses rather than flood the mailbox."""
-    bucket, _limit, window = rate_limit.OTP_PUBLIC_EMAILS_HOUR
-    limit = int(settings.otp_public_emails_per_hour)
-    try:
-        count = rate_limit.record(db, (bucket, limit, window), rate_limit.GLOBAL_KEY, fail_closed=True)
-    except rate_limit.StoreUnavailable:
-        raise rate_limit.unavailable() from None
-    db.commit()
-    if count > limit:
-        if count == limit + 1:
-            logger.critical("EMAIL_CIRCUIT_OPEN kind=otp limit_per_hour=%s", limit)
-        raise rate_limit.unavailable()
+    rate_limit.public_otp_circuit(db, int(settings.otp_public_emails_per_hour))
 
 
 @router.post("/otp/request")
@@ -168,9 +158,7 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
         raise HTTPException(400, "Email is required for OTP")
     ip = rate_limit.client_ip(request)
     # Per-email limits are counted below; these cap one client spraying many addresses.
-    rate_limit.enforce(db, rate_limit.OTP_REQUEST_IP, ip, fail_closed=True)
-    bucket, _limit, window = rate_limit.OTP_REQUEST_IP_DAY
-    rate_limit.enforce(db, (bucket, int(settings.otp_requests_per_ip_per_day), window), ip, fail_closed=True)
+    rate_limit.enforce_otp_request_ip(db, ip, settings.otp_requests_per_ip_per_day)
     bot_check.check(body.bot_token, ip=ip, action="otp_request", form_mode=settings.otp_bot_check)
 
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else "login"

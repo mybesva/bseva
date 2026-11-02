@@ -41,6 +41,15 @@ CHECKS = [
     "contact_global_cap",
     "datastore_failure_fails_closed",
     "bot_check_modes",
+    "account_codes_five_then_sixth_and_cooldown",
+    "account_codes_no_enumeration",
+    "account_codes_ip_limits",
+    "account_codes_global_breaker",
+    "account_codes_fail_closed",
+    "password_reset_customer_and_pujari",
+    "password_reset_expiry_and_attempts",
+    "password_reset_not_for_admins",
+    "deletion_and_cancel_codes",
 ]
 # Present in the repo .env files; blanked so nothing can reach a real mailbox or service.
 BLANKED = (

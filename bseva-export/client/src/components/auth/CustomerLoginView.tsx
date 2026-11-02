@@ -210,6 +210,15 @@ export default function CustomerLoginView({
                     className={fieldClass}
                   />
                 </div>
+                <div className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-semibold text-[#FF7A00] hover:underline"
+                    data-testid={`${fieldPrefix}-forgot-password`}
+                  >
+                    {t("auth.forgotPassword")}
+                  </Link>
+                </div>
               </div>
 
               <Button
