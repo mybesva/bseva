@@ -158,9 +158,9 @@ Reasons:
 |---|---|---|---|
 | POST | `/reports` | `{"target_type", "target_id", "booking_id"?, "reason", "details"}` | `200 {"id", "status": "open"}`. `details` is 10–1000 characters. |
 | GET | `/reports/mine` | — | `[{id, target_type, reason, status, created_at, resolution}]` |
-| GET | `/admin/reports` | `?status=&target_type=&page=` | `{"items", "total", "page", "pages", "counts": {"open","in_review","escalated","resolved","dismissed"}}` |
-| GET | `/admin/reports/{id}` | — | report + reporter + target summary + history |
-| PATCH | `/admin/reports/{id}` | `{"status": "in_review"\|"escalated"\|"resolved"\|"dismissed", "resolution"?, "note"?}` | `{"ok": true}` |
+| GET | `/admin/user-reports` | `?status=&target_type=&page=` | `{"items", "total", "page", "pages", "counts": {"open","in_review","escalated","resolved","dismissed"}}` |
+| GET | `/admin/user-reports/{id}` | — | report + reporter + target summary + history |
+| PATCH | `/admin/user-reports/{id}` | `{"status": "in_review"\|"escalated"\|"resolved"\|"dismissed", "resolution"?, "note"?}` | `{"ok": true}` |
 
 - Permissions: `view_complaints` and `manage_complaints`.
 - A user can only report a booking they belong to, or the pujari or customer on that booking.

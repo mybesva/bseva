@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 import json
 import os
@@ -11,7 +12,7 @@ from sqlalchemy.orm import Session
 from app import rate_limit
 from app.config import settings
 from app.db import get_db
-from app.deps import ACCOUNT_BLOCKED, current_user
+from app.deps import ACCOUNT_BLOCKED, account_state_error, current_user
 from app.domain import row_dict
 from app.platform_config import get_setting
 from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
@@ -238,6 +239,9 @@ def login_with_otp(body: OtpVerifyIn, request: Request, db: Session = Depends(ge
         raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
     if row["blocked"]:
         raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
+    state_error = account_state_error(row)
+    if state_error:
+        raise state_error
     if row["role"] == "super_admin":
         raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Super Admins sign in with password and OTP")
     return TokenOut(access_token=create_access_token(str(row["id"]), row["role"], row["password_hash"]), user=_public(dict(row)))
@@ -508,6 +512,9 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     db.commit()
     if row["blocked"]:
         raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
+    state_error = account_state_error(row)
+    if state_error:
+        raise state_error
     if row["role"] in ("customer", "pujari", "head_pujari") and not (row.get("public_id") or "").strip():
         from app.public_ids import ensure_public_id
 
@@ -651,9 +658,23 @@ def change_password(body: ChangePasswordIn, user=Depends(current_user), db: Sess
         raise HTTPException(400, "Current password is incorrect")
     if body.current_password == body.new_password:
         raise HTTPException(400, "New password must be different from current password")
+    from app.account_lifecycle import notify_password_changed
+
+    new_hash = hash_password(body.new_password)
+    # Ends every other session; the caller gets a fresh token below, issued after this moment.
     db.execute(
-        text("UPDATE users SET password_hash = :pw, updated_at = NOW() WHERE id = CAST(:id AS uuid)"),
-        {"pw": hash_password(body.new_password), "id": user["id"]},
+        text(
+            """
+            UPDATE users SET password_hash = :pw, updated_at = NOW(), sessions_revoked_at = :revoked
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"pw": new_hash, "id": user["id"], "revoked": datetime.now(timezone.utc)},
     )
     db.commit()
-    return {"ok": True, "message": "Password updated successfully"}
+    notify_password_changed(db, user)
+    return {
+        "ok": True,
+        "message": "Password updated successfully",
+        "access_token": create_access_token(str(user["id"]), user["role"], new_hash, mfa=user["role"] == "super_admin"),
+    }

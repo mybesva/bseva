@@ -32,8 +32,16 @@ SUPER_ADMIN_LOGIN_MINUTES = 10
 
 
 def create_access_token(sub: str, role: str, password_hash: str | None = None, *, mfa: bool = False) -> str:
-    exp = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
-    claims: dict[str, Any] = {"sub": sub, "role": role, "exp": exp}
+    now = datetime.now(timezone.utc)
+    exp = now + timedelta(minutes=settings.jwt_expire_minutes)
+    # iat lets the API refuse tokens issued before users.sessions_revoked_at.
+    claims: dict[str, Any] = {
+        "sub": sub,
+        "role": role,
+        "exp": exp,
+        "iat": int(now.timestamp()),
+        "iatm": int(now.timestamp() * 1000),
+    }
     # Admin sessions end when the password changes.
     if role in ("admin", "super_admin") and password_hash:
         claims["pv"] = password_version(password_hash)

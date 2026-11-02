@@ -29,6 +29,7 @@ from app.profile_utils import (
     utcnow,
 )
 from app.storage import content_type_for, file_response, upload_bytes
+from app.field_crypto import encrypt_value
 
 router = APIRouter(prefix="/pujari", tags=["pujari"])
 
@@ -465,7 +466,7 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             "avail": body.available,
             "radius": body.service_radius_km,
             "bank4": settlement.get("bank_account_last4", body.bank_account_last4),
-            "bank_acct": settlement.get("bank_account_number", body.bank_account_number),
+            "bank_acct": encrypt_value(settlement.get("bank_account_number", body.bank_account_number)),
             "ifsc": settlement.get("bank_ifsc", body.bank_ifsc),
             "holder": settlement.get("bank_holder_name", body.bank_holder_name),
             "bank_name": settlement.get("bank_name", body.bank_name),

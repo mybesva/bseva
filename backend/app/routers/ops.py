@@ -1246,6 +1246,15 @@ def cron_daily(request: Request, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/ops/cron/privacy")
+def cron_privacy(request: Request, db: Session = Depends(get_db)):
+    """Account deletions due today, overdue escalations, and location history past its retention period."""
+    _require_cron_auth(request)
+    from app.account_lifecycle import purge_location_history, run_due_deletions
+
+    return {"ok": True, "job": "privacy", "deletions": run_due_deletions(db), "location_pings_purged": purge_location_history(db)}
+
+
 def _require_cron_auth(request: Request) -> None:
     """Vercel Cron sends Authorization: Bearer $CRON_SECRET automatically when CRON_SECRET is set."""
     import hmac
