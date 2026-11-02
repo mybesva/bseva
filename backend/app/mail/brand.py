@@ -159,12 +159,12 @@ def checklist(title: str, items: list[str]) -> str:
     )
 
 
-def otp_box(code: str) -> str:
+def otp_box(code: str, valid_for: str = "5 minutes") -> str:
     return (
         f'<div style="margin:20px 0;text-align:center;background:#FFF7ED;border:2px dashed {PRIMARY};'
         f'border-radius:10px;padding:20px 12px;">'
         f'<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:1px;color:{MUTED};text-transform:uppercase;">Your OTP</div>'
         f'<div style="font-family:Consolas,Monaco,monospace;font-size:32px;font-weight:bold;letter-spacing:8px;color:{NAVY};margin-top:8px;">{_esc(code)}</div>'
-        f'<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:{MUTED};margin-top:8px;">Valid for: 10 minutes</div>'
+        f'<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:{MUTED};margin-top:8px;">Valid for: {_esc(valid_for)}</div>'
         f"</div>"
     )

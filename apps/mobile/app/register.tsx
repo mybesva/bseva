@@ -38,7 +38,7 @@ export default function RegisterScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [otpSentTo, setOtpSentTo] = useState("");
-  const [otpValidMins, setOtpValidMins] = useState(10);
+  const [otpValidMins, setOtpValidMins] = useState(5);
   const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
   const [consent, setConsent] = useState(false);
@@ -57,7 +57,8 @@ export default function RegisterScreen() {
   }, [otpExpiresAt]);
   const otpExpired = otpSent && otpExpiresAt != null && otpSecondsLeft <= 0;
   // Short cooldown before Resend so the code isn't re-requested by double taps.
-  const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= otpValidMins * 60 - 30);
+  // The server refuses a new code within 60 seconds of the last one.
+  const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= otpValidMins * 60 - 60);
   const mmss = `${Math.floor(otpSecondsLeft / 60)}:${String(otpSecondsLeft % 60).padStart(2, "0")}`;
 
   async function sendOtp() {
@@ -75,7 +76,7 @@ export default function RegisterScreen() {
         expires_in_minutes?: number;
         email?: string;
       };
-      const mins = out?.expires_in_minutes ?? 10;
+      const mins = out?.expires_in_minutes ?? 5;
       setOtpSentTo(out?.email || emailNorm);
       setOtpValidMins(mins);
       setOtpExpiresAt(Date.now() + mins * 60 * 1000);

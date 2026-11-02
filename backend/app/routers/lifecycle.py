@@ -1591,5 +1591,8 @@ def public_config(db: Session = Depends(get_db)):
         "customer_cancel_min_hours": int(get_setting(db, "customer_cancel_min_hours", 24)),
         "email_from_contact": str(get_setting(db, "email_from_contact", "contact@b-seva.com")),
         "email_from_support": str(get_setting(db, "email_from_support", "support@b-seva.com")),
-        "email_delivery": smtp_status(),
+        # Public: whether mail works, not which host or mailbox sends it (admins see the details elsewhere).
+        "email_delivery": {"configured": bool(smtp_status().get("configured"))},
+        # Turnstile site key and modes for the web forms (empty / "off" until both keys are configured).
+        **__import__("app.bot_check", fromlist=["public_config"]).public_config(),
     }

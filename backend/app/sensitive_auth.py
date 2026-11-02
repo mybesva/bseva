@@ -192,6 +192,8 @@ def open_challenge(
         customer_name=str(user.get("name") or ""),
         language=str(user.get("preferred_language") or "en"),
         ttl_minutes=ACTION_OTP_MINUTES,
+        # Financial authorisation keeps its own hourly cap; the public daily cap must never block it.
+        daily_limit=None,
         hourly_limit=SUPER_ADMIN_OTP_PER_HOUR,
         cooldown_seconds=ACTION_OTP_COOLDOWN_SECONDS,
     )
@@ -199,6 +201,10 @@ def open_challenge(
         if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
             wait = result.get("retry_after_seconds")
             raise HTTPException(429, f"Please wait before requesting another OTP{f' ({wait}s)' if wait else ''}")
+        if result.get("error") == "unavailable":
+            from app.rate_limit import unavailable
+
+            raise unavailable()
         raise HTTPException(502, result.get("message") or "Could not send the OTP. Nothing was changed.")
     db.execute(
         text("UPDATE security_challenges SET consumed_at = NOW() WHERE user_id = CAST(:u AS uuid) AND consumed_at IS NULL"),

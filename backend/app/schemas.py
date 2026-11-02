@@ -128,6 +128,8 @@ class OtpRequestIn(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     purpose: Literal["register", "login", "verify"] = "register"
+    # Cloudflare Turnstile token from the web client; the mobile apps send none.
+    bot_token: Optional[str] = Field(default=None, max_length=2048)
 
 
 class OtpVerifyIn(BaseModel):

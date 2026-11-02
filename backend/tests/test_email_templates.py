@@ -21,7 +21,8 @@ def test_login_otp_template_shows_validity_and_code():
     content = login_otp_email(otp_code="482913", customer_name="Test User", test_mode=True)
     assert content.template_id == "login_otp"
     assert "482913" in content.html
-    assert "Valid for: 10 minutes" in content.html
+    assert "Valid for: 5 minutes" in content.html
+    assert "Valid for: 5 minutes" in content.text
     assert "Do not share" in content.html
     assert "[TEST]" in content.subject
     assert "482913" in content.text

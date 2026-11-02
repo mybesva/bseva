@@ -123,6 +123,7 @@ def login_otp_email(
     language: str = "en",
     test_mode: bool = False,
     purpose: str = "login",
+    ttl_minutes: int = 5,
 ) -> EmailContent:
     is_register = purpose == "register"
     is_sensitive = purpose == "sensitive_action"
@@ -135,12 +136,12 @@ def login_otp_email(
         if is_sensitive
         else "Use this one-time password to sign in to your BSeva account."
     )
-    valid_for = "5 minutes" if is_sensitive else "10 minutes"
+    valid_for = f"{int(ttl_minutes)} minute{'' if int(ttl_minutes) == 1 else 's'}"
     body = (
         heading(title)
         + paragraph(_greet(customer_name or "Ji", language))
         + paragraph(action)
-        + otp_box(otp_code)
+        + otp_box(otp_code, valid_for)
         + muted(f"Valid for: {valid_for}")
         + muted("Do not share this OTP with anyone. BSeva will never ask for your OTP.")
     )
@@ -156,7 +157,7 @@ def login_otp_email(
         f"{title}\n\n"
         f"{_greet(customer_name or 'Ji', language)}\n\n"
         f"Your OTP: {otp_code}\n"
-        f"Valid for: 10 minutes\n\n"
+        f"Valid for: {valid_for}\n\n"
         f"Do not share this OTP with anyone.\n\n"
         f"{_closing(language)}"
     )
@@ -193,6 +194,26 @@ def welcome_email(*, customer_name: str, language: str = "en", test_mode: bool =
         f"{_closing(language)}"
     )
     return EmailContent(subject=subject, html=html, text=text, template_id="welcome")
+
+
+def contact_received_email() -> EmailContent:
+    """Acknowledgement for the public contact form. It goes to an address anyone can type in, so it carries
+    no visitor-supplied text at all (name, subject or message): it cannot relay someone else's content."""
+    subject = "We received your message — BSeva"
+    body = (
+        heading("Thank you for contacting BSeva")
+        + paragraph(_greet("Ji", "en"))
+        + paragraph("We have received your message. Our team typically responds within 24 hours.")
+        + muted("If you did not contact BSeva, you can ignore this email. No account was created.")
+    )
+    html = render_email(title=subject, preheader="We received your message", body_html=body, language="en")
+    text = (
+        f"{_greet('Ji', 'en')}\n\n"
+        "We have received your message. Our team typically responds within 24 hours.\n\n"
+        "If you did not contact BSeva, you can ignore this email. No account was created.\n\n"
+        f"{_closing('en')}"
+    )
+    return EmailContent(subject=subject, html=html, text=text, template_id="contact_received")
 
 
 def booking_confirmation_email(data: BookingEmailData) -> EmailContent:
