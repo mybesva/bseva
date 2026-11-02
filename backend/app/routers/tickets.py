@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import rate_limit
 from app.audit import write_audit
 from app.db import get_db
 from app.deps import current_user
@@ -475,6 +476,7 @@ def create_ticket(body: TicketCreateIn, user=Depends(current_user), db: Session 
         user_role = user["role"]
         if user_role not in ("customer", "pujari", "head_pujari"):
             raise HTTPException(403, "Not allowed")
+        rate_limit.check_user_action(db, user, "ticket")
 
     booking_id = _uuid(body.related_booking_id)
     booking = _assert_booking_link(db, booking_id, user, target_user_id) if booking_id else None
@@ -584,6 +586,7 @@ def create_ticket(body: TicketCreateIn, user=Depends(current_user), db: Session 
         )
         _import_conversation(db, conv_id, tid, user)
     write_audit(db, str(user["id"]), created_event, "support_ticket", tid)
+    rate_limit.count_user_action(db, user, "ticket")
     db.commit()
     return {"id": tid, "ticket_number": num, "status": "open"}
 
@@ -880,6 +883,7 @@ def add_message(
     if not t:
         raise HTTPException(404, "Ticket not found")
     _assert_access(t, user)
+    rate_limit.check_user_action(db, user, "support_message")
     kind = (body.kind or "reply").strip().lower()
     admin = _admin(user)
     if not admin:
@@ -924,6 +928,7 @@ def add_message(
     if admin and event_type == "admin_reply" and t.get("user_id"):
         _notify_user(db, str(t["user_id"]), "Support replied", body.body.strip()[:180], ticket_id)
     write_audit(db, str(user["id"]), event_type, "support_ticket", ticket_id)
+    rate_limit.count_user_action(db, user, "support_message")
     db.commit()
     return {"ok": True}
 

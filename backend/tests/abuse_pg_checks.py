@@ -249,9 +249,18 @@ def check_ip_limit():
 
 def check_global_otp_breaker():
     reset_state()
+    # Sign-in codes (counted for known and unknown addresses alike) share the site-wide budget.
     settings.otp_public_emails_per_hour = 3
     codes = [
-        post("/auth/otp/request", {"email": f"g{i}@example.org", "purpose": "register"}, ip=f"198.51.100.{i + 1}").status_code
+        post("/auth/otp/request", {"email": f"g{i}@example.org", "purpose": "login"}, ip=f"198.51.100.{i + 1}").status_code
+        for i in range(5)
+    ]
+    assert codes == [200, 200, 200, 503, 503], codes
+    # Registration codes have their own budget, with the same behaviour.
+    reset_state()
+    settings.otp_register_emails_per_hour = 3
+    codes = [
+        post("/auth/otp/request", {"email": f"gr{i}@example.org", "purpose": "register"}, ip=f"198.51.100.{i + 1}").status_code
         for i in range(5)
     ]
     assert codes == [200, 200, 200, 503, 503], codes
@@ -422,9 +431,11 @@ def check_account_codes_global_breaker():
     ]
     assert codes == [200, 200, 200, 503], codes
     assert len(SENT) == 3
-    # The cap is shared with /auth/otp/request and the deletion endpoints.
+    # The cap is shared with sign-in codes and the deletion endpoints...
     assert post("/account/deletion/public/request-otp", {"email": "gr0@example.org"}, ip="198.51.100.190").status_code == 503
-    assert post("/auth/otp/request", {"email": "gr-new@example.org", "purpose": "register"}, ip="198.51.100.191").status_code == 503
+    assert post("/auth/otp/request", {"email": "gr-new@example.org", "purpose": "login"}, ip="198.51.100.191").status_code == 503
+    # ...but not with registration codes, which have their own budget.
+    assert post("/auth/otp/request", {"email": "gr-new@example.org", "purpose": "register"}, ip="198.51.100.192").status_code == 200
 
 
 def check_account_codes_fail_closed():
@@ -1054,6 +1065,187 @@ def check_captcha_login_switches():
         _login("lc@example.org", "wrong-pass1", "customer", next(ips), captcha_for="login")
     r = _login("lc@example.org", "Str0ng!pass", "customer", next(ips), captcha_for="login")
     assert r.status_code == 429, r.text
+
+
+# ------------------------------------------------------------------------------- hardening batch
+
+
+def _token(email: str, password: str = "Str0ng!pass", ip: str = "198.51.100.230") -> str:
+    r = post("/auth/login", {"identifier": email, "password": password}, ip=ip)
+    assert r.status_code == 200 and r.json().get("access_token"), r.text
+    return r.json()["access_token"]
+
+
+def _staff(email: str, phone: str, role: str, perms: tuple[str, ...] = ()) -> str:
+    uid = sql(
+        "INSERT INTO users (id, name, email, phone, password_hash, role) "
+        "VALUES (gen_random_uuid(), 'Staff Person', :e, :ph, :pw, :role) RETURNING id",
+        e=email, ph=phone, pw=hash_password("Adm1n!pass"), role=role,
+    ).scalar()
+    for perm in perms:
+        sql("INSERT INTO admin_permissions (user_id, permission) VALUES (:u, :p)", u=uid, p=perm)
+    return str(uid)
+
+
+def check_registration_budget_separate():
+    reset_state()
+    register("customer", "budget-login@example.org", "9000000030", "Budget Login")
+    reset_state()
+    settings.otp_register_emails_per_hour = 3
+    codes = [
+        post("/auth/otp/request", {"email": f"rb{i}@example.org", "purpose": "register" if i % 2 == 0 else "verify"},
+             ip=f"198.51.100.{i + 1}").status_code
+        for i in range(5)
+    ]
+    assert codes == [200, 200, 200, 503, 503], codes
+    # Sign-in, reset and deletion codes keep flowing: they draw on a different budget.
+    assert post("/auth/otp/request", {"email": "budget-login@example.org", "purpose": "login"}, ip="198.51.100.20").status_code == 200
+    assert post("/auth/password/forgot", {"email": "budget-login@example.org"}, ip="198.51.100.21").status_code == 200
+    assert post("/account/deletion/public/request-otp", {"email": "budget-login@example.org"}, ip="198.51.100.22").status_code == 200
+    # And the reverse: an exhausted sign-in budget does not stop registration.
+    reset_state()
+    settings.otp_register_emails_per_hour = 100
+    settings.otp_public_emails_per_hour = 2
+    codes = [post("/auth/otp/request", {"email": f"nobody{i}@example.org", "purpose": "login"}, ip=f"198.51.100.{30 + i}").status_code for i in range(3)]
+    assert codes == [200, 200, 503], codes
+    assert post("/auth/otp/request", {"email": "new-after@example.org", "purpose": "register"}, ip="198.51.100.40").status_code == 200
+
+
+def check_registration_ip_daily_limit():
+    reset_state()
+    settings.otp_register_requests_per_ip_per_day = 3
+    codes = [post("/auth/otp/request", {"email": f"ipreg{i}@example.org", "purpose": "register"}, ip="198.51.100.50").status_code for i in range(4)]
+    assert codes == [200, 200, 200, 429], codes
+    # The same client can still ask for a sign-in code.
+    assert post("/auth/otp/request", {"email": "someone@example.org", "purpose": "login"}, ip="198.51.100.50").status_code == 200
+
+
+def check_admin_code_only_signin_refused():
+    reset_state()
+    _staff("ops-code@example.org", "9000000095", "admin")
+    r = post("/auth/otp/request", {"email": "ops-code@example.org", "purpose": "login"}, ip="198.51.100.60")
+    assert r.status_code == 200 and mails_to("ops-code@example.org") == [], r.text
+    # Even a valid code (issued directly) does not sign an Admin in.
+    db = SessionLocal()
+    try:
+        out = otp_service.issue_email_otp(db, email="ops-code@example.org", purpose="login", deliver=False, daily_limit=None, cooldown_seconds=0)
+    finally:
+        db.close()
+    assert out["ok"], out
+    r = post("/auth/login/otp", {"email": "ops-code@example.org", "code": CODE, "purpose": "login"}, ip="198.51.100.61")
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "INVALID_OTP", r.text
+    # Password sign-in still works for the Admin, without a second step.
+    r = post("/auth/login", {"identifier": "ops-code@example.org", "password": "Adm1n!pass"}, ip="198.51.100.62")
+    assert r.status_code == 200 and r.json()["access_token"] and not r.json().get("otp_required"), r.text
+    # Super Admin keeps password + code.
+    _staff("root-code@example.org", "9000000094", "super_admin")
+    r = post("/auth/login", {"identifier": "root-code@example.org", "password": "Adm1n!pass"}, ip="198.51.100.63")
+    assert r.status_code == 200 and r.json()["otp_required"] is True, r.text
+    # Customers, pujaris and head pujaris can still sign in with a code.
+    register("customer", "code-cust@example.org", "9000000031", "Code Customer")
+    register("pujari", "code-puj@example.org", "9000000032", "Ravi Kumar Sharma")
+    register("pujari", "code-head@example.org", "9000000033", "Mohan Lal Verma")
+    sql("UPDATE users SET role = 'head_pujari' WHERE email = 'code-head@example.org'")
+    for i, email in enumerate(("code-cust@example.org", "code-puj@example.org", "code-head@example.org")):
+        skip_cooldown()
+        assert post("/auth/otp/request", {"email": email, "purpose": "login"}, ip=f"198.51.100.{64 + i}").status_code == 200
+        r = post("/auth/login/otp", {"email": email, "code": CODE, "purpose": "login"}, ip=f"198.51.100.{70 + i}")
+        assert r.status_code == 200 and r.json()["access_token"], (email, r.text)
+
+
+def check_user_limits_support():
+    reset_state()
+    register("customer", "spam-cust@example.org", "9000000034", "Spam Customer")
+    tok = _token("spam-cust@example.org")
+    auth = lambda t: {"Authorization": f"Bearer {t}", "x-real-ip": "198.51.100.80"}
+    for i in range(10):
+        r = client.post("/api/v1/support/tickets", json={"subject": f"Booking help {i}", "description": f"Please help me with booking question number {i}."}, headers=auth(tok))
+        assert r.status_code == 200, (i, r.text)
+    r = client.post("/api/v1/support/tickets", json={"subject": "Booking help 11", "description": "Please help me with one more booking question."}, headers=auth(tok))
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "USER_LIMIT_REACHED" and "WhatsApp" in r.json()["detail"]["message"], r.text
+    uid = sql("SELECT id FROM users WHERE email = 'spam-cust@example.org'").scalar()
+    assert sql("SELECT COUNT(*) FROM support_tickets WHERE user_id = :u", u=uid).scalar() == 10
+    # Chats: 10 per day; messages: 60 per hour across chats and tickets.
+    convs = []
+    for i in range(10):
+        r = client.post("/api/v1/support/conversations", json={"subject": f"Chat {i}", "message": f"Hello, question {i}"}, headers=auth(tok))
+        assert r.status_code == 200, r.text
+        convs.append(r.json()["id"])
+    assert client.post("/api/v1/support/conversations", json={"message": "one more"}, headers=auth(tok)).status_code == 429
+    for i in range(60):
+        r = client.post(f"/api/v1/support/conversations/{convs[0]}/messages", json={"body": f"Message {i}"}, headers=auth(tok))
+        assert r.status_code == 200, (i, r.text)
+    r = client.post(f"/api/v1/support/conversations/{convs[0]}/messages", json={"body": "Message 61"}, headers=auth(tok))
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "USER_LIMIT_REACHED", r.text
+    # Staff replies are never limited.
+    _staff("agent@example.org", "9000000093", "admin", ("manage_support", "view_support"))
+    agent = _token("agent@example.org", "Adm1n!pass", ip="198.51.100.81")
+    for i in range(65):
+        r = client.post(f"/api/v1/support/conversations/{convs[1]}/messages", json={"body": f"Reply {i}"}, headers=auth(agent))
+        assert r.status_code == 200, (i, r.text)
+
+
+def check_user_limits_reports_and_duplicates():
+    from app import rate_limit
+
+    reset_state()
+    rate_limit.USER_ACTIONS["report"] = (("user_report_day", 2, 24 * 60 * 60),)
+    c = register("customer", "rep-cust@example.org", "9000000035", "Report Customer")
+    p = register("pujari", "rep-puj@example.org", "9000000036", "Suresh Kumar Iyer")
+    cid, pid = c["user"]["id"], p["user"]["id"]
+    svc = sql("INSERT INTO services (id, name, slug, required_level) VALUES (gen_random_uuid(), 'Test Puja', 'test-puja-rep', 1) RETURNING id").scalar()
+    bookings = []
+    for n in range(2):
+        bookings.append(str(sql(
+            """
+            INSERT INTO bookings (id, booking_number, customer_id, pujari_id, service_id, booking_date, start_time, end_time,
+                                  mode, package_type, base_price_paise, gst_amount_paise, gst_percent, total_paise, status)
+            VALUES (gen_random_uuid(), :num, :c, :p, :s, CURRENT_DATE + 5, '09:00', '10:00', 'in_person', 'standard',
+                    100000, 18000, 18, 118000, 'confirmed') RETURNING id
+            """, num=f"REP-{n}", c=cid, p=pid, s=svc,
+        ).scalar()))
+    ctok, ptok = _token("rep-cust@example.org"), _token("rep-puj@example.org")
+    rep = lambda tok, body: client.post("/api/v1/reports", json=body, headers={"Authorization": f"Bearer {tok}", "x-real-ip": "198.51.100.90"})
+    about_pujari = {"target_type": "pujari", "target_id": pid, "booking_id": bookings[0], "reason": "misconduct", "details": "The pujari was rude on the phone"}
+    assert rep(ctok, about_pujari).status_code == 200
+    r = rep(ctok, about_pujari)  # the same report again: refused, not stored, not counted
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "REPORT_EXISTS", r.text
+    assert sql("SELECT COUNT(*) FROM user_reports WHERE reporter_id = :u", u=cid).scalar() == 1
+    assert rep(ctok, {"target_type": "booking", "target_id": bookings[0], "booking_id": bookings[0], "reason": "other", "details": "The booking time was changed"}).status_code == 200
+    r = rep(ctok, dict(about_pujari, booking_id=bookings[1]))
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "USER_LIMIT_REACHED", r.text
+    # Another person has their own allowance.
+    r = rep(ptok, {"target_type": "customer", "target_id": cid, "booking_id": bookings[0], "reason": "payment", "details": "Customer asked to pay in cash"})
+    assert r.status_code == 200, r.text
+
+
+def check_user_limit_booking():
+    from app import rate_limit
+
+    reset_state()
+    c = register("customer", "book-cust@example.org", "9000000037", "Booking Customer")
+    tok = _token("book-cust@example.org")
+    body = {
+        "service_id": "00000000-0000-0000-0000-000000000001", "package_type": "standard", "mode": "in_person",
+        "booking_date": "2030-01-10", "start_time": "09:00", "location_label": "Test", "address": "Test street",
+        "city": "Hyderabad", "latitude": 17.44, "longitude": 78.39, "terms_accepted": False,
+    }
+    headers = {"Authorization": f"Bearer {tok}", "x-real-ip": "198.51.100.95"}
+    # A refused booking (here: terms not accepted) is not counted against the customer.
+    for _ in range(12):
+        assert client.post("/api/v1/bookings", json=body, headers=headers).status_code == 400
+    db = SessionLocal()
+    try:
+        assert rate_limit.hits(db, rate_limit.USER_ACTIONS["booking"][0], f"user:{c['user']['id']}") == 0
+        # At the hourly cap the next booking is refused before anything is written or charged.
+        for _ in range(10):
+            rate_limit.record(db, rate_limit.USER_ACTIONS["booking"][0], f"user:{c['user']['id']}")
+        db.commit()
+    finally:
+        db.close()
+    r = client.post("/api/v1/bookings", json=dict(body, terms_accepted=True), headers=headers)
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "USER_LIMIT_REACHED", r.text
+    assert sql("SELECT COUNT(*) FROM bookings WHERE customer_id = :c", c=c["user"]["id"]).scalar() == 0
 
 
 CHECKS = {name[len("check_"):]: fn for name, fn in globals().items() if name.startswith("check_")}

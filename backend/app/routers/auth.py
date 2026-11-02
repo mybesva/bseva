@@ -111,9 +111,16 @@ def _otp_refused(reason: str | None, retry_after: int | None):
     return HTTPException(429, OTP_WAIT_MESSAGE + (f" ({retry_after}s)" if retry_after else ""))
 
 
-def _public_otp_circuit(db: Session) -> None:
-    """Whole-deployment cap on OTP mail anonymous callers can trigger; refuses rather than flood the mailbox."""
-    rate_limit.public_otp_circuit(db, int(settings.otp_public_emails_per_hour))
+def _public_otp_circuit(db: Session, purpose: str = "login") -> None:
+    """Whole-deployment cap on OTP mail anonymous callers can trigger; refuses rather than flood the mailbox.
+
+    Registration and verify codes draw on their own budget so abusing them cannot block sign-in codes."""
+    if purpose in ("register", "verify"):
+        rate_limit.public_otp_circuit(
+            db, int(settings.otp_register_emails_per_hour), rule=rate_limit.OTP_REGISTER_EMAILS_HOUR, kind="otp_register"
+        )
+    else:
+        rate_limit.public_otp_circuit(db, int(settings.otp_public_emails_per_hour))
 
 
 @router.post("/otp/request")
@@ -131,6 +138,9 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
     rate_limit.enforce_otp_request_ip(db, ip, settings.otp_requests_per_ip_per_day)
 
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else "login"
+    if purpose in ("register", "verify"):
+        bucket, _limit, window = rate_limit.OTP_REGISTER_IP_DAY
+        rate_limit.enforce(db, (bucket, int(settings.otp_register_requests_per_ip_per_day), window), ip, fail_closed=True)
     account_type = body.account_type if purpose == "register" else None
     if purpose == "register" and captcha_settings.register_required(db, account_type):
         captcha.require(db, body.captcha_id, body.captcha_answer, purpose="register", ip=ip)
@@ -141,7 +151,7 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
         raise rate_limit.unavailable() from None
     if not gate.get("allowed"):
         raise _otp_refused(gate.get("reason"), gate.get("retry_after_seconds"))
-    _public_otp_circuit(db)
+    _public_otp_circuit(db, purpose)
 
     user_row = db.execute(
         text("SELECT name, role, preferred_language, blocked FROM users WHERE lower(email) = :e LIMIT 1"),
@@ -155,8 +165,9 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
             "message": "If an account exists for this email, an OTP has been sent.",
             "expires_in_minutes": OTP_TTL_MINUTES,
         }
-        # A Super Admin gets the login OTP only after the password step, so it cannot be requested here.
-        if not user_row or user_row.get("blocked") or user_row.get("role") == "super_admin":
+        # Admins and Super Admins sign in with their password (a Super Admin then gets the code), so a code
+        # alone is never sent to them here.
+        if not user_row or user_row.get("blocked") or user_row.get("role") in ("admin", "super_admin"):
             logger.info("OTP_REQUEST_NO_SEND purpose=login to=%s", mask_email(email))
             return generic
         issue_email_otp(
@@ -246,8 +257,9 @@ def login_with_otp(body: OtpVerifyIn, request: Request, db: Session = Depends(ge
     state_error = account_state_error(row)
     if state_error:
         raise state_error
-    if row["role"] == "super_admin":
-        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Super Admins sign in with password and OTP")
+    if row["role"] in ("admin", "super_admin"):
+        # No code is ever sent to these accounts here; refuse in the same words as any wrong code.
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
     return TokenOut(access_token=create_access_token(str(row["id"]), row["role"], row["password_hash"]), user=_public(dict(row)))
 
 

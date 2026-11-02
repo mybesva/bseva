@@ -32,6 +32,10 @@ CONTACT_EMAIL_DAY = ("contact_email_day", 5, 24 * 60 * 60)
 CONTACT_PHONE_DAY = ("contact_phone_day", 5, 24 * 60 * 60)
 # Whole-deployment circuit breakers; the limit comes from settings, so these hold only bucket and window.
 OTP_PUBLIC_EMAILS_HOUR = ("otp_public_emails_hour", 0, 60 * 60)
+# Registration and email-verification codes go to addresses with no account yet, so they get their own
+# site-wide budget and per-client daily cap: abusing them cannot use up sign-in, reset or deletion mail.
+OTP_REGISTER_EMAILS_HOUR = ("otp_register_emails_hour", 0, 60 * 60)
+OTP_REGISTER_IP_DAY = ("otp_register_ip_day", 0, 24 * 60 * 60)  # limit from settings
 CONTACT_TEAM_EMAILS_HOUR = ("contact_team_emails_hour", 0, 60 * 60)
 CONTACT_VOLUME_ALERT_HOUR = ("contact_volume_alert_hour", 1, 60 * 60)
 GLOBAL_KEY = "all"
@@ -172,9 +176,9 @@ def enforce_otp_request_ip(db: Session, ip: str, per_day: int) -> None:
     enforce(db, (bucket, int(per_day), window), ip, fail_closed=True)
 
 
-def public_otp_circuit(db: Session, limit: int) -> None:
+def public_otp_circuit(db: Session, limit: int, rule: tuple[str, int, int] = OTP_PUBLIC_EMAILS_HOUR, kind: str = "otp") -> None:
     """Whole-deployment cap on OTP mail anonymous callers can trigger; refuses rather than flood the mailbox."""
-    bucket, _limit, window = OTP_PUBLIC_EMAILS_HOUR
+    bucket, _limit, window = rule
     limit = int(limit)
     try:
         count = record(db, (bucket, limit, window), GLOBAL_KEY, fail_closed=True)
@@ -183,5 +187,49 @@ def public_otp_circuit(db: Session, limit: int) -> None:
     db.commit()
     if count > limit:
         if count == limit + 1:
-            logger.critical("EMAIL_CIRCUIT_OPEN kind=otp limit_per_hour=%s", limit)
+            logger.critical("EMAIL_CIRCUIT_OPEN kind=%s limit_per_hour=%s", kind, limit)
         raise unavailable()
+
+
+# Per-account caps on records signed-in customers and pujaris create. Staff are never limited. Only
+# successful creations are counted (check first, count just before the commit), so failed validation and
+# idempotent retries do not use up anyone's allowance. These counters fail open: a broken store must not
+# stop bookings or urgent support.
+SELF_SERVICE_ROLES = ("customer", "pujari", "head_pujari")
+USER_ACTIONS: dict[str, tuple[tuple[str, int, int], ...]] = {
+    "booking": (("user_booking_hour", 10, 60 * 60), ("user_booking_day", 30, 24 * 60 * 60)),
+    "ticket": (("user_ticket_day", 10, 24 * 60 * 60),),
+    "conversation": (("user_conversation_day", 10, 24 * 60 * 60),),
+    "support_message": (("user_support_message_hour", 60, 60 * 60),),
+    "report": (("user_report_day", 10, 24 * 60 * 60),),
+}
+USER_LIMIT_MESSAGES = {
+    "booking": "You have made many bookings in a short time. Please try again later, or contact support if you need more.",
+    "ticket": "You have opened many support requests today. Please add to an existing request, or call or WhatsApp us if it is urgent.",
+    "conversation": "You have started many support chats today. Please continue an existing chat, or call or WhatsApp us if it is urgent.",
+    "support_message": "You are sending messages very quickly. Please wait a few minutes, or call or WhatsApp us if it is urgent.",
+    "report": "You have sent many reports today. Please try again tomorrow, or contact support if it is urgent.",
+}
+
+
+def _limited(user: dict | None) -> bool:
+    return bool(user) and str(user.get("role") or "") in SELF_SERVICE_ROLES
+
+
+def check_user_action(db: Session, user: dict | None, action: str) -> None:
+    """Refuse (429 USER_LIMIT_REACHED) when this customer or pujari already reached a cap for the action."""
+    if not _limited(user):
+        return
+    for rule in USER_ACTIONS[action]:
+        if is_blocked(db, rule, f"user:{user['id']}"):
+            logger.warning("USER_LIMIT_REACHED action=%s bucket=%s", action, rule[0])
+            raise coded_http(429, "USER_LIMIT_REACHED", USER_LIMIT_MESSAGES[action])
+
+
+def count_user_action(db: Session, user: dict | None, action: str) -> None:
+    """Count one successful creation; call inside the same transaction, just before the commit."""
+    if not _limited(user):
+        return
+    for rule in USER_ACTIONS[action]:
+        record(db, rule, f"user:{user['id']}")
+
