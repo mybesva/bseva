@@ -807,7 +807,7 @@ def check_captcha_fails_closed():
     assert _contact_rows() == [] and SENT == []
 
 
-def _token(email: str) -> str:
+def _captcha_token(email: str) -> str:
     """A signed-in session for an existing account (a Super Admin's carries its completed second step)."""
     from app.security import create_access_token
 
@@ -815,13 +815,13 @@ def _token(email: str) -> str:
     return create_access_token(str(row["id"]), row["role"], row["password_hash"], mfa=row["role"] == "super_admin")
 
 
-def _staff(email: str, role: str, phone: str) -> str:
+def _captcha_staff(email: str, role: str, phone: str) -> str:
     sql(
         "INSERT INTO users (id, name, email, phone, password_hash, role) "
         "VALUES (gen_random_uuid(), :n, :e, :p, :pw, :r) ON CONFLICT DO NOTHING",
         n=f"Captcha {role}", e=email, p=phone, pw=hash_password("Sup3r!admin"), r=role,
     )
-    return _token(email)
+    return _captcha_token(email)
 
 
 def _switch(token: str, feature: str, enabled: bool):
@@ -838,7 +838,7 @@ def _all_switches_on():
 def check_captcha_settings_default_on_and_rollout_switch():
     reset_state()
     _all_switches_on()
-    root = _staff("root-cs1@example.org", "super_admin", "9000000081")
+    root = _captcha_staff("root-cs1@example.org", "super_admin", "9000000081")
     view = client.get("/api/v1/admin/security/captcha", headers={"Authorization": f"Bearer {root}"}).json()
     assert [(x["feature"], x["enabled"], x["locked"]) for x in view["mandatory"]] == [
         ("contact", True, True), ("custom_puja", True, True)
@@ -867,7 +867,7 @@ def check_captcha_settings_default_on_and_rollout_switch():
 def check_captcha_mandatory_cannot_be_disabled():
     reset_state()
     _all_switches_on()
-    root = _staff("root-cs2@example.org", "super_admin", "9000000082")
+    root = _captcha_staff("root-cs2@example.org", "super_admin", "9000000082")
     # API: no switch exists for Contact Us or Custom Puja.
     for feature in ("contact", "custom_puja", "contact_us", "custompuja"):
         r = _switch(root, feature, False)
@@ -911,8 +911,8 @@ def check_captcha_mandatory_cannot_be_disabled():
 def check_captcha_switches_super_admin_only_and_audited():
     reset_state()
     _all_switches_on()
-    root = _staff("root-cs3@example.org", "super_admin", "9000000084")
-    admin = _staff("admin-cs3@example.org", "admin", "9000000085")
+    root = _captcha_staff("root-cs3@example.org", "super_admin", "9000000084")
+    admin = _captcha_staff("admin-cs3@example.org", "admin", "9000000085")
     assert _switch(admin, "customer_login", False).status_code == 403
     assert client.get("/api/v1/admin/security/captcha", headers={"Authorization": f"Bearer {admin}"}).status_code == 403
     assert client.put("/api/v1/admin/security/captcha/customer_login", json={"enabled": False}).status_code == 401
@@ -960,7 +960,7 @@ def check_captcha_registration_switches():
     reset_state()
     _all_switches_on()
     settings.captcha_settings_enforcement = True
-    root = _staff("root-cs4@example.org", "super_admin", "9000000086")
+    root = _captcha_staff("root-cs4@example.org", "super_admin", "9000000086")
     # Both ON: each account type needs a registration CAPTCHA, then registers.
     for n, kind in enumerate(("customer", "pujari")):
         first, _ = _register_with(kind, f"r{n}@example.org", f"90000003{n}0", captcha_for=None, ip=f"198.51.102.{n}")
@@ -1011,8 +1011,8 @@ def check_captcha_login_switches():
     _all_switches_on()
     register("customer", "lc@example.org", "9000000201", "Login Customer")
     register("pujari", "lp@example.org", "9000000202", "Ravi Kumar Sharma")
-    root = _staff("root-cs5@example.org", "super_admin", "9000000203")
-    admin = _staff("admin-cs5@example.org", "admin", "9000000204")
+    root = _captcha_staff("root-cs5@example.org", "super_admin", "9000000203")
+    admin = _captcha_staff("admin-cs5@example.org", "admin", "9000000204")
     del admin
     settings.captcha_settings_enforcement = True
     ips = iter(f"198.51.103.{i}" for i in range(1, 250))
