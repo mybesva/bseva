@@ -10,6 +10,8 @@ bcrypt==4.0.1
 PyJWT==2.10.1
 python-multipart==0.0.20
 reportlab==4.4.1
+# Image CAPTCHA (app.captcha); also required by reportlab.
+pillow>=10.1,<13
 playwright==1.51.0
 httpx==0.28.1
 google-auth==2.40.3

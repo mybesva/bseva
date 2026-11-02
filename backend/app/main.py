@@ -18,6 +18,7 @@ from app.routers import (
     admin_seva,
     auth,
     bookings,
+    captcha,
     consultations,
     customer,
     lifecycle,
@@ -66,6 +67,7 @@ app.add_middleware(
 )
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(account.router, prefix="/api/v1")
+app.include_router(captcha.router, prefix="/api/v1")
 app.include_router(admin_compliance.router, prefix="/api/v1")
 app.include_router(bookings.router, prefix="/api/v1")
 app.include_router(admin_security.router, prefix="/api/v1")

@@ -16,7 +16,7 @@ from fastapi import HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import bot_check, rate_limit
+from app import captcha, rate_limit
 from app.config import settings
 
 logger = logging.getLogger("bseva.contact")
@@ -193,6 +193,11 @@ def submit(db: Session, body, request: Request, user: dict | None) -> dict:
     # Signed-in users (the mobile apps) are counted per account, anonymous visitors per address.
     client_key = f"user:{user['id']}" if signed_in else ip
     _enforce_limits(db, client_key=client_key, email=fields["email"], phone=fields["phone_e164"])
+    if not signed_in and captcha.mode(settings.contact_captcha) == "enforce":
+        # Anonymous visitors must answer the image CAPTCHA; a refused answer is not stored (the visitor retries).
+        captcha.require(
+            db, getattr(body, "captcha_id", None), getattr(body, "captcha_answer", None), purpose="contact", ip=ip
+        )
 
     spam_reason: str | None = None
     if (getattr(body, "website", None) or "").strip():
@@ -201,11 +206,6 @@ def submit(db: Session, body, request: Request, user: dict | None) -> dict:
         elapsed = getattr(body, "elapsed_ms", None)
         if elapsed is not None and elapsed < MIN_FILL_MS:
             spam_reason = "too_fast"
-        else:
-            # Raises 400 in enforce mode; the visitor can solve the check and resend.
-            failure = bot_check.check(getattr(body, "bot_token", None), ip=ip, action="contact", form_mode=settings.contact_bot_check)
-            if failure:
-                logger.info("CONTACT_BOT_CHECK_MONITOR reason=%s", failure)
     if not spam_reason and len(_LINK_RE.findall(fields["message"])) > MAX_LINKS:
         spam_reason = "too_many_links"
 

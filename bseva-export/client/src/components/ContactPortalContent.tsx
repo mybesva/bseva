@@ -8,7 +8,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
 import { useRef, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
-import { HoneypotField, TurnstileWidget, useFormTimer, type TurnstileHandle } from "@/components/BotProtection";
+import { CaptchaField, HoneypotField, useFormTimer, type CaptchaHandle } from "@/components/BotProtection";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -64,8 +65,10 @@ export function ContactPortalContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [honeypot, setHoneypot] = useState("");
-  const [botToken, setBotToken] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileHandle>(null);
+  const captchaRef = useRef<CaptchaHandle>(null);
+  const { user } = useAuth();
+  // Signed-in users are exempt on the server, so only signed-out visitors see the image.
+  const showCaptcha = Boolean(config.captcha?.contact) && !user;
   const formTimer = useFormTimer();
 
   function validate(values: FormState): FormErrors {
@@ -100,6 +103,10 @@ export function ContactPortalContent() {
       toast.error(t("contact.errRequired"));
       return;
     }
+    if (showCaptcha && !captchaRef.current?.values().captcha_answer) {
+      toast.error("Please type the characters shown in the security image.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await api<{ ok: boolean; message?: string }>("/support/contact", {
@@ -113,7 +120,7 @@ export function ContactPortalContent() {
           message: form.message.trim(),
           website: honeypot,
           elapsed_ms: formTimer.elapsedMs(),
-          bot_token: botToken || undefined,
+          ...(showCaptcha ? captchaRef.current?.values() : {}),
           source: "web_support",
         }),
       });
@@ -124,8 +131,8 @@ export function ContactPortalContent() {
     } catch (err: any) {
       toast.error(err?.message || t("contact.errSend"));
     } finally {
-      // Turnstile tokens are single use.
-      turnstileRef.current?.reset();
+      // Each CAPTCHA image works once: show a fresh one after every attempt.
+      if (showCaptcha) captchaRef.current?.refresh();
       setSubmitting(false);
     }
   }
@@ -306,7 +313,7 @@ export function ContactPortalContent() {
                     />
                     {errors.message && <p className="text-xs text-destructive">{errors.message}</p>}
                   </div>
-                  <TurnstileWidget ref={turnstileRef} siteKey={config.turnstile_site_key} action="contact" onToken={setBotToken} />
+                  {showCaptcha ? <CaptchaField ref={captchaRef} purpose="contact" disabled={submitting} /> : null}
                   <Button
                     type="submit"
                     disabled={submitting}

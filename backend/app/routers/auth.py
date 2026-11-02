@@ -1,10 +1,6 @@
 from datetime import datetime, timezone
 from uuid import uuid4
-import json
 import logging
-import os
-import urllib.parse
-import urllib.request
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import text
@@ -43,36 +39,6 @@ from app.otp_service import OTP_TTL_MINUTES
 logger = logging.getLogger("bseva.auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _verify_registration_captcha(db: Session, token: str | None) -> None:
-    if not bool(get_setting(db, "registration_captcha_enabled", False)):
-        return
-    secret = (os.environ.get("RECAPTCHA_SECRET_KEY") or "").strip()
-    if not secret:
-        raise HTTPException(503, "CAPTCHA is enabled but RECAPTCHA_SECRET_KEY is not configured")
-    if not token or not str(token).strip():
-        raise HTTPException(400, "CAPTCHA verification is required")
-    # Local development bypass only — never honoured in qa/production even if the secret is set to it
-    if secret == "dev-bypass" and token == "dev-bypass" and settings.environment == "development":
-        return
-    data = urllib.parse.urlencode({"secret": secret, "response": token}).encode()
-    try:
-        with urllib.request.urlopen(
-            "https://www.google.com/recaptcha/api/siteverify",
-            data=data,
-            timeout=8,
-        ) as resp:
-            payload = json.loads(resp.read().decode())
-    except Exception as exc:
-        raise HTTPException(502, f"CAPTCHA verification failed: {exc}") from exc
-    if not payload.get("success"):
-        raise HTTPException(400, "CAPTCHA verification failed")
-    # reCAPTCHA v3 always "succeeds"; the score and action are what tell a person from a script.
-    if "score" in payload and float(payload.get("score") or 0) < 0.5:
-        raise HTTPException(400, "CAPTCHA verification failed")
-    if payload.get("action") and payload.get("action") != "register":
-        raise HTTPException(400, "CAPTCHA verification failed")
 
 
 OTP_ATTEMPTS_MESSAGE = "Too many incorrect codes. Please request a new OTP."
@@ -149,7 +115,7 @@ def _public_otp_circuit(db: Session) -> None:
 @router.post("/otp/request")
 def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_db)):
     """Issue email OTP (5 minutes). Delivery via email provider; SMS reserved for later."""
-    from app import bot_check
+    from app import captcha
     from app.otp_service import OtpStoreUnavailable, issue_email_otp, mask_email, reserve_otp_send
 
     email = str(body.email).strip().lower() if body.email else None
@@ -159,9 +125,10 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
     ip = rate_limit.client_ip(request)
     # Per-email limits are counted below; these cap one client spraying many addresses.
     rate_limit.enforce_otp_request_ip(db, ip, settings.otp_requests_per_ip_per_day)
-    bot_check.check(body.bot_token, ip=ip, action="otp_request", form_mode=settings.otp_bot_check)
 
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else "login"
+    if purpose == "register" and captcha.mode(settings.register_otp_captcha) == "enforce":
+        captcha.require(db, body.captcha_id, body.captcha_answer, purpose="register", ip=ip)
     # Counted before the account lookup, for known and unknown addresses alike.
     try:
         gate = reserve_otp_send(db, email=email, scope=purpose, ip=ip)
@@ -284,7 +251,6 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(400, "You must accept the Terms & Conditions and Privacy Policy")
     if body.account_type not in ("customer", "pujari"):
         raise HTTPException(400, "Invalid account type")
-    _verify_registration_captcha(db, body.captcha_token)
     # Validate the referral before consuming the OTP so a bad code does not burn it.
     if body.referral_code:
         from app.referrals import find_referrer_by_code
@@ -542,6 +508,15 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         text("SELECT * FROM users WHERE email = :id OR phone = :id"),
         {"id": identifier},
     ).mappings().first()
+    threshold = int(settings.login_captcha_after_failures or 0)
+    # Off by default (the mobile apps send no CAPTCHA). Never asked of Admin or Super Admin sign-in.
+    if threshold > 0 and not (row and row["role"] in ("admin", "super_admin")):
+        if rate_limit.hits(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier) >= threshold or rate_limit.hits(
+            db, rate_limit.LOGIN_FAIL_IP, ip
+        ) >= threshold:
+            from app import captcha
+
+            captcha.require(db, body.captcha_id, body.captcha_answer, purpose="login", ip=ip)
     if not row or not verify_password(body.password, row["password_hash"]):
         rate_limit.record(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier)
         rate_limit.record(db, rate_limit.LOGIN_FAIL_IP, ip)

@@ -41,14 +41,15 @@ class Settings(BaseSettings):
     # their OTP is the secret OTP_TEST_CODE instead. Ignored outside qa/test; refused at startup in production.
     otp_test_email_domains: str = ""
     otp_test_code: str = ""
-    # Cloudflare Turnstile for public web forms. Without a secret key no token is checked.
-    turnstile_site_key: str = ""
-    turnstile_secret_key: str = ""
-    # off | monitor (log failures, allow) | enforce (refuse). Contact form: signed-in users are exempt.
-    contact_bot_check: str = "monitor"
-    # OTP requests also come from the mobile apps, which cannot show Turnstile yet: keep this at monitor
-    # until app attestation exists, or mobile registration and sign-in break.
-    otp_bot_check: str = "monitor"
+    # Self-hosted image CAPTCHA (app.captcha): off | enforce.
+    # Contact / custom puja form: signed-in users (the mobile apps) are exempt.
+    contact_captcha: str = "enforce"
+    # Registration OTP requests and password sign-in also come from the mobile apps, which do not send a
+    # CAPTCHA yet and cannot be told apart from the web securely: keep these off until they do.
+    register_otp_captcha: str = "off"
+    # Ask for a CAPTCHA on password sign-in after this many failures for the account or client (0 = never).
+    # Never asked of Admin or Super Admin sign-in.
+    login_captcha_after_failures: int = 0
     # Circuit breakers on mail that anonymous visitors can trigger (per clock hour, whole deployment).
     otp_public_emails_per_hour: int = 300
     # OTP requests one client address may make per rolling day (raise on QA if testers share one office IP).

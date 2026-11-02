@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CaptchaField, isCaptchaError, type CaptchaHandle } from "@/components/BotProtection";
 import MarketingLayout from "@/components/MarketingLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +64,9 @@ export default function RolePortalGate({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
+  // Shown only after the server asks for it (repeated failed sign-ins); never for Admin sign-in.
+  const [needCaptcha, setNeedCaptcha] = useState(false);
+  const captchaRef = useRef<CaptchaHandle>(null);
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const expected = apiRole(role);
   const copy = portalCopy(role, t);
@@ -126,7 +130,7 @@ export default function RolePortalGate({
     e.preventDefault();
     setPending(true);
     try {
-      const out = await loginApi(email, password);
+      const out = await loginApi(email, password, needCaptcha ? captchaRef.current?.values() : undefined);
       if (out.otp_required && out.challenge_token) {
         setPassword("");
         if (role === "admin") {
@@ -138,6 +142,8 @@ export default function RolePortalGate({
       }
       await finishLogin(out.user as AuthUser);
     } catch (err: any) {
+      if (needCaptcha) captchaRef.current?.refresh();
+      if (isCaptchaError(err?.code)) setNeedCaptcha(true);
       const key = errorKeyForCode(err?.code);
       toast.error(key ? t(key) : err.message || t("errors.loginFailed"));
     } finally {
@@ -166,6 +172,7 @@ export default function RolePortalGate({
           onPassword={setPassword}
           onSubmit={onLogin}
           registerHref={registerHref}
+          captchaSlot={needCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
         />
       </MarketingLayout>
     );

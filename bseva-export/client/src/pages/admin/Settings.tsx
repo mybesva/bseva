@@ -90,13 +90,6 @@ const PLATFORM_KEYS: PlatformKey[] = [
   { key: "chadhava_enabled", label: "Chadhava Seva", type: "boolean", group: "features" },
   { key: "pravachan_enabled", label: "Pravachan Seva", type: "boolean", group: "features" },
   {
-    key: "registration_captcha_enabled",
-    label: "Registration CAPTCHA",
-    type: "boolean",
-    group: "features",
-    hint: "Requires VITE_RECAPTCHA_SITE_KEY + RECAPTCHA_SECRET_KEY env vars.",
-  },
-  {
     key: "service_area_unavailable_heading",
     label: "Unavailable Service Area Heading",
     type: "string",

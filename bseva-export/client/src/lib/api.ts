@@ -298,11 +298,16 @@ export type LoginOut = {
   email_hint?: string;
 };
 
-/** A Super Admin gets `otp_required` here and signs in with completeLoginOtp. */
-export async function loginApi(identifier: string, password: string) {
+/** A Super Admin gets `otp_required` here and signs in with completeLoginOtp.
+ *  `captcha` is sent only after the server answered CAPTCHA_REQUIRED (repeated failures). */
+export async function loginApi(
+  identifier: string,
+  password: string,
+  captcha?: { captcha_id?: string; captcha_answer?: string },
+) {
   const out = await api<LoginOut>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ identifier, password }),
+    body: JSON.stringify({ identifier, password, ...(captcha || {}) }),
   });
   if (out.access_token) setToken(out.access_token);
   return out;

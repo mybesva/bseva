@@ -20,6 +20,12 @@ location ~ ^/api/v1/account/deletion/(request-otp|confirm|public/request-otp|pub
     include /etc/nginx/bseva-templates/proxy.inc;
 }
 
+# New CAPTCHA images (also limited per client in app.captcha).
+location = /api/v1/captcha {
+    limit_req zone=bseva_auth burst=20 nodelay;
+    include /etc/nginx/bseva-templates/proxy.inc;
+}
+
 location = /api/v1/support/contact {
     limit_req zone=bseva_contact burst=3 nodelay;
     include /etc/nginx/bseva-templates/proxy.inc;

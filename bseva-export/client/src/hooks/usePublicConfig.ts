@@ -11,12 +11,8 @@ export type PublicConfig = {
   support_email?: string;
   pujari_full_booking_details_before_hours: number;
   puja_start_otp_before_minutes: number;
-  registration_captcha_enabled?: boolean;
-  recaptcha_site_key?: string;
-  /** Cloudflare Turnstile site key; empty until the server has both keys. */
-  turnstile_site_key?: string;
-  contact_bot_check?: "off" | "monitor" | "enforce";
-  otp_bot_check?: "off" | "monitor" | "enforce";
+  /** Which web forms show the self-hosted image CAPTCHA (login: after this many failures, 0 = never). */
+  captcha?: { contact: boolean; register_otp: boolean; login_after_failures: number };
   customer_cancel_fee_over_48h_percent?: number;
   customer_cancel_fee_24_48h_percent?: number;
   customer_cancel_fee_under_24h_percent?: number;

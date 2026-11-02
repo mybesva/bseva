@@ -15,7 +15,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import { TurnstileWidget, type TurnstileHandle } from "@/components/BotProtection";
+import { CaptchaField, type CaptchaHandle } from "@/components/BotProtection";
 import { useAuth } from "@/_core/hooks/useAuth";
 import BSevaLogo from "@/components/BSevaLogo";
 
@@ -38,8 +38,8 @@ export default function Register() {
   const { t, lang, setLang } = useI18n();
   const { refresh } = useAuth();
   const { config: publicConfig } = usePublicConfig();
-  const captchaEnabled = Boolean(publicConfig.registration_captcha_enabled);
-  const captchaSiteKey = String(publicConfig.recaptcha_site_key || "");
+  // Off until the mobile apps send a CAPTCHA too (REGISTER_OTP_CAPTCHA on the server).
+  const otpCaptchaEnabled = Boolean(publicConfig.captcha?.register_otp);
   const [, setLocation] = useLocation();
   const search = typeof window !== "undefined" ? window.location.search : "";
   const params = new URLSearchParams(search);
@@ -66,7 +66,6 @@ export default function Register() {
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
   const [otpSending, setOtpSending] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [humanCheck, setHumanCheck] = useState(false);
   const [pending, setPending] = useState(false);
   const [referralCode, setReferralCode] = useState(() => {
     const fromUrl =
@@ -78,8 +77,7 @@ export default function Register() {
   const [language, setLanguage] = useState<PreferredLang>(lang);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string; otp?: string }>({});
   const [otpWindowSec, setOtpWindowSec] = useState(5 * 60);
-  const [otpBotToken, setOtpBotToken] = useState<string | null>(null);
-  const otpTurnstileRef = useRef<TurnstileHandle>(null);
+  const otpCaptchaRef = useRef<CaptchaHandle>(null);
 
   const otpExpired = otpSent && otpSecondsLeft <= 0;
   const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= otpWindowSec - OTP_RESEND_AFTER_SEC);
@@ -97,18 +95,6 @@ export default function Register() {
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [otpExpiresAt]);
-
-  useEffect(() => {
-    if (!captchaEnabled || !captchaSiteKey || typeof document === "undefined") return;
-    const existing = document.querySelector("script[data-bseva-recaptcha]");
-    if (existing) return;
-    const s = document.createElement("script");
-    s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(captchaSiteKey)}`;
-    s.async = true;
-    s.defer = true;
-    s.dataset.bsevaRecaptcha = "1";
-    document.head.appendChild(s);
-  }, [captchaEnabled, captchaSiteKey]);
 
   const phoneDigits = useMemo(() => phone.replace(/\D/g, ""), [phone]);
 
@@ -130,6 +116,10 @@ export default function Register() {
       toast.error(errors.email || errors.phone || "Fix the highlighted fields");
       return;
     }
+    if (otpCaptchaEnabled && !otpCaptchaRef.current?.values().captcha_answer) {
+      toast.error("Please type the characters shown in the security image.");
+      return;
+    }
     setOtpSending(true);
     try {
       const phoneE164 = toE164(countryCode, phoneDigits);
@@ -145,7 +135,7 @@ export default function Register() {
           phone: phoneE164,
           email: emailNorm,
           purpose: "register",
-          bot_token: otpBotToken || undefined,
+          ...(otpCaptchaEnabled ? otpCaptchaRef.current?.values() : {}),
         }),
       });
       const mins = out.expires_in_minutes ?? 5;
@@ -165,7 +155,8 @@ export default function Register() {
     } catch (err: any) {
       toast.error(err.message || "Could not send OTP");
     } finally {
-      otpTurnstileRef.current?.reset();
+      // Each CAPTCHA image works once.
+      if (otpCaptchaEnabled) otpCaptchaRef.current?.refresh();
       setOtpSending(false);
     }
   }
@@ -202,10 +193,6 @@ export default function Register() {
       toast.error("Enter the verification code sent to your email");
       return;
     }
-    if (captchaEnabled && !humanCheck && !captchaSiteKey) {
-      toast.error("Please confirm you are not a robot");
-      return;
-    }
     if (accountType === "pujari") {
       const nErrs = validatePersonNameParts(pujariName, { minLastLength: 3 });
       if (Object.keys(nErrs).length) {
@@ -218,18 +205,6 @@ export default function Register() {
 
     setPending(true);
     try {
-      let captcha_token: string | undefined;
-      if (captchaEnabled) {
-        if (captchaSiteKey && typeof window !== "undefined" && (window as any).grecaptcha) {
-          captcha_token = await (window as any).grecaptcha.execute(captchaSiteKey, { action: "register" });
-        } else if (humanCheck) {
-          captcha_token = "dev-bypass";
-        } else {
-          toast.error("CAPTCHA verification is required");
-          setPending(false);
-          return;
-        }
-      }
       const phoneE164 = toE164(countryCode, phoneDigits);
       const displayName =
         accountType === "pujari"
@@ -260,7 +235,6 @@ export default function Register() {
         terms_version: TERMS_VERSION,
         privacy_version: PRIVACY_VERSION,
         referral_code: referralCode.trim() || undefined,
-        captcha_token,
       });
       // Must refresh AuthContext — otherwise a previous session's user stays mounted
       // and the portal keeps showing that account's bookings/name.
@@ -423,12 +397,7 @@ export default function Register() {
                     {otpSending ? "Sending…" : otpSent ? "Resend" : t("auth.emailOtp.send")}
                   </Button>
                 </div>
-                <TurnstileWidget
-                  ref={otpTurnstileRef}
-                  siteKey={publicConfig.turnstile_site_key}
-                  action="otp_request"
-                  onToken={setOtpBotToken}
-                />
+                {otpCaptchaEnabled ? <CaptchaField ref={otpCaptchaRef} purpose="register" disabled={otpSending} /> : null}
                 {fieldErrors.otp && <p className="text-xs text-destructive">{fieldErrors.otp}</p>}
                 {otpSent && otpMessage && (
                   <div
@@ -445,17 +414,6 @@ export default function Register() {
                   </div>
                 )}
               </div>
-              {captchaEnabled && (
-                <div className="flex items-start gap-2 rounded-md border border-border p-3">
-                  <Checkbox id="human" checked={humanCheck} onCheckedChange={(v) => setHumanCheck(!!v)} />
-                  <Label htmlFor="human" className="text-sm font-normal leading-snug">
-                    I am not a robot
-                    {captchaSiteKey
-                      ? " (reCAPTCHA will verify on submit)"
-                      : " — enable RECAPTCHA_SECRET_KEY=dev-bypass for local testing"}
-                  </Label>
-                </div>
-              )}
               <div className="space-y-2">
                 <Label>
                   {t("rewards.codeLabel")} ({t("common.optional")})
