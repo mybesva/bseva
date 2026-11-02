@@ -8,6 +8,8 @@ import { AppText, Card, ErrorBanner, LoadingBlock } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { isPujariApp } from "@/config/appVariant";
+import { openLegal, type LegalPathKey } from "@/utils/webLinks";
 
 const TERMS_SLUGS = ["platform_terms", "booking_terms", "cancellation_policy"] as const;
 
@@ -98,6 +100,13 @@ function TermsSectionBar({
   );
 }
 
+const FULL_DOCS: [LegalPathKey, string][] = [
+  [isPujariApp ? "pujariTerms" : "customerTerms", isPujariApp ? "Pujari Terms" : "Customer Terms"],
+  ["refundPolicy", "Cancellation & Refund Policy"],
+  ["privacy", "Privacy Policy"],
+  ["appTerms", "App Terms"],
+];
+
 export function TermsScreenContent() {
   const { t } = useI18n();
   const { colors } = useAppTheme();
@@ -133,6 +142,16 @@ export function TermsScreenContent() {
         }}
         keyboardShouldPersistTaps="handled"
       >
+        <Card>
+          <AppText variant="small" color={colors.mutedForeground}>
+            Full documents
+          </AppText>
+          {FULL_DOCS.map(([key, label]) => (
+            <Pressable key={key} onPress={() => void openLegal(key)} accessibilityRole="link" style={{ paddingVertical: 6 }}>
+              <AppText color={colors.primary}>{label}</AppText>
+            </Pressable>
+          ))}
+        </Card>
         {policies.length ? (
           <TermsSectionBar
             policies={policies}

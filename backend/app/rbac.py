@@ -91,6 +91,14 @@ PERMISSION_GROUPS: list[dict] = [
     {"key": "legal", "label": "Terms & Conditions", "permissions": [
         ("manage_legal", "Edit Terms & Policies"),
     ]},
+    {"key": "account_deletions", "label": "Account Deletions", "permissions": [
+        ("view_account_deletions", "View Account Deletion Requests"),
+        ("manage_account_deletions", "Assign, Review & Escalate Deletion Requests"),
+    ]},
+    {"key": "complaints", "label": "User Reports", "permissions": [
+        ("view_complaints", "View Reports About Pujaris, Customers & Bookings"),
+        ("manage_complaints", "Review & Resolve Reports"),
+    ]},
 ]
 
 ADMIN_ASSIGNABLE: list[str] = [k for g in PERMISSION_GROUPS for k, _ in g["permissions"]]

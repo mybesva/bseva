@@ -3,6 +3,7 @@ import Layout from "@/components/Layout";
 import { CustomerPortal, PujariPortal } from "@/components/RolePortals";
 import { PortalSegmentedTabs } from "@/components/PortalSegmentedTabs";
 import { ContactPortalContent } from "@/components/ContactPortalContent";
+import MyReports from "@/components/reports/MyReports";
 import { useLocation, useSearch } from "wouter";
 import {
   supportContactTabFromSearch,
@@ -338,6 +339,7 @@ function PortalSupportContactPage({
   const tabs = [
     { id: "support", label: t("mobile.support") },
     { id: "contact", label: t("mobile.contact") },
+    { id: "reports", label: "My Reports" },
   ];
 
   return (
@@ -347,6 +349,7 @@ function PortalSupportContactPage({
         <PortalSegmentedTabs value={activeTab} onChange={(id) => setActiveTab(id as SupportContactTabId)} tabs={tabs} />
         {activeTab === "support" ? <SupportForm categories={categories} /> : null}
         {activeTab === "contact" ? <ContactPortalContent /> : null}
+        {activeTab === "reports" ? <MyReports /> : null}
       </div>
     </Portal>
   );

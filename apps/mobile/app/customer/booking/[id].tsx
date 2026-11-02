@@ -26,6 +26,7 @@ import { formatDisplaySlot } from "@/utils/formatDate";
 import { openMapsDirections, openMapsSearch } from "@/utils/maps";
 import { useI18n } from "@/providers/I18nProvider";
 import { navigateBackToBookingList } from "@/utils/bookingNavigation";
+import { text as ctext } from "@/content/compliance";
 
 type BusyAction =
   | "accept"
@@ -829,6 +830,26 @@ export default function BookingDetail() {
           </>
         ) : null}
 
+        <PrimaryButton
+          title={ctext.report}
+          variant="ghost"
+          onPress={() =>
+            router.push({
+              pathname: "/account/report",
+              params: {
+                booking_id: b.id,
+                label: `#${b.booking_number || b.id}`,
+                ...(pujari
+                  ? b.customer_id
+                    ? { customer_id: b.customer_id }
+                    : {}
+                  : b.pujari_id
+                    ? { pujari_id: b.pujari_id }
+                    : {}),
+              },
+            })
+          }
+        />
         <PrimaryButton title={t("mobile.backToList")} variant="ghost" onPress={goBackToList} />
       </ScrollView>
     </Screen>

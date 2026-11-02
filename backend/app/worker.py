@@ -101,6 +101,18 @@ def _prune(db) -> dict:
     return deleted
 
 
+def _privacy(db) -> dict:
+    from app.account_lifecycle import purge_location_history, run_due_deletions
+
+    from app.field_crypto import encrypt_existing_bank_numbers
+
+    return {
+        "deletions": run_due_deletions(db),
+        "location_pings_purged": purge_location_history(db),
+        "bank_numbers_encrypted": encrypt_existing_bank_numbers(db),
+    }
+
+
 def _settlements(db) -> dict:
     from app.settlement_cycle import run_due_settlements
 
@@ -114,6 +126,7 @@ JOBS: dict[str, tuple[int, Callable[[], dict]]] = {
     "booking_offers": (int(os.environ.get("WORKER_OFFERS_SECONDS", 300)), _with_session(_offers)),
     "settlements": (int(os.environ.get("WORKER_SETTLEMENT_SECONDS", 3600)), _with_session(_settlements)),
     "prune": (86400, _with_session(_prune)),
+    "privacy": (int(os.environ.get("WORKER_PRIVACY_SECONDS", 3600)), _with_session(_privacy)),
 }
 
 

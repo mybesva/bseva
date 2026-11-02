@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import PasswordInput, { passwordStrengthOk } from "@/components/PasswordInput";
-import { api } from "@/lib/api";
+import { api, setToken } from "@/lib/api";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -26,10 +26,12 @@ export default function ChangePasswordForm({ embedded = false }: { embedded?: bo
     }
     setPending(true);
     try {
-      await api("/auth/change-password", {
+      const out = await api<{ ok?: boolean; access_token?: string }>("/auth/change-password", {
         method: "POST",
         body: JSON.stringify({ current_password: current, new_password: next }),
       });
+      // Every other session ends on a password change; keep this one with the fresh token.
+      if (out?.access_token) setToken(out.access_token);
       toast.success(t("auth.passwordChanged"));
       setCurrent("");
       setNext("");

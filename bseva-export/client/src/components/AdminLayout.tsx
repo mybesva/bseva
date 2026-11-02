@@ -24,6 +24,8 @@ import {
   Lightbulb,
   Info,
   ShieldCheck,
+  UserX,
+  Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -49,6 +51,8 @@ interface AdminLayoutProps {
 
 interface NavItem {
   nameKey: string;
+  /** Plain label used when the locale has no `nameKey` entry yet. */
+  label?: string;
   /** Path under the private admin base, e.g. "" or "/customers" */
   suffix?: string;
   /** Public site route outside the admin console (e.g. About Us). */
@@ -96,6 +100,8 @@ const navigation: NavItem[] = [
   { nameKey: "admin.pricing", suffix: "/pricing", icon: IndianRupee },
   { nameKey: "admin.permissions", suffix: "/permissions", icon: UserCog },
   { nameKey: "admin.reviews", suffix: "/reviews", icon: Star },
+  { nameKey: "admin.reportsQueue", label: "User Reports", suffix: "/reports-queue", icon: Flag },
+  { nameKey: "admin.accountDeletions", label: "Account Deletions", suffix: "/account-deletions", icon: UserX },
   { nameKey: "admin.promos", suffix: "/promos", icon: Sparkles },
   { nameKey: "admin.reports", suffix: "/reports", icon: BarChart3 },
   { nameKey: "admin.settings", suffix: "/settings", icon: Settings },
@@ -109,7 +115,7 @@ function AdminShell({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, loading } = useAuth();
-  const t = (key: string) => dictionaries.en[key] || key;
+  const t = (key: string, label?: string) => dictionaries.en[key] || label || key;
   const { permissions, isSuper } = useAdminPermissions(user);
   const [badges, setBadges] = useState<NavBadges>({});
   const opsBase = adminBasePath();
@@ -166,7 +172,7 @@ function AdminShell({ children }: AdminLayoutProps) {
 
   const navActive = (suffix: string) => {
     const href = adminPath(suffix);
-    return location === href || (suffix !== "" && location.startsWith(href));
+    return location === href || (suffix !== "" && location.startsWith(`${href}/`));
   };
 
   if (loading) {
@@ -238,7 +244,7 @@ function AdminShell({ children }: AdminLayoutProps) {
                       onClick={() => setSidebarOpen(false)}
                     >
                       <item.icon size="1.125rem" className="shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{t(item.nameKey)}</span>
+                      <span className="min-w-0 flex-1 truncate">{t(item.nameKey, item.label)}</span>
                       {badgeKey ? (
                         <CountBadge count={badges[badgeKey]} tooltip={badges.tooltips?.[badgeKey]} />
                       ) : null}

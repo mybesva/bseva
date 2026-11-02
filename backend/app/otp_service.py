@@ -166,7 +166,9 @@ def issue_email_otp(
     if not email_n:
         return {"ok": False, "error": "email_required"}
 
-    purpose_n = purpose if purpose in ("register", "login", "verify", "reset", "verify_email", "sensitive_action") else "login"
+    purpose_n = purpose if purpose in (
+        "register", "login", "verify", "reset", "verify_email", "sensitive_action", "delete_account", "cancel_deletion"
+    ) else "login"
 
     if not reserved:
         try:

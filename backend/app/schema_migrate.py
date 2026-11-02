@@ -363,7 +363,7 @@ _DEFAULT_LEGAL_POLICIES = [
         "points": [
             {"title": "More than 48 hours before booking", "body": "10% cancellation charge, 90% refund to your Customer Wallet."},
             {"title": "Between 24 and 48 hours before booking", "body": "50% cancellation charge, 50% refund to your Customer Wallet."},
-            {"title": "Less than 24 hours before booking", "body": "100% cancellation charge, no refund. If the pujari cancels in this window, 100% of that puja’s cost is deducted from their wallet (same as no-show) and the customer is refunded in full."},
+            {"title": "Less than 24 hours before booking", "body": "100% cancellation charge, no refund. If the pujari cancels in this window, the pujari is charged 100% of that puja’s cost (same as a no-show) and your booking stays active while we arrange another pujari."},
             {"title": "How timing is calculated", "body": "Cancellation is calculated from the scheduled booking date and time versus the current date and time."},
         ],
     },
@@ -1117,7 +1117,7 @@ _FOUNDATION_STMTS = [
       ALTER TABLE otp_codes ADD CONSTRAINT otp_codes_purpose_check
         CHECK (purpose IN (
           'register', 'login', 'verify', 'reset', 'verify_email', 'verify_phone',
-          'start_puja', 'complete_puja', 'sensitive_action'
+          'start_puja', 'complete_puja', 'sensitive_action', 'delete_account', 'cancel_deletion'
         ));
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$

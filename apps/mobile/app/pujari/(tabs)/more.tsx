@@ -4,6 +4,7 @@ import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MenuProfileHeader } from "@/components/MenuProfileHeader";
 import { MoreAppearanceRow, MoreLanguageRow, MoreMenuRow } from "@/components/MoreMenuRow";
+import { MoreAccountLegal } from "@/components/MoreAccountLegal";
 import { Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -52,6 +53,7 @@ export default function PujariMore() {
         ))}
         <MoreLanguageRow />
         <MoreAppearanceRow />
+        <MoreAccountLegal role="pujari" />
         <MoreMenuRow
           icon="log-out-outline"
           label={t("mobile.logout")}

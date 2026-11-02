@@ -11,9 +11,13 @@ from app.pujari_levels import filter_rows_for_required_level
 
 
 def row_dict(row) -> dict:
+    from app.field_crypto import ENCRYPTED_COLUMNS, decrypt_value
+
     d = dict(row)
     for k, v in list(d.items()):
-        if isinstance(v, UUID):
+        if k in ENCRYPTED_COLUMNS and isinstance(v, str):
+            d[k] = decrypt_value(v)
+        elif isinstance(v, UUID):
             d[k] = str(v)
         elif isinstance(v, Decimal):
             d[k] = float(v)

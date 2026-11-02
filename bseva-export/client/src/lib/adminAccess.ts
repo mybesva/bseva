@@ -37,6 +37,8 @@ export const ADMIN_ROUTE_ACCESS: Record<string, AdminAccess> = {
   "/promos": { anyOf: ["view_promotions", "manage_promotions"] },
   "/support": { anyOf: ["manage_support"] },
   "/legal": { anyOf: ["manage_legal"] },
+  "/account-deletions": { anyOf: ["view_account_deletions", "manage_account_deletions"] },
+  "/reports-queue": { anyOf: ["view_complaints", "manage_complaints"] },
   // Super Admin only: finance, reporting, platform configuration and admin management.
   "/settlements": { superOnly: true },
   "/security": { superOnly: true },

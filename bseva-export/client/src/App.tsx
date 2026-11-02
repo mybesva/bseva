@@ -7,7 +7,7 @@ import { Route, Switch, useLocation } from "wouter";
 function RedirectTo({ to }: { to: string }) {
   const [, setLocation] = useLocation();
   useEffect(() => {
-    setLocation(to);
+    setLocation(to, { replace: true });
   }, [setLocation, to]);
   return null;
 }
@@ -64,8 +64,12 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import TermsPage from "./pages/Terms";
-import PrivacyPage from "./pages/Privacy";
+import LegalDocPage from "./components/legal/LegalDocPage";
+import ForgotPasswordPage from "./pages/ForgotPassword";
+import DeleteAccountPage from "./pages/DeleteAccount";
+import AccountDeletionPendingListener from "./components/account/AccountDeletionPendingListener";
+import AdminAccountDeletions from "./pages/admin/AccountDeletions";
+import AdminReportsQueue from "./pages/admin/ReportsQueue";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerProfilePage from "./pages/customer/Profile";
 import CustomerAddressPage from "./pages/customer/Address";
@@ -107,8 +111,17 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      <Route path="/terms" component={TermsPage} />
-      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/delete-account" component={DeleteAccountPage} />
+      <Route path="/privacy-policy">{() => <LegalDocPage slug="privacy-policy" />}</Route>
+      <Route path="/customer-terms">{() => <LegalDocPage slug="customer-terms" />}</Route>
+      <Route path="/pujari-terms">{() => <LegalDocPage slug="pujari-terms" />}</Route>
+      <Route path="/app-terms">{() => <LegalDocPage slug="app-terms" />}</Route>
+      <Route path="/refund-policy">{() => <LegalDocPage slug="refund-policy" />}</Route>
+      <Route path="/privacy">{() => <RedirectTo to="/privacy-policy" />}</Route>
+      <Route path="/terms">{() => <RedirectTo to="/customer-terms" />}</Route>
+      <Route path="/terms-and-conditions">{() => <RedirectTo to="/customer-terms" />}</Route>
+      <Route path="/cancellation-policy">{() => <RedirectTo to="/refund-policy" />}</Route>
       <Route path="/customer" component={CustomerDashboard} />
       <Route path="/customer/profile" component={CustomerProfilePage} />
       <Route path="/customer/address" component={CustomerAddressPage} />
@@ -193,6 +206,10 @@ function Router() {
       <Route path={`${ops}/email-templates`} component={adminRoute(AdminEmailTemplates)} />
       <Route path={`${ops}/sms-templates`} component={adminRoute(AdminSMSTemplates)} />
       <Route path={`${ops}/reports`} component={adminRoute(AdminReports)} />
+      <Route path={`${ops}/account-deletions/:id`} component={adminRoute(AdminAccountDeletions)} />
+      <Route path={`${ops}/account-deletions`} component={adminRoute(AdminAccountDeletions)} />
+      <Route path={`${ops}/reports-queue/:id`} component={adminRoute(AdminReportsQueue)} />
+      <Route path={`${ops}/reports-queue`} component={adminRoute(AdminReportsQueue)} />
 
       {/* Legacy public admin URLs → not found */}
       <Route path="/admin/:rest*" component={NotFound} />
@@ -211,6 +228,7 @@ function App() {
       <ThemeProvider defaultTheme="light" switchable>
         <AuthProvider>
           <LanguageSync />
+          <AccountDeletionPendingListener />
           <FcmBootstrap />
           <ServiceAvailabilityProvider>
             <TooltipProvider>

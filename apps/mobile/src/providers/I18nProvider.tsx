@@ -4,6 +4,7 @@ import { isLangCode } from "@bseva/config";
 import { LANG_KEY } from "@bseva/tokens";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { setApiLocale } from "@/services/api";
+import { setComplianceLang } from "@/content/compliance";
 
 type I18nValue = {
   lang: Lang;
@@ -44,6 +45,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     [lang, setLang]
   );
 
+  setComplianceLang(lang);
   if (!ready) return null;
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
