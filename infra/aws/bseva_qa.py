@@ -7,6 +7,8 @@
     python3 infra/aws/bseva_qa.py set-params --from-file F   # store QA app settings/secrets in SSM (values never printed)
     python3 infra/aws/bseva_qa.py health                # HTTPS /api/ready + instance/RDS state
     python3 infra/aws/bseva_qa.py backup-check          # RDS automated backups / restore window
+    python3 infra/aws/bseva_qa.py monitoring            # read-only: security log alarms that would be created
+    python3 infra/aws/bseva_qa.py monitoring --apply --yes   # QA only: create them (free tier)
     python3 infra/aws/bseva_qa.py teardown --confirm qa-472238087252   # delete QA (final RDS snapshot kept)
 
 Safety: every command verifies the caller's AWS account, the region (ap-south-1) and environment (qa)
@@ -707,6 +709,56 @@ def step_parameters(ctx, apply: bool):
         ssm.put_parameter(Name=f"{base}/DATABASE_URL", Value=url, Type="SecureString", Tier="Standard", Tags=tag_list())
 
 
+# Security alarms on the app log group. Each is a metric filter on a log line the API writes plus an alarm that
+# emails the existing alerts topic. Alarms only notify when they change into ALARM (no OK or repeat actions) and
+# missing data counts as fine, so a burst sends one email; the app itself raises contact-volume alerts at most hourly.
+SECURITY_ALARMS = (
+    # (short name, filter pattern, metric, period seconds, threshold, what it means)
+    ("security-events", '"SECURITY_EVENT"', "SecurityEvents", 300, 30, "30+ security events (failed CAPTCHAs, spam, failed step-up checks) in 5 min"),
+    ("captcha-failures", '"kind=captcha_failed"', "CaptchaFailures", 300, 20, "20+ wrong CAPTCHA answers in 5 min"),
+    ("email-circuit-open", '"EMAIL_CIRCUIT_OPEN"', "EmailCircuitOpen", 300, 1, "a site-wide code-email budget is exhausted (codes refused)"),
+    ("contact-volume", '"CONTACT_VOLUME_ALERT limit_per_hour"', "ContactVolumeAlert", 300, 1, "contact form exceeded its hourly team-mail budget"),
+    ("protection-store-down", '?"RATE_LIMIT_STORE_UNAVAILABLE" ?"CAPTCHA_STORE_UNAVAILABLE" ?"OTP_SEND_STORE_UNAVAILABLE"',
+     "ProtectionStoreUnavailable", 300, 1, "rate-limit, CAPTCHA or code-limit storage failing"),
+    ("user-limits", '"USER_LIMIT_REACHED"', "UserLimitReached", 900, 20, "20+ per-user limit refusals (bookings, support, reports) in 15 min"),
+)
+METRIC_NAMESPACE = f"BSeva/{LABEL}/Security"
+
+
+def step_security_alarms(ctx, apply: bool):
+    logs = ctx.c("logs")
+    cw = ctx.c("cloudwatch")
+    sns = ctx.c("sns")
+    topic_name = f"{P}-alerts"
+    topics = [t["TopicArn"] for t in sns.list_topics().get("Topics", []) if t["TopicArn"].endswith(f":{topic_name}")]
+    if not topics:
+        sys.exit(f"SNS topic {topic_name} is missing; run the base `apply` first")
+    groups = logs.describe_log_groups(logGroupNamePrefix=LOG_GROUP)["logGroups"]
+    if not any(g["logGroupName"] == LOG_GROUP for g in groups):
+        sys.exit(f"log group {LOG_GROUP} is missing")
+    filters = {f["filterName"] for f in logs.describe_metric_filters(logGroupName=LOG_GROUP)["metricFilters"]}
+    existing = {a["AlarmName"] for a in cw.describe_alarms(AlarmNamePrefix=f"{P}-sec-")["MetricAlarms"]}
+    out("keep", "sns topic", topic_name, "alarm emails go to its confirmed subscribers")
+    for short, pattern, metric, period, threshold, note in SECURITY_ALARMS:
+        fname, aname = f"{P}-sec-{short}", f"{P}-sec-{short}"
+        out("keep" if fname in filters else "create", "log metric filter", fname, f"{pattern} -> {METRIC_NAMESPACE}/{metric}")
+        out("keep" if aname in existing else "create", "cloudwatch alarm", aname, f"Sum >= {threshold} per {period // 60} min: {note}")
+        if not apply:
+            continue
+        if fname not in filters:
+            logs.put_metric_filter(
+                logGroupName=LOG_GROUP, filterName=fname, filterPattern=pattern,
+                metricTransformations=[{"metricName": metric, "metricNamespace": METRIC_NAMESPACE, "metricValue": "1", "defaultValue": 0}],
+            )
+        if aname not in existing:
+            cw.put_metric_alarm(
+                AlarmName=aname, AlarmDescription=f"B-Seva {LABEL}: {note}", Namespace=METRIC_NAMESPACE, MetricName=metric,
+                Statistic="Sum", Period=period, EvaluationPeriods=1, Threshold=threshold,
+                ComparisonOperator="GreaterThanOrEqualToThreshold", TreatMissingData="notBreaching",
+                AlarmActions=[topics[0]], Tags=tag_list(),
+            )
+
+
 STEPS = ("guardrails", "budget", "trail", "network", "storage", "iam", "database", "compute", "parameters", "alarms")
 
 
@@ -738,6 +790,15 @@ def cmd_apply(ctx, args):
     print(f"Applying {P} in {ACCOUNT}/{REGION}\n")
     run_steps(ctx, apply=True)
     print("\nApply complete. Next: DNS A record, `set-params`, GitHub environment, first deploy.")
+
+
+def cmd_monitoring(ctx, args):
+    if args.apply and ENV != "qa":
+        sys.exit("Refusing: security alarms are applied to QA only here; Production needs a separate approval.")
+    if args.apply and not args.yes:
+        sys.exit("re-run with --apply --yes after reviewing the plan")
+    print(f"Security alarms for {P} ({'apply' if args.apply else 'plan, read-only'})\n")
+    step_security_alarms(ctx, apply=bool(args.apply))
 
 
 def cmd_status(ctx, _args):
@@ -842,6 +903,9 @@ def main() -> int:
     p_params.add_argument("--from-file", required=True)
     sub.add_parser("health")
     sub.add_parser("backup-check")
+    p_mon = sub.add_parser("monitoring")
+    p_mon.add_argument("--apply", action="store_true")
+    p_mon.add_argument("--yes", action="store_true")
     p_down = sub.add_parser("teardown")
     p_down.add_argument("--confirm", default="")
     parser.add_argument("--account-guardrails", action="store_true",
@@ -853,7 +917,7 @@ def main() -> int:
     caller = ctx.guard()
     print(f"caller: {caller}  account: {ACCOUNT}  region: {REGION}  env: {ENV}")
     {"plan": cmd_plan, "apply": cmd_apply, "status": cmd_status, "set-params": cmd_set_params, "health": cmd_health,
-     "backup-check": cmd_backup_check, "teardown": cmd_teardown}[args.cmd](ctx, args)
+     "backup-check": cmd_backup_check, "teardown": cmd_teardown, "monitoring": cmd_monitoring}[args.cmd](ctx, args)
     return 0
 
 

@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import rate_limit
 from app.db import get_db
 from app.deps import current_user, optional_user, require_roles
 from app.rbac import ensure_admin_permission, require_permission
@@ -31,6 +32,7 @@ class MessageIn(BaseModel):
 
 @router.post("/conversations")
 def create_conversation(body: ConversationCreateIn, user=Depends(require_roles("customer", "pujari", "head_pujari")), db: Session = Depends(get_db)):
+    rate_limit.check_user_action(db, user, "conversation")
     cid = str(uuid4())
     mid = str(uuid4())
     db.execute(
@@ -51,6 +53,7 @@ def create_conversation(body: ConversationCreateIn, user=Depends(require_roles("
         ),
         {"id": mid, "cid": cid, "sid": user["id"], "body": body.message},
     )
+    rate_limit.count_user_action(db, user, "conversation")
     db.commit()
     return {"id": cid, "status": "open", "provider": "in_app_foundation"}
 
@@ -133,6 +136,7 @@ def post_message(conversation_id: str, body: MessageIn, user=Depends(current_use
     _can_access_conversation(conv, user)
     if conv["status"] in ("closed", "resolved"):
         raise HTTPException(400, "Conversation is closed")
+    rate_limit.check_user_action(db, user, "support_message")
     role = "agent" if user["role"] in ("admin", "super_admin") else user["role"]
     mid = str(uuid4())
     db.execute(
@@ -179,6 +183,7 @@ def post_message(conversation_id: str, body: MessageIn, user=Depends(current_use
             visibility="public",
             meta={"from_conversation": conversation_id},
         )
+    rate_limit.count_user_action(db, user, "support_message")
     db.commit()
     return {"id": mid, "ok": True}
 

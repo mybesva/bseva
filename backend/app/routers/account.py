@@ -272,6 +272,7 @@ def create_report(body: ReportIn, user=Depends(current_user), db: Session = Depe
     role = user["role"]
     if role not in SELF_SERVICE_ROLES:
         raise HTTPException(403, "Only customers and pujaris can send reports here")
+    rate_limit.check_user_action(db, user, "report")
     if body.reason not in REPORT_REASONS:
         raise HTTPException(400, "Choose a reason")
     allowed = {"customer": ("pujari", "booking"), "pujari": ("customer", "booking"), "head_pujari": ("customer", "booking")}
@@ -295,6 +296,20 @@ def create_report(body: ReportIn, user=Depends(current_user), db: Session = Depe
         target_user = str(b["customer_id"])
         if target_user != body.target_id:
             raise HTTPException(400, "This customer is not on the booking")
+    # One open report per person, booking and subject: a repeat adds nothing and would notify staff twice.
+    existing = db.execute(
+        text(
+            """
+            SELECT id FROM user_reports
+            WHERE reporter_id = CAST(:r AS uuid) AND booking_id = CAST(:b AS uuid) AND target_type = :t
+              AND status IN ('open', 'in_review', 'escalated')
+            LIMIT 1
+            """
+        ),
+        {"r": uid, "b": booking_id, "t": body.target_type},
+    ).first()
+    if existing:
+        raise coded_http(409, "REPORT_EXISTS", "You have already reported this. Our team is reviewing it.")
     rid = db.execute(
         text(
             """
@@ -317,6 +332,7 @@ def create_report(body: ReportIn, user=Depends(current_user), db: Session = Depe
                          category="ops", link=f"/admin/reports-queue?id={rid}")
     except Exception:
         pass
+    rate_limit.count_user_action(db, user, "report")
     db.commit()
     return {"id": str(rid), "status": "open"}
 
