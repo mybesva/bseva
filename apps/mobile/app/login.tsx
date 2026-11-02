@@ -15,7 +15,10 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient, resolveApiBase } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
-import { roleAllowedInApp, variantRole, wrongAppMessageKey } from "@/config/appVariant";
+import { isPujariApp, roleAllowedInApp, variantRole, wrongAppMessageKey } from "@/config/appVariant";
+import { InlineLink } from "@/components/InlineLink";
+import { text as ctext } from "@/content/compliance";
+import { openLegal } from "@/utils/webLinks";
 
 function routeForRole(role: string) {
   const dest = dashboardPath(role);
@@ -35,9 +38,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Set when the account is deactivated and waiting for deletion; offers the cancel flow.
+  const [deletionPending, setDeletionPending] = useState<string | null>(null);
 
   async function onSubmit() {
     setError(null);
+    setDeletionPending(null);
     const parsed = loginSchema.safeParse({ identifier, password });
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message || "auth.checkDetails";
@@ -61,6 +67,10 @@ export default function LoginScreen() {
       router.replace(routeForRole(out.user.role) as never);
     } catch (e: unknown) {
       const code = e instanceof ApiError ? e.code : undefined;
+      if (code === "ACCOUNT_DELETION_PENDING") {
+        setDeletionPending((e as ApiError).message || ctext.deletionPendingTitle);
+        return;
+      }
       const key = errorKeyForCode(code);
       let msg = key ? userMessage(t, key, t("errors.loginFailed")) || t("errors.loginFailed") : apiErrorMessage(t, e, "errors.loginFailed");
       if (__DEV__ && code === "NETWORK") {
@@ -103,12 +113,51 @@ export default function LoginScreen() {
                 keyboardType="email-address"
               />
               <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              {deletionPending ? (
+                <View style={{ gap: 10, padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}>
+                  <AppText style={{ fontWeight: "700" }}>{ctext.deletionPendingTitle}</AppText>
+                  <AppText variant="small">{deletionPending}</AppText>
+                  <PrimaryButton
+                    title={ctext.cancelDeletion}
+                    variant="outline"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/cancel-deletion",
+                        params: identifier.includes("@") ? { email: identifier.trim() } : {},
+                      })
+                    }
+                  />
+                </View>
+              ) : null}
+              <Pressable
+                accessibilityRole="link"
+                hitSlop={8}
+                style={{ alignSelf: "flex-end", minHeight: 32, justifyContent: "center" }}
+                onPress={() =>
+                  router.push({
+                    pathname: "/forgot-password",
+                    params: identifier.includes("@") ? { email: identifier.trim() } : {},
+                  })
+                }
+              >
+                <AppText variant="small" color={colors.primary} style={{ fontWeight: "700" }}>
+                  {ctext.forgotPasswordLink}
+                </AppText>
+              </Pressable>
               <PrimaryButton title={pending ? t("auth.signingIn") : t("auth.signIn")} loading={pending} onPress={onSubmit} />
               <Pressable onPress={() => router.push({ pathname: "/register", params: roleHint ? { role: roleHint } : {} })}>
                 <AppText color={colors.primary} style={{ textAlign: "center", fontWeight: "700" }}>
                   {t("mobile.createAccount")}
                 </AppText>
               </Pressable>
+              <AppText variant="small" color={colors.mutedForeground} style={{ textAlign: "center", lineHeight: 20 }}>
+                {ctext.loginLegalPrefix}{" "}
+                <InlineLink
+                  label={ctext.terms}
+                  onPress={() => void openLegal(isPujariApp || roleHint === "pujari" ? "pujariTerms" : "customerTerms")}
+                />{" "}
+                {ctext.and} <InlineLink label={ctext.privacyPolicy} onPress={() => void openLegal("privacy")} />.
+              </AppText>
             </View>
           </Card>
         </ScrollView>

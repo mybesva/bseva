@@ -11,6 +11,7 @@ import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { userMessage } from "@/utils/userMessage";
+import { text as ctext } from "@/content/compliance";
 
 function publicWalletDescription(raw?: string | null, fallback = "Wallet transaction"): string {
   const s = String(raw || "").trim();
@@ -90,7 +91,7 @@ export default function WalletScreen() {
           ) : (
             <>
               <AppText variant="small" color={colors.mutedForeground} style={{ marginVertical: 8 }}>
-                {tr("mobile.walletHelp")}
+                {ctext.walletHelp}
               </AppText>
               <ErrorBanner message={error} />
               <Field label={tr("mobile.amount")} value={rupee} onChangeText={setRupee} keyboardType="numeric" />

@@ -8,6 +8,7 @@ import {
   MoreLanguageRow,
   MoreMenuRow,
 } from "@/components/MoreMenuRow";
+import { MoreAccountLegal } from "@/components/MoreAccountLegal";
 import { Screen } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -46,6 +47,7 @@ export default function CustomerMore() {
         ))}
         <MoreLanguageRow />
         <MoreAppearanceRow />
+        <MoreAccountLegal role="customer" />
         <MoreMenuRow
           icon="log-out-outline"
           label={t("mobile.logout")}
