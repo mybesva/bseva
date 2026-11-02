@@ -1,8 +1,11 @@
 import { dashboardPath, LANGS, PRIVACY_VERSION, TERMS_VERSION, toE164 } from "@bseva/config";
 import { LANG_LABELS, type Lang } from "@bseva/locales";
 import { registerSchema } from "@bseva/validation";
+import { ApiError, isCaptchaErrorCode, type CaptchaFlags } from "@bseva/api-client";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { CaptchaField, type CaptchaHandle } from "@/components/CaptchaField";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from "react-native";
 import { InlineLink } from "@/components/InlineLink";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
@@ -25,6 +28,12 @@ export default function RegisterScreen() {
   const [accountType, setAccountType] = useState<"customer" | "pujari">(
     variantRole ?? (role === "pujari" ? "pujari" : "customer"),
   );
+  const config = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
+  const flags = (config.data?.captcha || {}) as Partial<CaptchaFlags>;
+  // Super Admin switch for this account type, or the server asked for it.
+  const [captchaAsked, setCaptchaAsked] = useState(false);
+  const showCaptcha = captchaAsked || Boolean(flags[`${accountType}_register`]);
+  const captchaRef = useRef<CaptchaHandle>(null);
   const [name, setName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -72,7 +81,13 @@ export default function RegisterScreen() {
     }
     setOtpSending(true);
     try {
-      const out = (await apiClient.requestOtp({ phone: e164 || undefined, email: emailNorm, purpose: "register" })) as {
+      const out = (await apiClient.requestOtp({
+        phone: e164 || undefined,
+        email: emailNorm,
+        purpose: "register",
+        account_type: accountType,
+        ...(showCaptcha ? captchaRef.current?.values() : {}),
+      })) as {
         expires_in_minutes?: number;
         email?: string;
       };
@@ -82,8 +97,11 @@ export default function RegisterScreen() {
       setOtpExpiresAt(Date.now() + mins * 60 * 1000);
       setOtpSent(true);
     } catch (e: unknown) {
+      if (e instanceof ApiError && isCaptchaErrorCode(e.code)) setCaptchaAsked(true);
       setError(e instanceof Error ? e.message : "Could not send OTP");
     } finally {
+      // Each image works once.
+      if (showCaptcha) captchaRef.current?.refresh();
       setOtpSending(false);
     }
   }
@@ -222,6 +240,7 @@ export default function RegisterScreen() {
               <AppText variant="small" color={colors.mutedForeground}>
                 {t("auth.emailOtp.help")}
               </AppText>
+              {showCaptcha ? <CaptchaField ref={captchaRef} purpose="register" disabled={otpSending} /> : null}
               <PrimaryButton
                 title={otpSent ? t("auth.resendOtp") : t("auth.emailOtp.send")}
                 variant="outline"

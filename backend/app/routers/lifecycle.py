@@ -1589,6 +1589,6 @@ def public_config(db: Session = Depends(get_db)):
         "email_from_support": str(get_setting(db, "email_from_support", "support@b-seva.com")),
         # Public: whether mail works, not which host or mailbox sends it (admins see the details elsewhere).
         "email_delivery": {"configured": bool(smtp_status().get("configured"))},
-        # Which web forms show the self-hosted CAPTCHA.
-        **__import__("app.captcha", fromlist=["public_config"]).public_config(),
+        # Which forms show the self-hosted CAPTCHA (web and the mobile apps).
+        **__import__("app.captcha_settings", fromlist=["public_flags"]).public_flags(db),
     }

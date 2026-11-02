@@ -152,13 +152,15 @@ def issue_email_otp(
     limit_scope: str | None = None,
     reserved: bool = False,
     ip: str | None = None,
+    account_type: str | None = None,
 ) -> dict[str, Any]:
     """
     Create hashed OTP (5 min by default), invalidate prior codes for same email+purpose,
     optionally deliver via email provider.
 
     Send limits are counted per email and per limit_scope (the purpose unless given). Pass reserved=True when
-    the caller already ran reserve_otp_send for this request.
+    the caller already ran reserve_otp_send for this request. account_type binds a registration code to the
+    account type it was requested (and its CAPTCHA answered) for.
     Never returns plaintext OTP except in non-production when SMTP is not configured
     and OTP_DEV_CODE is set for local fallback.
     """
@@ -206,8 +208,8 @@ def issue_email_otp(
     db.execute(
         text(
             """
-            INSERT INTO otp_codes (phone, email, code_hash, purpose, expires_at)
-            VALUES (:phone, :email, :hash, :purpose, NOW() + make_interval(mins => :ttl))
+            INSERT INTO otp_codes (phone, email, code_hash, purpose, expires_at, account_type)
+            VALUES (:phone, :email, :hash, :purpose, NOW() + make_interval(mins => :ttl), :account_type)
             """
         ),
         {
@@ -216,6 +218,7 @@ def issue_email_otp(
             "hash": hash_otp(code),
             "purpose": purpose_n,
             "ttl": ttl_minutes,
+            "account_type": account_type,
         },
     )
     db.commit()
@@ -353,7 +356,10 @@ def verify_email_otp(
                     {"email": email_n, "purpose": row["purpose"], "id": row["id"]},
                 )
                 db.commit()
-            return {"ok": True, "purpose": row["purpose"]}
+            out = {"ok": True, "purpose": row["purpose"]}
+            if row.get("account_type"):
+                out["account_type"] = row["account_type"]
+            return out
 
     if not rows:
         return {"ok": False, "error": "invalid_or_expired"}

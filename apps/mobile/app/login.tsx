@@ -2,9 +2,11 @@ import { dashboardPath, isAdminRole } from "@bseva/config";
 import { errorKeyForCode } from "@bseva/locales";
 import { apiErrorMessage, userMessage } from "@/utils/userMessage";
 import { loginSchema } from "@bseva/validation";
-import { ApiError } from "@bseva/api-client";
+import { ApiError, isCaptchaErrorCode, type CaptchaFlags } from "@bseva/api-client";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { CaptchaField, type CaptchaHandle } from "@/components/CaptchaField";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
@@ -40,6 +42,13 @@ export default function LoginScreen() {
   const [pending, setPending] = useState(false);
   // Set when the account is deactivated and waiting for deletion; offers the cancel flow.
   const [deletionPending, setDeletionPending] = useState<string | null>(null);
+  const config = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
+  const flags = (config.data?.captcha || {}) as Partial<CaptchaFlags>;
+  // The Super Admin switch for this app's sign-in (no role: the stricter one), or the server asked for it.
+  const loginSwitchOn = roleHint ? Boolean(flags[`${roleHint}_login`]) : Boolean(flags.customer_login || flags.pujari_login);
+  const [captchaAsked, setCaptchaAsked] = useState(false);
+  const showCaptcha = captchaAsked || loginSwitchOn;
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   async function onSubmit() {
     setError(null);
@@ -52,7 +61,10 @@ export default function LoginScreen() {
     }
     setPending(true);
     try {
-      const out = await apiClient.login(identifier.trim(), password);
+      const out = await apiClient.login(identifier.trim(), password, {
+        ...(roleHint ? { portal: roleHint } : {}),
+        ...(showCaptcha ? captchaRef.current?.values() : {}),
+      });
       if (!roleAllowedInApp(out.user.role)) {
         // Valid account, wrong app: end this session and point to the right app.
         await logout();
@@ -67,6 +79,9 @@ export default function LoginScreen() {
       router.replace(routeForRole(out.user.role) as never);
     } catch (e: unknown) {
       const code = e instanceof ApiError ? e.code : undefined;
+      // Each image works once.
+      if (showCaptcha) captchaRef.current?.refresh();
+      if (isCaptchaErrorCode(code)) setCaptchaAsked(true);
       if (code === "ACCOUNT_DELETION_PENDING") {
         setDeletionPending((e as ApiError).message || ctext.deletionPendingTitle);
         return;
@@ -113,6 +128,7 @@ export default function LoginScreen() {
                 keyboardType="email-address"
               />
               <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              {showCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
               {deletionPending ? (
                 <View style={{ gap: 10, padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}>
                   <AppText style={{ fontWeight: "700" }}>{ctext.deletionPendingTitle}</AppText>

@@ -70,6 +70,10 @@ def _verify_registration_otp(db: Session, body: RegisterIn, ip: str = "unknown")
     )
     if not result.get("ok"):
         _raise_otp_failure(db, ip, result, 400)
+    # A code requested for one account type (and its CAPTCHA switch) cannot register the other.
+    bound = result.get("account_type")
+    if bound and bound != body.account_type:
+        _raise_otp_failure(db, ip, {"error": "invalid"}, 400)
 
 
 def _public(row: dict) -> dict:
@@ -122,7 +126,7 @@ def _public_otp_circuit(db: Session, purpose: str = "login") -> None:
 @router.post("/otp/request")
 def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_db)):
     """Issue email OTP (5 minutes). Delivery via email provider; SMS reserved for later."""
-    from app import captcha
+    from app import captcha, captcha_settings
     from app.otp_service import OtpStoreUnavailable, issue_email_otp, mask_email, reserve_otp_send
 
     email = str(body.email).strip().lower() if body.email else None
@@ -137,7 +141,8 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
     if purpose in ("register", "verify"):
         bucket, _limit, window = rate_limit.OTP_REGISTER_IP_DAY
         rate_limit.enforce(db, (bucket, int(settings.otp_register_requests_per_ip_per_day), window), ip, fail_closed=True)
-    if purpose == "register" and captcha.mode(settings.register_otp_captcha) == "enforce":
+    account_type = body.account_type if purpose == "register" else None
+    if purpose == "register" and captcha_settings.register_required(db, account_type):
         captcha.require(db, body.captcha_id, body.captcha_answer, purpose="register", ip=ip)
     # Counted before the account lookup, for known and unknown addresses alike.
     try:
@@ -191,6 +196,7 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
         deliver=True,
         reserved=True,
         ip=ip,
+        account_type=account_type,
     )
     if not result.get("ok"):
         if result.get("error") == "recipient_not_allowed":
@@ -507,6 +513,13 @@ def _super_admin_challenge(db: Session, token: str) -> dict:
     return dict(row)
 
 
+PORTAL_ROLES = {
+    "customer": ("customer",),
+    "pujari": ("pujari", "head_pujari"),
+    "admin": ("admin", "super_admin"),
+}
+
+
 @router.post("/login", response_model=LoginOut)
 def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     identifier = body.identifier.strip()
@@ -520,16 +533,18 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         text("SELECT * FROM users WHERE email = :id OR phone = :id"),
         {"id": identifier},
     ).mappings().first()
-    threshold = int(settings.login_captcha_after_failures or 0)
-    # Off by default (the mobile apps send no CAPTCHA). Never asked of Admin or Super Admin sign-in.
-    if threshold > 0 and not (row and row["role"] in ("admin", "super_admin")):
-        if rate_limit.hits(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier) >= threshold or rate_limit.hits(
-            db, rate_limit.LOGIN_FAIL_IP, ip
-        ) >= threshold:
-            from app import captcha
+    from app import captcha_settings
 
-            captcha.require(db, body.captcha_id, body.captcha_answer, purpose="login", ip=ip)
-    if not row or not verify_password(body.password, row["password_hash"]):
+    # Chosen by the sign-in page, never by the account looked up, so asking or not reveals nothing about it.
+    if captcha_settings.login_required(db, body.portal):
+        from app import captcha
+
+        captcha.require(db, body.captcha_id, body.captcha_answer, purpose="login", ip=ip)
+    # An account signs in only through its own portal. Anything else is the same failure as a wrong password,
+    # so naming a portal whose switch is off cannot be used to try passwords for another portal's accounts.
+    password_ok = bool(row) and verify_password(body.password, row["password_hash"])
+    wrong_portal = bool(row) and body.portal is not None and row["role"] not in PORTAL_ROLES[body.portal]
+    if not password_ok or wrong_portal:
         rate_limit.record(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier)
         rate_limit.record(db, rate_limit.LOGIN_FAIL_IP, ip)
         db.commit()

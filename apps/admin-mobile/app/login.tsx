@@ -57,7 +57,8 @@ export default function AdminLogin() {
     }
     setPending(true);
     try {
-      const out = await apiClient.startLogin(identifier.trim(), password);
+      // Admin sign-in is never asked for a CAPTCHA; the portal also limits it to Admin and Super Admin accounts.
+      const out = await apiClient.startLogin(identifier.trim(), password, { portal: "admin" });
       if (out.otp_required && out.challenge_token) {
         setPassword("");
         setChallenge({ token: out.challenge_token, emailHint: out.email_hint || "your email" });

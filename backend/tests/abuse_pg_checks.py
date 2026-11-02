@@ -730,7 +730,7 @@ def check_captcha_answer_never_exposed():
     assert all(len(a) == 5 and a.isalnum() and a == a.upper() and not set(a) & set("O0I1L") for a in answers), answers
     assert len(set(answers)) > 190  # unpredictable, not a fixed list
     cfg = client.get("/api/v1/config/public").json()
-    assert cfg["captcha"] == {"contact": True, "register_otp": False, "login_after_failures": 0}, cfg["captcha"]
+    assert cfg["captcha"]["contact"] is True and cfg["captcha"]["custom_puja"] is True, cfg["captcha"]
     for gone in ("turnstile_site_key", "contact_bot_check", "otp_bot_check", "recaptcha_site_key", "registration_captcha_enabled"):
         assert gone not in cfg, gone
 
@@ -818,57 +818,253 @@ def check_captcha_fails_closed():
     assert _contact_rows() == [] and SENT == []
 
 
-def check_captcha_registration_otp_switch():
-    reset_state()
-    # Off by default: the mobile apps (no CAPTCHA) keep requesting registration codes.
-    assert post("/auth/otp/request", {"email": "app-reg@example.org", "purpose": "register"}).status_code == 200
-    settings.register_otp_captcha = "enforce"
-    r = post("/auth/otp/request", {"email": "web-reg@example.org", "purpose": "register"}, ip="198.51.100.150")
-    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
-    r = post(
-        "/auth/otp/request", {"email": "web-reg@example.org", "purpose": "register", **solved("register", ip="198.51.100.150")},
-        ip="198.51.100.150",
-    )
-    assert r.status_code == 200, r.text
-    # A contact-form CAPTCHA does not unlock registration.
-    r = post(
-        "/auth/otp/request", {"email": "web-reg2@example.org", "purpose": "register", **solved("contact", ip="198.51.100.151")},
-        ip="198.51.100.151",
-    )
-    assert r.status_code == 400, r.text
-    # Sign-in codes are never asked for a CAPTCHA.
-    assert post("/auth/otp/request", {"email": "someone@example.org", "purpose": "login"}, ip="198.51.100.152").status_code == 200
+def _captcha_token(email: str) -> str:
+    """A signed-in session for an existing account (a Super Admin's carries its completed second step)."""
+    from app.security import create_access_token
+
+    row = sql("SELECT id, role, password_hash FROM users WHERE email = :e", e=email).mappings().one()
+    return create_access_token(str(row["id"]), row["role"], row["password_hash"], mfa=row["role"] == "super_admin")
 
 
-def check_captcha_login_after_failures():
-    reset_state()
-    email = "loginc@example.org"
-    register("customer", email, "9000000020", "Login Captcha")
-    # Off by default: failures never trigger a CAPTCHA (the mobile apps keep working).
-    for _ in range(4):
-        assert post("/auth/login", {"identifier": email, "password": "wrong-pass1"}, ip="198.51.100.160").status_code == 401
-    assert post("/auth/login", {"identifier": email, "password": "Str0ng!pass"}, ip="198.51.100.160").status_code == 200
-    reset_state()
-    settings.login_captcha_after_failures = 3
-    for _ in range(3):
-        assert post("/auth/login", {"identifier": email, "password": "wrong-pass1"}, ip="198.51.100.161").status_code == 401
-    # After three failures even the right password needs the CAPTCHA.
-    r = post("/auth/login", {"identifier": email, "password": "Str0ng!pass"}, ip="198.51.100.162")
-    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
-    r = post(
-        "/auth/login", {"identifier": email, "password": "Str0ng!pass", **solved("login", ip="198.51.100.162")}, ip="198.51.100.162"
-    )
-    assert r.status_code == 200 and r.json()["access_token"], r.text
-    # Super Admin sign-in is never asked for a CAPTCHA and keeps its emailed second step.
+def _captcha_staff(email: str, role: str, phone: str) -> str:
     sql(
         "INSERT INTO users (id, name, email, phone, password_hash, role) "
-        "VALUES (gen_random_uuid(), 'Captcha Root', 'root-captcha@example.org', '9000000096', :pw, 'super_admin')",
-        pw=hash_password("Sup3r!admin"),
+        "VALUES (gen_random_uuid(), :n, :e, :p, :pw, :r) ON CONFLICT DO NOTHING",
+        n=f"Captcha {role}", e=email, p=phone, pw=hash_password("Sup3r!admin"), r=role,
     )
-    for _ in range(3):
-        post("/auth/login", {"identifier": "root-captcha@example.org", "password": "wrong-pass1"}, ip="198.51.100.163")
-    r = post("/auth/login", {"identifier": "root-captcha@example.org", "password": "Sup3r!admin"}, ip="198.51.100.164")
+    return _captcha_token(email)
+
+
+def _switch(token: str, feature: str, enabled: bool):
+    return client.put(
+        f"/api/v1/admin/security/captcha/{feature}", json={"enabled": enabled},
+        headers={"Authorization": f"Bearer {token}", "x-real-ip": "198.51.100.230"},
+    )
+
+
+def _all_switches_on():
+    sql("UPDATE captcha_settings SET enabled = TRUE, updated_by = NULL, updated_by_name = NULL")
+
+
+def check_captcha_settings_default_on_and_rollout_switch():
+    reset_state()
+    _all_switches_on()
+    root = _captcha_staff("root-cs1@example.org", "super_admin", "9000000081")
+    view = client.get("/api/v1/admin/security/captcha", headers={"Authorization": f"Bearer {root}"}).json()
+    assert [(x["feature"], x["enabled"], x["locked"]) for x in view["mandatory"]] == [
+        ("contact", True, True), ("custom_puja", True, True)
+    ], view
+    assert [(x["feature"], x["enabled"]) for x in view["configurable"]] == [
+        ("customer_register", True), ("pujari_register", True), ("customer_login", True), ("pujari_login", True)
+    ], view
+    # Saved ON, but not enforced until the deployment turns enforcement on (older app builds send no CAPTCHA).
+    assert view["enforcement_active"] is False
+    off = {"contact": True, "custom_puja": True, "customer_register": False, "pujari_register": False,
+           "customer_login": False, "pujari_login": False}
+    assert client.get("/api/v1/config/public").json()["captcha"] == off
+    assert post("/auth/otp/request", {"email": "old-app@example.org", "purpose": "register"}).status_code == 200
+    settings.captcha_settings_enforcement = True
+    assert client.get("/api/v1/config/public").json()["captcha"] == {k: True for k in off}
+    r = post("/auth/otp/request", {"email": "old-app2@example.org", "purpose": "register"}, ip="198.51.100.231")
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
+    # A store that cannot be read counts every switch as ON.
+    sql("ALTER TABLE captcha_settings RENAME TO captcha_settings_off")
+    try:
+        assert client.get("/api/v1/config/public").json()["captcha"] == {k: True for k in off}
+    finally:
+        sql("ALTER TABLE captcha_settings_off RENAME TO captcha_settings")
+
+
+def check_captcha_mandatory_cannot_be_disabled():
+    reset_state()
+    _all_switches_on()
+    root = _captcha_staff("root-cs2@example.org", "super_admin", "9000000082")
+    # API: no switch exists for Contact Us or Custom Puja.
+    for feature in ("contact", "custom_puja", "contact_us", "custompuja"):
+        r = _switch(root, feature, False)
+        assert r.status_code == 422, (feature, r.status_code, r.text)
+    # Database: the settings table cannot hold a row for them, and look-alike platform settings are ignored.
+    for feature in ("contact", "custom_puja"):
+        try:
+            sql("INSERT INTO captcha_settings (feature, enabled) VALUES (:f, FALSE)", f=feature)
+            raise AssertionError(f"{feature} row accepted")
+        except Exception as exc:  # noqa: BLE001
+            assert "check" in str(exc).lower(), exc
+    for key in ("contact_captcha", "custom_puja_captcha", "captcha_contact", "registration_captcha_enabled"):
+        sql(
+            "INSERT INTO platform_settings (key, value) VALUES (:k, 'false'::jsonb) "
+            "ON CONFLICT (key) DO UPDATE SET value = 'false'::jsonb", k=key,
+        )
+    # Every switchable CAPTCHA off, enforcement off and on: both forms still ask signed-out visitors.
+    for feature in ("customer_register", "pujari_register", "customer_login", "pujari_login"):
+        assert _switch(root, feature, False).status_code == 200
+    for enforcement in (False, True):
+        settings.captcha_settings_enforcement = enforcement
+        for i, subject in enumerate(("General question", "custom_puja", "Custom puja request")):
+            body = dict(
+                CONTACT, subject=subject, email=f"m{i}{int(enforcement)}@example.org",
+                phone=f"9876{i}{int(enforcement)}0000", captcha_id=None,
+            )
+            r = post("/support/contact", body, ip=f"198.51.100.{240 + i + 3 * int(enforcement)}")
+            assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", (subject, r.text)
+        cfg = client.get("/api/v1/config/public").json()["captcha"]
+        assert cfg["contact"] is True and cfg["custom_puja"] is True, cfg
+    assert _contact_rows() == [] and SENT == []
+    # With the answer it is accepted; signed-in users keep their exemption.
+    assert post("/support/contact", dict(CONTACT, subject="custom_puja"), ip="198.51.100.250").status_code == 200
+    token = register("customer", "signedin-cs@example.org", "9000000083", "Signed In")["access_token"]
+    body = dict(CONTACT, subject="custom_puja", email="signedin-cs@example.org", message="Custom puja from the app please")
+    assert post("/support/contact", body, ip="198.51.100.251", token=token).status_code == 200
+    sql("DELETE FROM platform_settings WHERE key IN ('contact_captcha', 'custom_puja_captcha', 'captcha_contact', 'registration_captcha_enabled')")
+    _all_switches_on()
+
+
+def check_captcha_switches_super_admin_only_and_audited():
+    reset_state()
+    _all_switches_on()
+    root = _captcha_staff("root-cs3@example.org", "super_admin", "9000000084")
+    admin = _captcha_staff("admin-cs3@example.org", "admin", "9000000085")
+    assert _switch(admin, "customer_login", False).status_code == 403
+    assert client.get("/api/v1/admin/security/captcha", headers={"Authorization": f"Bearer {admin}"}).status_code == 403
+    assert client.put("/api/v1/admin/security/captcha/customer_login", json={"enabled": False}).status_code == 401
+    before = sql("SELECT count(*) FROM security_audit_log WHERE action = 'captcha_setting_change'").scalar()
+    view = _switch(root, "pujari_register", False).json()
+    row = {x["feature"]: x for x in view["configurable"]}["pujari_register"]
+    assert row["enabled"] is False and row["updated_by_name"] == "Captcha super_admin" and row["updated_at"], row
+    # Saved in the database (survives a restart), and only that one switch changed.
+    assert dict(sql("SELECT feature, enabled FROM captcha_settings").all()) == {
+        "customer_register": True, "pujari_register": False, "customer_login": True, "pujari_login": True
+    }
+    _switch(root, "pujari_register", True)
+    audit = sql(
+        "SELECT actor_name, actor_email, reason, status, ip FROM security_audit_log "
+        "WHERE action = 'captcha_setting_change' ORDER BY created_at"
+    ).mappings().all()[before:]
+    assert [(a["actor_email"], a["reason"], a["status"], a["ip"]) for a in audit] == [
+        ("root-cs3@example.org", "Pujari Registration: ON -> OFF", "success", "198.51.100.230"),
+        ("root-cs3@example.org", "Pujari Registration: OFF -> ON", "success", "198.51.100.230"),
+    ], audit
+    view = client.get("/api/v1/admin/security/captcha", headers={"Authorization": f"Bearer {root}"}).json()
+    assert view["history"][0]["reason"] == "Pujari Registration: OFF -> ON", view["history"]
+    assert _switch(admin, "customer_login", True).status_code == 403 and len(view["history"]) == len(audit) + before
+
+
+def _register_with(account_type: str, email: str, phone: str, *, captcha_for: str | None, ip: str, code_type: str | None = None):
+    """Request a registration code (as the web and apps do), then register; returns both responses."""
+    body = {"email": email, "purpose": "register", "account_type": code_type or account_type}
+    if captcha_for:
+        body.update(solved(captcha_for, ip=ip))
+    first = post("/auth/otp/request", body, ip=ip)
+    if first.status_code != 200:
+        return first, None
+    name = "Ravi Kumar Sharma" if account_type == "pujari" else "Reg Person"
+    second = post(
+        "/auth/register",
+        {"account_type": account_type, "name": name, "email": email, "phone": phone, "password": "Str0ng!pass",
+         "otp": CODE, "registration_consent": True},
+        ip=ip,
+    )
+    return first, second
+
+
+def check_captcha_registration_switches():
+    reset_state()
+    _all_switches_on()
+    settings.captcha_settings_enforcement = True
+    root = _captcha_staff("root-cs4@example.org", "super_admin", "9000000086")
+    # Both ON: each account type needs a registration CAPTCHA, then registers.
+    for n, kind in enumerate(("customer", "pujari")):
+        first, _ = _register_with(kind, f"r{n}@example.org", f"90000003{n}0", captcha_for=None, ip=f"198.51.102.{n}")
+        assert first.status_code == 400 and first.json()["detail"]["code"] == "CAPTCHA_REQUIRED", first.text
+        first, second = _register_with(kind, f"r{n}@example.org", f"90000003{n}0", captcha_for="register", ip=f"198.51.102.{10 + n}")
+        assert first.status_code == 200 and second.status_code == 200 and second.json()["user"]["role"] == kind, (first.text, second.text)
+    # A CAPTCHA solved for another form does not count.
+    first, _ = _register_with("customer", "r2@example.org", "9000000320", captcha_for="login", ip="198.51.102.20")
+    assert first.status_code == 400, first.text
+    # Independent switches: customer OFF leaves pujari ON, and the reverse.
+    _switch(root, "customer_register", False)
+    first, second = _register_with("customer", "r3@example.org", "9000000330", captcha_for=None, ip="198.51.102.30")
+    assert first.status_code == 200 and second.status_code == 200, (first.text, second.text)
+    first, _ = _register_with("pujari", "r4@example.org", "9000000340", captcha_for=None, ip="198.51.102.31")
+    assert first.status_code == 400 and first.json()["detail"]["code"] == "CAPTCHA_REQUIRED", first.text
+    # No account type given: the stricter switch (pujari ON) applies.
+    r = post("/auth/otp/request", {"email": "r5@example.org", "purpose": "register"}, ip="198.51.102.32")
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
+    # A code requested as a customer (no CAPTCHA) cannot register a pujari.
+    first, second = _register_with("pujari", "r6@example.org", "9000000360", captcha_for=None, code_type="customer", ip="198.51.102.33")
+    assert first.status_code == 200 and second.status_code == 400 and second.json()["detail"]["code"] == "INVALID_OTP", second.text
+    assert sql("SELECT count(*) FROM users WHERE email = 'r6@example.org'").scalar() == 0
+    _switch(root, "customer_register", True)
+    _switch(root, "pujari_register", False)
+    first, _ = _register_with("customer", "r7@example.org", "9000000370", captcha_for=None, ip="198.51.102.34")
+    assert first.status_code == 400, first.text
+    first, second = _register_with("pujari", "r8@example.org", "9000000380", captcha_for=None, ip="198.51.102.35")
+    assert first.status_code == 200 and second.status_code == 200 and second.json()["user"]["role"] == "pujari", second.text
+    # Both OFF: no CAPTCHA, with or without an account type.
+    _switch(root, "customer_register", False)
+    assert post("/auth/otp/request", {"email": "r9@example.org", "purpose": "register"}, ip="198.51.102.36").status_code == 200
+    # Sign-in codes are never asked for a CAPTCHA.
+    _all_switches_on()
+    assert post("/auth/otp/request", {"email": "someone@example.org", "purpose": "login"}, ip="198.51.102.37").status_code == 200
+
+
+def _login(email: str, password: str, portal: str | None, ip: str, captcha_for: str | None = None):
+    body = {"identifier": email, "password": password}
+    if portal:
+        body["portal"] = portal
+    if captcha_for:
+        body.update(solved(captcha_for, ip=ip))
+    return post("/auth/login", body, ip=ip)
+
+
+def check_captcha_login_switches():
+    reset_state()
+    _all_switches_on()
+    register("customer", "lc@example.org", "9000000201", "Login Customer")
+    register("pujari", "lp@example.org", "9000000202", "Ravi Kumar Sharma")
+    root = _captcha_staff("root-cs5@example.org", "super_admin", "9000000203")
+    admin = _captcha_staff("admin-cs5@example.org", "admin", "9000000204")
+    del admin
+    settings.captcha_settings_enforcement = True
+    ips = iter(f"198.51.103.{i}" for i in range(1, 250))
+    # Both ON: each portal asks first, then signs in with the answer.
+    for email, portal in (("lc@example.org", "customer"), ("lp@example.org", "pujari")):
+        r = _login(email, "Str0ng!pass", portal, next(ips))
+        assert r.status_code == 400 and r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
+        r = _login(email, "Str0ng!pass", portal, next(ips), captcha_for="login")
+        assert r.status_code == 200 and r.json()["access_token"], r.text
+    # The same question for unknown accounts, so asking reveals nothing.
+    r = _login("nobody@example.org", "Str0ng!pass", "customer", next(ips))
+    assert r.json()["detail"]["code"] == "CAPTCHA_REQUIRED", r.text
+    # Independent switches.
+    _switch(root, "customer_login", False)
+    assert _login("lc@example.org", "Str0ng!pass", "customer", next(ips)).status_code == 200
+    assert _login("lp@example.org", "Str0ng!pass", "pujari", next(ips)).json()["detail"]["code"] == "CAPTCHA_REQUIRED"
+    # Naming the portal whose switch is off does not unlock another portal's accounts, even with the right password.
+    r = _login("lp@example.org", "Str0ng!pass", "customer", next(ips))
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "LOGIN_FAILED", r.text
+    # No portal (older clients): the stricter switch applies.
+    assert _login("lc@example.org", "Str0ng!pass", None, next(ips)).json()["detail"]["code"] == "CAPTCHA_REQUIRED"
+    _switch(root, "customer_login", True)
+    _switch(root, "pujari_login", False)
+    assert _login("lp@example.org", "Str0ng!pass", "pujari", next(ips)).status_code == 200
+    assert _login("lc@example.org", "Str0ng!pass", "customer", next(ips)).json()["detail"]["code"] == "CAPTCHA_REQUIRED"
+    r = _login("lc@example.org", "Str0ng!pass", "pujari", next(ips))
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "LOGIN_FAILED", r.text
+    _switch(root, "customer_login", False)
+    assert _login("lc@example.org", "Str0ng!pass", None, next(ips)).status_code == 200
+    # Admin sign-in is never asked; customer accounts cannot use it; Super Admin keeps the emailed second step.
+    _all_switches_on()
+    assert _login("admin-cs5@example.org", "Sup3r!admin", "admin", next(ips)).status_code == 200
+    assert _login("lc@example.org", "Str0ng!pass", "admin", next(ips)).status_code == 401
+    r = _login("root-cs5@example.org", "Sup3r!admin", "admin", next(ips))
     assert r.status_code == 200 and r.json()["otp_required"] is True, r.text
+    # Lockout still applies with the CAPTCHA on.
+    reset_state()
+    for _ in range(10):
+        _login("lc@example.org", "wrong-pass1", "customer", next(ips), captcha_for="login")
+    r = _login("lc@example.org", "Str0ng!pass", "customer", next(ips), captcha_for="login")
+    assert r.status_code == 429, r.text
 
 
 # ------------------------------------------------------------------------------- hardening batch

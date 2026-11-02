@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/PasswordInput";
-import { loginApi, type AuthUser } from "@/lib/api";
+import { loginApi, type AuthUser, type LoginPortal } from "@/lib/api";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import SuperAdminOtpForm, { type LoginChallenge } from "@/components/auth/SuperAdminOtpForm";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
@@ -64,11 +65,15 @@ export default function RolePortalGate({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
-  // Shown only after the server asks for it (repeated failed sign-ins); never for Admin sign-in.
   const [needCaptcha, setNeedCaptcha] = useState(false);
   const captchaRef = useRef<CaptchaHandle>(null);
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const expected = apiRole(role);
+  const portal = expected as LoginPortal;
+  const { config } = usePublicConfig();
+  // Super Admin switch for this portal (Settings > CAPTCHA), or the server asked for it. Never for Admin sign-in.
+  const showCaptcha =
+    portal !== "admin" && (needCaptcha || Boolean(config.captcha?.[portal === "pujari" ? "pujari_login" : "customer_login"]));
   const copy = portalCopy(role, t);
   const isAdminLike = (r: string) => r === "admin" || r === "super_admin";
   const matchesPortal =
@@ -130,7 +135,7 @@ export default function RolePortalGate({
     e.preventDefault();
     setPending(true);
     try {
-      const out = await loginApi(email, password, needCaptcha ? captchaRef.current?.values() : undefined);
+      const out = await loginApi(email, password, showCaptcha ? captchaRef.current?.values() : undefined, portal);
       if (out.otp_required && out.challenge_token) {
         setPassword("");
         if (role === "admin") {
@@ -142,7 +147,7 @@ export default function RolePortalGate({
       }
       await finishLogin(out.user as AuthUser);
     } catch (err: any) {
-      if (needCaptcha) captchaRef.current?.refresh();
+      if (showCaptcha) captchaRef.current?.refresh();
       if (isCaptchaError(err?.code)) setNeedCaptcha(true);
       const key = errorKeyForCode(err?.code);
       toast.error(key ? t(key) : err.message || t("errors.loginFailed"));
@@ -172,7 +177,7 @@ export default function RolePortalGate({
           onPassword={setPassword}
           onSubmit={onLogin}
           registerHref={registerHref}
-          captchaSlot={needCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
+          captchaSlot={showCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
         />
       </MarketingLayout>
     );

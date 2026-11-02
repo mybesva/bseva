@@ -298,16 +298,20 @@ export type LoginOut = {
   email_hint?: string;
 };
 
+export type LoginPortal = "customer" | "pujari" | "admin";
+
 /** A Super Admin gets `otp_required` here and signs in with completeLoginOtp.
- *  `captcha` is sent only after the server answered CAPTCHA_REQUIRED (repeated failures). */
+ *  `portal` names the sign-in page: the server picks the CAPTCHA switch by it and signs in only that
+ *  portal's accounts. `captcha` is sent when that switch is on (or the server answered CAPTCHA_REQUIRED). */
 export async function loginApi(
   identifier: string,
   password: string,
   captcha?: { captcha_id?: string; captcha_answer?: string },
+  portal?: LoginPortal,
 ) {
   const out = await api<LoginOut>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ identifier, password, ...(captcha || {}) }),
+    body: JSON.stringify({ identifier, password, ...(portal ? { portal } : {}), ...(captcha || {}) }),
   });
   if (out.access_token) setToken(out.access_token);
   return out;

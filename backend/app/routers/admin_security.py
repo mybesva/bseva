@@ -1,6 +1,7 @@
 """Super Admin Security Settings: MPIN management, OTP challenges and the security audit log."""
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -156,3 +157,52 @@ def security_audit(
         {"sid": str(settlement_id) if settlement_id else None, "lim": limit},
     ).mappings().all()
     return [row_dict(r) for r in rows]
+
+
+# ------------------------------------------------------------------------------------------------ CAPTCHA
+
+
+class CaptchaSettingIn(BaseModel):
+    enabled: bool
+
+
+def _captcha_view(db: Session) -> dict:
+    from app import captcha_settings as cs
+
+    saved = cs.saved(db)
+    history = db.execute(
+        text(
+            """
+            SELECT actor_name, reason, created_at FROM security_audit_log
+            WHERE action = 'captcha_setting_change' ORDER BY created_at DESC LIMIT 20
+            """
+        )
+    ).mappings().all()
+    return {
+        # Contact Us and Custom Puja: always on for signed-out visitors, shown locked, no switch exists.
+        "mandatory": [{"feature": k, "label": v, "enabled": True, "locked": True} for k, v in cs.MANDATORY.items()],
+        "configurable": [{"feature": k, "label": v, **saved[k]} for k, v in cs.CONFIGURABLE.items()],
+        # False until the deployment turns on CAPTCHA_SETTINGS_ENFORCEMENT (after the mobile app release).
+        "enforcement_active": cs.enforcement_active(),
+        "history": [row_dict(r) for r in history],
+    }
+
+
+@router.get("/captcha")
+def captcha_settings_view(user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    return _captcha_view(db)
+
+
+@router.put("/captcha/{feature}")
+def update_captcha_setting(
+    feature: Literal["customer_register", "pujari_register", "customer_login", "pujari_login"],
+    body: CaptchaSettingIn,
+    request: Request,
+    user=Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    """Only the four switchable forms are accepted; Contact Us and Custom Puja have no switch to change."""
+    from app import captcha_settings as cs
+
+    cs.save(db, feature, body.enabled, user, rate_limit.client_ip(request))
+    return _captcha_view(db)
