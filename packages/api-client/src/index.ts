@@ -38,6 +38,77 @@ export class ApiError extends Error {
   }
 }
 
+/** Account deletion reasons (contract: send the key). */
+export const DELETION_REASON_KEYS = [
+  "no_longer_using",
+  "not_satisfied",
+  "privacy",
+  "payment_settlement",
+  "app_issues",
+  "duplicate_account",
+  "other",
+] as const;
+export type DeletionReasonKey = (typeof DELETION_REASON_KEYS)[number];
+
+export type DeletionRequest = {
+  id: string;
+  state: "requested" | "pending_resolution" | "ready" | "deleted" | "cancelled" | "escalated";
+  reason: string;
+  explanation: string;
+  requested_at: string;
+  deadline_at: string;
+  cancelled_at: string | null;
+  completed_at: string | null;
+  message: string;
+};
+
+export type DeletionObligationBooking = {
+  id: string;
+  booking_number: string;
+  service_name: string;
+  booking_date: string;
+  start_time: string;
+  status: string;
+  kind: "upcoming" | "ongoing";
+  cancellation?: { allowed: boolean; refund_paise: number; fee_paise: number; policy_note: string };
+  action?: "reassign";
+};
+
+export type DeletionOverview = {
+  account: { role: "customer" | "pujari" | "head_pujari"; email: string; name: string };
+  request: DeletionRequest | null;
+  reasons: { key: string; label: string }[];
+  obligations: {
+    bookings: DeletionObligationBooking[];
+    wallet_balance_paise: number;
+    pending_refunds: number;
+    pending_settlement_paise: number;
+    blocking: string[];
+  };
+  retention_notice: string;
+};
+
+export const REPORT_REASON_KEYS = [
+  "misconduct",
+  "no_show",
+  "unsafe",
+  "fraud",
+  "payment",
+  "inappropriate_content",
+  "other",
+] as const;
+export type ReportReasonKey = (typeof REPORT_REASON_KEYS)[number];
+export type ReportTargetType = "pujari" | "booking" | "customer";
+
+export type UserReport = {
+  id: string;
+  target_type: ReportTargetType;
+  reason: string;
+  status: string;
+  created_at: string;
+  resolution: string | null;
+};
+
 export function asArray<T>(data: T[] | { items?: T[] } | unknown): T[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === "object" && Array.isArray((data as { items?: T[] }).items)) {
@@ -269,11 +340,73 @@ export function createApiClient(opts: ApiClientOptions) {
       return api<AuthUser>("/auth/me", { method: "PATCH", body: JSON.stringify(body) });
     },
 
+    /** Ends every other session; the server returns a fresh token for this device. */
     async changePassword(current_password: string, new_password: string) {
-      return api("/auth/change-password", {
+      const out = await api<{ ok?: boolean; access_token?: string }>("/auth/change-password", {
         method: "POST",
         body: JSON.stringify({ current_password, new_password }),
       });
+      if (out?.access_token) await opts.tokenStore.setToken(out.access_token);
+      return out;
+    },
+
+    /** Always answers with the same generic message, whether or not the email has an account. */
+    forgotPassword(email: string) {
+      return api<{ ok: boolean; message: string }>("/auth/password/forgot", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    },
+
+    resetPassword(body: { email: string; code: string; new_password: string }) {
+      return api<{ ok: boolean }>("/auth/password/reset", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    deletionOverview() {
+      return api<DeletionOverview>("/account/deletion");
+    },
+
+    requestDeletionOtp(body: { reason: DeletionReasonKey; explanation: string }) {
+      return api<{ ok: boolean; message: string; email_hint?: string }>("/account/deletion/request-otp", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+
+    /** Deactivates the account. The server ends every session; callers sign out locally. */
+    confirmDeletion(body: { reason: DeletionReasonKey; explanation: string; code: string }) {
+      return api<{ request: DeletionRequest }>("/account/deletion/confirm", {
+        method: "POST",
+        body: JSON.stringify({ ...body, acknowledge: true }),
+      });
+    },
+
+    requestCancelDeletionOtp(email: string) {
+      return api<{ ok: boolean; message?: string }>("/account/deletion/cancel/request-otp", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    },
+
+    cancelDeletion(body: { email: string; code: string }) {
+      return api<{ ok: boolean; message: string }>("/account/deletion/cancel", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+
+    createReport(body: {
+      target_type: ReportTargetType;
+      target_id: string;
+      booking_id?: string;
+      reason: ReportReasonKey;
+      details: string;
+    }) {
+      return api<{ id: string; status: string }>("/reports", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    async myReports() {
+      return asArray<UserReport>(await api<UserReport[]>("/reports/mine"));
     },
 
     async requestOtp(body: { phone?: string; email?: string; purpose: "register" | "login" | "verify" }) {
