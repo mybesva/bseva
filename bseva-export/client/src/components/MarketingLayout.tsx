@@ -350,8 +350,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <li><Link href="/about"><a className={footerLink}>{t("nav.about")}</a></Link></li>
               <li><Link href="/contact"><a className={footerLink}>{t("nav.contact")}</a></Link></li>
               <li><Link href="/support"><a className={footerLink}>{t("nav.support")}</a></Link></li>
-              <li><Link href="/terms"><a className={footerLink}>{t("nav.terms")}</a></Link></li>
-              <li><Link href="/privacy"><a className={footerLink}>{t("nav.privacy")}</a></Link></li>
+              <li><Link href="/customer-terms"><a className={footerLink}>{t("nav.terms")}</a></Link></li>
+              <li><Link href="/pujari-terms"><a className={footerLink}>Pujari Terms</a></Link></li>
+              <li><Link href="/privacy-policy"><a className={footerLink}>{t("nav.privacy")}</a></Link></li>
+              <li><Link href="/refund-policy"><a className={footerLink}>Refund Policy</a></Link></li>
+              <li><Link href="/app-terms"><a className={footerLink}>App Terms</a></Link></li>
+              <li><Link href="/delete-account"><a className={footerLink}>Delete Account</a></Link></li>
             </ul>
           </nav>
 

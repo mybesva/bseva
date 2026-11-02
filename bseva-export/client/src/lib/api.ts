@@ -38,18 +38,60 @@ function formatFetchError(data: unknown, res: Response, fallback: string): { mes
   return { message: `${fallback}${statusBit}` };
 }
 
+/** Error thrown by api(): `code` for coded errors, plus HTTP status and any retry hint. */
+export type ApiError = Error & {
+  code?: string;
+  status?: number;
+  /** Seconds to wait before retrying (429), from the body or the Retry-After header. */
+  retryAfterSeconds?: number;
+};
+
+export const ACCOUNT_DELETION_PENDING = "ACCOUNT_DELETION_PENDING";
+/** Window event fired when a signed-in request is refused because the account is pending deletion. */
+export const ACCOUNT_DELETION_PENDING_EVENT = "bseva:account-deletion-pending";
+
+function retryAfterFrom(data: unknown, res: Response): number | undefined {
+  const candidates: unknown[] = [];
+  const top = data as { retry_after_seconds?: unknown; detail?: unknown } | null;
+  candidates.push(top?.retry_after_seconds);
+  if (top?.detail && typeof top.detail === "object" && !Array.isArray(top.detail)) {
+    candidates.push((top.detail as { retry_after_seconds?: unknown }).retry_after_seconds);
+  }
+  candidates.push(res.headers?.get?.("Retry-After"));
+  for (const c of candidates) {
+    const n = Number(c);
+    if (c != null && c !== "" && Number.isFinite(n) && n > 0) return Math.ceil(n);
+  }
+  return undefined;
+}
+
 function throwApiError(data: unknown, res: Response, fallback: string): never {
   const parsed = formatFetchError(data, res, fallback);
-  const err = new Error(parsed.message) as Error & { code?: string };
+  const err = new Error(parsed.message) as ApiError;
   err.code = parsed.code;
+  err.status = res.status;
+  err.retryAfterSeconds = retryAfterFrom(data, res);
   throw err;
+}
+
+/** Read the coded-error fields from anything caught around api(). */
+export function apiErrorInfo(err: unknown, fallback = "Something went wrong. Please try again.") {
+  const e = (err ?? {}) as ApiError;
+  return {
+    message: (e instanceof Error && e.message) || fallback,
+    code: e.code,
+    status: e.status,
+    retryAfterSeconds: e.retryAfterSeconds,
+  };
 }
 
 export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers = new Headers(opts.headers);
   if (!headers.has("Content-Type") && opts.body) headers.set("Content-Type", "application/json");
+  // A caller may pass its own bearer (e.g. the short-lived deletion token on /delete-account).
   const token = getToken();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const usesStoredToken = Boolean(token) && !headers.has("Authorization");
+  if (usesStoredToken) headers.set("Authorization", `Bearer ${token}`);
   if (typeof window !== "undefined") {
     const lang = localStorage.getItem(LANG_STORAGE_KEY);
     if (lang && !headers.has("Accept-Language")) headers.set("Accept-Language", lang);
@@ -57,9 +99,22 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(`${apiBase()}/api/v1${path}`, { ...opts, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (usesStoredToken && res.status === 403) notifyDeletionPending(data);
     throwApiError(data, res, "Request failed");
   }
   return data as T;
+}
+
+/** A signed-in session for an account pending deletion: drop the token and tell the app shell. */
+function notifyDeletionPending(data: unknown) {
+  const detail = (data as { detail?: unknown } | null)?.detail;
+  if (!detail || typeof detail !== "object" || Array.isArray(detail)) return;
+  const d = detail as { code?: string; message?: string };
+  if (d.code !== ACCOUNT_DELETION_PENDING) return;
+  setToken(null);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(ACCOUNT_DELETION_PENDING_EVENT, { detail: { message: d.message || "" } }));
+  }
 }
 
 /** Bookings list is paginated: { items, total, page, limit, pages }. */

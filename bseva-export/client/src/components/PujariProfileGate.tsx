@@ -23,6 +23,13 @@ const ALLOWED = new Set([
   "/pujari/change-password",
   "/terms",
   "/privacy",
+  "/customer-terms",
+  "/pujari-terms",
+  "/app-terms",
+  "/privacy-policy",
+  "/refund-policy",
+  "/delete-account",
+  "/pujari/support",
 ]);
 
 const PHOTO_PROMPT_KEY = "bseva.pujariPhotoPrompted";
