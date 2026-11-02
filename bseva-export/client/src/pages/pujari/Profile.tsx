@@ -5,6 +5,7 @@ import { PujariPortal } from "@/components/RolePortals";
 import { PortalSegmentedTabs } from "@/components/PortalSegmentedTabs";
 import { PortalTermsContent } from "@/pages/portal/TermsPage";
 import ChangePasswordForm from "@/pages/ChangePassword";
+import AccountSettingsPanel from "@/components/account/AccountSettingsPanel";
 import {
   profilePathWithTab,
   profileTabFromSearch,
@@ -764,6 +765,7 @@ export default function PujariProfilePage() {
       label: t("profile.tab.terms"),
       multilineLabel: t("profile.tab.termsLines"),
     },
+    { id: "account", label: "Account" },
   ];
 
   return (
@@ -779,6 +781,7 @@ export default function PujariProfilePage() {
         {activeTab === "address" ? <PujariAddressPanel /> : null}
         {activeTab === "password" ? <ChangePasswordForm embedded /> : null}
         {activeTab === "terms" ? <PortalTermsContent /> : null}
+        {activeTab === "account" ? <AccountSettingsPanel /> : null}
 
         {activeTab === "profile" ? (
           <Card>

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import PreparationChecklist from "@/components/PreparationChecklist";
 import PujariLiveTrackCard from "@/components/PujariLiveTrackCard";
 import BookingContactSupport from "@/components/BookingContactSupport";
+import ReportButton from "@/components/reports/ReportDialog";
 import RescheduleCard from "@/components/RescheduleCard";
 import { translatedTokenLabel } from "@bseva/config";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -181,6 +182,9 @@ export default function BookingReceipt() {
               {t("booking.cancel")}
             </Button>
           )}
+          {user?.role === "customer" ? (
+            <ReportButton bookingId={String(booking.id)} viewer="customer" counterpartId={booking.pujari_id} />
+          ) : null}
         </div>
 
         {user?.role === "customer" ? <BookingContactSupport bookingNumber={String(booking.booking_number || booking.id)} /> : null}
