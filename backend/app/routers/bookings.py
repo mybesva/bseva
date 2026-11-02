@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import rate_limit
 from app.audit import write_audit
 from app.booking_attention import BOOKING_QUEUES, mark_open_offers
 from app.db import get_db
@@ -659,6 +660,8 @@ def create_booking(
         if replay:
             return replay
 
+    # A retry with the same idempotency key returned above and is not counted.
+    rate_limit.check_user_action(db, user, "booking")
     if not body.terms_accepted:
         raise HTTPException(400, "Please accept the Terms & Conditions and Cancellation Policy")
     svc = db.execute(
@@ -1394,6 +1397,7 @@ def create_booking(
             ),
             {"id": booking_id, "response": json.dumps(response, default=str)},
         )
+    rate_limit.count_user_action(db, user, "booking")
     db.commit()
     background_tasks.add_task(_post_create_booking_side_effects, booking_id, email_payload)
     return response

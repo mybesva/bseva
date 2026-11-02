@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     otp_public_emails_per_hour: int = 300
     # OTP requests one client address may make per rolling day (raise on QA if testers share one office IP).
     otp_requests_per_ip_per_day: int = 60
+    # Registration / email-verification codes: their own site-wide hourly budget (separate from the one above, so
+    # they cannot use up sign-in, reset or deletion mail) and a tighter per-client daily cap.
+    otp_register_emails_per_hour: int = 100
+    otp_register_requests_per_ip_per_day: int = 20
     contact_team_emails_per_hour: int = 30
 
     @property
