@@ -1,6 +1,8 @@
 """Admin review of account deletion requests and of user reports. Financial actions stay on their own screens."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -124,6 +126,8 @@ def deletion_detail(request_id: str, user=Depends(view_deletions), db: Session =
     out.pop("contact_email", None)
     out["reason_label"] = al.REASONS.get(req["reason"], req["reason"])
     out["assigned_admin_name"] = assigned
+    out["escalation_reason"] = req.get("escalated_reason")
+    out["overdue"] = req["state"] in al.OPEN_STATES and req["deadline_at"] < datetime.now(timezone.utc)
     return {
         "request": out,
         "user": row_dict(owner),
