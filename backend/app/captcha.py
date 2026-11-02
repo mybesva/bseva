@@ -1,4 +1,4 @@
-"""Self-hosted image CAPTCHA for public web forms: five characters drawn as a noisy PNG, checked on the server.
+"""Self-hosted image CAPTCHA for public forms (web and the mobile apps): five characters drawn as a noisy PNG, checked on the server.
 
 Nothing that reveals the answer leaves the server or is stored in a readable form. The browser gets an
 unguessable challenge id and a PNG. The table keeps SHA-256 of the id and an HMAC of id + answer keyed from
@@ -192,18 +192,3 @@ def require(db: Session, captcha_id: str | None, answer: str | None, *, purpose:
         db.commit()
         logger.warning("SECURITY_EVENT kind=captcha_failed purpose=%s", purpose)
         raise coded_http(400, "CAPTCHA_INVALID", INVALID_MESSAGE)
-
-
-def mode(raw: str | None) -> str:
-    return "enforce" if (raw or "").strip().lower() == "enforce" else "off"
-
-
-def public_config() -> dict:
-    """Which web forms show the CAPTCHA. Login asks only after repeated failures (0 = never)."""
-    return {
-        "captcha": {
-            "contact": mode(settings.contact_captcha) == "enforce",
-            "register_otp": mode(settings.register_otp_captcha) == "enforce",
-            "login_after_failures": max(0, int(settings.login_captcha_after_failures or 0)),
-        }
-    }

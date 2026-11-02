@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import type { PujariLevelRow } from "@/hooks/usePujariLevels";
 import { useAuth } from "@/_core/hooks/useAuth";
+import CaptchaSettingsCard from "@/components/admin/CaptchaSettingsCard";
 
 const emptyRoleForm = { title: "", summary: "", examplesText: "" };
 
@@ -836,6 +837,7 @@ export default function Settings() {
           ...SETTING_GROUPS.map((group) => ({ id: `settings-${group.id}`, title: group.title })),
           { id: "settings-cancellation", title: "Cancellation" },
           { id: "settings-pujari-roles", title: "Pujari Roles" },
+          ...(isSuper ? [{ id: "settings-captcha", title: "CAPTCHA" }] : []),
         ].map((item) => (
           <Button
             key={item.id}
@@ -902,6 +904,8 @@ export default function Settings() {
             </Card>
           );
         })}
+
+        {isSuper && <CaptchaSettingsCard />}
 
         <Card id="settings-cancellation" className="scroll-mt-24">
           <CardHeader>

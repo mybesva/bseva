@@ -109,6 +109,25 @@ export type UserReport = {
   resolution: string | null;
 };
 
+/** Self-hosted image CAPTCHA (POST /captcha). The image is a PNG data URI; the answer stays on the server. */
+export type CaptchaChallenge = { captcha_id: string; image: string; length: number; expires_in_seconds: number };
+export type CaptchaAnswer = { captcha_id?: string; captcha_answer?: string };
+export type LoginExtra = { portal?: "customer" | "pujari" | "admin" } & CaptchaAnswer;
+
+/** Which forms show the CAPTCHA, from /config/public. Contact Us and Custom Puja are always true. */
+export type CaptchaFlags = {
+  contact: boolean;
+  custom_puja: boolean;
+  customer_register: boolean;
+  pujari_register: boolean;
+  customer_login: boolean;
+  pujari_login: boolean;
+};
+
+export function isCaptchaErrorCode(code?: string) {
+  return code === "CAPTCHA_REQUIRED" || code === "CAPTCHA_INVALID";
+}
+
 export function asArray<T>(data: T[] | { items?: T[] } | unknown): T[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === "object" && Array.isArray((data as { items?: T[] }).items)) {
@@ -290,17 +309,19 @@ export function createApiClient(opts: ApiClientOptions) {
     mediaImageSource,
     getBaseUrl: opts.getBaseUrl,
 
-    async login(identifier: string, password: string) {
-      const out = await this.startLogin(identifier, password);
+    async login(identifier: string, password: string, extra?: LoginExtra) {
+      const out = await this.startLogin(identifier, password, extra);
       if (!out.access_token) throw new Error("Super Admins sign in through the admin app");
       return out as TokenOut;
     },
 
-    /** Password step. A Super Admin gets `otp_required` and finishes with completeLoginOtp. */
-    async startLogin(identifier: string, password: string) {
+    /** Password step. A Super Admin gets `otp_required` and finishes with completeLoginOtp.
+     *  `portal` names the sign-in screen: the server picks the CAPTCHA switch by it and signs in only that
+     *  portal's accounts. Send the CAPTCHA answer when that switch is on. */
+    async startLogin(identifier: string, password: string, extra?: LoginExtra) {
       const out = await api<Partial<TokenOut> & { otp_required?: boolean; challenge_token?: string; email_hint?: string }>(
         "/auth/login",
-        { method: "POST", body: JSON.stringify({ identifier, password }) }
+        { method: "POST", body: JSON.stringify({ identifier, password, ...(extra || {}) }) }
       );
       if (out.access_token) await opts.tokenStore.setToken(out.access_token);
       return out;
@@ -409,8 +430,22 @@ export function createApiClient(opts: ApiClientOptions) {
       return asArray<UserReport>(await api<UserReport[]>("/reports/mine"));
     },
 
-    async requestOtp(body: { phone?: string; email?: string; purpose: "register" | "login" | "verify" }) {
+    /** Registration codes: send account_type (it picks the CAPTCHA switch, and the code registers only that
+     *  type) and the CAPTCHA answer when that switch is on. */
+    async requestOtp(
+      body: {
+        phone?: string;
+        email?: string;
+        purpose: "register" | "login" | "verify";
+        account_type?: "customer" | "pujari";
+      } & CaptchaAnswer
+    ) {
       return api("/auth/otp/request", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    /** A new 5-character image CAPTCHA (the answer never leaves the server). `replaces` retires the old one. */
+    async newCaptcha(purpose: "contact" | "register" | "login", replaces?: string) {
+      return api<CaptchaChallenge>("/captcha", { method: "POST", body: JSON.stringify({ purpose, replaces }) });
     },
 
     async logout() {

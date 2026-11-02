@@ -121,7 +121,10 @@ class CustomerAddressPatchIn(BaseModel):
 class LoginIn(BaseModel):
     identifier: str
     password: str
-    # Self-hosted CAPTCHA, asked for only after repeated failures when LOGIN_CAPTCHA_AFTER_FAILURES > 0.
+    # Which sign-in page sent this. The CAPTCHA switch is chosen by it, so the account must belong to it; no
+    # portal gets the stricter of the customer and pujari switches. Admin sign-in is never asked.
+    portal: Optional[Literal["customer", "pujari", "admin"]] = None
+    # Self-hosted CAPTCHA, when the Super Admin switch for this portal is on (app.captcha_settings).
     captcha_id: Optional[str] = Field(default=None, max_length=128)
     captcha_answer: Optional[str] = Field(default=None, max_length=16)
 
@@ -130,7 +133,10 @@ class OtpRequestIn(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     purpose: Literal["register", "login", "verify"] = "register"
-    # Self-hosted CAPTCHA (only checked when REGISTER_OTP_CAPTCHA=enforce); the mobile apps send none.
+    # Registration codes: the account type being registered. It picks the CAPTCHA switch, and the code then
+    # registers only that type. Without it the stricter switch applies.
+    account_type: Optional[Literal["customer", "pujari"]] = None
+    # Self-hosted CAPTCHA, when the Super Admin registration switch is on (app.captcha_settings).
     captcha_id: Optional[str] = Field(default=None, max_length=128)
     captcha_answer: Optional[str] = Field(default=None, max_length=16)
 

@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import PasswordInput from "@/components/PasswordInput";
 import SuperAdminOtpForm, { type LoginChallenge } from "@/components/auth/SuperAdminOtpForm";
-import { ACCOUNT_DELETION_PENDING, dashboardPath, loginApi, type AuthUser } from "@/lib/api";
+import { ACCOUNT_DELETION_PENDING, dashboardPath, loginApi, type AuthUser, type LoginPortal } from "@/lib/api";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { errorKeyForCode } from "@bseva/locales";
@@ -30,9 +31,19 @@ export default function Login() {
   const [pending, setPending] = useState(false);
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const [deletionPending, setDeletionPending] = useState<string | null>(null);
-  // Shown only after the server asks for it (repeated failed sign-ins).
   const [needCaptcha, setNeedCaptcha] = useState(false);
   const captchaRef = useRef<CaptchaHandle>(null);
+  const { config } = usePublicConfig();
+  // The portal picks the Super Admin CAPTCHA switch; without one the server applies the stricter switch.
+  const portal: LoginPortal | undefined =
+    roleHint === "customer" || roleHint === "pujari" || roleHint === "admin" ? roleHint : undefined;
+  const loginSwitchOn =
+    portal === "admin"
+      ? false
+      : portal
+        ? Boolean(config.captcha?.[`${portal}_login`])
+        : Boolean(config.captcha?.customer_login || config.captcha?.pujari_login);
+  const showCaptcha = portal !== "admin" && (needCaptcha || loginSwitchOn);
 
   function goAfterLogin(role: string) {
     if (returnUrl && (role === "customer" || !roleHint || roleHint === "customer")) {
@@ -71,7 +82,7 @@ export default function Login() {
     setPending(true);
     setDeletionPending(null);
     try {
-      const out = await loginApi(identifier, password, needCaptcha ? captchaRef.current?.values() : undefined);
+      const out = await loginApi(identifier, password, showCaptcha ? captchaRef.current?.values() : undefined, portal);
       if (out.otp_required && out.challenge_token) {
         setPassword("");
         setChallenge({ token: out.challenge_token, emailHint: out.email_hint || "your email" });
@@ -85,7 +96,7 @@ export default function Login() {
         setDeletionPending((err as Error)?.message || "This account is scheduled for deletion.");
         return;
       }
-      if (needCaptcha) captchaRef.current?.refresh();
+      if (showCaptcha) captchaRef.current?.refresh();
       if (isCaptchaError(code)) setNeedCaptcha(true);
       const key = errorKeyForCode(code);
       toast.error(key ? t(key) : (err as Error)?.message || t("errors.loginFailed"));
@@ -166,7 +177,7 @@ export default function Login() {
                   </Link>
                 </div>
               ) : null}
-              {needCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
+              {showCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
                 <LogIn className="w-4 h-4 mr-2" />
                 {pending ? t("auth.loggingIn") : t("auth.login")}

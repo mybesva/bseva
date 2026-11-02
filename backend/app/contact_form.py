@@ -193,8 +193,9 @@ def submit(db: Session, body, request: Request, user: dict | None) -> dict:
     # Signed-in users (the mobile apps) are counted per account, anonymous visitors per address.
     client_key = f"user:{user['id']}" if signed_in else ip
     _enforce_limits(db, client_key=client_key, email=fields["email"], phone=fields["phone_e164"])
-    if not signed_in and captcha.mode(settings.contact_captcha) == "enforce":
-        # Anonymous visitors must answer the image CAPTCHA; a refused answer is not stored (the visitor retries).
+    if not signed_in:
+        # Contact Us and Custom Puja: signed-out visitors must always answer the image CAPTCHA (no setting
+        # turns this off). A refused answer is not stored (the visitor retries).
         captcha.require(
             db, getattr(body, "captcha_id", None), getattr(body, "captcha_answer", None), purpose="contact", ip=ip
         )

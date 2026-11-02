@@ -15,7 +15,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { safeReturnUrl } from "@/const";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import { CaptchaField, type CaptchaHandle } from "@/components/BotProtection";
+import { CaptchaField, isCaptchaError, type CaptchaHandle } from "@/components/BotProtection";
 import { useAuth } from "@/_core/hooks/useAuth";
 import BSevaLogo from "@/components/BSevaLogo";
 
@@ -38,8 +38,6 @@ export default function Register() {
   const { t, lang, setLang } = useI18n();
   const { refresh } = useAuth();
   const { config: publicConfig } = usePublicConfig();
-  // Off until the mobile apps send a CAPTCHA too (REGISTER_OTP_CAPTCHA on the server).
-  const otpCaptchaEnabled = Boolean(publicConfig.captcha?.register_otp);
   const [, setLocation] = useLocation();
   const search = typeof window !== "undefined" ? window.location.search : "";
   const params = new URLSearchParams(search);
@@ -47,6 +45,9 @@ export default function Register() {
   const returnUrl = safeReturnUrl(params.get("returnUrl"));
   // Role comes from URL / header navigation — no in-form Customer↔Pujari switcher
   const accountType: "customer" | "pujari" = roleHint === "pujari" ? "pujari" : "customer";
+  // Super Admin switch for this account type (Settings > CAPTCHA); also shown if the server asks for it.
+  const [captchaAsked, setCaptchaAsked] = useState(false);
+  const otpCaptchaEnabled = captchaAsked || Boolean(publicConfig.captcha?.[`${accountType}_register`]);
   const [name, setName] = useState("");
   const [pujariName, setPujariName] = useState<PersonNameParts>({
     first_name: "",
@@ -135,6 +136,7 @@ export default function Register() {
           phone: phoneE164,
           email: emailNorm,
           purpose: "register",
+          account_type: accountType,
           ...(otpCaptchaEnabled ? otpCaptchaRef.current?.values() : {}),
         }),
       });
@@ -153,6 +155,7 @@ export default function Register() {
         toast.message(`Dev hint: ${out.dev_hint}`);
       }
     } catch (err: any) {
+      if (isCaptchaError(err?.code)) setCaptchaAsked(true);
       toast.error(err.message || "Could not send OTP");
     } finally {
       // Each CAPTCHA image works once.
