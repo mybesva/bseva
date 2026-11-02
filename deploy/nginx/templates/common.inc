@@ -9,7 +9,13 @@ location = /nginx-health { access_log off; default_type text/plain; return 200 "
 location ^~ /api/v1/ops/cron/ { return 404; }
 
 # Credential endpoints only: /auth/me is read on every page load and stays in the general API zone.
-location ~ ^/api/v1/auth/(login|login/otp|otp/request|otp/verify|register|change-password)$ {
+location ~ ^/api/v1/auth/(login|login/otp|otp/request|otp/verify|register|change-password|password/forgot|password/reset)$ {
+    limit_req zone=bseva_auth burst=20 nodelay;
+    include /etc/nginx/bseva-templates/proxy.inc;
+}
+
+# Account deletion steps that send or check an email code share the credential zone.
+location ~ ^/api/v1/account/deletion/(request-otp|confirm|public/request-otp|public/verify|cancel/request-otp|cancel)$ {
     limit_req zone=bseva_auth burst=20 nodelay;
     include /etc/nginx/bseva-templates/proxy.inc;
 }

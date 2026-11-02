@@ -35,21 +35,20 @@ def _rate_limited(wait) -> HTTPException:
 
 
 def _send_code(db: Session, request: Request, email: str, purpose: str, *, require_state: str) -> dict:
-    """Same response whether or not the account exists, including the rate limit: when the OTP service has
-    per-address send counters, every address is counted before we look the account up."""
-    from app import otp_service
-    from app.otp_service import issue_email_otp
+    """Same limits as /auth/otp/request and the same response whether or not the account exists: every address
+    is counted (per client, per address and site-wide) before the account is looked up."""
+    from app.otp_service import OtpStoreUnavailable, issue_email_otp, reserve_otp_send
 
     ip = rate_limit.client_ip(request)
-    rate_limit.enforce(db, rate_limit.OTP_REQUEST_IP, ip)
+    rate_limit.enforce_otp_request_ip(db, ip, settings.otp_requests_per_ip_per_day)
     email_n = str(email).strip().lower()
-    reserve = getattr(otp_service, "reserve_otp_send", None)
-    reserved = False
-    if reserve:
-        gate = reserve(db, email=email_n, scope=purpose, ip=ip)
-        if not gate.get("allowed"):
-            raise _rate_limited(gate.get("retry_after_seconds"))
-        reserved = True
+    try:
+        gate = reserve_otp_send(db, email=email_n, scope=purpose, ip=ip)
+    except OtpStoreUnavailable:
+        raise rate_limit.unavailable() from None
+    if not gate.get("allowed"):
+        raise _rate_limited(gate.get("retry_after_seconds"))
+    rate_limit.public_otp_circuit(db, settings.otp_public_emails_per_hour)
     row = db.execute(
         text("SELECT name, role, preferred_language, blocked, account_state FROM users WHERE lower(email) = :e LIMIT 1"),
         {"e": email_n},
@@ -61,7 +60,6 @@ def _send_code(db: Session, request: Request, email: str, purpose: str, *, requi
         and (purpose != "reset" or not row["blocked"])
     )
     if eligible:
-        kwargs = {"reserved": True} if reserved else {}
         result = issue_email_otp(
             db,
             email=email_n,
@@ -69,7 +67,7 @@ def _send_code(db: Session, request: Request, email: str, purpose: str, *, requi
             customer_name=str(row.get("name") or ""),
             language=str(row.get("preferred_language") or "en"),
             ttl_minutes=OTP_MINUTES,
-            **kwargs,
+            reserved=True,
         )
         if not result.get("ok") and result.get("error") in ("cooldown", "hourly_limit", "daily_limit", "rate_limited"):
             raise _rate_limited(result.get("retry_after_seconds"))

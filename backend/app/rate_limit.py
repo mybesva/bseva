@@ -163,3 +163,25 @@ def enforce(
     db.commit()
     if count > rule[1]:
         raise too_many(message) if message else too_many()
+
+
+def enforce_otp_request_ip(db: Session, ip: str, per_day: int) -> None:
+    """Per-client caps shared by every public endpoint that emails a code; a broken counter store refuses."""
+    enforce(db, OTP_REQUEST_IP, ip, fail_closed=True)
+    bucket, _limit, window = OTP_REQUEST_IP_DAY
+    enforce(db, (bucket, int(per_day), window), ip, fail_closed=True)
+
+
+def public_otp_circuit(db: Session, limit: int) -> None:
+    """Whole-deployment cap on OTP mail anonymous callers can trigger; refuses rather than flood the mailbox."""
+    bucket, _limit, window = OTP_PUBLIC_EMAILS_HOUR
+    limit = int(limit)
+    try:
+        count = record(db, (bucket, limit, window), GLOBAL_KEY, fail_closed=True)
+    except StoreUnavailable:
+        raise unavailable() from None
+    db.commit()
+    if count > limit:
+        if count == limit + 1:
+            logger.critical("EMAIL_CIRCUIT_OPEN kind=otp limit_per_hour=%s", limit)
+        raise unavailable()

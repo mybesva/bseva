@@ -140,11 +140,14 @@ export default function Login() {
                   autoComplete="new-password"
                   name="bseva-login-password"
                 />
-                <div className="text-right">
-                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                    Forgot Password?
-                  </Link>
-                </div>
+                {/* Self-service reset is for customers and pujaris; admins reset through a Super Admin. */}
+                {roleHint !== "admin" ? (
+                  <div className="text-right">
+                    <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                      {t("auth.forgotPassword")}
+                    </Link>
+                  </div>
+                ) : null}
               </div>
               {deletionPending ? (
                 <div

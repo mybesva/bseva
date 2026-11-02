@@ -317,6 +317,210 @@ def check_sensitive_action_not_capped_daily():
         skip_cooldown()
 
 
+# ------------------------------------------------------------------------------------- account codes
+# Forgot password, account deletion and cancel deletion email a code from app.routers.account and must be
+# held to the same limits as /auth/otp/request.
+
+ACCOUNT_CODE_ENDPOINTS = (
+    ("/auth/password/forgot", "reset"),
+    ("/account/deletion/public/request-otp", "delete_account"),
+)
+
+
+def mails_to(to: str) -> list[dict]:
+    return [m for m in SENT if m.get("to") == to]
+
+
+def check_account_codes_five_then_sixth_and_cooldown():
+    reset_state()
+    email = "reset5@example.org"
+    register("customer", email, "9000000010", "Reset Five")
+    for path, _purpose in ACCOUNT_CODE_ENDPOINTS:
+        reset_state()
+        assert post(path, {"email": email}, ip="198.51.100.30").status_code == 200
+        # Cooldown: a second request within a minute is refused and sends nothing.
+        r = post(path, {"email": email}, ip="198.51.100.31")
+        assert r.status_code == 429 and r.json()["detail"]["code"] == "OTP_RATE_LIMITED", (path, r.text)
+        for i in range(4):
+            skip_cooldown()
+            assert post(path, {"email": email}, ip=f"198.51.100.{32 + i}").status_code == 200, (path, i)
+        skip_cooldown()
+        r = post(path, {"email": email}, ip="198.51.100.39")
+        assert r.status_code == 429, (path, r.text)
+        assert len(mails_to(email)) == 5, (path, len(mails_to(email)))
+
+
+def check_account_codes_no_enumeration():
+    reset_state()
+    known = "resetknown@example.org"
+    register("customer", known, "9000000011", "Reset Known")
+    for path, _purpose in ACCOUNT_CODE_ENDPOINTS:
+        seq = {}
+        for email in (known, "reset-nobody@example.org"):
+            reset_state()
+            out = []
+            for i in range(7):
+                r = post(path, {"email": email}, ip=f"198.51.100.{110 + i}")
+                out.append((r.status_code, re.sub(r'"retry_after_seconds":\d+', "N", r.text)))
+                if i != 1:
+                    skip_cooldown()
+            seq[email] = out
+        assert seq[known] == seq["reset-nobody@example.org"], (path, seq)
+        assert [s for s, _ in seq[known]] == [200, 200, 429, 200, 200, 200, 429], (path, seq[known])
+
+
+def check_account_codes_ip_limits():
+    reset_state()
+    # Hourly: 20 code requests per client address across every code endpoint, then refused.
+    codes = [
+        post(ACCOUNT_CODE_ENDPOINTS[i % 2][0], {"email": f"ipr{i}@example.org"}, ip="198.51.100.160").status_code
+        for i in range(21)
+    ]
+    assert codes[:20] == [200] * 20 and codes[20] == 429, codes
+    # The same client counter as /auth/otp/request.
+    assert post("/auth/otp/request", {"email": "ipr-x@example.org", "purpose": "register"}, ip="198.51.100.160").status_code == 429
+    # Daily: the per-day cap applies to these endpoints as well.
+    reset_state()
+    settings.otp_requests_per_ip_per_day = 3
+    codes = [
+        post("/auth/password/forgot", {"email": f"ipd{i}@example.org"}, ip="198.51.100.161").status_code for i in range(4)
+    ]
+    assert codes == [200, 200, 200, 429], codes
+
+
+def check_account_codes_global_breaker():
+    reset_state()
+    for i in range(4):
+        register("customer", f"gr{i}@example.org", f"90000001{i:02d}", f"Global Reset {i}")
+    reset_state()
+    settings.otp_public_emails_per_hour = 3
+    codes = [
+        post("/auth/password/forgot", {"email": f"gr{i}@example.org"}, ip=f"198.51.100.{180 + i}").status_code
+        for i in range(4)
+    ]
+    assert codes == [200, 200, 200, 503], codes
+    assert len(SENT) == 3
+    # The cap is shared with /auth/otp/request and the deletion endpoints.
+    assert post("/account/deletion/public/request-otp", {"email": "gr0@example.org"}, ip="198.51.100.190").status_code == 503
+    assert post("/auth/otp/request", {"email": "gr-new@example.org", "purpose": "register"}, ip="198.51.100.191").status_code == 503
+
+
+def check_account_codes_fail_closed():
+    reset_state()
+    register("customer", "resetdown@example.org", "9000000012", "Reset Down")
+    reset_state()
+    for table in ("security_rate_limits", "otp_send_events"):
+        sql(f"ALTER TABLE {table} RENAME TO {table}_off")
+        try:
+            for path, _purpose in ACCOUNT_CODE_ENDPOINTS:
+                r = post(path, {"email": "resetdown@example.org"})
+                assert r.status_code == 503, (table, path, r.text)
+            assert SENT == [], table
+        finally:
+            sql(f"ALTER TABLE {table}_off RENAME TO {table}")
+
+
+def check_password_reset_customer_and_pujari():
+    reset_state()
+    for kind, email, phone in (("customer", "rc@example.org", "9000000013"), ("pujari", "rp@example.org", "9000000014")):
+        token = register(kind, email, phone, f"Reset {kind.title()} Person")["access_token"]
+        assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 200
+        skip_cooldown()
+        before = len(mails_to(email))
+        assert post("/auth/password/forgot", {"email": email}, ip="198.51.100.80").status_code == 200
+        assert len(mails_to(email)) == before + 1
+        bad = post("/auth/password/reset", {"email": email, "code": "111111", "new_password": "N3w!password"}, ip="198.51.100.81")
+        assert bad.status_code == 400 and bad.json()["detail"]["code"] == "INVALID_CODE", bad.text
+        ok = post("/auth/password/reset", {"email": email, "code": CODE, "new_password": "N3w!password"}, ip="198.51.100.82")
+        assert ok.status_code == 200, ok.text
+        # Every earlier session ends; the old password stops working; the new one signs in.
+        assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+        assert post("/auth/login", {"identifier": email, "password": "Str0ng!pass"}, ip="198.51.100.83").status_code == 401
+        assert post("/auth/login", {"identifier": email, "password": "N3w!password"}, ip="198.51.100.84").status_code == 200
+        # Replay: the used code cannot reset the password again.
+        again = post("/auth/password/reset", {"email": email, "code": CODE, "new_password": "An0ther!pass"}, ip="198.51.100.85")
+        assert again.status_code == 400, again.text
+
+
+def check_password_reset_expiry_and_attempts():
+    reset_state()
+    email = "rexp@example.org"
+    register("customer", email, "9000000015", "Reset Expiry")
+    skip_cooldown()
+    assert post("/auth/password/forgot", {"email": email}).status_code == 200
+    expiry = sql(
+        "SELECT EXTRACT(EPOCH FROM (expires_at - created_at)) FROM otp_codes WHERE consumed = FALSE ORDER BY created_at DESC LIMIT 1"
+    ).scalar()
+    assert 299 <= float(expiry) <= 301, expiry
+    sql("UPDATE otp_codes SET expires_at = NOW() - INTERVAL '1 second' WHERE consumed = FALSE")
+    r = post("/auth/password/reset", {"email": email, "code": CODE, "new_password": "N3w!password"}, ip="198.51.100.86")
+    assert r.status_code == 400, r.text
+    # Five wrong guesses burn the code: the right code is then refused too.
+    skip_cooldown()
+    assert post("/auth/password/forgot", {"email": email}).status_code == 200
+    statuses = [
+        post("/auth/password/reset", {"email": email, "code": "000000", "new_password": "N3w!password"}, ip=f"198.51.100.{90 + i}").status_code
+        for i in range(5)
+    ]
+    assert statuses[:4] == [400] * 4 and statuses[4] == 429, statuses
+    r = post("/auth/password/reset", {"email": email, "code": CODE, "new_password": "N3w!password"}, ip="198.51.100.96")
+    assert r.status_code == 400, r.text
+
+
+def check_password_reset_not_for_admins():
+    reset_state()
+    for email, phone, role, password in (
+        ("root-reset@example.org", "9000000097", "super_admin", "Sup3r!admin"),
+        ("ops-reset@example.org", "9000000098", "admin", "Adm1n!pass"),
+    ):
+        sql(
+            """
+            INSERT INTO users (id, name, email, phone, password_hash, role)
+            VALUES (gen_random_uuid(), 'Reset Admin', :e, :ph, :pw, :role)
+            """,
+            e=email, ph=phone, pw=hash_password(password), role=role,
+        )
+    for email in ("root-reset@example.org", "ops-reset@example.org"):
+        r = post("/auth/password/forgot", {"email": email}, ip="198.51.100.120")
+        assert r.status_code == 200, r.text
+        assert mails_to(email) == []
+        r = post("/auth/password/reset", {"email": email, "code": CODE, "new_password": "Hijack!pass1"}, ip="198.51.100.121")
+        assert r.status_code == 400, r.text
+        skip_cooldown()
+    # Admin passwords are unchanged and Super Admin sign-in still needs its emailed code.
+    r = post("/auth/login", {"identifier": "root-reset@example.org", "password": "Sup3r!admin"}, ip="198.51.100.122")
+    assert r.status_code == 200 and r.json()["otp_required"] is True, r.text
+    r = post("/auth/login", {"identifier": "ops-reset@example.org", "password": "Adm1n!pass"}, ip="198.51.100.123")
+    assert r.status_code == 200 and r.json()["access_token"], r.text
+
+
+def check_deletion_and_cancel_codes():
+    reset_state()
+    email = "delc@example.org"
+    token = register("customer", email, "9000000016", "Delete Cancel")["access_token"]
+    auth = {"Authorization": f"Bearer {token}"}
+    skip_cooldown()
+    body = {"reason": "privacy", "explanation": "Testing the deletion code limits"}
+    r = client.post("/api/v1/account/deletion/request-otp", json=body, headers={**auth, "x-real-ip": "198.51.100.130"})
+    assert r.status_code == 200, r.text
+    r = client.post(
+        "/api/v1/account/deletion/confirm", json={**body, "code": CODE, "acknowledge": True},
+        headers={**auth, "x-real-ip": "198.51.100.131"},
+    )
+    assert r.status_code == 200, r.text
+    assert sql("SELECT account_state FROM users WHERE email = :e", e=email).scalar() == "deletion_requested"
+    # Cancel: same per-address limits (cooldown) and the same reply for an address with no request.
+    assert post("/account/deletion/cancel/request-otp", {"email": email}, ip="198.51.100.132").status_code == 200
+    assert post("/account/deletion/cancel/request-otp", {"email": email}, ip="198.51.100.133").status_code == 429
+    other = post("/account/deletion/cancel/request-otp", {"email": "no-request@example.org"}, ip="198.51.100.134")
+    assert other.status_code == 200 and other.json()["message"] == post(
+        "/account/deletion/cancel/request-otp", {"email": "no-request2@example.org"}, ip="198.51.100.135"
+    ).json()["message"]
+    r = post("/account/deletion/cancel", {"email": email, "code": CODE}, ip="198.51.100.136")
+    assert r.status_code == 200, r.text
+    assert sql("SELECT account_state FROM users WHERE email = :e", e=email).scalar() == "active"
+
+
 # ------------------------------------------------------------------------------------------------- contact
 
 CONTACT = {
