@@ -20,15 +20,11 @@
       "infoPlist": {
         "NSCameraUsageDescription": "B-Seva uses the camera so you can take a profile photo, signature photo, or document photo instead of only picking from the library.",
         "NSPhotoLibraryUsageDescription": "B-Seva needs photo library access to attach documents and profile photos.",
-        "NSLocationWhenInUseUsageDescription": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival, and to find nearby pujaris or save your address.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival.",
-        "NSLocationAlwaysUsageDescription": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival.",
-        "NSMicrophoneUsageDescription": "Microphone access is unused; this permission is only requested if a system picker requires it.",
+        "NSLocationWhenInUseUsageDescription": "B-Seva uses your location while you use the app to find nearby pujaris and to fill in your address.",
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
         "UIBackgroundModes": [
-          "remote-notification",
-          "location"
+          "remote-notification"
         ]
       }
     },
@@ -59,6 +55,11 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE"
       ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -83,13 +84,15 @@
     "plugins": [
       ["./plugins/withBsevaAndroid.js", { "keyName": "customer", "variants": true }],
       "expo-router",
-      "expo-secure-store",
+      ["expo-secure-store", { "faceIDPermission": false }],
       [
         "expo-location",
         {
           "isAndroidBackgroundLocationEnabled": true,
-          "isIosBackgroundLocationEnabled": true,
-          "locationAlwaysAndWhenInUsePermission": "B-Seva uses your location during the pre-Puja travel period so the customer can track your arrival."
+          "isIosBackgroundLocationEnabled": false,
+          "locationWhenInUsePermission": "B-Seva uses your location while you use the app to find nearby pujaris and to fill in your address.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false
         }
       ],
       "expo-task-manager",
@@ -97,7 +100,8 @@
         "expo-image-picker",
         {
           "photosPermission": "B-Seva needs photo library access to attach documents and profile photos.",
-          "cameraPermission": "B-Seva uses the camera so you can take a profile photo, signature photo, or document photo."
+          "cameraPermission": "B-Seva uses the camera so you can take a profile photo, signature photo, or document photo.",
+          "microphonePermission": false
         }
       ],
       "expo-document-picker",

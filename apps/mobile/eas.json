@@ -27,6 +27,62 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://b-seva.com"
       }
+    },
+    "preview-customer": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://qa.b-seva.com",
+        "BSEVA_APP": "customer",
+        "BSEVA_IOS_BUNDLE_ID": "com.bseva.app"
+      }
+    },
+    "preview-pujari": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://qa.b-seva.com",
+        "BSEVA_APP": "pujari",
+        "BSEVA_IOS_BUNDLE_ID": "com.bseva.pujari"
+      }
+    },
+    "production-customer": {
+      "distribution": "store",
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://b-seva.com",
+        "BSEVA_APP": "customer",
+        "BSEVA_IOS_BUNDLE_ID": "com.bseva.app"
+      }
+    },
+    "production-pujari": {
+      "distribution": "store",
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://b-seva.com",
+        "BSEVA_APP": "pujari",
+        "BSEVA_IOS_BUNDLE_ID": "com.bseva.pujari"
+      }
+    }
+  },
+  "submit": {
+    "production-customer": {
+      "ios": {
+        "bundleIdentifier": "com.bseva.app"
+      }
+    },
+    "production-pujari": {
+      "ios": {
+        "bundleIdentifier": "com.bseva.pujari"
+      }
     }
   }
 }
