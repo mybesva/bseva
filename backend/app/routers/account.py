@@ -28,12 +28,28 @@ SELF_SERVICE_ROLES = ("customer", "pujari", "head_pujari")
 DELETION_AUDIENCE = "bseva-account-deletion"
 
 
+def _rate_limited(wait) -> HTTPException:
+    return HTTPException(
+        429, {"code": "OTP_RATE_LIMITED", "message": "Please wait before requesting another code.", "retry_after_seconds": wait}
+    )
+
+
 def _send_code(db: Session, request: Request, email: str, purpose: str, *, require_state: str) -> dict:
-    """Same response whether or not the account exists. Per-email limits live in issue_email_otp."""
+    """Same response whether or not the account exists, including the rate limit: when the OTP service has
+    per-address send counters, every address is counted before we look the account up."""
+    from app import otp_service
     from app.otp_service import issue_email_otp
 
-    rate_limit.enforce(db, rate_limit.OTP_REQUEST_IP, rate_limit.client_ip(request))
+    ip = rate_limit.client_ip(request)
+    rate_limit.enforce(db, rate_limit.OTP_REQUEST_IP, ip)
     email_n = str(email).strip().lower()
+    reserve = getattr(otp_service, "reserve_otp_send", None)
+    reserved = False
+    if reserve:
+        gate = reserve(db, email=email_n, scope=purpose, ip=ip)
+        if not gate.get("allowed"):
+            raise _rate_limited(gate.get("retry_after_seconds"))
+        reserved = True
     row = db.execute(
         text("SELECT name, role, preferred_language, blocked, account_state FROM users WHERE lower(email) = :e LIMIT 1"),
         {"e": email_n},
@@ -45,6 +61,7 @@ def _send_code(db: Session, request: Request, email: str, purpose: str, *, requi
         and (purpose != "reset" or not row["blocked"])
     )
     if eligible:
+        kwargs = {"reserved": True} if reserved else {}
         result = issue_email_otp(
             db,
             email=email_n,
@@ -52,13 +69,10 @@ def _send_code(db: Session, request: Request, email: str, purpose: str, *, requi
             customer_name=str(row.get("name") or ""),
             language=str(row.get("preferred_language") or "en"),
             ttl_minutes=OTP_MINUTES,
+            **kwargs,
         )
         if not result.get("ok") and result.get("error") in ("cooldown", "hourly_limit", "daily_limit", "rate_limited"):
-            wait = result.get("retry_after_seconds")
-            raise HTTPException(
-                429,
-                {"code": "OTP_RATE_LIMITED", "message": "Please wait before requesting another code.", "retry_after_seconds": wait},
-            )
+            raise _rate_limited(result.get("retry_after_seconds"))
     return {"ok": True, "message": GENERIC_CODE_SENT, "expires_in_minutes": OTP_MINUTES}
 
 
