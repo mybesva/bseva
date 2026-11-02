@@ -65,3 +65,17 @@ def test_request_status_message_matches_the_required_wording():
         "requested_at": None, "deadline_at": None,
     }
     assert al.request_public(req)["message"].startswith("Your account has been deactivated.")
+
+
+def test_late_pujari_cancellation_never_promises_a_refund_in_any_language():
+    from app.routers.bookings import _normalize_legal_points
+
+    stored = [
+        {"title": "More than 48 hours before booking", "body": "10% charge"},
+        {"title": "బుకింగ్‌కు 24 గంటల లోపు", "body": "... కస్టమర్‌కు పూర్తిగా వాపసు చేస్తారు."},
+    ]
+    te = _normalize_legal_points("cancellation_policy", stored, "te")
+    assert te[0]["body"] == "10% charge"
+    assert "వాపసు చేస్తారు" not in te[1]["body"] and "మరో పూజారిని" in te[1]["body"]
+    en = _normalize_legal_points("cancellation_policy", [{"title": "Less than 24 hours", "body": "refunded in full"}], "xx")
+    assert "refunded in full" not in en[0]["body"] and "stays active" in en[0]["body"]

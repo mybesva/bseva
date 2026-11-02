@@ -7,8 +7,30 @@
  * returned by the API.
  */
 import type { DeletionReasonKey, ReportReasonKey } from "@bseva/api-client";
+import {
+  DELETION_REASON_LABELS_TE,
+  REPORT_REASON_LABELS_TE,
+  REPORT_STATUS_LABELS_TE,
+  REPORT_TARGET_LABELS_TE,
+  textTe,
+} from "./compliance.te";
 
-export const DELETION_REASON_LABELS: Record<DeletionReasonKey, string> = {
+// Set by I18nProvider whenever the app language changes. Telugu has its own copy; other languages use English.
+let currentLang = "en";
+export function setComplianceLang(lang: string): void {
+  currentLang = lang;
+}
+
+function localized<T extends object>(en: T, te: Partial<Record<keyof T, unknown>>): T {
+  return new Proxy(en, {
+    get(target, key) {
+      if (currentLang === "te" && typeof key === "string" && key in te) return (te as Record<string, unknown>)[key];
+      return (target as Record<string | symbol, unknown>)[key];
+    },
+  });
+}
+
+const DELETION_REASON_LABELS_EN: Record<DeletionReasonKey, string> = {
   no_longer_using: "I no longer use B-Seva",
   not_satisfied: "Not satisfied with the service",
   privacy: "Privacy concerns",
@@ -17,8 +39,9 @@ export const DELETION_REASON_LABELS: Record<DeletionReasonKey, string> = {
   duplicate_account: "I have another account",
   other: "Other",
 };
+export const DELETION_REASON_LABELS = localized(DELETION_REASON_LABELS_EN, DELETION_REASON_LABELS_TE);
 
-export const REPORT_REASON_LABELS: Record<ReportReasonKey, string> = {
+const REPORT_REASON_LABELS_EN: Record<ReportReasonKey, string> = {
   misconduct: "Misconduct or rude behaviour",
   no_show: "Did not show up",
   unsafe: "Safety concern",
@@ -27,20 +50,23 @@ export const REPORT_REASON_LABELS: Record<ReportReasonKey, string> = {
   inappropriate_content: "Inappropriate content",
   other: "Other",
 };
+export const REPORT_REASON_LABELS = localized(REPORT_REASON_LABELS_EN, REPORT_REASON_LABELS_TE);
 
-export const REPORT_TARGET_LABELS: Record<string, string> = {
+const REPORT_TARGET_LABELS_EN: Record<string, string> = {
   booking: "Booking",
   pujari: "Pujari",
   customer: "Customer",
 };
+export const REPORT_TARGET_LABELS = localized(REPORT_TARGET_LABELS_EN, REPORT_TARGET_LABELS_TE);
 
-export const REPORT_STATUS_LABELS: Record<string, string> = {
+const REPORT_STATUS_LABELS_EN: Record<string, string> = {
   open: "Open",
   in_review: "In review",
   escalated: "Escalated",
   resolved: "Resolved",
   dismissed: "Dismissed",
 };
+export const REPORT_STATUS_LABELS = localized(REPORT_STATUS_LABELS_EN, REPORT_STATUS_LABELS_TE);
 
 /** Fixed by the API contract; shown after a successful deletion request. */
 export const DEACTIVATION_MESSAGE =
@@ -53,7 +79,8 @@ export const REPORT_DETAILS_MIN = 10;
 export const REPORT_DETAILS_MAX = 1000;
 export const PASSWORD_MIN = 8;
 
-export const text = {
+const textEn = {
+  deactivationMessage: DEACTIVATION_MESSAGE,
   forgotPasswordLink: "Forgot Password?",
   forgotTitle: "Reset Password",
   forgotIntro: "Enter the email address of your B-Seva account. If an account exists, we will email you a 6-digit code.",
@@ -155,3 +182,5 @@ export const text = {
 
   walletHelp: "Wallet credit is currently added through B-Seva support. Contact support to add credit to your wallet.",
 };
+
+export const text = localized(textEn, textTe);

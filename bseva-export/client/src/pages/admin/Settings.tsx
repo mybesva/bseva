@@ -314,7 +314,7 @@ const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: strin
     label: "Pujari Penalty % When Cancelling Under 24h",
     type: "number",
     group: "pujari",
-    hint: "Default 100. Same as no-show: 100% of that puja’s cost is deducted from the pujari wallet. Customer is refunded in full.",
+    hint: "Default 100. Same as no-show: 100% of that puja’s cost is deducted from the pujari wallet. The booking stays active and goes to another pujari.",
   },
 ];
 

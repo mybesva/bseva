@@ -44,6 +44,24 @@ RETENTION_NOTICE = (
     "and records needed for an open complaint, dispute or legal requirement, for the period the law requires. "
     "Data in backups is removed when those backups expire."
 )
+# Telugu copy for what the deletion screens show from the server. Needs native-speaker review.
+TE = {
+    "deactivated": "మీ ఖాతా నిష్క్రియం చేయబడింది. చట్టపరంగా భద్రపరచాల్సిన రికార్డులు లేదా పరిష్కారం కాని బాధ్యతలకు లోబడి, "
+    "మీ ఖాతా తొలగింపు అభ్యర్థన 14 రోజుల్లో పూర్తవుతుంది. ధృవీకరణ ఇమెయిల్ ద్వారా వస్తుంది.",
+    "retention": "మీ ఖాతా తొలగించినప్పుడు మీ ప్రొఫైల్, చిరునామాలు, ఫోటోలు, పత్రాలు, లొకేషన్ చరిత్ర మరియు పరికర డేటాను తొలగిస్తాం లేదా "
+    "గుర్తించలేని విధంగా మారుస్తాం. GST ఇన్వాయిస్‌లు, చెల్లింపు, వాలెట్, వాపసు మరియు సెటిల్‌మెంట్ రికార్డులు, తెరిచి ఉన్న ఫిర్యాదు, "
+    "వివాదం లేదా చట్టపరమైన అవసరానికి కావాల్సిన రికార్డులను చట్టం నిర్దేశించిన కాలం వరకు భద్రపరుస్తాం. బ్యాకప్‌లలోని డేటా ఆ బ్యాకప్‌ల "
+    "గడువు ముగిసినప్పుడు తొలగిపోతుంది.",
+    "reasons": {
+        "no_longer_using": "నేను ఇకపై B-Seva ఉపయోగించడం లేదు",
+        "not_satisfied": "సేవతో సంతృప్తిగా లేను",
+        "privacy": "గోప్యత సమస్యలు",
+        "payment_settlement": "చెల్లింపు లేదా సెటిల్‌మెంట్ సమస్య",
+        "app_issues": "యాప్‌లో సమస్యలు",
+        "duplicate_account": "నాకు మరో ఖాతా ఉంది",
+        "other": "ఇతర కారణం",
+    },
+}
 UPCOMING = ("pending", "pending_acceptance", "confirmed")
 ONGOING = ("in_progress",)
 
@@ -228,14 +246,18 @@ def request_public(req: dict | None) -> dict | None:
     }
 
 
-def overview(db: Session, user: dict) -> dict[str, Any]:
+def overview(db: Session, user: dict, lang: str = "en") -> dict[str, Any]:
     req = open_request(db, str(user["id"]))
+    te = lang == "te"
+    public = request_public(req)
+    if te and public and public["state"] in ("requested", "pending_resolution", "ready"):
+        public["message"] = TE["deactivated"]
     return {
         "account": {"role": user.get("role"), "email": user.get("email"), "name": user.get("name")},
-        "request": request_public(req),
-        "reasons": [{"key": k, "label": v} for k, v in REASONS.items()],
+        "request": public,
+        "reasons": [{"key": k, "label": TE["reasons"][k] if te else v} for k, v in REASONS.items()],
         "obligations": obligations(db, user, preview_cancellations=user.get("account_state", "active") == "active"),
-        "retention_notice": RETENTION_NOTICE,
+        "retention_notice": TE["retention"] if te else RETENTION_NOTICE,
     }
 
 

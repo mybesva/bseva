@@ -12,6 +12,14 @@ const SECTION_ICONS: Record<string, React.ComponentType<{ size?: number | string
   cancellation_policy: Ban,
 };
 
+const LEGAL_LINKS: [string, string][] = [
+  ["/customer-terms", "Customer Terms"],
+  ["/pujari-terms", "Pujari Terms"],
+  ["/refund-policy", "Cancellation & Refund Policy"],
+  ["/privacy-policy", "Privacy Policy"],
+  ["/app-terms", "App Terms"],
+];
+
 export function PortalTermsContent() {
   const { t } = useI18n();
   const { policies, loading } = useLegalPolicies([
@@ -35,6 +43,17 @@ export function PortalTermsContent() {
         <p className="text-sm text-muted-foreground mt-1">
           {t("web.legal.chooseSection")}
         </p>
+      </div>
+
+      <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+        <p className="font-medium text-foreground">Full documents</p>
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          {LEGAL_LINKS.map(([href, label]) => (
+            <a key={href} href={href} className="text-primary hover:underline">
+              {label}
+            </a>
+          ))}
+        </div>
       </div>
 
       {loading && <Skeleton className="h-40 w-full" />}

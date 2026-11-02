@@ -16,7 +16,6 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { SelectField } from "@/components/SelectField";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import {
-  DEACTIVATION_MESSAGE,
   DELETION_REASON_LABELS,
   EXPLANATION_MAX,
   EXPLANATION_MIN,
@@ -175,8 +174,7 @@ export default function DeleteAccountScreen() {
     return () => sub.remove();
   }, [step, finish]);
 
-  const labels = new Map((overview?.reasons || []).map((r) => [r.key, r.label]));
-  const reasonOptions = DELETION_REASON_KEYS.map((key) => ({ id: key, label: labels.get(key) || DELETION_REASON_LABELS[key] }));
+  const reasonOptions = DELETION_REASON_KEYS.map((key) => ({ id: key, label: DELETION_REASON_LABELS[key] }));
   const trimmed = explanation.trim();
 
   async function requestOtp(): Promise<boolean> {
@@ -237,7 +235,7 @@ export default function DeleteAccountScreen() {
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
           {step === "done" ? (
             <Card style={{ gap: 14 }}>
-              <AppText style={{ lineHeight: 22 }}>{DEACTIVATION_MESSAGE}</AppText>
+              <AppText style={{ lineHeight: 22 }}>{text.deactivationMessage}</AppText>
               <PrimaryButton title={text.done} onPress={() => void finish()} />
             </Card>
           ) : q.isLoading ? (

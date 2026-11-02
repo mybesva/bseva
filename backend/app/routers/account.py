@@ -193,9 +193,11 @@ def _require_self_service(user: dict) -> None:
 
 
 @router.get("/account/deletion")
-def deletion_overview(user=Depends(deletion_actor), db: Session = Depends(get_db)):
+def deletion_overview(request: Request, user=Depends(deletion_actor), db: Session = Depends(get_db)):
+    from app.i18n import resolve_request_lang
+
     _require_self_service(user)
-    return al.overview(db, user)
+    return al.overview(db, user, resolve_request_lang(None, request))
 
 
 @router.post("/account/deletion/request-otp")
