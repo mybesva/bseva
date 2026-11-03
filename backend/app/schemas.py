@@ -198,6 +198,8 @@ class BookingCreateIn(BaseModel):
     include_food: bool = False
     customer_timezone: Optional[str] = Field(default=None, max_length=80)
     customer_country: Optional[str] = Field(default=None, max_length=80)
+    # "cashfree" = pay online (booking waits for a verified payment); omitted/"wallet" = B-Seva wallet as before.
+    payment_method: Optional[Literal["wallet", "cashfree"]] = None
 
 
 class WalletLoadIn(BaseModel):

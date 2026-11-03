@@ -76,6 +76,19 @@ def request_challenge(
         sa.log_event(db, user, "initiated", "pending", amount_paise=body.amount_paise, reference=bound, ip=ip)
         db.commit()
         return out
+    if body.action == "settlement_payout" and body.settlement_id:
+        from app.payouts.service import payout_reference
+
+        settlement_id = str(body.settlement_id)
+        settlement = sa.settlement_for_action(db, settlement_id)
+        sa.require_mpin_usable(db, user)
+        amount = int(settlement["settlement_amount_paise"] or 0)
+        # Bound server-side to the pujari's current bank/UPI details: a change after the OTP voids it.
+        reference = payout_reference(db, settlement)
+        out = sa.open_challenge(db, user, body.action, settlement_id=settlement_id, amount_paise=amount, reference=reference)
+        sa.log_event(db, user, "initiated", "pending", settlement_id=settlement_id, amount_paise=amount, reference=reference, ip=ip)
+        db.commit()
+        return {**out, "amount_paise": amount}
     if body.action not in sa.SETTLEMENT_ACTIONS or not body.settlement_id:
         raise HTTPException(400, "Unknown action")
     settlement_id = str(body.settlement_id)

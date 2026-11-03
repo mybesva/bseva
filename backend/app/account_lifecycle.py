@@ -63,6 +63,8 @@ TE = {
     },
 }
 UPCOMING = ("pending", "pending_acceptance", "confirmed")
+# Online bookings whose payment never completed: nothing was charged, so they are closed, not cancelled.
+UNPAID = ("awaiting_payment",)
 ONGOING = ("in_progress",)
 
 
@@ -140,6 +142,8 @@ def obligations(db: Session, user: dict, *, preview_cancellations: bool = True) 
     pending_settlement = 0
     balance = _wallet_balance(db, uid)
     if role == "customer":
+        for row in _booking_rows(db, "customer_id", uid, UNPAID):
+            bookings.append({**_fmt(row), "kind": "unpaid", "action": "close"})
         for row in _booking_rows(db, "customer_id", uid, UPCOMING):
             item = {**_fmt(row), "kind": "upcoming"}
             if preview_cancellations:
@@ -362,8 +366,20 @@ def _resolve_bookings(db: Session, user: dict, req_id: str) -> list[dict]:
     uid = str(user["id"])
     out: list[dict] = []
     if user["role"] == "customer":
+        from app.payments.service import abandon_unpaid_booking
         from app.routers.bookings import cancel_booking
 
+        # Unpaid online bookings first: one that turns out to be paid is then cancelled with the upcoming ones below.
+        for row in _booking_rows(db, "customer_id", uid, UNPAID):
+            bid = str(row["id"])
+            try:
+                res = abandon_unpaid_booking(db, bid, user, reason="Customer requested account deletion")
+                if not res["paid"]:
+                    out.append({"booking_id": bid, "action": "closed_unpaid", "refund_paise": 0})
+            except Exception as e:  # noqa: BLE001 - a gateway outage must not stop the deletion request
+                db.rollback()
+                logger.warning("unpaid_booking_close_failed booking=%s", bid, exc_info=True)
+                out.append({"booking_id": bid, "action": "needs_admin", "error": str(e)[:200]})
         for row in _booking_rows(db, "customer_id", uid, UPCOMING):
             bid = str(row["id"])
             try:
