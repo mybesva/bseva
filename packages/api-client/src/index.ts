@@ -27,6 +27,28 @@ import type {
   Wallet,
 } from "@bseva/types";
 
+export type CheckoutSession = {
+  provider: string;
+  environment: "sandbox" | "production";
+  order_id: string;
+  payment_session_id: string;
+  amount_paise: number;
+  currency: string;
+  expires_at?: string;
+};
+
+export type PaymentStatus = {
+  booking_id: string;
+  booking_number: string;
+  booking_status: string;
+  payment_status: string;
+  cancel_policy?: string | null;
+  paid: boolean;
+  payment_expires_at?: string | null;
+  total_paise: number;
+  attempt?: { provider: string; status: string; attempt_no: number; provider_status?: string | null; message?: string | null } | null;
+};
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -528,6 +550,25 @@ export function createApiClient(opts: ApiClientOptions) {
 
     getWallet() {
       return api<Wallet>("/wallet");
+    },
+
+    /** Whether online (gateway) checkout is available, and in which environment. Never returns keys. */
+    paymentConfig() {
+      return api<{ online_enabled: boolean; provider: string | null; environment: string | null }>("/payments/config");
+    },
+
+    /** Session for a booking still awaiting payment (reuses the open attempt, or opens a new one). */
+    resumeCheckout(bookingId: string) {
+      return api<CheckoutSession>(`/payments/bookings/${bookingId}/checkout`, { method: "POST" });
+    },
+
+    /** Payment state verified server-side with the gateway; the app's own redirect result is never trusted. */
+    paymentStatus(bookingId: string) {
+      return api<PaymentStatus>(`/payments/bookings/${bookingId}/status`);
+    },
+
+    abandonCheckout(bookingId: string) {
+      return api<{ ok: boolean }>(`/payments/bookings/${bookingId}/abandon`, { method: "POST" });
     },
 
     loadWallet(amount_paise: number) {

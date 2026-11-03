@@ -448,9 +448,13 @@ def admin_config(user=Depends(require_permission("manage_config")), db: Session 
 
 @router.put("/admin/config")
 def update_config(body: SettingIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
-    super_only = body.key.startswith("reschedule_") or body.key in ("bseva_whatsapp_number", "support_phone", "support_email")
+    super_only = body.key.startswith("reschedule_") or body.key in (
+        "bseva_whatsapp_number", "support_phone", "support_email", "settlement_payout_mode",
+    )
     if super_only and not is_super_admin(user):
         raise HTTPException(403, "Super Admin only")
+    if body.key == "settlement_payout_mode" and body.value not in ("wallet", "bank"):
+        raise HTTPException(400, 'Settlement payout mode must be "wallet" or "bank"')
     set_setting(db, body.key, body.value, str(user["id"]))
     write_audit(db, str(user["id"]), "config_update", "platform_settings", body.key)
     db.commit()

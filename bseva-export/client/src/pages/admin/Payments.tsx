@@ -2,6 +2,7 @@ import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import GatewayPaymentsPanel from "@/components/admin/GatewayPaymentsPanel";
 import { PujaTitle } from "@/components/PujaTitle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,6 +140,7 @@ export default function Payments() {
 
   return (
     <AdminLayout>
+      <GatewayPaymentsPanel />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <div>
           <p className="text-sm text-muted-foreground">Live booking payments from the database</p>

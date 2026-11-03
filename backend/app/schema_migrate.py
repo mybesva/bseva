@@ -416,8 +416,8 @@ _FOUNDATION_STMTS = [
       ALTER TABLE bookings ADD CONSTRAINT bookings_status_check
         CHECK (status IN (
           'pending', 'pending_acceptance', 'confirmed', 'in_progress',
-          'completed', 'cancelled', 'rejected'
-        ));
+          'completed', 'cancelled', 'rejected', 'awaiting_payment'
+        )) NOT VALID;
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$
     """,

@@ -1508,7 +1508,7 @@ def override_settlement(
     s = db.execute(
         text("SELECT * FROM settlements WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": settlement_id}
     ).mappings().first()
-    if s["status"] in ("settled", "blocked") or int(s["settlement_amount_paise"] or 0) != amount:
+    if s["status"] in ("settled", "blocked", "processing") or int(s["settlement_amount_paise"] or 0) != amount:
         sa.log_failure(db, user, action, f"state_changed:{s['status']}", **audit)
         raise HTTPException(400, "This settlement changed while it was being verified. Nothing was paid.")
     sa.log_event(db, user, "approved", "success", **audit)

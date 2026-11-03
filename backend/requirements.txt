@@ -18,3 +18,4 @@ google-auth-httplib2==0.2.0
 google-api-python-client==2.179.0
 firebase-admin==6.9.0
 astronomy-engine==2.1.19
+cryptography==44.0.3
