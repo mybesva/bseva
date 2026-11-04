@@ -1,3 +1,5 @@
+import { DeleteAccountRow } from "@/components/DeleteAccountRow";
+import { Ionicons } from "@expo/vector-icons";
 import { LANGS, toE164 } from "@bseva/config";
 import { LANG_LABELS, type Lang } from "@bseva/locales";
 import type { AuthUser } from "@bseva/types";
@@ -134,7 +136,6 @@ export default function CustomerProfile() {
       ? profileQ.error.message
       : null;
 
-  const initial = (firstName || user?.name || "?").slice(0, 1).toUpperCase();
   const firstNameError = userMessage(t, firstNameErrorKey);
   const lastNameError = userMessage(t, lastNameErrorKey);
   const phoneError = userMessage(t, phoneErrorKey);
@@ -169,9 +170,7 @@ export default function CustomerProfile() {
                   justifyContent: "center",
                 }}
               >
-                <AppText variant="h2" color={colors.primary}>
-                  {initial}
-                </AppText>
+                <Ionicons name="person" size={48} color={colors.primary} />
               </View>
             )}
             {pendingPhoto ? (
@@ -342,6 +341,7 @@ export default function CustomerProfile() {
               }}
             />
           </Card>
+          <DeleteAccountRow />
         </ScrollView>
       ) : null}
       {activeTab === "address" ? <CustomerAddressContent /> : null}

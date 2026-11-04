@@ -300,7 +300,7 @@ export default function Register() {
                   </div>
                 ) : (
                   <div className="md:col-span-2 space-y-2">
-                    <Label>Full Name</Label>
+                    <Label>Full Name <span className="text-destructive">*</span></Label>
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -311,7 +311,7 @@ export default function Register() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label>Email</Label>
+                  <Label>Email <span className="text-destructive">*</span></Label>
                   <Input
                     type="email"
                     value={email}
@@ -343,7 +343,7 @@ export default function Register() {
                   }}
                 />
                 <div className="space-y-2">
-                  <Label>Password</Label>
+                  <Label>Password <span className="text-destructive">*</span></Label>
                   <PasswordInput
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -353,7 +353,7 @@ export default function Register() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Confirm Password</Label>
+                  <Label>Confirm Password <span className="text-destructive">*</span></Label>
                   <PasswordInput
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -381,7 +381,7 @@ export default function Register() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>{t("auth.emailOtp.label")}</Label>
+                <Label>{t("auth.emailOtp.label")} <span className="text-destructive">*</span></Label>
                 <p className="text-xs text-muted-foreground">{t("auth.emailOtp.help")}</p>
                 <div className="flex gap-2">
                   <Input

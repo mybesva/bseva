@@ -5,11 +5,13 @@ import { Pressable, ScrollView, View } from "react-native";
 import { CustomerContactPanel } from "@/components/customer/CustomerContactPanel";
 import { CustomerSupportPanel } from "@/components/customer/CustomerSupportPanel";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { MyReportsPanel } from "@/components/MyReportsPanel";
+import { text as ctext } from "@/content/compliance";
 import { AppText, Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 
-type SupportContactTab = "support" | "contact";
+type SupportContactTab = "support" | "contact" | "reports";
 
 function SupportContactTabs({
   value,
@@ -23,6 +25,7 @@ function SupportContactTabs({
   const options: { id: SupportContactTab; label: string }[] = [
     { id: "support", label: t("mobile.support") },
     { id: "contact", label: t("mobile.contact") },
+    { id: "reports", label: ctext.myReports },
   ];
 
   return (
@@ -80,6 +83,7 @@ export default function SupportContactScreen() {
 
   useEffect(() => {
     if (params.tab === "contact") setTab("contact");
+    else if (params.tab === "reports") setTab("reports");
     else if (params.tab === "support") setTab("support");
   }, [params.tab]);
 
@@ -105,6 +109,9 @@ export default function SupportContactScreen() {
           >
             <CustomerContactPanel />
           </ScrollView>
+        </View>
+        <View style={{ flex: 1, display: tab === "reports" ? "flex" : "none" }}>
+          <MyReportsPanel />
         </View>
       </View>
     </Screen>
