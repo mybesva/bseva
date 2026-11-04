@@ -55,6 +55,20 @@ class Settings(BaseSettings):
     otp_register_emails_per_hour: int = 100
     otp_register_requests_per_ip_per_day: int = 20
     contact_team_emails_per_hour: int = 30
+    # WhatsApp Cloud API (app.whatsapp). Everything is off until configured. The webhook answers only when its
+    # verify token (GET challenge) and app secret (POST signatures) are set; sending also needs the flag below.
+    whatsapp_webhook_verify_token: str = ""
+    whatsapp_app_secret: str = ""
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_graph_api_version: str = "v26.0"
+    whatsapp_send_enabled: bool = False
+    # Comma-separated recipients (digits with country code, e.g. 919876543210) the app may message. Outside
+    # production an empty list sends nothing at all, so QA can never reach a real customer.
+    whatsapp_recipient_allowlist: str = ""
+    whatsapp_request_timeout_seconds: float = 10.0
+    # Extra attempts after a send that certainly did not reach Meta (connection refused, 429, 5xx).
+    whatsapp_send_retries: int = 2
 
     @property
     def wallet_self_topup_allowed(self) -> bool:
@@ -97,6 +111,9 @@ def insecure_settings_problems(s: Settings, env: Mapping[str, str] | None = None
             )
     if environment == "production" and (s.otp_test_email_domains or s.otp_test_code):
         problems.append("OTP_TEST_EMAIL_DOMAINS / OTP_TEST_CODE are QA-only and must not be set in production")
+    if environment == "production" and s.whatsapp_send_enabled:
+        # Lift only with the approved Production rollout (templates, billing and the number decision in place).
+        problems.append("WHATSAPP_SEND_ENABLED is QA-only until the Production WhatsApp rollout is approved")
     return problems
 
 
