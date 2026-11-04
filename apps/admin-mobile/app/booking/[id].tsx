@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@bseva/locales";
 import { displayTokenLabel, rupees } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useLocalSearchParams } from "expo-router";
@@ -74,14 +75,14 @@ export default function AdminBookingDetail() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
         <Card>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <PujaTitle name={b.service_name} variant="h2" />
+          <PujaTitle name={b.service_name} variant="h2" />
+          <View style={{ alignSelf: "flex-start", marginTop: 4 }}>
             <StatusBadge status={b.status} />
           </View>
           <AppText>Customer: {b.customer_name}</AppText>
           <AppText>Pujari: {b.pujari_name ? (["pending", "pending_acceptance"].includes(String(b.status)) ? `${b.pujari_name} (awaiting acceptance)` : b.pujari_name) : "Unassigned"}</AppText>
           <AppText>
-            {b.booking_date} {b.start_time}
+            {`${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)}`}
           </AppText>
           <AppText>{b.location_label || b.address}</AppText>
           <AppText variant="price">{rupees(b.total_paise)}</AppText>

@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@bseva/locales";
 import {
   ADMIN_ASSIGNMENT_FILTERS,
   ADMIN_BOOKING_STATUS_FILTERS,
@@ -187,15 +188,15 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
                       {(b.customer_country || "—") + " · " + (b.customer_timezone || "—")}
                     </AppText>
                     <AppText variant="small">
-                      Customer: {b.schedule_display?.customer_local || `${b.booking_date} ${b.start_time}`}
+                      Customer: {b.schedule_display?.customer_local || `${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)}`}
                     </AppText>
                     <AppText variant="small">
-                      India: {b.schedule_display?.india_local || `${b.booking_date} ${b.start_time} IST`}
+                      India: {b.schedule_display?.india_local || `${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)} IST`}
                     </AppText>
                   </>
                 ) : (
                   <AppText variant="small" color={colors.mutedForeground}>
-                    {b.booking_date} {b.start_time}
+                    {`${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)}`}
                   </AppText>
                 )}
                 <AppText variant="small">

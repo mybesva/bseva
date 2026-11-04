@@ -227,7 +227,7 @@ export default function LandingScreen() {
                   </Text>
                   {svc.standard_price_paise != null ? (
                     <Text style={s.pujaPrice}>
-                      {t("customer.from")} {rupees(svc.standard_price_paise)}
+                      {t("services.startingFrom")} {rupees(svc.standard_price_paise)}
                     </Text>
                   ) : null}
                 </View>

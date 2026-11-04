@@ -30,35 +30,21 @@ export function SectionHeader({ title, actionLabel, onAction }: { title: string;
   );
 }
 
-const QUICK: { key: string; labelKey: string; icon: keyof typeof Ionicons.glyphMap; href: string; bg: string }[] = [
-  { key: "book", labelKey: "nav.bookPuja", icon: "flower-outline", href: "/customer/services", bg: SAFFRON },
-  { key: "bookings", labelKey: "nav.bookings", icon: "calendar-outline", href: "/customer/bookings", bg: "#0D2445" },
-  { key: "seva", labelKey: "seva.mySeva", icon: "sparkles-outline", href: "/customer/(tabs)/bookings", bg: "#C65D3B" },
-  { key: "sankalp", labelKey: "seva.familySankalp", icon: "people-outline", href: "/customer/family-sankalp", bg: "#1B7A4A" },
-];
-
+/** Home: one full-width "Book a Puja" button. Bookings, Seva and Family Sankalp are in the tab bar and menu. */
 export function CustomerQuickActions() {
   const { t } = useI18n();
   const router = useRouter();
   return (
-    <View style={styles.quickRow}>
-      {QUICK.map((q) => (
-        <Pressable
-          key={q.key}
-          onPress={() => router.push(q.href as never)}
-          accessibilityRole="button"
-          accessibilityLabel={t(q.labelKey)}
-          style={({ pressed }) => [styles.quickItem, pressed && { opacity: 0.75 }]}
-        >
-          <View style={[styles.quickIcon, { backgroundColor: q.bg }]}>
-            <Ionicons name={q.icon} size={24} color="#FFFFFF" />
-          </View>
-          <AppText variant="small" style={styles.quickLabel} numberOfLines={2}>
-            {t(q.labelKey)}
-          </AppText>
-        </Pressable>
-      ))}
-    </View>
+    <Pressable
+      onPress={() => router.push("/customer/services" as never)}
+      accessibilityRole="button"
+      accessibilityLabel={t("nav.bookPuja")}
+      style={({ pressed }) => [styles.bookButton, pressed && { opacity: 0.85 }]}
+    >
+      <Ionicons name="flower-outline" size={22} color="#FFFFFF" />
+      <Text style={styles.bookButtonText}>{t("nav.bookPuja")}</Text>
+      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+    </Pressable>
   );
 }
 
@@ -212,7 +198,7 @@ export function RecommendedRail({ items }: { items: unknown[] }) {
               </AppText>
             ) : null}
             <View style={styles.recFoot}>
-              <Text style={styles.recPrice}>{price != null ? `${t("customer.from")} ${rupees(price)}` : ""}</Text>
+              <Text style={styles.recPrice}>{price != null ? `${t("services.startingFrom")} ${rupees(price)}` : ""}</Text>
               <View style={styles.recBtn}>
                 <Text style={styles.recBtnText}>{t("customer.bookNow")}</Text>
               </View>
@@ -225,23 +211,24 @@ export function RecommendedRail({ items }: { items: unknown[] }) {
 }
 
 const styles = StyleSheet.create({
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  sectionAction: { color: SAFFRON, fontWeight: "800", fontSize: 13 },
-  quickRow: { flexDirection: "row", gap: 8 },
-  quickItem: { flex: 1, alignItems: "center", gap: 7 },
-  quickIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+  bookButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    gap: 10,
+    minHeight: 56,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    backgroundColor: SAFFRON,
+    shadowColor: SAFFRON,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  quickLabel: { textAlign: "center", fontWeight: "700", fontSize: 11.5, lineHeight: 15 },
+  bookButtonText: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  sectionAction: { color: SAFFRON, fontWeight: "800", fontSize: 13 },
   card: { borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 12 },
   ongoingIcon: {
     width: 64,
