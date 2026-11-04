@@ -33,6 +33,7 @@ from app.routers import (
     temples,
     tickets,
     wallet,
+    whatsapp_webhook,
 )
 
 
@@ -89,6 +90,7 @@ app.include_router(tickets.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(seva.router, prefix="/api/v1")
 app.include_router(admin_seva.router, prefix="/api/v1")
+app.include_router(whatsapp_webhook.router, prefix="/api/v1")
 
 try:
     from fastapi.staticfiles import StaticFiles

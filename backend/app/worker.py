@@ -86,6 +86,7 @@ def _prune(db) -> dict:
         ("job_dedupe", "created_at", 30, ""),
         ("security_rate_limits", "window_start", 2, ""),
         ("otp_send_events", "created_at", 2, ""),
+        ("whatsapp_webhook_events", "received_at", 30, ""),
         # Refused contact messages are kept only long enough to investigate abuse; real ones are kept.
         ("contact_submissions", "created_at", 90, " AND status IN ('spam', 'duplicate')"),
     ):
