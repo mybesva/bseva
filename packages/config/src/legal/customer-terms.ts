@@ -1,5 +1,5 @@
+import type { LegalDoc } from "./types";
 import {
-  CIN,
   COMPANY,
   DELETE_ACCOUNT_URL,
   EFFECTIVE_DATE,
@@ -9,17 +9,15 @@ import {
   REGISTERED_OFFICE,
   SUPPORT_EMAIL,
   grievanceTable,
-  toConfirm,
-  withToConfirm,
 } from "./shared";
 
-export const customerTerms = withToConfirm({
+export const customerTerms: LegalDoc = {
   slug: "customer-terms",
   title: "Customer Terms & Conditions",
   version: LEGAL_VERSION,
   effectiveDate: EFFECTIVE_DATE,
   intro: [
-    `Operated by: ${COMPANY}. CIN: ${CIN}. Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Customer support: ${PHONE} | ${SUPPORT_EMAIL}`,
+    `Operated by: ${COMPANY}. Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Customer support: ${PHONE} | ${SUPPORT_EMAIL}`,
     "Please read these Customer Terms carefully before you create an account or place a Booking. By using B-Seva you agree to these terms. If you do not agree, please do not use the Platform.",
   ],
   sections: [
@@ -141,7 +139,7 @@ export const customerTerms = withToConfirm({
         "You may cancel or reschedule through the Platform or our support channels. A cancellation is effective only when B-Seva records it. Please do not cancel privately with a Service Provider or arrange a replacement outside the Platform.",
         "If you are not present, deny access, provide an unsafe Service Location, or fail to provide required information or facilities, a cancellation or no-show charge may apply as stated in the Cancellation Policy. If a Service Provider does not arrive, is materially late, behaves unsafely, or fails to perform, please report it promptly so we can investigate and provide the applicable remedy.",
         "B-Seva may cancel or reschedule a Booking because of Service Provider unavailability, safety, fraud, legal requirements, technical failure, weather, travel disruption, or force majeure. In that case we will offer you a substitute Service Provider, a new date, a credit, or a full refund of the amount paid for the affected Booking, as you choose where practicable.",
-        `Approved refunds are credited to your B-Seva wallet. A refund for a cancellation you make in the Platform is credited when the cancellation is recorded. You can ask support to return an unused wallet balance to your bank account ${toConfirm("process and timing for returning unused wallet balance to a bank account")}; your bank may take additional time to credit the amount.`,
+        `Approved refunds are credited to your B-Seva wallet. A refund for a cancellation you make in the Platform is credited when the cancellation is recorded. You can ask support to return an unused wallet balance to your bank account (processed within 7 working days of verifying your bank details); your bank may take additional time to credit the amount.`,
       ],
     },
     {
@@ -282,7 +280,7 @@ export const customerTerms = withToConfirm({
       ],
       bullets: [
         "Confirmation and deactivation. You confirm your request with a one-time password (OTP) sent to your registered email address. Your account is deactivated once you confirm the request: you are signed out on all devices, you will not be able to place new Bookings, and we will stop sending you marketing messages. Before you confirm, the Platform shows any upcoming Bookings. Upcoming Bookings are cancelled under the Cancellation Policy, so cancellation charges may apply; the refund for each Booking is shown to you before you confirm. A puja that is already in progress is completed first.",
-        `Settlement and review (14 days). During this period B-Seva reviews the account and settles all pending amounts. Any refund due to you is credited to your B-Seva wallet, any refundable wallet balance is returned to you ${toConfirm("method for returning wallet balance on account deletion")}, and any amount you owe for Services already received is reconciled.`,
+        `Settlement and review (14 days). During this period B-Seva reviews the account and settles all pending amounts. Any refund due to you is credited to your B-Seva wallet, any refundable wallet balance is returned to your verified bank account, and any amount you owe for Services already received is reconciled.`,
         "Final deletion (on completion of the 14-day period). Your account and personal data are permanently deleted or anonymized, subject to the retention described below, and we confirm completion by email (and by SMS or WhatsApp where enabled). If a refund, settlement, complaint, or dispute is still open at that time, final deletion waits until it is resolved, and we will tell you.",
       ],
     },
@@ -337,4 +335,4 @@ export const customerTerms = withToConfirm({
       ],
     },
   ],
-});
+};

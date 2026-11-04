@@ -466,3 +466,6 @@ export {
   type PanchangCalendarType,
   type PanchangDateParts,
 } from "./panchangDisplay";
+
+// Legal documents shown on the website and in the apps (one source, same text everywhere).
+export * from "./legal";

@@ -1,12 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { AlertTriangle, ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { goBackOr } from "@/lib/browserActions";
 // provided by legal content branch (bseva-export/client/src/content/legal)
 import { legalDocs } from "@/content/legal";
 
-/** Mirrors `LegalDoc` in content/legal/types.ts (see docs/compliance/api-contract.md). */
+/** Mirrors `LegalDoc` in packages/config/src/legal/types.ts (see docs/compliance/api-contract.md). */
 export type LegalDoc = {
   slug: string;
   title: string;
@@ -14,7 +14,6 @@ export type LegalDoc = {
   effectiveDate: string;
   intro?: string[];
   sections: { id: string; heading: string; paragraphs?: string[]; bullets?: string[]; table?: string[][] }[];
-  toConfirm: string[];
 };
 
 export type LegalSlug = "customer-terms" | "pujari-terms" | "app-terms" | "privacy-policy" | "refund-policy";
@@ -41,7 +40,6 @@ function sectionAnchor(id: string) {
 }
 
 export function LegalDocView({ doc }: { doc: LegalDoc }) {
-  const toConfirm = (doc.toConfirm || []).filter(Boolean);
   return (
     <article className="legal-doc">
       <header className="mb-6">
@@ -51,22 +49,6 @@ export function LegalDocView({ doc }: { doc: LegalDoc }) {
         </p>
       </header>
 
-      {toConfirm.length > 0 ? (
-        <div
-          role="note"
-          className="mb-8 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-100"
-        >
-          <p className="flex items-center gap-2 font-semibold">
-            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
-            Draft: {toConfirm.length} item{toConfirm.length === 1 ? "" : "s"} still to be confirmed
-          </p>
-          <ul className="mt-2 list-disc space-y-1 pl-6">
-            {toConfirm.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
 
       {doc.sections.length > 1 ? (
         <nav aria-label="Contents" className="mb-8 rounded-lg border border-border bg-card px-4 py-3 print:hidden">

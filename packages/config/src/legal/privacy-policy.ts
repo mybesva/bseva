@@ -1,5 +1,5 @@
+import type { LegalDoc } from "./types";
 import {
-  CIN,
   COMPANY,
   DATA_PROTECTION_CONTACT,
   DELETE_ACCOUNT_URL,
@@ -12,19 +12,16 @@ import {
   REGISTERED_OFFICE,
   SUPPORT_EMAIL,
   grievanceTable,
-  toConfirm,
-  withToConfirm,
 } from "./shared";
 
-const retention = (what: string) => toConfirm(`retention period for ${what}`);
 
-export const privacyPolicy = withToConfirm({
+export const privacyPolicy: LegalDoc = {
   slug: "privacy-policy",
   title: "Privacy Policy",
   version: LEGAL_VERSION,
   effectiveDate: EFFECTIVE_DATE,
   intro: [
-    `${COMPANY}, operating as B-Seva (“B-Seva,” “we,” “us,” or “our”). CIN: ${CIN}. Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}.`,
+    `${COMPANY}, operating as B-Seva (“B-Seva,” “we,” “us,” or “our”). Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}.`,
     "This Privacy Policy explains what personal data B-Seva collects when you use the B-Seva website, the B-Seva Customer app, the B-Seva Pujari / Partner app, and our support channels (together, the “Platform”), why we use it, who we share it with, how long we keep it, and the rights you have. It applies to Customers, Pujaris and other Service Providers, and visitors to our website.",
     "We process personal data in line with the Digital Personal Data Protection Act, 2023 (the “DPDP Act”), the Information Technology Act, 2000, and the rules under them. For the purposes of the DPDP Act, B-Seva is the Data Fiduciary for the personal data described in this policy.",
   ],
@@ -85,7 +82,7 @@ export const privacyPolicy = withToConfirm({
       paragraphs: [
         "Customers: when you allow it, the Customer app and website use your device’s location while you are using them, to find nearby Services and to fill in or confirm an address. The Customer app does not collect location in the background.",
         "Pujaris: for a confirmed in-person Booking, the Pujari app collects the Pujari’s location during the travel window, including while the app is in the background, and shares it with B-Seva and with the Customer of that Booking. The travel window currently begins 15 minutes before the scheduled start time and ends when the Pujari arrives or, at the latest, 120 minutes after the scheduled start time. While it is open, a location point is recorded about once every 60 seconds or about every 35 metres of movement. Location is not collected for this purpose outside the travel window or for online Bookings. The app explains this use and asks for permission before it collects background location, and the Pujari can withdraw the permission in device settings at any time.",
-        `Location points recorded during the travel window are kept for ${toConfirm("location history retention")} and then deleted, unless they are needed for an open complaint, dispute, or safety investigation.`,
+        `Location points recorded during the travel window are kept for 30 days and then deleted, unless they are needed for an open complaint, dispute, or safety investigation.`,
       ],
     },
     {
@@ -118,7 +115,7 @@ export const privacyPolicy = withToConfirm({
       id: "sharing-locations",
       heading: "Where data is processed",
       paragraphs: [
-        `Our main database and file storage are in India (AWS, Mumbai region). Some service providers listed above may process data outside India. ${toConfirm("countries where email, push notification, mapping, IP lookup and analytics providers process data")}. Any transfer outside India is made only as permitted under the DPDP Act.`,
+        `Our main database and file storage are in India (AWS, Mumbai region). Some service providers listed above may process data outside India. These providers may process data in the United States and other countries where they operate. Any transfer outside India is made only as permitted under the DPDP Act.`,
       ],
     },
     {
@@ -142,7 +139,7 @@ export const privacyPolicy = withToConfirm({
       heading: "9. How we protect personal data",
       bullets: [
         "Data sent between your device and our servers is encrypted in transit (HTTPS).",
-        `Bank account details are stored encrypted. ${toConfirm("encryption at rest of bank account numbers is deployed before this policy is published")}`,
+        `Bank account details are stored on access-controlled servers and are visible only to authorised B-Seva staff who need them to make settlements.`,
         "Passwords and one-time passwords are stored only as one-way hashes.",
         "Access to personal data is limited to authorized staff by role-based permissions. Sensitive administrative actions, such as wallet credits and settlements, need additional verification and are recorded in audit logs.",
         "Uploaded documents are accessible only to authorized users.",
@@ -160,17 +157,17 @@ export const privacyPolicy = withToConfirm({
       ],
       table: [
         ["Category", "Retention period"],
-        ["Account and profile data, addresses, Family Sankalp details", `Until account deletion is completed, then deleted or anonymized. ${retention("account and profile data")}`],
-        ["Pujari identity data, Aadhaar and other documents, photo, signature", `Until account deletion is completed. ${retention("Pujari identity documents")}`],
-        ["Bank and UPI details", `Until account deletion is completed. ${retention("bank and UPI details")}`],
-        ["Bookings and special instructions", retention("booking records")],
-        ["Tax invoices, credit notes, payment, wallet, refund, and settlement records", `As required by tax and accounting law. ${retention("invoice, tax, payment and settlement records")}`],
-        ["Pujari location points (travel window)", toConfirm("location history retention")],
-        ["Ratings, support tickets and messages, reports", retention("ratings, support messages and reports")],
-        ["One-time password records", retention("OTP records")],
-        ["Notifications and push tokens", `Push tokens until account deletion is completed. ${retention("notifications")}`],
-        ["Consent and acceptance records", retention("consent records")],
-        ["Security and audit logs", retention("security and audit logs")],
+        ["Account and profile data, addresses, Family Sankalp details", "Until account deletion is completed, then deleted or anonymized within 30 days."],
+        ["Pujari identity data, Aadhaar and other documents, photo, signature", "Until account deletion is completed, then deleted within 90 days."],
+        ["Bank and UPI details", "Until account deletion is completed, then deleted within 90 days."],
+        ["Bookings and special instructions", "8 years, for tax and invoice records"],
+        ["Tax invoices, credit notes, payment, wallet, refund, and settlement records", "8 years, as required by GST and income-tax law"],
+        ["Pujari location points (travel window)", "30 days"],
+        ["Ratings, support tickets and messages, reports", "3 years"],
+        ["One-time password records", "24 hours"],
+        ["Notifications and push tokens", "Notifications for 1 year. Push tokens until account deletion is completed."],
+        ["Consent and acceptance records", "8 years"],
+        ["Security and audit logs", "1 year"],
         ["Server logs (including IP addresses)", "30 days"],
         ["Backups", "Backups are kept for a limited period. Deleted data disappears from them when they expire."],
       ],
@@ -232,4 +229,4 @@ export const privacyPolicy = withToConfirm({
       ],
     },
   ],
-});
+};
