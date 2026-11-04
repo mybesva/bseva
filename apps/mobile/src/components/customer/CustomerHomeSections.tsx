@@ -170,7 +170,14 @@ export function RecommendedRail({ items }: { items: unknown[] }) {
   const isDark = theme === "dark";
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
-      {items.slice(0, 5).map((raw, i) => {
+      {/* Priced (bookable) recommendations first; otherwise keep the admin's order. */}
+      {[...items]
+        .sort((a, b) => {
+          const priced = (x: unknown) => ((x as Rec).standard_price_paise ?? (x as Rec).price_paise) != null;
+          return Number(priced(b)) - Number(priced(a));
+        })
+        .slice(0, 5)
+        .map((raw, i) => {
         const rec = raw as Rec;
         const slug = rec.service_slug || rec.slug;
         const price = rec.standard_price_paise ?? rec.price_paise ?? null;
