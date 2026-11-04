@@ -1,4 +1,5 @@
 import { DeleteAccountRow } from "@/components/DeleteAccountRow";
+import { DobPickerField } from "@/components/DobPickerField";
 import { Ionicons } from "@expo/vector-icons";
 import { PUJARI_QUALS, SAMPRADAYA_OPTS, translatedTokenLabel } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
@@ -149,7 +150,7 @@ export default function PujariProfile() {
         </Card>
         <Field label={t("mobile.fullName")} value={String(p.full_name || "")} onChangeText={(v) => set("full_name", v)} />
         <Field label={t("mobile.fatherName")} value={String(p.father_name || "")} onChangeText={(v) => set("father_name", v)} />
-        <Field label={t("mobile.dateOfBirth")} value={String(p.date_of_birth || "").slice(0, 10)} onChangeText={(v) => set("date_of_birth", v)} />
+        <DobPickerField label={t("mobile.dateOfBirth")} value={String(p.date_of_birth || "")} onChange={(v) => set("date_of_birth", v)} />
         <Field label={t("mobile.mobileNumber")} value={String(p.mobile_number || "")} onChangeText={(v) => set("mobile_number", v)} keyboardType="phone-pad" />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <AppText>{t("mobile.whatsappSame")}</AppText>
@@ -208,7 +209,7 @@ export default function PujariProfile() {
                 father_name: p.father_name,
                 gotra: p.gotra ?? "",
                 pravara: p.pravara ?? "",
-                date_of_birth: p.date_of_birth || null,
+                date_of_birth: String(p.date_of_birth || "").slice(0, 10) || null,
                 native_place: p.native_place,
                 permanent_address: p.permanent_address,
                 present_address: p.present_address,
