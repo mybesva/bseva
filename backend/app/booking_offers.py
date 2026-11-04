@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.domain import (
     SERVICE_RADIUS_KM,
     _eligible_pujari_location_rows,
+    pujari_reach_km,
     haversine_km,
     pujari_free_for_slot,
     row_dict,
@@ -92,8 +93,7 @@ def eligible_pujaris_for_booking(
         if not complete:
             continue
         dist = haversine_km(latitude, longitude, float(r["latitude"]), float(r["longitude"]))
-        effective = min(radius_km, float(r["service_radius_km"] or radius_km))
-        if dist > effective:
+        if dist > pujari_reach_km(r["service_radius_km"]):
             continue
         if not pujari_free_for_slot(
             db, str(r["id"]), booking_date, start_time, end_time, service_id
