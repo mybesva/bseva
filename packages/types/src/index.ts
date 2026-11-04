@@ -120,6 +120,8 @@ export type PreparationItem = {
   label?: string;
   quantity?: number | null;
   unit?: string | null;
+  /** Ready-to-show quantity, e.g. "50g" or "15 pcs" (prefer this over quantity + unit). */
+  quantity_text?: string | null;
   optional?: boolean;
   required?: boolean;
   notes?: string | null;

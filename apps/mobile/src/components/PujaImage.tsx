@@ -123,20 +123,28 @@ export function PujaServiceCard({
         <PujaImage service={service} height={168} imageStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }} />
         <View style={{ padding: 12, gap: 4 }}>
           <PujaTitle name={service.name} />
-          {service.short_description || service.description ? (
-            <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
-              {service.short_description || service.description}
-            </AppText>
-          ) : null}
+          {/* Same order and wording as the website card: price, then description with Read More. */}
           {service.standard_price_paise != null ? (
-            <AppText color={colors.primary} style={{ fontWeight: "700", marginTop: 2 }}>
-              {t("customer.from")} {rupees(service.standard_price_paise)}
+            <AppText color={colors.primary} style={{ fontWeight: "700" }}>
+              {t("services.startingFrom")} {rupees(service.standard_price_paise)}
             </AppText>
           ) : (
-            <AppText variant="small" color={colors.mutedForeground}>
+            <AppText variant="small" style={{ fontWeight: "700" }} color={colors.mutedForeground}>
               {t("services.comingSoonLabel")}
             </AppText>
           )}
+          {service.short_description || service.description ? (
+            <View style={{ gap: 2 }}>
+              <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
+                {service.short_description || service.description}
+              </AppText>
+              <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={{ alignSelf: "flex-start" }}>
+                <AppText variant="small" color={colors.primary} style={{ fontWeight: "700" }}>
+                  {t("services.readMore")}
+                </AppText>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </Card>
     </Pressable>

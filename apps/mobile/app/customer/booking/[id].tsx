@@ -8,7 +8,7 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, ScrollView, Share, View } from "react-native";
+import { Alert, Linking, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LegalAcceptRow } from "@/components/LegalAcceptRow";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -212,9 +212,18 @@ function prepPendingOver(status?: string | null) {
   return ["completed", "cancelled", "rejected"].includes(String(status));
 }
 
+/** Item name and quantity, without repeating the quantity that is already part of `label`. */
+function prepItemParts(item: PreparationItem): { name: string; qty: string } {
+  const label = String(item.label || "");
+  const name = String(item.name || label.split(" — ")[0] || "");
+  const fromLabel = label.includes(" — ") ? label.split(" — ").slice(1).join(" — ") : "";
+  const fallback = item.quantity != null ? `${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : "";
+  return { name, qty: String(item.quantity_text || fromLabel || fallback) };
+}
+
 function prepItemLabel(item: PreparationItem) {
-  const name = item.label || item.name || "";
-  return item.quantity != null ? `${name} — ${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : name;
+  const { name, qty } = prepItemParts(item);
+  return qty ? `${name} — ${qty}` : name;
 }
 
 export default function BookingDetail() {
@@ -452,11 +461,10 @@ export default function BookingDetail() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }}>
         <ErrorBanner message={error} />
         <Card style={{ gap: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-            <PujaTitle name={b.service_name} variant="h2" style={{ flex: 1, minWidth: 0 }} />
-            <View style={{ flexShrink: 0, maxWidth: "44%" }}>
-              <StatusBadge status={displayStatus} />
-            </View>
+          {/* Full width for the puja name so long names wrap between words; status goes underneath. */}
+          <PujaTitle name={b.service_name} variant="h2" />
+          <View style={{ alignSelf: "flex-start" }}>
+            <StatusBadge status={displayStatus} />
           </View>
           <AppText>{formatDisplaySlot(b.booking_date, b.start_time)}</AppText>
           {b.duration_minutes ? <AppText>{t("web.booking.pujaDuration")}: {formatPujaDuration(lang, b.duration_minutes)}</AppText> : null}
@@ -473,7 +481,13 @@ export default function BookingDetail() {
           <AppText variant="price" color={colors.primary} style={{ marginTop: 4 }}>
             {rupees(b.total_paise)}
           </AppText>
-          <AppText variant="small">{t("mobile.paymentStatus", { status: b.payment_status || "—" })}</AppText>
+          <AppText variant="small">{t("mobile.paymentStatus", {
+              status: b.payment_status
+                ? t(`status.${b.payment_status}`) === `status.${b.payment_status}`
+                  ? String(b.payment_status)
+                  : t(`status.${b.payment_status}`)
+                : "—",
+            })}</AppText>
           {pujari && destReady && (b.status === "confirmed" || b.status === "in_progress") ? (
             <View style={{ gap: 8, marginTop: 4 }}>
               <AppText variant="h3">{t("detail.serviceLocation")}</AppText>
@@ -541,13 +555,40 @@ export default function BookingDetail() {
             ) : null}
             {PREPARATION_SECTION_KEYS.map((section) =>
               prepSections[section]?.length ? (
-                <View key={section} style={{ gap: 4 }}>
-                  <AppText variant="h3">{t(`web.preparation.section.${section}`)}</AppText>
-                  {prepSections[section].map((item, index) => (
-                    <AppText key={`${section}-${index}`} variant="small" color={colors.mutedForeground}>
-                      • {prepItemLabel(item)}{item.notes ? ` — ${item.notes}` : ""}
-                    </AppText>
-                  ))}
+                <View key={section} style={{ marginTop: 6 }}>
+                  <AppText variant="h3" style={{ marginBottom: 4 }}>
+                    {t(`web.preparation.section.${section}`)}
+                  </AppText>
+                  {prepSections[section].map((item, index) => {
+                    const { name, qty } = prepItemParts(item);
+                    return (
+                      <View
+                        key={`${section}-${index}`}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "flex-start",
+                          gap: 12,
+                          paddingVertical: 8,
+                          borderTopWidth: index ? StyleSheet.hairlineWidth : 0,
+                          borderTopColor: colors.border,
+                        }}
+                      >
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <AppText style={{ lineHeight: 20 }}>{name}</AppText>
+                          {item.notes ? (
+                            <AppText variant="small" color={colors.mutedForeground}>
+                              {String(item.notes)}
+                            </AppText>
+                          ) : null}
+                        </View>
+                        {qty ? (
+                          <AppText style={{ fontWeight: "700", textAlign: "right", minWidth: 64 }} color={colors.foreground}>
+                            {qty}
+                          </AppText>
+                        ) : null}
+                      </View>
+                    );
+                  })}
                 </View>
               ) : null
             )}

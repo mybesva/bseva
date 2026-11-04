@@ -1,7 +1,7 @@
 /** Shared service catalog image helper — DB-driven, one default placeholder. */
 import { apiBase } from "@/lib/api";
 
-export const DEFAULT_SERVICE_IMAGE = "/images/puja-thali.png";
+export const DEFAULT_SERVICE_IMAGE = "/images/puja-thali.jpg";
 
 /** Catalog slugs without DB image_url yet (Top 10 / import). */
 const SLUG_IMAGE_FALLBACK: Record<string, string> = {

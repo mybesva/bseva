@@ -1730,7 +1730,7 @@ export default function ServicesAdmin() {
                   { title: "Customer Arranges", items: linked.filter((it) => !isKitItem(it)) },
                 ].map((group) => (
                   <div key={group.title} className="space-y-1">
-                    <p className="text-xs font-semibold text-muted-foreground">
+                    <p className="text-sm font-bold text-foreground">
                       {group.title} ({group.items.length})
                     </p>
                     <ul className="text-sm space-y-1 max-h-36 overflow-y-auto">
@@ -1744,13 +1744,33 @@ export default function ServicesAdmin() {
                             {it.optional ? " (optional)" : ""}
                           </span>
                           {canSamagri && it.samagri_item_id ? (
-                            <button
-                              type="button"
-                              className="shrink-0 text-xs font-medium text-primary hover:underline"
-                              onClick={() => editLinkedItem(it)}
-                            >
-                              Edit
-                            </button>
+                            <span className="flex shrink-0 items-center gap-3">
+                              <button
+                                type="button"
+                                className="text-xs font-medium text-primary hover:underline"
+                                onClick={() => editLinkedItem(it)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="text-xs font-medium text-destructive hover:underline"
+                                onClick={async () => {
+                                  if (!editId) return;
+                                  if (!confirm(`Remove "${it.name}" from this puja's Samagri list?`)) return;
+                                  try {
+                                    await api(`/admin/services/${editId}/samagri/${it.samagri_item_id}`, { method: "DELETE" });
+                                    toast.success("Item removed");
+                                    if (String(linkItemId) === String(it.samagri_item_id)) resetLinkForm();
+                                    await loadLinked(editId);
+                                  } catch (e: any) {
+                                    toast.error(e.message || "Remove failed");
+                                  }
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </span>
                           ) : null}
                         </li>
                       ))}

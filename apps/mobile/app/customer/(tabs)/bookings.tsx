@@ -83,8 +83,8 @@ export default function CustomerBookings() {
               <AppText variant="small" color={colors.primary} style={{ fontWeight: "700" }}>
                 Puja Booking
               </AppText>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
+              <PujaTitle name={b.service_name} variant="h3" />
+              <View style={{ alignSelf: "flex-start" }}>
                 <StatusBadge status={b.customer_display_status || b.status} />
               </View>
               <AppText variant="small" color={colors.mutedForeground}>
@@ -115,8 +115,8 @@ export default function CustomerBookings() {
               <AppText variant="small" color={colors.primary} style={{ fontWeight: "700" }}>
                 Puja Booking
               </AppText>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <PujaTitle name={b.service_name} variant="h3" style={{ flex: 1 }} />
+              <PujaTitle name={b.service_name} variant="h3" />
+              <View style={{ alignSelf: "flex-start" }}>
                 <StatusBadge status={b.customer_display_status || b.status} />
               </View>
               <AppText variant="small">{formatDisplayDate(b.booking_date)}</AppText>

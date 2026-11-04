@@ -1,4 +1,4 @@
-import { isAdminRole, isPujariRole, pujaServicesOnly, rupees } from "@bseva/config";
+import { isAdminRole, isPujariRole, pujaServicesOnly, rupees, splitAvailableUpcoming } from "@bseva/config";
 import type { CatalogService } from "@bseva/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -69,7 +69,8 @@ export default function LandingScreen() {
 
   if (isPujariApp) return <PujariWelcome />;
 
-  const services = pujaServicesOnly(popular.data).slice(0, 8);
+  // Bookable pujas first (same rule as the Services tab), then Coming Soon.
+  const services = splitAvailableUpcoming(pujaServicesOnly(popular.data)).combined.slice(0, 8);
   const goLogin = (role: "customer" | "pujari") => router.push({ pathname: "/login", params: { role } });
   const goRegister = () => router.push({ pathname: "/register", params: { role: "customer" } });
   const search = () => router.push({ pathname: "/browse-services", params: { q } } as never);
@@ -227,7 +228,7 @@ export default function LandingScreen() {
                   </Text>
                   {svc.standard_price_paise != null ? (
                     <Text style={s.pujaPrice}>
-                      {t("customer.from")} {rupees(svc.standard_price_paise)}
+                      {t("services.startingFrom")} {rupees(svc.standard_price_paise)}
                     </Text>
                   ) : null}
                 </View>

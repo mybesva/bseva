@@ -67,7 +67,7 @@ export function CustomerWelcomeHero({
         <View style={styles.body}>
           <View style={styles.taglineRow}>
             <Ionicons name="flower-outline" size={13} color={SAFFRON} />
-            <Text style={styles.tagline} numberOfLines={1}>
+            <Text style={styles.tagline} numberOfLines={2}>
               {t("customer.hero.tagline").toUpperCase()}
             </Text>
           </View>
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   },
   body: { paddingHorizontal: 18, paddingVertical: 20, gap: 6 },
   taglineRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  tagline: { color: SAFFRON, fontSize: 10, fontWeight: "800", letterSpacing: 1.4, flexShrink: 1 },
+  tagline: { color: SAFFRON, fontSize: 10, lineHeight: 14, fontWeight: "800", letterSpacing: 1.4, flexShrink: 1 },
   greeting: { color: "#FFFFFF", fontSize: 26, lineHeight: 32, fontWeight: "700", marginTop: 2 },
   blessing: { color: "rgba(255,255,255,0.88)", fontSize: 13, lineHeight: 19, fontWeight: "500", maxWidth: 300 },
   quote: { color: GOLD, fontSize: 11.5, lineHeight: 16, fontWeight: "700", marginTop: 6 },

@@ -312,6 +312,24 @@ def link_samagri(service_id: str, body: ServiceSamagriIn, user=Depends(require_p
     return {"ok": True}
 
 
+@router.delete("/admin/services/{service_id}/samagri/{samagri_item_id}")
+def unlink_samagri(
+    service_id: str, samagri_item_id: str, user=Depends(require_permission("manage_samagri")), db: Session = Depends(get_db)
+):
+    """Remove one item from a puja's Samagri list (the item stays in the Samagri catalogue)."""
+    res = db.execute(
+        text(
+            "DELETE FROM service_samagri WHERE service_id = CAST(:s AS uuid) AND samagri_item_id = CAST(:i AS uuid)"
+        ),
+        {"s": service_id, "i": samagri_item_id},
+    )
+    if not res.rowcount:
+        raise HTTPException(404, "This item is not in the puja's Samagri list")
+    write_audit(db, str(user["id"]), "service_samagri_removed", "service", service_id, reason=samagri_item_id)
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/services/{service_id}/samagri")
 def service_samagri(
     service_id: str,
