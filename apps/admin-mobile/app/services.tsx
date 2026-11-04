@@ -220,13 +220,27 @@ export default function AdminServices() {
             <Field label="Priests Min" value={String(form.priests_min)} onChangeText={(v) => set("priests_min", Number(v) || 1)} keyboardType="number-pad" />
             <Field label="Priests Max" value={String(form.priests_max)} onChangeText={(v) => set("priests_max", Number(v) || 1)} keyboardType="number-pad" />
             <Field label="Muhurtham Fee ₹" value={rupeesField(form.muhurta_fee_paise)} onChangeText={(v) => set("muhurta_fee_paise", paiseFromRupees(v) ?? 0)} keyboardType="decimal-pad" />
-            <Field label="Dakshina Share %" value={String(form.dakshina_share_percent)} onChangeText={(v) => set("dakshina_share_percent", Number(v) || 0)} keyboardType="decimal-pad" />
+            <Field label="Standard Dakshina Share %" value={String(form.dakshina_share_percent)} onChangeText={(v) => set("dakshina_share_percent", Number(v) || 0)} keyboardType="decimal-pad" />
             <Field
-              label="Dakshina Fixed Amount ₹ (Optional, Replaces %)"
+              label="Premium Dakshina Share % (Empty = Same as Standard)"
+              value={form.premium_dakshina_share_percent == null ? "" : String(form.premium_dakshina_share_percent)}
+              onChangeText={(v) => set("premium_dakshina_share_percent", v.trim() === "" ? null : Number(v) || 0)}
+              keyboardType="decimal-pad"
+            />
+            <Field
+              label="Standard Dakshina Fixed Amount ₹ (Optional, Replaces %)"
               value={rupeesField(form.dakshina_amount_paise)}
               onChangeText={(v) => set("dakshina_amount_paise", paiseFromRupees(v))}
               keyboardType="decimal-pad"
             />
+            {Number(form.dakshina_amount_paise) > 0 ? (
+              <Field
+                label="Premium Dakshina Fixed Amount ₹ (Empty = Same as Standard)"
+                value={rupeesField(form.premium_dakshina_amount_paise)}
+                onChangeText={(v) => set("premium_dakshina_amount_paise", paiseFromRupees(v))}
+                keyboardType="decimal-pad"
+              />
+            ) : null}
             <Field label="Languages" value={form.languages_text} onChangeText={(v) => set("languages_text", v)} />
             <Field label="Search Aliases" value={form.search_aliases_text} onChangeText={(v) => set("search_aliases_text", v)} />
             <Field label="Process Steps (One per Line)" value={form.process_steps_text} onChangeText={(v) => set("process_steps_text", v)} />
