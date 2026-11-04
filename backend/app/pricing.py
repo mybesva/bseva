@@ -13,10 +13,19 @@ from app.platform_config import get_setting
 DEFAULT_DAKSHINA_SHARE_PERCENT = 85.0
 
 
-def dakshina_share_percent(service: Any | None = None) -> float:
-    """Pujari dakshina % for a puja. Default 85; admin can override per service."""
+def dakshina_share_percent(service: Any | None = None, package_type: str | None = None) -> float:
+    """Pujari dakshina % for a puja. Default 85; admin can override per service.
+    Premium bookings use the separate Premium % when one is set, else the Standard %."""
     raw = None
     if service is not None and hasattr(service, "get"):
+        if str(package_type or "").lower() == "premium":
+            raw = service.get("premium_dakshina_share_percent")
+            if raw is not None:
+                try:
+                    if 0 <= float(raw) <= 100:
+                        return float(raw)
+                except (TypeError, ValueError):
+                    pass
         raw = service.get("dakshina_share_percent")
     try:
         value = float(raw) if raw is not None else DEFAULT_DAKSHINA_SHARE_PERCENT
@@ -27,9 +36,8 @@ def dakshina_share_percent(service: Any | None = None) -> float:
     return value
 
 
-def dakshina_fixed_paise(service: Any | None = None) -> int | None:
-    """Fixed pujari dakshina per booking (paise) when the admin set one, else None (use the %)."""
-    raw = service.get("dakshina_amount_paise") if service is not None and hasattr(service, "get") else None
+def _positive_paise(service: Any | None, key: str) -> int | None:
+    raw = service.get(key) if service is not None and hasattr(service, "get") else None
     try:
         value = int(raw) if raw is not None else 0
     except (TypeError, ValueError):
@@ -37,14 +45,25 @@ def dakshina_fixed_paise(service: Any | None = None) -> int | None:
     return value if value > 0 else None
 
 
-def pujari_dakshina_paise(service: Any | None, base_paise: int) -> int:
-    """Pujari's share of the main puja price: the admin's fixed amount if set, else the %.
+def dakshina_fixed_paise(service: Any | None = None, package_type: str | None = None) -> int | None:
+    """Fixed pujari dakshina per booking (paise) when the admin set one, else None (use the %).
+    Premium bookings use the separate Premium amount when one is set, else the Standard amount."""
+    standard = _positive_paise(service, "dakshina_amount_paise")
+    if standard is None:
+        return None
+    if str(package_type or "").lower() == "premium":
+        return _positive_paise(service, "premium_dakshina_amount_paise") or standard
+    return standard
+
+
+def pujari_dakshina_paise(service: Any | None, base_paise: int, package_type: str | None = None) -> int:
+    """Pujari's share of the main puja price: the admin's fixed amount for this package if set, else the %.
     Never more than the main puja price itself, so the platform share can't go negative."""
     base = max(0, int(base_paise or 0))
-    fixed = dakshina_fixed_paise(service)
+    fixed = dakshina_fixed_paise(service, package_type)
     if fixed is not None:
         return min(fixed, base)
-    return int(round(base * dakshina_share_percent(service) / 100))
+    return int(round(base * dakshina_share_percent(service, package_type) / 100))
 
 
 def _weekend_days(db: Session) -> set[int]:
@@ -318,7 +337,7 @@ def compute_quote(
         0,
         adjusted_base + peak + components_total - int(discount_paise or 0) - int(wallet_credit_paise or 0),
     )
-    pujari_share = pujari_dakshina_paise(service, adjusted_base)
+    pujari_share = pujari_dakshina_paise(service, adjusted_base, package_type)
     platform_fee = adjusted_base - pujari_share
     pricing = db.execute(text("SELECT * FROM pricing_config WHERE id = 1")).mappings().one()
     from app.tax_config import quote_tax

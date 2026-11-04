@@ -33,16 +33,23 @@ export function AddressForm({
   onSave,
   busy,
   includeGstin,
+  saveLabel,
+  onBack,
 }: {
   value: AddressFormValue;
   onChange: (next: AddressFormValue) => void;
   onSave: (parsed: AddressFormValue) => Promise<void>;
   busy?: boolean;
   includeGstin?: boolean;
+  /** Save button text (default "Save Address"). */
+  saveLabel?: string;
+  /** When set, a Back button is shown next to Save (onboarding steps). */
+  onBack?: () => void;
 }) {
   const { t } = useI18n();
   const { colors } = useAppTheme();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [locating, setLocating] = useState(false);
   function set<K extends keyof AddressFormValue>(key: K, v: AddressFormValue[K]) {
     onChange({ ...value, [key]: v });
@@ -78,12 +85,12 @@ export function AddressForm({
   return (
     <View style={{ gap: 10 }}>
       <ErrorBanner message={error} />
-      <Field label={t("mobile.addressLine1")} value={value.address_line1} onChangeText={(v) => set("address_line1", v)} />
+      <Field required label={t("mobile.addressLine1")} value={value.address_line1} onChangeText={(v) => set("address_line1", v)} error={fieldErrors.address_line1} />
       <Field label={t("mobile.addressLine2")} value={value.address_line2 || ""} onChangeText={(v) => set("address_line2", v)} />
-      <Field label={t("mobile.city")} value={value.city} onChangeText={(v) => set("city", v)} />
-      <Field label={t("mobile.district")} value={value.district} onChangeText={(v) => set("district", v)} />
-      <Field label={t("mobile.state")} value={value.state} onChangeText={(v) => set("state", v)} />
-      <Field label={t("mobile.pincode")} value={value.pincode} onChangeText={(v) => set("pincode", v)} keyboardType="number-pad" />
+      <Field required label={t("mobile.city")} value={value.city} onChangeText={(v) => set("city", v)} error={fieldErrors.city} />
+      <Field required label={t("mobile.district")} value={value.district} onChangeText={(v) => set("district", v)} error={fieldErrors.district} />
+      <Field required label={t("mobile.state")} value={value.state} onChangeText={(v) => set("state", v)} error={fieldErrors.state} />
+      <Field required label={t("mobile.pincode")} value={value.pincode} onChangeText={(v) => set("pincode", v)} keyboardType="number-pad" error={fieldErrors.pincode} />
       <Field label={t("mobile.country")} value={value.country || "India"} onChangeText={(v) => set("country", v)} />
       <Field label={t("mobile.locationLabel")} value={value.location_label || ""} onChangeText={(v) => set("location_label", v)} />
       {includeGstin ? (
@@ -106,15 +113,30 @@ export function AddressForm({
         onPress={() => void useCurrentLocation()}
       />
       {error ? <AppText variant="small" color={colors.destructive}>{error}</AppText> : null}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+      {onBack ? (
+        <View style={{ flex: 1 }}>
+          <PrimaryButton title={t("common.back")} variant="outline" onPress={onBack} />
+        </View>
+      ) : null}
+      <View style={{ flex: onBack ? 2 : 1 }}>
       <PrimaryButton
-        title={busy ? t("mobile.saving") : t("mobile.saveAddress")}
+        title={busy ? t("mobile.saving") : saveLabel || t("mobile.saveAddress")}
         loading={busy}
         onPress={async () => {
           const parsed = addressSchema.safeParse({ ...value, country: value.country || "India" });
           if (!parsed.success) {
-            setError(userMessage(t, parsed.error.issues[0]?.message, t("mobile.checkAddress")) || t("mobile.checkAddress"));
+            // Highlight every invalid field, not just the first one.
+            const next: Record<string, string> = {};
+            for (const issue of parsed.error.issues) {
+              const key = String(issue.path[0] || "address_line1");
+              if (!next[key]) next[key] = userMessage(t, issue.message, t("mobile.checkAddress")) || t("mobile.checkAddress");
+            }
+            setFieldErrors(next);
+            setError(t("errors.validation"));
             return;
           }
+          setFieldErrors({});
           if (value.latitude == null || value.longitude == null) {
             setError(t("booking.needMap"));
             return;
@@ -129,6 +151,8 @@ export function AddressForm({
           });
         }}
       />
+      </View>
+      </View>
     </View>
   );
 }

@@ -442,6 +442,8 @@ _FOUNDATION_STMTS = [
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS booking_lead_hours INTEGER NOT NULL DEFAULT 48",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_share_percent NUMERIC NOT NULL DEFAULT 85",
     "ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_amount_paise INTEGER",
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS premium_dakshina_amount_paise INTEGER",
+    "ALTER TABLE services ADD COLUMN IF NOT EXISTS premium_dakshina_share_percent NUMERIC",
     # Pujari penalties may overdraw the wallet; apply_wallet guards every other change.
     "ALTER TABLE wallets DROP CONSTRAINT IF EXISTS wallets_balance_paise_check",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT",

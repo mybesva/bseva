@@ -94,11 +94,10 @@ function FeaturedBookingCard({ booking }: { booking: Booking }) {
       <View style={{ flexDirection: "row", gap: 12 }}>
         <PujaThumb service={serviceRef} size={72} />
         <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 6 }}>
-            <PujaTitle name={booking.service_name} variant="h3" style={{ flex: 1, fontWeight: "700" }} numberOfLines={2} />
+          {/* Name gets the full width so long names wrap between words, not mid-word. */}
+          <PujaTitle name={booking.service_name} variant="h3" style={{ fontWeight: "700" }} numberOfLines={2} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
             <StatusBadge status={booking.status} />
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             {booking.samagri_requested ? <BookingMetaBadge label={t("pujari.dashboard.samagriSelected")} tone="accent" /> : null}
             {isVirtual ? <BookingMetaBadge label={t("mobile.virtual")} /> : null}
             {!isVirtual ? <BookingMetaBadge label={t("mobile.inPerson")} /> : null}
@@ -166,11 +165,10 @@ function RequestBookingCard({ booking }: { booking: Booking }) {
         <View style={{ flexDirection: "row", gap: 10 }}>
           <PujaThumb service={serviceRef} size={56} />
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 6 }}>
-              <PujaTitle name={booking.service_name} variant="h3" style={{ flex: 1, fontWeight: "700" }} numberOfLines={2} />
+            {/* Name gets the full width so long names wrap between words, not mid-word. */}
+            <PujaTitle name={booking.service_name} variant="h3" style={{ fontWeight: "700" }} numberOfLines={2} />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4 }}>
               <StatusBadge status={booking.status} />
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
               {booking.samagri_requested ? (
                 <BookingMetaBadge label={t("pujari.dashboard.samagriSelected")} tone="accent" />
               ) : null}

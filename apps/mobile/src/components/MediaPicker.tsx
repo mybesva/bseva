@@ -41,6 +41,9 @@ async function ensureCameraPermission(strings: PermissionStrings): Promise<boole
 }
 
 async function ensureLibraryPermission(strings: PermissionStrings): Promise<boolean> {
+  // Android uses the system photo picker, which needs no permission (READ_MEDIA_IMAGES is blocked for
+  // Google Play). Asking anyway is always denied there and would block "Choose from Photos".
+  if (Platform.OS === "android") return true;
   let perm = await ImagePicker.getMediaLibraryPermissionsAsync();
   if (!perm.granted && perm.canAskAgain) {
     perm = await ImagePicker.requestMediaLibraryPermissionsAsync();

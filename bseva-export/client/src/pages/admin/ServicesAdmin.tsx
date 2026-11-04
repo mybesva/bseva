@@ -120,6 +120,8 @@ const emptyForm = {
   muhurta_fee_paise: 0,
   dakshina_share_percent: 85,
   dakshina_amount_paise: null as number | null,
+  premium_dakshina_amount_paise: null as number | null,
+  premium_dakshina_share_percent: null as number | null,
   requires_muhurta: false,
   duration_minutes: 90,
   pujaris_required: 1,
@@ -343,6 +345,10 @@ export default function ServicesAdmin() {
       dakshina_share_percent:
         s.dakshina_share_percent != null ? Number(s.dakshina_share_percent) : 85,
       dakshina_amount_paise: Number(s.dakshina_amount_paise) > 0 ? Number(s.dakshina_amount_paise) : null,
+      premium_dakshina_amount_paise:
+        Number(s.premium_dakshina_amount_paise) > 0 ? Number(s.premium_dakshina_amount_paise) : null,
+      premium_dakshina_share_percent:
+        s.premium_dakshina_share_percent != null ? Number(s.premium_dakshina_share_percent) : null,
       requires_muhurta: Boolean(s.requires_muhurta),
       duration_minutes: s.duration_minutes || 90,
       pujaris_required: s.pujaris_required || 1,
@@ -1105,6 +1111,14 @@ export default function ServicesAdmin() {
                                 (Number(form.standard_price_paise) || 0) * (Number(form.dakshina_share_percent) || 0) / 100,
                               )
                             : null,
+                        premium_dakshina_amount_paise:
+                          v === "amount" && Number(form.premium_price_paise) > 0
+                            ? Math.round(
+                                Number(form.premium_price_paise) *
+                                  (Number(form.premium_dakshina_share_percent ?? form.dakshina_share_percent) || 0) /
+                                  100,
+                              )
+                            : null,
                       })
                     }
                   >
@@ -1120,7 +1134,7 @@ export default function ServicesAdmin() {
                 <div className="space-y-2">
                   {form.dakshina_amount_paise != null ? (
                     <>
-                      <Label htmlFor="service-dakshina">Dakshina Amount (₹)</Label>
+                      <Label htmlFor="service-dakshina">Standard Dakshina (₹)</Label>
                       <Input
                         id="service-dakshina"
                         type="number"
@@ -1137,7 +1151,7 @@ export default function ServicesAdmin() {
                     </>
                   ) : (
                     <>
-                      <Label htmlFor="service-dakshina">Dakshina %</Label>
+                      <Label htmlFor="service-dakshina">Standard Dakshina %</Label>
                       <Input
                         id="service-dakshina"
                         type="number"
@@ -1155,10 +1169,52 @@ export default function ServicesAdmin() {
                     </>
                   )}
                 </div>
+                <div className="space-y-2 sm:col-start-2">
+                  {form.dakshina_amount_paise != null ? (
+                    <>
+                      <Label htmlFor="service-dakshina-premium">Premium Dakshina (₹)</Label>
+                      <Input
+                        id="service-dakshina-premium"
+                        type="number"
+                        min={0}
+                        step={1}
+                        placeholder="Same as Standard"
+                        value={formatPriceInput(form.premium_dakshina_amount_paise)}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            premium_dakshina_amount_paise:
+                              e.target.value === "" ? null : Math.max(0, Math.round(Number(e.target.value) * 100)),
+                          })
+                        }
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Label htmlFor="service-dakshina-premium">Premium Dakshina %</Label>
+                      <Input
+                        id="service-dakshina-premium"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        placeholder="Same as Standard"
+                        value={form.premium_dakshina_share_percent ?? ""}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            premium_dakshina_share_percent:
+                              e.target.value === "" ? null : Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                          })
+                        }
+                      />
+                    </>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground sm:col-span-2">
                   {form.dakshina_amount_paise != null
-                    ? "Pujari earns this fixed amount per booking, whichever package is booked (never more than the main puja price)."
-                    : "Default 85%. Admin can override for this puja only. Pujari earns this % of the main puja price."}
+                    ? "Pujari earns the Standard amount on Standard bookings and the Premium amount on Premium bookings. Leave Premium empty to pay the Standard amount on both."
+                    : "Default 85%. Pujari earns the Standard % of the Standard price on Standard bookings and the Premium % of the Premium price on Premium bookings. Leave Premium empty to use the Standard %."}
                   {form.dakshina_amount_paise != null && Number(form.dakshina_amount_paise) <= 0
                     ? " Enter an amount above ₹0, or switch back to %."
                     : ""}

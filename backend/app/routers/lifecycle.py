@@ -712,7 +712,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
         {"id": str(b["service_id"])},
     ).mappings().first()
     base = int(b["base_price_paise"])
-    payable = pujari_dakshina_paise(svc, base)
+    payable = pujari_dakshina_paise(svc, base, b.get("package_type"))
     platform = base - payable
     reimbursement = int(b.get("pujari_reimbursement_paise") or 0)
     settlement_total = payable + reimbursement

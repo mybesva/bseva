@@ -60,7 +60,6 @@ function UnreadBell({ color, onPress, label }: { color: string; onPress: () => v
 function HeaderProfileAvatar({ onPress, label }: { onPress: () => void; label: string }) {
   const { user } = useAuth();
   const { colors } = useAppTheme();
-  const initial = (user?.name || "?").slice(0, 1).toUpperCase();
 
   return (
     <Pressable
@@ -81,7 +80,7 @@ function HeaderProfileAvatar({ onPress, label }: { onPress: () => void; label: s
           justifyContent: "center",
         }}
       >
-        <AppText style={{ fontSize: 15, fontWeight: "700", color: colors.primary }}>{initial}</AppText>
+        <Ionicons name="person" size={20} color={colors.primary} />
       </View>
       <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
     </Pressable>

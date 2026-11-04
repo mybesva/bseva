@@ -200,23 +200,24 @@ export default function RegisterScreen() {
               <ErrorBanner message={error} />
               {accountType === "pujari" ? (
                 <>
-                  <Field label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
+                  <Field required label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
                   <Field label={t("auth.middleName")} value={middleName} onChangeText={setMiddleName} />
-                  <Field label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
+                  <Field required label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
                 </>
               ) : (
-                <Field label={t("auth.name")} value={name} onChangeText={setName} />
+                <Field required label={t("auth.name")} value={name} onChangeText={setName} />
               )}
-              <Field label={t("auth.email")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+              <Field required label={t("auth.email")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
               <PhoneWithCountryCode
+                required
                 label={t("auth.phone")}
                 countryCode={countryCode}
                 national={phone}
                 onCountryCodeChange={setCountryCode}
                 onNationalChange={setPhone}
               />
-              <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
-              <Field label={t("auth.confirmPassword")} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              <Field required label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              <Field required label={t("auth.confirmPassword")} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
               <AppText variant="small">{t("profile.preferredLanguage")}</AppText>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {LANGS.map((code) => (
@@ -271,6 +272,7 @@ export default function RegisterScreen() {
                 </View>
               ) : null}
               <Field
+                required
                 label={t("auth.emailOtp.label")}
                 placeholder={t("auth.emailOtp.placeholder")}
                 value={otp}

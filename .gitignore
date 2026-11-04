@@ -101,3 +101,9 @@ infra/aws/reports/
 
 # Local Claude Code configuration
 .claude/
+
+# Local-only documentation and AI context files (kept on disk, not in git)
+docs/user-guides/
+B-SEVA_CONTEXT.md
+B-SEVA_MASTER_AI_CONTEXT.md
+/*.docx

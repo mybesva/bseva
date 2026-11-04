@@ -72,7 +72,6 @@ function ProfileAvatar({ onPress, label }: { onPress: () => void; label: string 
   const photo = photoQ.data ?? null;
   const photoUri =
     photo && typeof photo === "object" && "uri" in photo && typeof photo.uri === "string" ? photo.uri : null;
-  const initial = (user?.name || "?").slice(0, 1).toUpperCase();
 
   useFocusEffect(
     useCallback(() => {
@@ -111,7 +110,7 @@ function ProfileAvatar({ onPress, label }: { onPress: () => void; label: string 
             justifyContent: "center",
           }}
         >
-          <AppText style={{ fontSize: 15, fontWeight: "700", color: colors.primary }}>{initial}</AppText>
+          <Ionicons name="person" size={20} color={colors.primary} />
         </View>
       )}
       <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />

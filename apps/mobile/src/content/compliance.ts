@@ -178,6 +178,7 @@ const textEn = {
   reportSent: "Report submitted. Our team will review it.",
   myReports: "My Reports",
   noReports: "You have not made any reports.",
+  howToReport: "To report a problem, open the booking from Bookings and tap Report.",
   resolution: "Resolution",
 
   walletHelp: "Wallet credit is currently added through B-Seva support. Contact support to add credit to your wallet.",
