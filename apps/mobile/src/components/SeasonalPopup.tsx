@@ -1,7 +1,9 @@
+import { useRouter } from "expo-router";
+import { openPromoLink } from "@/utils/webLinks";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Image, Linking, Modal, Pressable, View } from "react-native";
+import { Image, Modal, Pressable, View } from "react-native";
 import { AppText, PrimaryButton } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
@@ -10,6 +12,7 @@ import { useAppTheme } from "@/theme/ThemeContext";
 const SEEN_KEY = "bseva_seasonal_popup_seen_v2";
 
 export function SeasonalPopup() {
+  const router = useRouter();
   const { t, lang } = useI18n();
   const { colors } = useAppTheme();
   const [visible, setVisible] = useState(false);
@@ -72,7 +75,7 @@ export function SeasonalPopup() {
               <PrimaryButton
                 title={popup.cta_label || t("common.view")}
                 onPress={() => {
-                  void Linking.openURL(popup.cta_url!);
+                  void openPromoLink(popup.cta_url, (route) => router.push(route as never));
                   void dismiss();
                 }}
               />
