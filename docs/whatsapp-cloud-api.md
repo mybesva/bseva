@@ -34,6 +34,7 @@ Callback URL for QA, once deployed: `https://qa.b-seva.com/api/v1/webhooks/whats
 - Verify token and signature compared in constant time (`hmac.compare_digest`); the HMAC is over the exact raw body.
 - The challenge is echoed only if it is a short token (letters, digits, `_-.`), as plain text.
 - Bodies over 3 MB are refused (Nginx and the app).
+- Access logs never contain the query string, which is where Meta puts the verify token: Nginx logs the webhook route with the `bseva_noquery` format (`$uri`, not `$request`), and the API strips query strings from Uvicorn's access log (`backend/app/access_log.py`). Covered by `backend/tests/test_access_log_redaction.py`. Nginx *error* lines (for example a rate-limit refusal) still quote the full request.
 - Every webhook delivery is applied in one transaction. Each event is claimed once in `whatsapp_webhook_events`, so Meta's retries and duplicates are skipped; a failure rolls the claims back, answers 503 and Meta retries.
 - Delivery status only moves forward (`accepted → sent → delivered → read`); `failed` applies only before delivery.
 - Nothing stores or logs message text, template parameters (they can hold OTPs), tokens or full phone numbers. Numbers are kept as a SHA-256 hash plus the last four digits.

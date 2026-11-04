@@ -9,6 +9,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 
 from app.config import settings
 from app import env_loader  # noqa: F401 — load .env into os.environ
+from app import access_log
 from app.routers import (
     account,
     admin_compliance,
@@ -38,6 +39,8 @@ from app.routers import (
 
 
 logger = logging.getLogger("bseva.api")
+# Query strings (e.g. the WhatsApp webhook verify token) never reach the access log.
+access_log.install()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
