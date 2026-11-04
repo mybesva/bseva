@@ -127,6 +127,11 @@ def test_nginx_webhook_location_uses_query_free_log_format():
     assert re.search(r"^\s*access_log\s+\S+\s+bseva_noquery;", _webhook_location(), re.M)
 
 
+def test_nginx_webhook_location_keeps_request_lines_out_of_error_log():
+    # Error lines quote the full request (with the token); only critical ones are kept for this route.
+    assert re.search(r"^\s*error_log\s+\S+\s+crit;", _webhook_location(), re.M)
+
+
 @pytest.mark.parametrize("template", ["http.conf.template", "https.conf.template"])
 def test_nginx_query_free_format_defined_without_query_variables(template):
     text = (TEMPLATES / template).read_text()
@@ -168,6 +173,7 @@ def test_real_nginx_access_log_has_no_token():
             text = text.replace("http://api:8000", f"http://127.0.0.1:{upstream.server_port}")
             text = text.replace("root /usr/share/nginx/html;", f"root {root};")
             text = text.replace("/var/log/nginx/access.log", str(root / "access.log"))
+            text = text.replace("/var/log/nginx/error.log", str(root / "error.log"))
             (inc / name).write_text(text)
         site = (TEMPLATES / "http.conf.template").read_text().replace("${DOMAIN}", "localhost")
         site = site.replace("/etc/nginx/bseva-templates", str(inc))
@@ -175,7 +181,7 @@ def test_real_nginx_access_log_has_no_token():
         site = site.replace("/var/www/certbot", str(root))
         (root / "site.conf").write_text(site)
         (root / "nginx.conf").write_text(
-            f"pid {root}/nginx.pid; error_log {root}/error.log; daemon off;\n"
+            f"pid {root}/nginx.pid; error_log {root}/error.log info; daemon off;\n"
             f"events {{}}\nhttp {{ access_log {root}/default_access.log;\n"
             f"client_body_temp_path {root}/b; proxy_temp_path {root}/p; fastcgi_temp_path {root}/f;"
             f" uwsgi_temp_path {root}/u; scgi_temp_path {root}/s;\ninclude {root}/site.conf; }}\n"
@@ -186,12 +192,16 @@ def test_real_nginx_access_log_has_no_token():
         try:
             _wait(f"http://127.0.0.1:{listen}/nginx-health")
             assert _get(f"http://127.0.0.1:{listen}{WEBHOOK}") == 200
+            upstream.shutdown()
+            upstream.server_close()
+            # Upstream down: Nginx would write an error line quoting the full request, token included.
+            assert _get(f"http://127.0.0.1:{listen}{WEBHOOK}") == 502
             time.sleep(0.3)
         finally:
             proc.terminate()
             proc.wait(timeout=10)
-            upstream.shutdown()
         logged = (root / "access.log").read_text()
-        assert "GET /api/v1/webhooks/whatsapp HTTP/1.1" in logged and " 200 " in logged, logged
+        assert "GET /api/v1/webhooks/whatsapp HTTP/1.1" in logged and " 200 " in logged and " 502 " in logged, logged
         assert TOKEN not in logged and "verify_token" not in logged
         assert TOKEN not in (root / "default_access.log").read_text()
+        assert TOKEN not in (root / "error.log").read_text()
