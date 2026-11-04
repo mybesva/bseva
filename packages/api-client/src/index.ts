@@ -197,9 +197,10 @@ export function resolveServiceImageUrl(
     return joinUrl(baseUrl, `/api/v1/services/${encodeURIComponent(row.slug)}/image`);
   }
   if (row.slug) {
-    return joinUrl(baseUrl, `/images/services/${encodeURIComponent(row.slug)}.jpg`);
+    // The API endpoint serves the cover, an alias or the default photo; never guess a static file.
+    return joinUrl(baseUrl, `/api/v1/services/${encodeURIComponent(row.slug)}/image`);
   }
-  return joinUrl(baseUrl, "/images/puja-thali.png");
+  return joinUrl(baseUrl, "/images/puja-thali.jpg");
 }
 
 export function toQuery(params?: Record<string, string | number | boolean | undefined | null>): string {
@@ -488,7 +489,8 @@ export function createApiClient(opts: ApiClientOptions) {
       if (slug) out.push(joinUrl(base, `/api/v1/services/${encodeURIComponent(slug)}/image`));
       if (raw.startsWith("http://") || raw.startsWith("https://")) out.push(raw);
       else if (raw.startsWith("/")) out.push(joinUrl(base, raw));
-      if (slug) out.push(joinUrl(base, `/images/services/${slug}.jpg`));
+      // No /images/services/<slug>.jpg guess: the API endpoint above already serves catalogue files, and a
+      // missing file on the web host answers 200 with the site's HTML, which phones show as an empty box.
       if (typeDefault) out.push(joinUrl(base, typeDefault));
       return Array.from(new Set(out.filter(Boolean)));
     },

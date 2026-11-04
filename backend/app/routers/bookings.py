@@ -294,7 +294,7 @@ def get_service_image(slug: str, db: Session = Depends(get_db)):
     from fastapi.responses import FileResponse
 
     from app.catalog import resolve_service_by_slug
-    from app.catalog_images import catalog_image_file, seva_type_default_image
+    from app.catalog_images import catalog_image_file, default_service_image, seva_type_default_image
     from app.storage import file_response
 
     row = resolve_service_by_slug(db, slug, active_only=False)
@@ -303,12 +303,17 @@ def get_service_image(slug: str, db: Session = Depends(get_db)):
     stored = (row.get("image_path") or "").strip()
     if stored.startswith("services/"):
         return file_response(stored, filename=Path(stored).name)
+    types = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
     local = catalog_image_file(row.get("slug") or slug, row.get("image_url"), row.get("image_path"))
     if local and local.is_file():
-        return FileResponse(local)
+        return FileResponse(local, media_type=types.get(local.suffix.lower()))
     seva_default = seva_type_default_image(row.get("service_type"))
     if seva_default:
-        return FileResponse(seva_default)
+        return FileResponse(seva_default, media_type=types.get(seva_default.suffix.lower()))
+    # Same default photo the website shows, so a puja never appears without a picture.
+    fallback = default_service_image()
+    if fallback:
+        return FileResponse(fallback, media_type="image/jpeg")
     raise HTTPException(404, "No uploaded image")
 
 
