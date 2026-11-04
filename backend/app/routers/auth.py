@@ -1,8 +1,6 @@
+from datetime import datetime, timezone
 from uuid import uuid4
-import json
-import os
-import urllib.parse
-import urllib.request
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import text
@@ -11,7 +9,7 @@ from sqlalchemy.orm import Session
 from app import rate_limit
 from app.config import settings
 from app.db import get_db
-from app.deps import ACCOUNT_BLOCKED, current_user
+from app.deps import ACCOUNT_BLOCKED, account_state_error, current_user
 from app.domain import row_dict
 from app.platform_config import get_setting
 from app.profile_utils import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
@@ -36,33 +34,11 @@ from app.security import (
     verify_password,
 )
 from app.i18n import coded_http
+from app.otp_service import OTP_TTL_MINUTES
+
+logger = logging.getLogger("bseva.auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _verify_registration_captcha(db: Session, token: str | None) -> None:
-    if not bool(get_setting(db, "registration_captcha_enabled", False)):
-        return
-    secret = (os.environ.get("RECAPTCHA_SECRET_KEY") or "").strip()
-    if not secret:
-        raise HTTPException(503, "CAPTCHA is enabled but RECAPTCHA_SECRET_KEY is not configured")
-    if not token or not str(token).strip():
-        raise HTTPException(400, "CAPTCHA verification is required")
-    # Local development bypass only — never honoured in qa/production even if the secret is set to it
-    if secret == "dev-bypass" and token == "dev-bypass" and settings.environment == "development":
-        return
-    data = urllib.parse.urlencode({"secret": secret, "response": token}).encode()
-    try:
-        with urllib.request.urlopen(
-            "https://www.google.com/recaptcha/api/siteverify",
-            data=data,
-            timeout=8,
-        ) as resp:
-            payload = json.loads(resp.read().decode())
-    except Exception as exc:
-        raise HTTPException(502, f"CAPTCHA verification failed: {exc}") from exc
-    if not payload.get("success"):
-        raise HTTPException(400, "CAPTCHA verification failed")
 
 
 OTP_ATTEMPTS_MESSAGE = "Too many incorrect codes. Please request a new OTP."
@@ -94,6 +70,10 @@ def _verify_registration_otp(db: Session, body: RegisterIn, ip: str = "unknown")
     )
     if not result.get("ok"):
         _raise_otp_failure(db, ip, result, 400)
+    # A code requested for one account type (and its CAPTCHA switch) cannot register the other.
+    bound = result.get("account_type")
+    if bound and bound != body.account_type:
+        _raise_otp_failure(db, ip, {"error": "invalid"}, 400)
 
 
 def _public(row: dict) -> dict:
@@ -120,20 +100,59 @@ def _public(row: dict) -> dict:
     }
 
 
+OTP_WAIT_MESSAGE = "Please wait before requesting another OTP"
+OTP_DAILY_MESSAGE = "Too many codes were requested for this email today. Please try again later or contact BSeva support."
+
+
+def _otp_refused(reason: str | None, retry_after: int | None):
+    """The same refusal for every address, so limits never reveal whether an account exists."""
+    if reason == "daily_limit":
+        return coded_http(429, "OTP_DAILY_LIMIT", OTP_DAILY_MESSAGE)
+    return HTTPException(429, OTP_WAIT_MESSAGE + (f" ({retry_after}s)" if retry_after else ""))
+
+
+def _public_otp_circuit(db: Session, purpose: str = "login") -> None:
+    """Whole-deployment cap on OTP mail anonymous callers can trigger; refuses rather than flood the mailbox.
+
+    Registration and verify codes draw on their own budget so abusing them cannot block sign-in codes."""
+    if purpose in ("register", "verify"):
+        rate_limit.public_otp_circuit(
+            db, int(settings.otp_register_emails_per_hour), rule=rate_limit.OTP_REGISTER_EMAILS_HOUR, kind="otp_register"
+        )
+    else:
+        rate_limit.public_otp_circuit(db, int(settings.otp_public_emails_per_hour))
+
+
 @router.post("/otp/request")
 def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_db)):
-    """Issue email OTP (10 minutes). Delivery via email provider; SMS reserved for later."""
-    from app.otp_service import issue_email_otp
+    """Issue email OTP (5 minutes). Delivery via email provider; SMS reserved for later."""
+    from app import captcha, captcha_settings
+    from app.otp_service import OtpStoreUnavailable, issue_email_otp, mask_email, reserve_otp_send
 
     email = str(body.email).strip().lower() if body.email else None
     if not email:
         # Prefer email OTP; do not fall back to SMS for now
         raise HTTPException(400, "Email is required for OTP")
-    # Per-email limits live in issue_email_otp; this caps one client spraying many addresses.
-    rate_limit.enforce(db, rate_limit.OTP_REQUEST_IP, rate_limit.client_ip(request))
+    ip = rate_limit.client_ip(request)
+    # Per-email limits are counted below; these cap one client spraying many addresses.
+    rate_limit.enforce_otp_request_ip(db, ip, settings.otp_requests_per_ip_per_day)
 
     purpose = body.purpose if body.purpose in ("register", "login", "verify") else "login"
-    # Generic response — do not reveal whether the account exists for login
+    if purpose in ("register", "verify"):
+        bucket, _limit, window = rate_limit.OTP_REGISTER_IP_DAY
+        rate_limit.enforce(db, (bucket, int(settings.otp_register_requests_per_ip_per_day), window), ip, fail_closed=True)
+    account_type = body.account_type if purpose == "register" else None
+    if purpose == "register" and captcha_settings.register_required(db, account_type):
+        captcha.require(db, body.captcha_id, body.captcha_answer, purpose="register", ip=ip)
+    # Counted before the account lookup, for known and unknown addresses alike.
+    try:
+        gate = reserve_otp_send(db, email=email, scope=purpose, ip=ip)
+    except OtpStoreUnavailable:
+        raise rate_limit.unavailable() from None
+    if not gate.get("allowed"):
+        raise _otp_refused(gate.get("reason"), gate.get("retry_after_seconds"))
+    _public_otp_circuit(db, purpose)
+
     user_row = db.execute(
         text("SELECT name, role, preferred_language, blocked FROM users WHERE lower(email) = :e LIMIT 1"),
         {"e": email},
@@ -144,12 +163,14 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
         generic = {
             "ok": True,
             "message": "If an account exists for this email, an OTP has been sent.",
-            "expires_in_minutes": 10,
+            "expires_in_minutes": OTP_TTL_MINUTES,
         }
-        # A Super Admin gets the login OTP only after the password step, so it cannot be requested here.
-        if not user_row or user_row.get("blocked") or user_row.get("role") == "super_admin":
+        # Admins and Super Admins sign in with their password (a Super Admin then gets the code), so a code
+        # alone is never sent to them here.
+        if not user_row or user_row.get("blocked") or user_row.get("role") in ("admin", "super_admin"):
+            logger.info("OTP_REQUEST_NO_SEND purpose=login to=%s", mask_email(email))
             return generic
-        result = issue_email_otp(
+        issue_email_otp(
             db,
             email=email,
             purpose="login",
@@ -157,15 +178,9 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
             language=str(user_row.get("preferred_language") or "en"),
             phone=body.phone,
             deliver=True,
+            reserved=True,
+            ip=ip,
         )
-        if not result.get("ok"):
-            if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
-                raise HTTPException(
-                    429,
-                    f"Please wait before requesting another OTP"
-                    + (f" ({result.get('retry_after_seconds')}s)" if result.get("retry_after_seconds") else ""),
-                )
-            return generic
         return generic
 
     # register / verify — send to provided email (existence checked later on register)
@@ -179,10 +194,11 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
         language=lang,
         phone=body.phone,
         deliver=True,
+        reserved=True,
+        ip=ip,
+        account_type=account_type,
     )
     if not result.get("ok"):
-        if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
-            raise HTTPException(429, "Please wait before requesting another OTP")
         if result.get("error") == "recipient_not_allowed":
             raise HTTPException(403, result["message"])
         raise HTTPException(
@@ -192,8 +208,8 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
         )
     out = {
         "ok": True,
-        "message": result.get("message") or f"OTP sent to {email}. Valid for 10 minutes.",
-        "expires_in_minutes": int(result.get("expires_in_minutes") or 10),
+        "message": result.get("message") or f"OTP sent to {email}. Valid for {OTP_TTL_MINUTES} minutes.",
+        "expires_in_minutes": int(result.get("expires_in_minutes") or OTP_TTL_MINUTES),
         "email": email,
     }
     if result.get("dev_hint"):
@@ -238,8 +254,12 @@ def login_with_otp(body: OtpVerifyIn, request: Request, db: Session = Depends(ge
         raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
     if row["blocked"]:
         raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
-    if row["role"] == "super_admin":
-        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Super Admins sign in with password and OTP")
+    state_error = account_state_error(row)
+    if state_error:
+        raise state_error
+    if row["role"] in ("admin", "super_admin"):
+        # No code is ever sent to these accounts here; refuse in the same words as any wrong code.
+        raise coded_http(status.HTTP_401_UNAUTHORIZED, "INVALID_OTP", "Invalid or expired OTP")
     return TokenOut(access_token=create_access_token(str(row["id"]), row["role"], row["password_hash"]), user=_public(dict(row)))
 
 
@@ -249,20 +269,13 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(400, "You must accept the Terms & Conditions and Privacy Policy")
     if body.account_type not in ("customer", "pujari"):
         raise HTTPException(400, "Invalid account type")
-    _verify_registration_captcha(db, body.captcha_token)
-    # Validate referral / uniqueness before consuming OTP so a bad code does not burn it.
+    # Validate the referral before consuming the OTP so a bad code does not burn it.
     if body.referral_code:
         from app.referrals import find_referrer_by_code
 
         referrer_ok = find_referrer_by_code(db, body.referral_code)
         if not referrer_ok or referrer_ok.get("blocked"):
             raise HTTPException(400, "Invalid referral code")
-    exists = db.execute(
-        text("SELECT id FROM users WHERE email = :e OR phone = :p"),
-        {"e": str(body.email), "p": body.phone},
-    ).first()
-    if exists:
-        raise HTTPException(409, "An account with this email or phone already exists")
     from app.name_parts import compose_display_name, split_display_name, validate_name_parts
 
     reg_first = (body.first_name or "").strip()
@@ -293,7 +306,16 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     from app.schema_migrate import ensure_calendar_preference_schema
 
     ensure_calendar_preference_schema()
+    # The emailed code is checked first, so only someone who controls the mailbox learns whether an account
+    # already uses this email or phone (otherwise /register answers "already exists" to anyone who asks).
     _verify_registration_otp(db, body, rate_limit.client_ip(request))
+    exists = db.execute(
+        text("SELECT id FROM users WHERE email = :e OR phone = :p"),
+        {"e": str(body.email), "p": body.phone},
+    ).first()
+    if exists:
+        db.commit()  # the code stays used: a new attempt needs a new OTP
+        raise HTTPException(409, "An account with this email or phone already exists")
 
     user_id = str(uuid4())
     db.execute(
@@ -460,6 +482,9 @@ def _send_super_admin_otp(db: Session, row: dict) -> None:
         purpose="login",
         customer_name=str(row.get("name") or ""),
         language=str(row.get("preferred_language") or "en"),
+        # Its own counter, so public OTP requests for this address cannot use up the Super Admin's sends.
+        limit_scope="super_admin_login",
+        daily_limit=None,
         hourly_limit=SUPER_ADMIN_OTP_PER_HOUR,
     )
     if result.get("ok"):
@@ -467,6 +492,8 @@ def _send_super_admin_otp(db: Session, row: dict) -> None:
     if result.get("error") in ("cooldown", "hourly_limit", "rate_limited"):
         wait = result.get("retry_after_seconds")
         raise HTTPException(429, f"Please wait before requesting another OTP{f' ({wait}s)' if wait else ''}")
+    if result.get("error") == "unavailable":
+        raise rate_limit.unavailable()
     # No OTP means no sign-in: this step never falls back to password alone.
     raise HTTPException(502, result.get("message") or "Could not send your OTP. Please try again shortly.")
 
@@ -486,6 +513,13 @@ def _super_admin_challenge(db: Session, token: str) -> dict:
     return dict(row)
 
 
+PORTAL_ROLES = {
+    "customer": ("customer",),
+    "pujari": ("pujari", "head_pujari"),
+    "admin": ("admin", "super_admin"),
+}
+
+
 @router.post("/login", response_model=LoginOut)
 def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     identifier = body.identifier.strip()
@@ -499,7 +533,18 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         text("SELECT * FROM users WHERE email = :id OR phone = :id"),
         {"id": identifier},
     ).mappings().first()
-    if not row or not verify_password(body.password, row["password_hash"]):
+    from app import captcha_settings
+
+    # Chosen by the sign-in page, never by the account looked up, so asking or not reveals nothing about it.
+    if captcha_settings.login_required(db, body.portal):
+        from app import captcha
+
+        captcha.require(db, body.captcha_id, body.captcha_answer, purpose="login", ip=ip)
+    # An account signs in only through its own portal. Anything else is the same failure as a wrong password,
+    # so naming a portal whose switch is off cannot be used to try passwords for another portal's accounts.
+    password_ok = bool(row) and verify_password(body.password, row["password_hash"])
+    wrong_portal = bool(row) and body.portal is not None and row["role"] not in PORTAL_ROLES[body.portal]
+    if not password_ok or wrong_portal:
         rate_limit.record(db, rate_limit.LOGIN_FAIL_IDENTIFIER, identifier)
         rate_limit.record(db, rate_limit.LOGIN_FAIL_IP, ip)
         db.commit()
@@ -508,6 +553,9 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     db.commit()
     if row["blocked"]:
         raise coded_http(status.HTTP_403_FORBIDDEN, "ACCOUNT_BLOCKED", ACCOUNT_BLOCKED)
+    state_error = account_state_error(row)
+    if state_error:
+        raise state_error
     if row["role"] in ("customer", "pujari", "head_pujari") and not (row.get("public_id") or "").strip():
         from app.public_ids import ensure_public_id
 
@@ -520,7 +568,7 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
             otp_required=True,
             challenge_token=create_login_challenge(str(row["id"]), row["password_hash"]),
             email_hint=_mask_email(row["email"]),
-            expires_in_minutes=10,
+            expires_in_minutes=OTP_TTL_MINUTES,
         )
     return LoginOut(access_token=create_access_token(str(row["id"]), row["role"], row["password_hash"]), user=_public(dict(row)))
 
@@ -651,9 +699,23 @@ def change_password(body: ChangePasswordIn, user=Depends(current_user), db: Sess
         raise HTTPException(400, "Current password is incorrect")
     if body.current_password == body.new_password:
         raise HTTPException(400, "New password must be different from current password")
+    from app.account_lifecycle import notify_password_changed
+
+    new_hash = hash_password(body.new_password)
+    # Ends every other session; the caller gets a fresh token below, issued after this moment.
     db.execute(
-        text("UPDATE users SET password_hash = :pw, updated_at = NOW() WHERE id = CAST(:id AS uuid)"),
-        {"pw": hash_password(body.new_password), "id": user["id"]},
+        text(
+            """
+            UPDATE users SET password_hash = :pw, updated_at = NOW(), sessions_revoked_at = :revoked
+            WHERE id = CAST(:id AS uuid)
+            """
+        ),
+        {"pw": new_hash, "id": user["id"], "revoked": datetime.now(timezone.utc)},
     )
     db.commit()
-    return {"ok": True, "message": "Password updated successfully"}
+    notify_password_changed(db, user)
+    return {
+        "ok": True,
+        "message": "Password updated successfully",
+        "access_token": create_access_token(str(user["id"]), user["role"], new_hash, mfa=user["role"] == "super_admin"),
+    }

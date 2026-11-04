@@ -86,7 +86,12 @@ export default function PujariDocuments() {
         {officialRows.length > 0 ? <AppText variant="h3">{t("mobile.officialDocuments")}</AppText> : null}
         {officialRows.map((d, i) => (
           <Card key={i}>
-            <AppText>{String((d as { title?: string; document_type?: string }).title || (d as { document_type?: string }).document_type || t("mobile.document"))}</AppText>
+            <AppText>{String(
+                (d as { title?: string; document_name?: string; document_type?: string }).title ||
+                  (d as { document_name?: string }).document_name ||
+                  (d as { document_type?: string }).document_type ||
+                  t("mobile.document"),
+              )}</AppText>
             {(d as { status?: string }).status ? <StatusBadge status={String((d as { status?: string }).status)} /> : null}
           </Card>
         ))}

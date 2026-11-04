@@ -76,6 +76,10 @@ export type AdminServiceForm = {
   dakshina_share_percent: number;
   /** Fixed pujari dakshina per booking (paise). Set (> 0) = used instead of the %; null/0 = use the %. */
   dakshina_amount_paise?: number | null;
+  /** Fixed dakshina for Premium bookings (paise). Only used with dakshina_amount_paise; null = same amount. */
+  premium_dakshina_amount_paise?: number | null;
+  /** Dakshina % for Premium bookings (percentage mode). null = same % as Standard. */
+  premium_dakshina_share_percent?: number | null;
   requires_muhurta: boolean;
   duration_minutes: number;
   pujaris_required: number;
@@ -143,6 +147,8 @@ export function emptyAdminServiceForm(): AdminServiceForm {
     muhurta_fee_paise: 0,
     dakshina_share_percent: 85,
     dakshina_amount_paise: null,
+    premium_dakshina_amount_paise: null,
+    premium_dakshina_share_percent: null,
     requires_muhurta: false,
     duration_minutes: 90,
     pujaris_required: 1,
@@ -216,6 +222,14 @@ export function buildAdminServicePayload(form: AdminServiceForm): Record<string,
     ),
     dakshina_amount_paise:
       Number(form.dakshina_amount_paise) > 0 ? Math.round(Number(form.dakshina_amount_paise)) : null,
+    premium_dakshina_amount_paise:
+      Number(form.dakshina_amount_paise) > 0 && Number(form.premium_dakshina_amount_paise) > 0
+        ? Math.round(Number(form.premium_dakshina_amount_paise))
+        : null,
+    premium_dakshina_share_percent:
+      form.premium_dakshina_share_percent == null || !Number.isFinite(Number(form.premium_dakshina_share_percent))
+        ? null
+        : Math.min(100, Math.max(0, Number(form.premium_dakshina_share_percent))),
     muhurta_fee_paise: muhurtaFee,
     duration_minutes: Math.max(15, Math.round(Number(form.duration_minutes) || 90)),
     required_level: clampServiceRequiredLevel(Number(form.required_level) || 2),

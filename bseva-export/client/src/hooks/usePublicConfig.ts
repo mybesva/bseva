@@ -11,8 +11,16 @@ export type PublicConfig = {
   support_email?: string;
   pujari_full_booking_details_before_hours: number;
   puja_start_otp_before_minutes: number;
-  registration_captcha_enabled?: boolean;
-  recaptcha_site_key?: string;
+  /** Which forms show the self-hosted image CAPTCHA. Contact Us and Custom Puja are always true; the other
+   *  four are the Super Admin switches as the server enforces them right now. */
+  captcha?: {
+    contact: boolean;
+    custom_puja: boolean;
+    customer_register: boolean;
+    pujari_register: boolean;
+    customer_login: boolean;
+    pujari_login: boolean;
+  };
   customer_cancel_fee_over_48h_percent?: number;
   customer_cancel_fee_24_48h_percent?: number;
   customer_cancel_fee_under_24h_percent?: number;

@@ -241,6 +241,16 @@ export function rupees(paise: number | null | undefined): string {
   return `₹${(Number(paise || 0) / 100).toLocaleString("en-IN")}`;
 }
 
+/** Pujari dakshina for a puja: "₹X Standard · ₹Y Premium", or just "₹X" when there is no Premium price. */
+export function dakshinaLabel(
+  standardPaise: number | null | undefined,
+  premiumPaise: number | null | undefined,
+  t: (key: string) => string
+): string {
+  if (premiumPaise == null) return rupees(standardPaise);
+  return `${rupees(standardPaise)} ${t("booking.standard")} · ${rupees(premiumPaise)} ${t("booking.premium")}`;
+}
+
 export function dashboardPath(role: string): "/customer" | "/pujari" | "admin-web" {
   if (isAdminRole(role)) return "admin-web";
   if (isPujariRole(role)) return "/pujari";

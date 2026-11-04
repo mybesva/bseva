@@ -6,8 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, whatsappDisplay, whatsappHref, telHref } from "@/hooks/usePublicConfig";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
+import { CaptchaField, HoneypotField, useFormTimer, type CaptchaHandle } from "@/components/BotProtection";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,6 +64,12 @@ export function ContactPortalContent() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const captchaRef = useRef<CaptchaHandle>(null);
+  const { user } = useAuth();
+  // Signed-in users are exempt on the server, so only signed-out visitors see the image.
+  const showCaptcha = Boolean(config.captcha?.contact) && !user;
+  const formTimer = useFormTimer();
 
   function validate(values: FormState): FormErrors {
     const next: FormErrors = {};
@@ -95,6 +103,10 @@ export function ContactPortalContent() {
       toast.error(t("contact.errRequired"));
       return;
     }
+    if (showCaptcha && !captchaRef.current?.values().captcha_answer) {
+      toast.error("Please type the characters shown in the security image.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await api<{ ok: boolean; message?: string }>("/support/contact", {
@@ -106,6 +118,10 @@ export function ContactPortalContent() {
           phone: form.phone.trim(),
           subject: form.subject.trim(),
           message: form.message.trim(),
+          website: honeypot,
+          elapsed_ms: formTimer.elapsedMs(),
+          ...(showCaptcha ? captchaRef.current?.values() : {}),
+          source: "web_support",
         }),
       });
       setSubmitted(true);
@@ -115,6 +131,8 @@ export function ContactPortalContent() {
     } catch (err: any) {
       toast.error(err?.message || t("contact.errSend"));
     } finally {
+      // Each CAPTCHA image works once: show a fresh one after every attempt.
+      if (showCaptcha) captchaRef.current?.refresh();
       setSubmitting(false);
     }
   }
@@ -189,12 +207,16 @@ export function ContactPortalContent() {
                       <p className="text-muted-foreground mt-1">{t("contact.success")}</p>
                     </div>
                   </div>
-                  <Button type="button" variant="outline" onClick={() => setSubmitted(false)} className="font-semibold">
+                  <Button type="button" variant="outline" onClick={() => {
+                      formTimer.restart();
+                      setSubmitted(false);
+                    }} className="font-semibold">
                     {t("contact.sendAnother")}
                   </Button>
                 </div>
               ) : (
-                <form className="space-y-5" onSubmit={onSubmit} noValidate>
+                <form className="relative space-y-5" onSubmit={onSubmit} noValidate>
+                  <HoneypotField value={honeypot} onChange={setHoneypot} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="portal-contact-name">
@@ -291,6 +313,7 @@ export function ContactPortalContent() {
                     />
                     {errors.message && <p className="text-xs text-destructive">{errors.message}</p>}
                   </div>
+                  {showCaptcha ? <CaptchaField ref={captchaRef} purpose="contact" disabled={submitting} /> : null}
                   <Button
                     type="submit"
                     disabled={submitting}

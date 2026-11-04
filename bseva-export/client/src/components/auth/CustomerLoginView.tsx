@@ -60,6 +60,7 @@ export default function CustomerLoginView({
   onPassword,
   onSubmit,
   registerHref,
+  captchaSlot,
 }: {
   variant?: "customer" | "pujari";
   identifier: string;
@@ -69,6 +70,8 @@ export default function CustomerLoginView({
   onPassword: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   registerHref: string;
+  /** Security image, shown only after the server asks for it (repeated failed sign-ins). */
+  captchaSlot?: React.ReactNode;
 }) {
   const { t } = useI18n();
   const pujari = variant === "pujari";
@@ -210,7 +213,18 @@ export default function CustomerLoginView({
                     className={fieldClass}
                   />
                 </div>
+                <div className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-semibold text-[#FF7A00] hover:underline"
+                    data-testid={`${fieldPrefix}-forgot-password`}
+                  >
+                    {t("auth.forgotPassword")}
+                  </Link>
+                </div>
               </div>
+
+              {captchaSlot}
 
               <Button
                 type="submit"

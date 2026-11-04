@@ -41,6 +41,20 @@ class Settings(BaseSettings):
     # their OTP is the secret OTP_TEST_CODE instead. Ignored outside qa/test; refused at startup in production.
     otp_test_email_domains: str = ""
     otp_test_code: str = ""
+    # Self-hosted image CAPTCHA (app.captcha). Contact Us and Custom Puja always ask signed-out visitors; no
+    # setting turns that off. The Super Admin switches for registration and password sign-in (customer and
+    # pujari, app.captcha_settings) are enforced only when this is true. Keep it false until the web and the
+    # mobile app builds that show the CAPTCHA are released: older app builds send none.
+    captcha_settings_enforcement: bool = False
+    # Circuit breakers on mail that anonymous visitors can trigger (per clock hour, whole deployment).
+    otp_public_emails_per_hour: int = 300
+    # OTP requests one client address may make per rolling day (raise on QA if testers share one office IP).
+    otp_requests_per_ip_per_day: int = 60
+    # Registration / email-verification codes: their own site-wide hourly budget (separate from the one above, so
+    # they cannot use up sign-in, reset or deletion mail) and a tighter per-client daily cap.
+    otp_register_emails_per_hour: int = 100
+    otp_register_requests_per_ip_per_day: int = 20
+    contact_team_emails_per_hour: int = 30
 
     @property
     def wallet_self_topup_allowed(self) -> bool:

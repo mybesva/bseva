@@ -30,6 +30,7 @@ import {
 } from "@/lib/downloadSamagriList";
 import { formatPujaDuration } from "@bseva/locales";
 import { PujaTitle } from "@/components/PujaTitle";
+import ReportButton from "@/components/reports/ReportDialog";
 import { Download, Printer, Share2 } from "lucide-react";
 import { mapsDirectionsUrl, mapsSearchUrl } from "@/lib/googleMaps";
 import { pujariTeamAcceptNotice, pujariTeamPaymentNotice, pujarisIncludedShort } from "@/lib/pujariTeam";
@@ -344,6 +345,14 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
         <Badge variant="outline" className="font-normal">
           {teamLabel}
         </Badge>
+        {viewerRole === "customer" || viewerRole === "pujari" ? (
+          <ReportButton
+            className="ml-auto"
+            bookingId={String(booking.id || bookingId)}
+            viewer={viewerRole}
+            counterpartId={viewerRole === "customer" ? booking.pujari_id : booking.customer_id}
+          />
+        ) : null}
       </div>
 
       {teamCustomerNote && viewerRole === "customer" ? (

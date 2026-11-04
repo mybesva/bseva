@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import os
+
 import httpx
 from fastapi import Request
 
@@ -66,11 +68,15 @@ def inspect_ip(ip: str) -> dict[str, Any]:
     if not ip or ip in {"127.0.0.1", "::1", "localhost", "testclient"}:
         out["source"] = "local"
         return out
+    # Customer IPs only travel over HTTPS. ip-api's free tier is HTTP-only, so it is used only with a Pro key.
+    pro_key = (os.environ.get("IP_API_PRO_KEY") or "").strip()
     try:
-        url = f"http://ip-api.com/json/{ip}?fields=status,message,proxy,hosting,countryCode,org,as,query"
-        with httpx.Client(timeout=4.0) as client:
-            res = client.get(url)
-            data = res.json() if res.status_code == 200 else {}
+        data = {}
+        if pro_key:
+            url = f"https://pro.ip-api.com/json/{ip}?fields=status,message,proxy,hosting,countryCode,org,as,query&key={pro_key}"
+            with httpx.Client(timeout=4.0) as client:
+                res = client.get(url)
+                data = res.json() if res.status_code == 200 else {}
         if str(data.get("status") or "") == "success":
             out["source"] = "ip-api"
             out["country_code"] = data.get("countryCode")
@@ -79,7 +85,7 @@ def inspect_ip(ip: str) -> dict[str, Any]:
                 out["vpn_or_proxy"] = True
             return out
     except Exception:
-        logger.warning("VPN lookup via ip-api failed for %s", ip, exc_info=True)
+        logger.warning("VPN lookup via ip-api failed", exc_info=True)
     try:
         with httpx.Client(timeout=4.0) as client:
             res = client.get(f"https://ipapi.co/{ip}/json/")
@@ -92,7 +98,7 @@ def inspect_ip(ip: str) -> dict[str, Any]:
         if _looks_like_vpn_org(str(out["org"] or "")):
             out["vpn_or_proxy"] = True
     except Exception:
-        logger.warning("VPN lookup via ipapi.co failed for %s", ip, exc_info=True)
+        logger.warning("VPN lookup via ipapi.co failed", exc_info=True)
     return out
 
 

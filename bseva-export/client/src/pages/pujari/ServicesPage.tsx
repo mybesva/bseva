@@ -4,6 +4,7 @@ import PujariOnboardingWalkthrough, { usePujariOnboardingGate } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { dakshinaLabel } from "@bseva/config";
 import { api, rupees } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,8 @@ type CatalogService = {
   short_description?: string | null;
   catalog_price_paise: number;
   dakshina_paise: number;
+  /** Share on a Premium booking; null when the puja has no Premium price. */
+  premium_dakshina_paise?: number | null;
   applied: boolean;
   section_slugs?: string[];
   categories?: { slug?: string; name?: string }[];
@@ -245,7 +248,11 @@ export default function PujariServicesPage() {
                       <div className="flex-1 min-w-0 space-y-0.5">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                           <PujaTitle name={s.name} className="min-w-0" />
-                          <p className="text-sm font-semibold text-primary">{t("web.services.dakshina", { amount: rupees(s.dakshina_paise) })}</p>
+                          <p className="text-sm font-semibold text-primary">
+                            {t("web.services.dakshina", {
+                              amount: dakshinaLabel(s.dakshina_paise, s.premium_dakshina_paise, t),
+                            })}
+                          </p>
                         </div>
                         {s.short_description ? (
                           <p className="text-xs text-muted-foreground line-clamp-2">{s.short_description}</p>

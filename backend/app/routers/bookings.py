@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import rate_limit
 from app.audit import write_audit
 from app.booking_attention import BOOKING_QUEUES, mark_open_offers
 from app.db import get_db
@@ -327,14 +328,25 @@ def list_pujari_roles(db: Session = Depends(get_db)):
     return out
 
 
-_UNDER_24H_CANCEL_BODY = (
-    "100% cancellation charge, no refund. If the pujari cancels in this window, "
-    "100% of that puja’s cost is deducted from their wallet (same as no-show) "
-    "and the customer is refunded in full."
-)
+# The booking stays live when a pujari cancels late (it goes back out to other pujaris), so customers are not
+# promised a refund. Overrides older stored text in every language. Translations need native-speaker review.
+_UNDER_24H_CANCEL_BODY = {
+    "en": "100% cancellation charge, no refund. If the pujari cancels in this window, the pujari is charged 100% of that puja’s cost (same as a no-show) and your booking stays active while we arrange another pujari.",
+    "hi": "100% रद्दीकरण शुल्क, कोई वापसी नहीं। इस अवधि में पुजारी रद्द करे तो पूजा की पूरी लागत पुजारी के वॉलेट से ली जाती है, और आपकी बुकिंग जारी रहती है; हम दूसरे पुजारी की व्यवस्था करते हैं।",
+    "te": "100% రద్దు రుసుము, వాపసు లేదు. ఈ సమయంలో పూజారి రద్దు చేస్తే, పూజ పూర్తి ఖర్చు పూజారి వాలెట్ నుంచి తీసుకుంటాం. మీ బుకింగ్ కొనసాగుతుంది, మేము మరో పూజారిని ఏర్పాటు చేస్తాం.",
+    "kn": "100% ರದ್ದತಿ ಶುಲ್ಕ, ಮರುಪಾವತಿ ಇಲ್ಲ. ಈ ಅವಧಿಯಲ್ಲಿ ಪೂಜಾರಿ ರದ್ದುಪಡಿಸಿದರೆ, ಪೂಜೆಯ ಪೂರ್ಣ ವೆಚ್ಚವನ್ನು ಪೂಜಾರಿಯ ವಾಲೆಟ್‌ನಿಂದ ಕಡಿತಗೊಳಿಸಲಾಗುತ್ತದೆ. ನಿಮ್ಮ ಬುಕಿಂಗ್ ಮುಂದುವರಿಯುತ್ತದೆ, ನಾವು ಬೇರೆ ಪೂಜಾರಿಯನ್ನು ವ್ಯವಸ್ಥೆ ಮಾಡುತ್ತೇವೆ.",
+    "ta": "100% ரத்து கட்டணம், பணம் திருப்பித் தரப்படாது. இந்த நேரத்தில் பூசாரி ரத்து செய்தால், பூஜையின் முழு செலவு பூசாரியின் வாலெட்டில் இருந்து கழிக்கப்படும். உங்கள் முன்பதிவு தொடரும், நாங்கள் வேறு பூசாரியை ஏற்பாடு செய்வோம்.",
+    "mr": "100% रद्द शुल्क, परतावा नाही. या कालावधीत पुजारीने रद्द केल्यास पूजेचा पूर्ण खर्च पुजारीच्या वॉलेटमधून कापला जातो. तुमचे बुकिंग सुरू राहते आणि आम्ही दुसऱ्या पुजारीची व्यवस्था करतो.",
+    "ml": "100% റദ്ദാക്കൽ നിരക്ക്, റീഫണ്ട് ഇല്ല. ഈ സമയത്ത് പൂജാരി റദ്ദാക്കിയാൽ, പൂജയുടെ മുഴുവൻ ചെലവും പൂജാരിയുടെ വാലറ്റിൽ നിന്ന് ഈടാക്കും. നിങ്ങളുടെ ബുക്കിംഗ് തുടരും, ഞങ്ങൾ മറ്റൊരു പൂജാരിയെ ഏർപ്പാടാക്കും.",
+}
 
 
-def _normalize_legal_points(slug: str, points):
+def _is_under_24h_point(item: dict) -> bool:
+    title = str(item.get("title") or "")
+    return "24" in title and "48" not in title
+
+
+def _normalize_legal_points(slug: str, points, lang: str = "en"):
     out = []
     for raw in points or []:
         item = dict(raw)
@@ -343,8 +355,8 @@ def _normalize_legal_points(slug: str, points):
         if "demo notice" in title or "demonstration application" in body:
             continue
         body = body.replace("demo total charged", "charged")
-        if slug == "cancellation_policy" and "less than 24" in title and "not permitted" in body:
-            item["body"] = _UNDER_24H_CANCEL_BODY
+        if slug == "cancellation_policy" and _is_under_24h_point(item):
+            item["body"] = _UNDER_24H_CANCEL_BODY.get(lang) or _UNDER_24H_CANCEL_BODY["en"]
         out.append(item)
     return out
 
@@ -376,7 +388,7 @@ def list_legal_public(request: Request, lang: str | None = None, db: Session = D
             import json
 
             points = json.loads(points)
-        data["points"] = _normalize_legal_points(str(data.get("slug") or ""), points)
+        data["points"] = _normalize_legal_points(str(data.get("slug") or ""), points, code)
         out.append(data)
     return out
 
@@ -408,7 +420,7 @@ def get_legal_public(slug: str, request: Request, lang: str | None = None, db: S
         import json
 
         points = json.loads(points)
-    data["points"] = _normalize_legal_points(str(data.get("slug") or slug), points)
+    data["points"] = _normalize_legal_points(str(data.get("slug") or slug), points, code)
     return data
 
 
@@ -648,6 +660,8 @@ def create_booking(
         if replay:
             return replay
 
+    # A retry with the same idempotency key returned above and is not counted.
+    rate_limit.check_user_action(db, user, "booking")
     if not body.terms_accepted:
         raise HTTPException(400, "Please accept the Terms & Conditions and Cancellation Policy")
     svc = db.execute(
@@ -1383,6 +1397,7 @@ def create_booking(
             ),
             {"id": booking_id, "response": json.dumps(response, default=str)},
         )
+    rate_limit.count_user_action(db, user, "booking")
     db.commit()
     background_tasks.add_task(_post_create_booking_side_effects, booking_id, email_payload)
     return response

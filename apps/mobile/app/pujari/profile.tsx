@@ -1,3 +1,5 @@
+import { DeleteAccountRow } from "@/components/DeleteAccountRow";
+import { Ionicons } from "@expo/vector-icons";
 import { PUJARI_QUALS, SAMPRADAYA_OPTS, translatedTokenLabel } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
@@ -132,9 +134,7 @@ export default function PujariProfile() {
               justifyContent: "center",
             }}
           >
-            <AppText variant="h2" color={colors.primary}>
-              {String(p.full_name || user?.name || "?").slice(0, 1).toUpperCase()}
-            </AppText>
+            <Ionicons name="person" size={48} color={colors.primary} />
           </View>
         )}
         <Card>
@@ -228,6 +228,7 @@ export default function PujariProfile() {
             }
           }}
         />
+        <DeleteAccountRow />
       </ScrollView>
       ) : null}
       {activeTab === "address" ? <PujariAddressContent /> : null}

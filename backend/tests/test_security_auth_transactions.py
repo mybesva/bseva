@@ -370,10 +370,13 @@ def test_contact_form_refused_over_limit():
     from app.routers import support
 
     db = FakeDB([("INSERT INTO security_rate_limits", rate_limit.CONTACT_IP[1] + 1)])
-    body = SimpleNamespace(name="A", email="a@b.in", subject="Hi", message="Hello there", country_code="+91", phone="")
+    body = SimpleNamespace(
+        name="Asha", email="a@b.in", subject="Hello", message="Hello there team", country_code="+91", phone="9876543210"
+    )
     with pytest.raises(HTTPException) as exc:
-        support.submit_contact_form(body, request=_request(), db=db)
+        support.submit_contact_form(body, request=_request(), db=db, user=None)
     assert exc.value.status_code == 429
+    assert db.writes("contact_submissions") == []
 
 
 def test_rate_limit_fails_open_if_table_missing():
@@ -420,20 +423,6 @@ def test_hosted_deployment_must_declare_environment():
 
 def test_local_development_unaffected():
     assert insecure_settings_problems(_settings(environment="development"), env={}) == []
-
-
-def test_recaptcha_dev_bypass_ignored_in_production(monkeypatch):
-    monkeypatch.setenv("RECAPTCHA_SECRET_KEY", "dev-bypass")
-    monkeypatch.setattr(auth, "get_setting", lambda db, k, d=None: True)
-    import urllib.request
-
-    def _no_network(*a, **k):
-        raise OSError("network disabled in test")
-
-    monkeypatch.setattr(urllib.request, "urlopen", _no_network)
-    with pytest.raises(HTTPException) as exc:
-        auth._verify_registration_captcha(FakeDB(), "dev-bypass")
-    assert exc.value.status_code == 502  # went to real verification instead of bypassing
 
 
 def test_cron_requires_secret_outside_development(monkeypatch):

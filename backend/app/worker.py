@@ -82,14 +82,35 @@ def _offers(db) -> dict:
 
 def _prune(db) -> dict:
     deleted = {}
-    for table, column, days in (("job_dedupe", "created_at", 30), ("security_rate_limits", "window_start", 2)):
+    for table, column, days, extra in (
+        ("job_dedupe", "created_at", 30, ""),
+        ("security_rate_limits", "window_start", 2, ""),
+        ("otp_send_events", "created_at", 2, ""),
+        # Refused contact messages are kept only long enough to investigate abuse; real ones are kept.
+        ("contact_submissions", "created_at", 90, " AND status IN ('spam', 'duplicate')"),
+    ):
+        label = f"{table}{'_spam' if extra else ''}"
         try:
             with db.begin_nested():
-                res = db.execute(text(f"DELETE FROM {table} WHERE {column} < NOW() - make_interval(days => :d)"), {"d": days})
-                deleted[table] = res.rowcount
+                res = db.execute(
+                    text(f"DELETE FROM {table} WHERE {column} < NOW() - make_interval(days => :d){extra}"), {"d": days}
+                )
+                deleted[label] = res.rowcount
         except Exception:
-            deleted[table] = "unavailable"
+            deleted[label] = "unavailable"
     return deleted
+
+
+def _privacy(db) -> dict:
+    from app.account_lifecycle import purge_location_history, run_due_deletions
+
+    from app.field_crypto import encrypt_existing_bank_numbers
+
+    return {
+        "deletions": run_due_deletions(db),
+        "location_pings_purged": purge_location_history(db),
+        "bank_numbers_encrypted": encrypt_existing_bank_numbers(db),
+    }
 
 
 def _settlements(db) -> dict:
@@ -105,6 +126,7 @@ JOBS: dict[str, tuple[int, Callable[[], dict]]] = {
     "booking_offers": (int(os.environ.get("WORKER_OFFERS_SECONDS", 300)), _with_session(_offers)),
     "settlements": (int(os.environ.get("WORKER_SETTLEMENT_SECONDS", 3600)), _with_session(_settlements)),
     "prune": (86400, _with_session(_prune)),
+    "privacy": (int(os.environ.get("WORKER_PRIVACY_SECONDS", 3600)), _with_session(_privacy)),
 }
 
 

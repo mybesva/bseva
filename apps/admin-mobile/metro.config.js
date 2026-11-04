@@ -28,4 +28,14 @@ if (fs.existsSync(packagesRoot)) {
 }
 config.resolver.extraNodeModules = extraNodeModules;
 
+// extraNodeModules is only a fallback, so an old copy in node_modules/@bseva/* would still win.
+// Send every @bseva/* import (and subpath) to the workspace source first.
+const defaultResolve = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const match = /^(@bseva\/[^/]+)(\/.*)?$/.exec(moduleName);
+  const target = match && extraNodeModules[match[1]];
+  const request = target ? path.join(target, match[2] || "") : moduleName;
+  return defaultResolve ? defaultResolve(context, request, platform) : context.resolveRequest(context, request, platform);
+};
+
 module.exports = config;

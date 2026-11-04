@@ -30,7 +30,6 @@ class RegisterIn(BaseModel):
     phone: str = Field(min_length=10, max_length=15)
     password: str = Field(min_length=8, max_length=128)
     otp: str = Field(min_length=4, max_length=8)
-    captcha_token: Optional[str] = None
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -122,12 +121,24 @@ class CustomerAddressPatchIn(BaseModel):
 class LoginIn(BaseModel):
     identifier: str
     password: str
+    # Which sign-in page sent this. The CAPTCHA switch is chosen by it, so the account must belong to it; no
+    # portal gets the stricter of the customer and pujari switches. Admin sign-in is never asked.
+    portal: Optional[Literal["customer", "pujari", "admin"]] = None
+    # Self-hosted CAPTCHA, when the Super Admin switch for this portal is on (app.captcha_settings).
+    captcha_id: Optional[str] = Field(default=None, max_length=128)
+    captcha_answer: Optional[str] = Field(default=None, max_length=16)
 
 
 class OtpRequestIn(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     purpose: Literal["register", "login", "verify"] = "register"
+    # Registration codes: the account type being registered. It picks the CAPTCHA switch, and the code then
+    # registers only that type. Without it the stricter switch applies.
+    account_type: Optional[Literal["customer", "pujari"]] = None
+    # Self-hosted CAPTCHA, when the Super Admin registration switch is on (app.captcha_settings).
+    captcha_id: Optional[str] = Field(default=None, max_length=128)
+    captcha_answer: Optional[str] = Field(default=None, max_length=16)
 
 
 class OtpVerifyIn(BaseModel):
@@ -296,6 +307,10 @@ class ServiceIn(BaseModel):
     dakshina_share_percent: Optional[float] = Field(default=85, ge=0, le=100)
     # Fixed pujari dakshina per booking (paise). When set (> 0) it replaces the percentage.
     dakshina_amount_paise: Optional[int] = Field(default=None, ge=0)
+    # Fixed dakshina for Premium bookings (paise). Only used with dakshina_amount_paise; empty = same amount.
+    premium_dakshina_amount_paise: Optional[int] = Field(default=None, ge=0)
+    # Dakshina % for Premium bookings (percentage mode). Empty = same % as Standard.
+    premium_dakshina_share_percent: Optional[float] = Field(default=None, ge=0, le=100)
     muhurta_consultation_enabled: Optional[bool] = False
     muhurta_fee_paise: Optional[int] = None
     requires_muhurta: Optional[bool] = False

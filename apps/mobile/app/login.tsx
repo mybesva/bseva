@@ -2,9 +2,11 @@ import { dashboardPath, isAdminRole } from "@bseva/config";
 import { errorKeyForCode } from "@bseva/locales";
 import { apiErrorMessage, userMessage } from "@/utils/userMessage";
 import { loginSchema } from "@bseva/validation";
-import { ApiError } from "@bseva/api-client";
+import { ApiError, isCaptchaErrorCode, type CaptchaFlags } from "@bseva/api-client";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { CaptchaField, type CaptchaHandle } from "@/components/CaptchaField";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
@@ -15,7 +17,10 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient, resolveApiBase } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
-import { roleAllowedInApp, variantRole, wrongAppMessageKey } from "@/config/appVariant";
+import { isPujariApp, roleAllowedInApp, variantRole, wrongAppMessageKey } from "@/config/appVariant";
+import { InlineLink } from "@/components/InlineLink";
+import { text as ctext } from "@/content/compliance";
+import { openLegal } from "@/utils/webLinks";
 
 function routeForRole(role: string) {
   const dest = dashboardPath(role);
@@ -35,9 +40,19 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Set when the account is deactivated and waiting for deletion; offers the cancel flow.
+  const [deletionPending, setDeletionPending] = useState<string | null>(null);
+  const config = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
+  const flags = (config.data?.captcha || {}) as Partial<CaptchaFlags>;
+  // The Super Admin switch for this app's sign-in (no role: the stricter one), or the server asked for it.
+  const loginSwitchOn = roleHint ? Boolean(flags[`${roleHint}_login`]) : Boolean(flags.customer_login || flags.pujari_login);
+  const [captchaAsked, setCaptchaAsked] = useState(false);
+  const showCaptcha = captchaAsked || loginSwitchOn;
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   async function onSubmit() {
     setError(null);
+    setDeletionPending(null);
     const parsed = loginSchema.safeParse({ identifier, password });
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message || "auth.checkDetails";
@@ -46,7 +61,10 @@ export default function LoginScreen() {
     }
     setPending(true);
     try {
-      const out = await apiClient.login(identifier.trim(), password);
+      const out = await apiClient.login(identifier.trim(), password, {
+        ...(roleHint ? { portal: roleHint } : {}),
+        ...(showCaptcha ? captchaRef.current?.values() : {}),
+      });
       if (!roleAllowedInApp(out.user.role)) {
         // Valid account, wrong app: end this session and point to the right app.
         await logout();
@@ -61,6 +79,13 @@ export default function LoginScreen() {
       router.replace(routeForRole(out.user.role) as never);
     } catch (e: unknown) {
       const code = e instanceof ApiError ? e.code : undefined;
+      // Each image works once.
+      if (showCaptcha) captchaRef.current?.refresh();
+      if (isCaptchaErrorCode(code)) setCaptchaAsked(true);
+      if (code === "ACCOUNT_DELETION_PENDING") {
+        setDeletionPending((e as ApiError).message || ctext.deletionPendingTitle);
+        return;
+      }
       const key = errorKeyForCode(code);
       let msg = key ? userMessage(t, key, t("errors.loginFailed")) || t("errors.loginFailed") : apiErrorMessage(t, e, "errors.loginFailed");
       if (__DEV__ && code === "NETWORK") {
@@ -103,12 +128,52 @@ export default function LoginScreen() {
                 keyboardType="email-address"
               />
               <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              {showCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
+              {deletionPending ? (
+                <View style={{ gap: 10, padding: 12, borderRadius: 12, backgroundColor: colors.secondary }}>
+                  <AppText style={{ fontWeight: "700" }}>{ctext.deletionPendingTitle}</AppText>
+                  <AppText variant="small">{deletionPending}</AppText>
+                  <PrimaryButton
+                    title={ctext.cancelDeletion}
+                    variant="outline"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/cancel-deletion",
+                        params: identifier.includes("@") ? { email: identifier.trim() } : {},
+                      })
+                    }
+                  />
+                </View>
+              ) : null}
+              <Pressable
+                accessibilityRole="link"
+                hitSlop={8}
+                style={{ alignSelf: "flex-end", minHeight: 32, justifyContent: "center" }}
+                onPress={() =>
+                  router.push({
+                    pathname: "/forgot-password",
+                    params: identifier.includes("@") ? { email: identifier.trim() } : {},
+                  })
+                }
+              >
+                <AppText variant="small" color={colors.primary} style={{ fontWeight: "700" }}>
+                  {ctext.forgotPasswordLink}
+                </AppText>
+              </Pressable>
               <PrimaryButton title={pending ? t("auth.signingIn") : t("auth.signIn")} loading={pending} onPress={onSubmit} />
               <Pressable onPress={() => router.push({ pathname: "/register", params: roleHint ? { role: roleHint } : {} })}>
                 <AppText color={colors.primary} style={{ textAlign: "center", fontWeight: "700" }}>
                   {t("mobile.createAccount")}
                 </AppText>
               </Pressable>
+              <AppText variant="small" color={colors.mutedForeground} style={{ textAlign: "center", lineHeight: 20 }}>
+                {ctext.loginLegalPrefix}{" "}
+                <InlineLink
+                  label={ctext.terms}
+                  onPress={() => void openLegal(isPujariApp || roleHint === "pujari" ? "pujariTerms" : "customerTerms")}
+                />{" "}
+                {ctext.and} <InlineLink label={ctext.privacyPolicy} onPress={() => void openLegal("privacy")} />.
+              </AppText>
             </View>
           </Card>
         </ScrollView>

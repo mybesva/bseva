@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useDarkStatusBarWhileFocused } from "@/hooks/useDarkStatusBarWhileFocused";
 import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 
 export default function CustomerTabs() {
+  useDarkStatusBarWhileFocused();
   const { colors } = useAppTheme();
   const { t } = useI18n();
   return (

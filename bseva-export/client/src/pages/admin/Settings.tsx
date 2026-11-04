@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import type { PujariLevelRow } from "@/hooks/usePujariLevels";
 import { useAuth } from "@/_core/hooks/useAuth";
+import CaptchaSettingsCard from "@/components/admin/CaptchaSettingsCard";
 
 const emptyRoleForm = { title: "", summary: "", examplesText: "" };
 
@@ -89,13 +90,6 @@ const PLATFORM_KEYS: PlatformKey[] = [
   },
   { key: "chadhava_enabled", label: "Chadhava Seva", type: "boolean", group: "features" },
   { key: "pravachan_enabled", label: "Pravachan Seva", type: "boolean", group: "features" },
-  {
-    key: "registration_captcha_enabled",
-    label: "Registration CAPTCHA",
-    type: "boolean",
-    group: "features",
-    hint: "Requires VITE_RECAPTCHA_SITE_KEY + RECAPTCHA_SECRET_KEY env vars.",
-  },
   {
     key: "service_area_unavailable_heading",
     label: "Unavailable Service Area Heading",
@@ -314,7 +308,7 @@ const CANCEL_KEYS: { key: string; label: string; type: SettingType; hint?: strin
     label: "Pujari Penalty % When Cancelling Under 24h",
     type: "number",
     group: "pujari",
-    hint: "Default 100. Same as no-show: 100% of that puja’s cost is deducted from the pujari wallet. Customer is refunded in full.",
+    hint: "Default 100. Same as no-show: 100% of that puja’s cost is deducted from the pujari wallet. The booking stays active and goes to another pujari.",
   },
 ];
 
@@ -843,6 +837,7 @@ export default function Settings() {
           ...SETTING_GROUPS.map((group) => ({ id: `settings-${group.id}`, title: group.title })),
           { id: "settings-cancellation", title: "Cancellation" },
           { id: "settings-pujari-roles", title: "Pujari Roles" },
+          ...(isSuper ? [{ id: "settings-captcha", title: "CAPTCHA" }] : []),
         ].map((item) => (
           <Button
             key={item.id}
@@ -909,6 +904,8 @@ export default function Settings() {
             </Card>
           );
         })}
+
+        {isSuper && <CaptchaSettingsCard />}
 
         <Card id="settings-cancellation" className="scroll-mt-24">
           <CardHeader>

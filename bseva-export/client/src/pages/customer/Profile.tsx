@@ -4,6 +4,7 @@ import { CustomerPortal } from "@/components/RolePortals";
 import { PortalSegmentedTabs } from "@/components/PortalSegmentedTabs";
 import { PortalTermsContent } from "@/pages/portal/TermsPage";
 import ChangePasswordForm from "@/pages/ChangePassword";
+import AccountSettingsPanel from "@/components/account/AccountSettingsPanel";
 import {
   profilePathWithTab,
   profileTabFromSearch,
@@ -62,6 +63,7 @@ export default function CustomerProfilePage() {
       label: t("profile.tab.terms"),
       multilineLabel: t("profile.tab.termsLines"),
     },
+    { id: "account", label: "Account" },
   ];
   const [nameParts, setNameParts] = useState<PersonNameParts>({
     first_name: "",
@@ -251,6 +253,7 @@ export default function CustomerProfilePage() {
 
         {activeTab === "password" ? <ChangePasswordForm embedded /> : null}
         {activeTab === "terms" ? <PortalTermsContent /> : null}
+        {activeTab === "account" ? <AccountSettingsPanel /> : null}
         {activeTab === "address" ? <CustomerAddressPanel /> : null}
 
         {activeTab === "profile" ? (

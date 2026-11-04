@@ -38,6 +38,96 @@ export class ApiError extends Error {
   }
 }
 
+/** Account deletion reasons (contract: send the key). */
+export const DELETION_REASON_KEYS = [
+  "no_longer_using",
+  "not_satisfied",
+  "privacy",
+  "payment_settlement",
+  "app_issues",
+  "duplicate_account",
+  "other",
+] as const;
+export type DeletionReasonKey = (typeof DELETION_REASON_KEYS)[number];
+
+export type DeletionRequest = {
+  id: string;
+  state: "requested" | "pending_resolution" | "ready" | "deleted" | "cancelled" | "escalated";
+  reason: string;
+  explanation: string;
+  requested_at: string;
+  deadline_at: string;
+  cancelled_at: string | null;
+  completed_at: string | null;
+  message: string;
+};
+
+export type DeletionObligationBooking = {
+  id: string;
+  booking_number: string;
+  service_name: string;
+  booking_date: string;
+  start_time: string;
+  status: string;
+  kind: "upcoming" | "ongoing";
+  cancellation?: { allowed: boolean; refund_paise: number; fee_paise: number; policy_note: string };
+  action?: "reassign";
+};
+
+export type DeletionOverview = {
+  account: { role: "customer" | "pujari" | "head_pujari"; email: string; name: string };
+  request: DeletionRequest | null;
+  reasons: { key: string; label: string }[];
+  obligations: {
+    bookings: DeletionObligationBooking[];
+    wallet_balance_paise: number;
+    pending_refunds: number;
+    pending_settlement_paise: number;
+    blocking: string[];
+  };
+  retention_notice: string;
+};
+
+export const REPORT_REASON_KEYS = [
+  "misconduct",
+  "no_show",
+  "unsafe",
+  "fraud",
+  "payment",
+  "inappropriate_content",
+  "other",
+] as const;
+export type ReportReasonKey = (typeof REPORT_REASON_KEYS)[number];
+export type ReportTargetType = "pujari" | "booking" | "customer";
+
+export type UserReport = {
+  id: string;
+  target_type: ReportTargetType;
+  reason: string;
+  status: string;
+  created_at: string;
+  resolution: string | null;
+};
+
+/** Self-hosted image CAPTCHA (POST /captcha). The image is a PNG data URI; the answer stays on the server. */
+export type CaptchaChallenge = { captcha_id: string; image: string; length: number; expires_in_seconds: number };
+export type CaptchaAnswer = { captcha_id?: string; captcha_answer?: string };
+export type LoginExtra = { portal?: "customer" | "pujari" | "admin" } & CaptchaAnswer;
+
+/** Which forms show the CAPTCHA, from /config/public. Contact Us and Custom Puja are always true. */
+export type CaptchaFlags = {
+  contact: boolean;
+  custom_puja: boolean;
+  customer_register: boolean;
+  pujari_register: boolean;
+  customer_login: boolean;
+  pujari_login: boolean;
+};
+
+export function isCaptchaErrorCode(code?: string) {
+  return code === "CAPTCHA_REQUIRED" || code === "CAPTCHA_INVALID";
+}
+
 export function asArray<T>(data: T[] | { items?: T[] } | unknown): T[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === "object" && Array.isArray((data as { items?: T[] }).items)) {
@@ -219,17 +309,19 @@ export function createApiClient(opts: ApiClientOptions) {
     mediaImageSource,
     getBaseUrl: opts.getBaseUrl,
 
-    async login(identifier: string, password: string) {
-      const out = await this.startLogin(identifier, password);
+    async login(identifier: string, password: string, extra?: LoginExtra) {
+      const out = await this.startLogin(identifier, password, extra);
       if (!out.access_token) throw new Error("Super Admins sign in through the admin app");
       return out as TokenOut;
     },
 
-    /** Password step. A Super Admin gets `otp_required` and finishes with completeLoginOtp. */
-    async startLogin(identifier: string, password: string) {
+    /** Password step. A Super Admin gets `otp_required` and finishes with completeLoginOtp.
+     *  `portal` names the sign-in screen: the server picks the CAPTCHA switch by it and signs in only that
+     *  portal's accounts. Send the CAPTCHA answer when that switch is on. */
+    async startLogin(identifier: string, password: string, extra?: LoginExtra) {
       const out = await api<Partial<TokenOut> & { otp_required?: boolean; challenge_token?: string; email_hint?: string }>(
         "/auth/login",
-        { method: "POST", body: JSON.stringify({ identifier, password }) }
+        { method: "POST", body: JSON.stringify({ identifier, password, ...(extra || {}) }) }
       );
       if (out.access_token) await opts.tokenStore.setToken(out.access_token);
       return out;
@@ -269,15 +361,91 @@ export function createApiClient(opts: ApiClientOptions) {
       return api<AuthUser>("/auth/me", { method: "PATCH", body: JSON.stringify(body) });
     },
 
+    /** Ends every other session; the server returns a fresh token for this device. */
     async changePassword(current_password: string, new_password: string) {
-      return api("/auth/change-password", {
+      const out = await api<{ ok?: boolean; access_token?: string }>("/auth/change-password", {
         method: "POST",
         body: JSON.stringify({ current_password, new_password }),
       });
+      if (out?.access_token) await opts.tokenStore.setToken(out.access_token);
+      return out;
     },
 
-    async requestOtp(body: { phone?: string; email?: string; purpose: "register" | "login" | "verify" }) {
+    /** Always answers with the same generic message, whether or not the email has an account. */
+    forgotPassword(email: string) {
+      return api<{ ok: boolean; message: string }>("/auth/password/forgot", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    },
+
+    resetPassword(body: { email: string; code: string; new_password: string }) {
+      return api<{ ok: boolean }>("/auth/password/reset", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    deletionOverview() {
+      return api<DeletionOverview>("/account/deletion");
+    },
+
+    requestDeletionOtp(body: { reason: DeletionReasonKey; explanation: string }) {
+      return api<{ ok: boolean; message: string; email_hint?: string }>("/account/deletion/request-otp", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+
+    /** Deactivates the account. The server ends every session; callers sign out locally. */
+    confirmDeletion(body: { reason: DeletionReasonKey; explanation: string; code: string }) {
+      return api<{ request: DeletionRequest }>("/account/deletion/confirm", {
+        method: "POST",
+        body: JSON.stringify({ ...body, acknowledge: true }),
+      });
+    },
+
+    requestCancelDeletionOtp(email: string) {
+      return api<{ ok: boolean; message?: string }>("/account/deletion/cancel/request-otp", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    },
+
+    cancelDeletion(body: { email: string; code: string }) {
+      return api<{ ok: boolean; message: string }>("/account/deletion/cancel", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+
+    createReport(body: {
+      target_type: ReportTargetType;
+      target_id: string;
+      booking_id?: string;
+      reason: ReportReasonKey;
+      details: string;
+    }) {
+      return api<{ id: string; status: string }>("/reports", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    async myReports() {
+      return asArray<UserReport>(await api<UserReport[]>("/reports/mine"));
+    },
+
+    /** Registration codes: send account_type (it picks the CAPTCHA switch, and the code registers only that
+     *  type) and the CAPTCHA answer when that switch is on. */
+    async requestOtp(
+      body: {
+        phone?: string;
+        email?: string;
+        purpose: "register" | "login" | "verify";
+        account_type?: "customer" | "pujari";
+      } & CaptchaAnswer
+    ) {
       return api("/auth/otp/request", { method: "POST", body: JSON.stringify(body) });
+    },
+
+    /** A new 5-character image CAPTCHA (the answer never leaves the server). `replaces` retires the old one. */
+    async newCaptcha(purpose: "contact" | "register" | "login", replaces?: string) {
+      return api<CaptchaChallenge>("/captcha", { method: "POST", body: JSON.stringify({ purpose, replaces }) });
     },
 
     async logout() {

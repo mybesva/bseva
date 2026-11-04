@@ -1,4 +1,4 @@
-import { pujariAlreadyHoldsRole, pujariCanSelectRole, rupees } from "@bseva/config";
+import { dakshinaLabel, pujariAlreadyHoldsRole, pujariCanSelectRole, rupees } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { Pressable, ScrollView, View } from "react-native";
 import { PujaTitle } from "@/components/PujaTitle";
@@ -16,6 +16,7 @@ type OfferService = {
   slug?: string;
   applied?: boolean;
   dakshina_paise?: number;
+  premium_dakshina_paise?: number | null;
   catalog_price_paise?: number;
   short_description?: string | null;
 };
@@ -65,7 +66,7 @@ export default function PujariServicesScreen() {
                 {s.short_description}
               </AppText>
             ) : null}
-            {s.dakshina_paise != null ? <AppText variant="small">{rupees(s.dakshina_paise)}</AppText> : s.catalog_price_paise ? <AppText variant="small">{rupees(s.catalog_price_paise)}</AppText> : null}
+            {s.dakshina_paise != null ? <AppText variant="small">{dakshinaLabel(s.dakshina_paise, s.premium_dakshina_paise, t)}</AppText> : s.catalog_price_paise ? <AppText variant="small">{rupees(s.catalog_price_paise)}</AppText> : null}
             {s.applied ? (
               <AppText variant="small" color={colors.success}>
                 {t("mobile.applied")}

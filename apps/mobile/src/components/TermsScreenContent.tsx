@@ -8,23 +8,31 @@ import { AppText, Card, ErrorBanner, LoadingBlock } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { isPujariApp } from "@/config/appVariant";
 
-const TERMS_SLUGS = ["platform_terms", "booking_terms", "cancellation_policy"] as const;
+// All four policies are read inside the app (no links out to the website).
+const TERMS_SLUGS = ["platform_terms", isPujariApp ? "pujari_booking_terms" : "booking_terms", "cancellation_policy", "privacy"] as const;
 
 const SECTION_LABEL_KEYS: Record<string, string> = {
   platform_terms: "legal.section.platform",
   booking_terms: "legal.section.booking",
+  pujari_booking_terms: "legal.section.booking",
   cancellation_policy: "legal.section.cancellation",
+  privacy: "legal.section.privacy",
 };
 
 const SECTION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   platform_terms: "document-text-outline",
   booking_terms: "calendar-outline",
+  pujari_booking_terms: "calendar-outline",
   cancellation_policy: "refresh-circle-outline",
+  privacy: "shield-checkmark-outline",
 };
 
 function orderPolicies(rows: LegalPolicy[]): LegalPolicy[] {
-  return TERMS_SLUGS.map((slug) => rows.find((p) => p.slug === slug)).filter(Boolean) as LegalPolicy[];
+  // Pujaris fall back to the general booking terms if their own version isn't published.
+  const pick = (slug: string) => rows.find((p) => p.slug === slug) || (slug === "pujari_booking_terms" ? rows.find((p) => p.slug === "booking_terms") : undefined);
+  return TERMS_SLUGS.map(pick).filter(Boolean) as LegalPolicy[];
 }
 
 /** Second-level switcher under the profile tabs: soft card with equal-width segments. */
@@ -45,6 +53,7 @@ function TermsSectionBar({
       accessibilityRole="tablist"
       style={{
         flexDirection: "row",
+        flexWrap: "wrap",
         gap: 4,
         padding: 4,
         borderRadius: 14,
@@ -65,7 +74,8 @@ function TermsSectionBar({
             accessibilityLabel={label}
             onPress={() => onSelect(policy.slug)}
             style={({ pressed }) => ({
-              flex: 1,
+              flexGrow: 1,
+              flexBasis: "45%",
               minHeight: 44,
               paddingHorizontal: 6,
               paddingVertical: 8,
@@ -97,6 +107,7 @@ function TermsSectionBar({
     </View>
   );
 }
+
 
 export function TermsScreenContent() {
   const { t } = useI18n();

@@ -37,8 +37,9 @@ export function ProfileTabBar({ value, onChange }: ProfileTabBarProps) {
     },
     {
       id: "terms",
-      label: t("profile.tab.termsLines"),
-      accessibilityLabel: t("profile.tab.terms"),
+      // "Terms & Policies" on two lines, like "Change / Password".
+      label: t("mobile.tab.termsPolicies").replace(" & ", " &\n"),
+      accessibilityLabel: t("mobile.tab.termsPolicies"),
       lines: 2,
     },
   ];

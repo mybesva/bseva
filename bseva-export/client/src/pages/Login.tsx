@@ -5,11 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import PasswordInput from "@/components/PasswordInput";
 import SuperAdminOtpForm, { type LoginChallenge } from "@/components/auth/SuperAdminOtpForm";
-import { dashboardPath, loginApi, type AuthUser } from "@/lib/api";
+import { ACCOUNT_DELETION_PENDING, dashboardPath, loginApi, type AuthUser, type LoginPortal } from "@/lib/api";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { errorKeyForCode } from "@bseva/locales";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CaptchaField, isCaptchaError, type CaptchaHandle } from "@/components/BotProtection";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
@@ -28,6 +30,20 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
+  const [deletionPending, setDeletionPending] = useState<string | null>(null);
+  const [needCaptcha, setNeedCaptcha] = useState(false);
+  const captchaRef = useRef<CaptchaHandle>(null);
+  const { config } = usePublicConfig();
+  // The portal picks the Super Admin CAPTCHA switch; without one the server applies the stricter switch.
+  const portal: LoginPortal | undefined =
+    roleHint === "customer" || roleHint === "pujari" || roleHint === "admin" ? roleHint : undefined;
+  const loginSwitchOn =
+    portal === "admin"
+      ? false
+      : portal
+        ? Boolean(config.captcha?.[`${portal}_login`])
+        : Boolean(config.captcha?.customer_login || config.captcha?.pujari_login);
+  const showCaptcha = portal !== "admin" && (needCaptcha || loginSwitchOn);
 
   function goAfterLogin(role: string) {
     if (returnUrl && (role === "customer" || !roleHint || roleHint === "customer")) {
@@ -64,8 +80,9 @@ export default function Login() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
+    setDeletionPending(null);
     try {
-      const out = await loginApi(identifier, password);
+      const out = await loginApi(identifier, password, showCaptcha ? captchaRef.current?.values() : undefined, portal);
       if (out.otp_required && out.challenge_token) {
         setPassword("");
         setChallenge({ token: out.challenge_token, emailHint: out.email_hint || "your email" });
@@ -74,6 +91,13 @@ export default function Login() {
       await finishLogin(out.user as AuthUser);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
+      if (code === ACCOUNT_DELETION_PENDING) {
+        setPassword("");
+        setDeletionPending((err as Error)?.message || "This account is scheduled for deletion.");
+        return;
+      }
+      if (showCaptcha) captchaRef.current?.refresh();
+      if (isCaptchaError(code)) setNeedCaptcha(true);
       const key = errorKeyForCode(code);
       toast.error(key ? t(key) : (err as Error)?.message || t("errors.loginFailed"));
     } finally {
@@ -133,7 +157,27 @@ export default function Login() {
                   autoComplete="new-password"
                   name="bseva-login-password"
                 />
+                {/* Self-service reset is for customers and pujaris; admins reset through a Super Admin. */}
+                {roleHint !== "admin" ? (
+                  <div className="text-right">
+                    <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                      {t("auth.forgotPassword")}
+                    </Link>
+                  </div>
+                ) : null}
               </div>
+              {deletionPending ? (
+                <div
+                  role="alert"
+                  className="rounded-md border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-950 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-100"
+                >
+                  <p>{deletionPending}</p>
+                  <Link href="/delete-account?cancel=1" className="mt-2 inline-block font-semibold text-primary underline">
+                    Cancel Deletion
+                  </Link>
+                </div>
+              ) : null}
+              {showCaptcha ? <CaptchaField ref={captchaRef} purpose="login" disabled={pending} /> : null}
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={pending}>
                 <LogIn className="w-4 h-4 mr-2" />
                 {pending ? t("auth.loggingIn") : t("auth.login")}
@@ -157,6 +201,17 @@ export default function Login() {
               </p>
               <p className="text-sm text-center">
                 <Link href="/" className="text-muted-foreground hover:text-primary">{t("auth.backHome")}</Link>
+              </p>
+              <p className="text-xs text-center text-muted-foreground">
+                By signing in you agree to our{" "}
+                <Link href={roleHint === "pujari" ? "/pujari-terms" : "/customer-terms"} className="underline hover:text-primary">
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy-policy" className="underline hover:text-primary">
+                  Privacy Policy
+                </Link>
+                .
               </p>
             </form>
             )}

@@ -378,5 +378,141 @@ export function formatAddressLines(parts: {
     .join(", ");
 }
 
+export const PUJARI_QUALIFICATION_YEAR_MIN = 1950;
+export const PUJARI_EXPERIENCE_MAX = 80;
+
+/** Whole years between an ISO date of birth (YYYY-MM-DD) and today, or null when it is not a real date. */
+export function ageFromDob(iso: string, today: Date = new Date()): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "").trim());
+  if (!m) return null;
+  const dob = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (Number.isNaN(dob.getTime()) || dob.getMonth() !== Number(m[2]) - 1) return null;
+  let age = today.getFullYear() - dob.getFullYear();
+  const beforeBirthday =
+    today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate());
+  if (beforeBirthday) age -= 1;
+  return age;
+}
+
+export function isValidPujariDob(iso: string, minAge = 18, today: Date = new Date()): boolean {
+  const age = ageFromDob(iso, today);
+  return age != null && age >= minAge && age <= 100;
+}
+
+/** Returns an i18n key, or undefined when the year is fine. */
+export function validateQualificationYear(raw: unknown, yearNow = new Date().getFullYear()): string | undefined {
+  if (raw === "" || raw == null) return "web.validation.qualificationYear";
+  const y = Number(raw);
+  if (!Number.isFinite(y) || !Number.isInteger(y)) return "web.validation.validYear";
+  if (y < PUJARI_QUALIFICATION_YEAR_MIN) return "web.validation.yearMinimum";
+  if (y > yearNow) return "web.validation.yearFuture";
+  return undefined;
+}
+
+/** Returns an i18n key, or undefined when the number of years is fine. */
+export function validateExperienceYears(raw: unknown): string | undefined {
+  if (raw === "" || raw == null || (typeof raw === "string" && !raw.trim())) return "web.validation.experienceRequired";
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return "web.validation.experienceNumber";
+  if (n < 0) return "web.validation.experienceNegative";
+  if (n > PUJARI_EXPERIENCE_MAX) return "web.validation.experienceMaximum";
+  return undefined;
+}
+
+type PujariStepProfile = Record<string, unknown>;
+
+/**
+ * Required-field checks for one step of the pujari onboarding (same rules as the web).
+ * Returns { field: i18nKey } for every problem; empty means the step can be saved.
+ * Step 1 profile, 2 address, 3 professional, 4 documents, 5 services + payout, 6 review.
+ */
+export function validatePujariOnboardingStep(
+  step: number,
+  profile: PujariStepProfile,
+  ctx: {
+    hasPhoto?: boolean;
+    documentTypes?: string[];
+    appliedServices?: number;
+    consent?: boolean;
+    today?: Date;
+  } = {},
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const text = (key: string) => String(profile[key] ?? "").trim();
+
+  if (step === 1) {
+    if (!ctx.hasPhoto && !text("profile_photo_path")) errors.profile_photo_path = "web.validation.profilePhoto";
+    // Same as the web profile form: first and last name (3+ letters each), optional middle name.
+    const hasParts = ["first_name", "middle_name", "last_name"].some((k) => profile[k] != null);
+    const name = hasParts
+      ? { first_name: text("first_name"), middle_name: text("middle_name"), last_name: text("last_name") }
+      : splitDisplayName(text("full_name"));
+    const nameErrors = validatePersonNameParts(name, { minLastLength: 3 });
+    if (nameErrors.first_name) errors.first_name = nameErrors.first_name;
+    if (nameErrors.middle_name) errors.middle_name = nameErrors.middle_name;
+    if (nameErrors.last_name) {
+      errors.last_name = nameErrors.last_name === "validation.lastNameMin" ? "validation.pujariLastNameMin" : nameErrors.last_name;
+    }
+    const dob = text("date_of_birth").slice(0, 10);
+    if (!dob) errors.date_of_birth = "web.validation.dob";
+    else if (!isValidPujariDob(dob, 18, ctx.today)) errors.date_of_birth = "web.validation.adult";
+    const phone = parsePhoneParts(text("mobile_number"));
+    const phoneError = validatePhoneNational(phone.countryCode, phone.national);
+    if (phoneError) errors.mobile_number = phoneError;
+    if (!text("gotra")) errors.gotra = "web.validation.gotra";
+    if (!text("pravara")) errors.pravara = "web.validation.pravara";
+  }
+
+  if (step === 2) {
+    const parsed = addressSchema.safeParse({
+      address_line1: text("address_line1"),
+      city: text("city"),
+      district: text("district"),
+      state: text("state"),
+      pincode: text("pincode"),
+    });
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        const key = String(issue.path[0] || "address_line1");
+        if (!errors[key]) errors[key] = issue.message;
+      }
+    }
+    if (profile.latitude == null || profile.longitude == null) errors.latitude = "web.validation.mapPin";
+  }
+
+  if (step === 1 || step === 3) {
+    const expError = validateExperienceYears(profile.experience_years);
+    if (expError) errors.experience_years = expError;
+    const quals = Array.isArray(profile.qualifications) ? profile.qualifications : [];
+    // Qualifications are optional; the year is only needed once one is ticked.
+    if (quals.length > 0) {
+      const yearError = validateQualificationYear(profile.qualification_year, (ctx.today || new Date()).getFullYear());
+      if (yearError) errors.qualification_year = yearError;
+    }
+    if (!text("sampradaya")) errors.sampradaya = "web.validation.sampradaya";
+    const langs = Array.isArray(profile.languages) ? profile.languages : [];
+    if (!langs.length) errors.languages = "web.validation.languages";
+  }
+
+  if (step === 4) {
+    const docs = ctx.documentTypes || [];
+    if (!docs.includes("identity")) errors.identity = "web.validation.aadhaar";
+    const licence = text("licence_type").toLowerCase();
+    if ((licence === "driving_licence" || licence === "cab_commercial") && !docs.includes("driving_licence")) {
+      errors.driving_licence = "web.validation.drivingLicence";
+    }
+  }
+
+  if (step === 5) {
+    if (!ctx.appliedServices) errors.services = "web.validation.services";
+    const radius = Number(profile.service_radius_km);
+    if (!Number.isFinite(radius) || radius <= 0) errors.service_radius_km = "web.validation.serviceRadius";
+  }
+
+  if (step === 6 && !ctx.consent) errors.consent = "web.validation.finalConsent";
+
+  return errors;
+}
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;

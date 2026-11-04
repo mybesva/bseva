@@ -48,7 +48,6 @@ export function MenuProfileHeader({
     staleTime: 0,
   });
   const photo = photoQ.data ?? null;
-  const initial = (user?.name || "?").slice(0, 1).toUpperCase();
   const photoUri =
     photo && typeof photo === "object" && "uri" in photo && typeof photo.uri === "string" ? photo.uri : null;
 
@@ -97,9 +96,7 @@ export function MenuProfileHeader({
             justifyContent: "center",
           }}
         >
-          <AppText variant="h2" color={colors.primary}>
-            {initial}
-          </AppText>
+          <Ionicons name="person" size={36} color={colors.primary} />
         </View>
       )}
       <View style={{ flex: 1, justifyContent: "center" }}>

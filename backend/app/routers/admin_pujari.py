@@ -28,6 +28,7 @@ from app.rbac import (
 )
 from app.schemas import BookingAssignIn, JoiningFeeWaiveIn, PujariProfileIn, PujariVerifiedServicesIn
 from app.storage import content_type_for, file_response, upload_bytes
+from app.field_crypto import encrypt_value
 
 router = APIRouter(prefix="/admin", tags=["admin-pujari"])
 
@@ -210,7 +211,7 @@ def patch_pujari_profile(
             "avail": body.available,
             "radius": body.service_radius_km,
             "bank4": body.bank_account_last4,
-            "bank_acct": body.bank_account_number,
+            "bank_acct": encrypt_value(body.bank_account_number),
             "ifsc": body.bank_ifsc,
             "holder": body.bank_holder_name,
             "bank_name": body.bank_name,

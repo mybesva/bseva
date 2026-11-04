@@ -47,7 +47,7 @@ export default function SuperAdminOtpForm({
   return (
     <form className="space-y-4" onSubmit={submit} autoComplete="off">
       <p className="text-sm text-muted-foreground">
-        Enter the 6-digit OTP sent to <strong>{challenge.emailHint}</strong>. It is valid for 10 minutes.
+        Enter the 6-digit OTP sent to <strong>{challenge.emailHint}</strong>. It is valid for 5 minutes.
       </p>
       <div className="space-y-2">
         <Label htmlFor="login-otp">One-Time Password</Label>

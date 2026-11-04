@@ -970,6 +970,8 @@ def _ensure_dakshina_column(db: Session) -> None:
             )
         )
         db.execute(text("ALTER TABLE services ADD COLUMN IF NOT EXISTS dakshina_amount_paise INTEGER"))
+        db.execute(text("ALTER TABLE services ADD COLUMN IF NOT EXISTS premium_dakshina_amount_paise INTEGER"))
+        db.execute(text("ALTER TABLE services ADD COLUMN IF NOT EXISTS premium_dakshina_share_percent NUMERIC"))
     except Exception:
         db.rollback()
 
@@ -999,7 +1001,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
               standard_price_paise, premium_price_paise, basic_price_paise, main_puja_price_paise,
               samagri_price_paise, alankaram_price_paise, food_price_paise,
               samagri_provider, alankaram_provider, food_provider,
-              dakshina_share_percent, dakshina_amount_paise,
+              dakshina_share_percent, dakshina_amount_paise, premium_dakshina_amount_paise, premium_dakshina_share_percent,
               muhurta_consultation_enabled, muhurta_fee_paise, requires_muhurta,
               duration_minutes, pujaris_required,
               basic_pujaris_required, standard_pujaris_required, premium_pujaris_required,
@@ -1016,7 +1018,7 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
               :std, :prm, :basic, :main,
               :sam, :alan, :food,
               :samp, :alanp, :foodp,
-              :dak, :dak_amt,
+              :dak, :dak_amt, :dak_prm, :dak_prm_pct,
               :muh_en, :muh_fee, :req_muh,
               :dur, :pujn, :pujn_basic, :pujn_std, :pujn_prm, :virt, :act,
               :sam_av, :alan_av, :food_av,
@@ -1064,6 +1066,13 @@ def create_service(body: ServiceIn, user=Depends(require_permission("manage_serv
             "foodp": body.food_provider or "included",
             "dak": 85.0 if body.dakshina_share_percent is None else max(0.0, min(100.0, float(body.dakshina_share_percent))),
             "dak_amt": int(body.dakshina_amount_paise) if body.dakshina_amount_paise else None,
+            # A Premium amount only means something alongside a fixed Standard amount.
+            "dak_prm": int(body.premium_dakshina_amount_paise)
+            if body.dakshina_amount_paise and body.premium_dakshina_amount_paise
+            else None,
+            "dak_prm_pct": None
+            if body.premium_dakshina_share_percent is None
+            else max(0.0, min(100.0, float(body.premium_dakshina_share_percent))),
             "muh_en": bool(body.muhurta_consultation_enabled),
             "muh_fee": int(body.muhurta_fee_paise or 0),
             "req_muh": bool(body.requires_muhurta),
@@ -1157,7 +1166,8 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
               standard_price_paise=:std, premium_price_paise=:prm, basic_price_paise=:basic, main_puja_price_paise=:main,
               samagri_price_paise=:sam, alankaram_price_paise=:alan, food_price_paise=:food,
               samagri_provider=:samp, alankaram_provider=:alanp, food_provider=:foodp,
-              dakshina_share_percent=:dak, dakshina_amount_paise=:dak_amt,
+              dakshina_share_percent=:dak, dakshina_amount_paise=:dak_amt, premium_dakshina_amount_paise=:dak_prm,
+              premium_dakshina_share_percent=:dak_prm_pct,
               muhurta_consultation_enabled=:muh_en, muhurta_fee_paise=:muh_fee, requires_muhurta=:req_muh,
               duration_minutes=:dur, pujaris_required=:pujn,
               basic_pujaris_required=:pujn_basic, standard_pujaris_required=:pujn_std,
@@ -1210,6 +1220,13 @@ def update_service(service_id: str, body: ServiceIn, user=Depends(require_permis
             "foodp": body.food_provider or "included",
             "dak": 85.0 if body.dakshina_share_percent is None else max(0.0, min(100.0, float(body.dakshina_share_percent))),
             "dak_amt": int(body.dakshina_amount_paise) if body.dakshina_amount_paise else None,
+            # A Premium amount only means something alongside a fixed Standard amount.
+            "dak_prm": int(body.premium_dakshina_amount_paise)
+            if body.dakshina_amount_paise and body.premium_dakshina_amount_paise
+            else None,
+            "dak_prm_pct": None
+            if body.premium_dakshina_share_percent is None
+            else max(0.0, min(100.0, float(body.premium_dakshina_share_percent))),
             "muh_en": bool(body.muhurta_consultation_enabled),
             "muh_fee": int(body.muhurta_fee_paise or 0),
             "req_muh": bool(body.requires_muhurta),

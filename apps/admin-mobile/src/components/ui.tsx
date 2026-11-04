@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { chipSelectionValue, displayTokenLabel } from "@bseva/config";
 import { radius, spacing, typography } from "@bseva/tokens";
 import { useState, type ReactNode } from "react";
@@ -13,6 +14,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { BrandWatermark } from "@/components/BrandWatermark";
+import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 
 export function Screen({ children, style, watermark = true }: { children: ReactNode; style?: ViewStyle; watermark?: boolean }) {
@@ -128,43 +130,62 @@ export function Field({
   onChangeText,
   onBlur,
   keyboardType,
+  secureTextEntry,
   ...props
 }: TextInputProps & { label: string; error?: string | null }) {
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   // Screens often turn "" into a default (Number(v) || 0). Keep an empty box, or the same number as
   // typed, until the field is left; otherwise a number box can never be cleared.
   const numeric = keyboardType === "numeric" || keyboardType === "number-pad" || keyboardType === "decimal-pad";
   const [numberDraft, setNumberDraft] = useState<string | null>(null);
   const keepDraft = numberDraft !== null && (numberDraft === "" || Number(numberDraft) === Number(value));
+  // Password boxes get an eye button so people can check what they typed.
+  const [revealed, setRevealed] = useState(false);
   return (
     <View style={{ gap: 6 }}>
       <Text style={{ color: colors.mutedForeground, fontWeight: "600", fontSize: 13 }}>{label}</Text>
-      <TextInput
-        placeholderTextColor={colors.mutedForeground}
-        accessibilityLabel={label}
-        style={{
-          backgroundColor: colors.input,
-          borderRadius: radius.md,
-          borderWidth: 1,
-          borderColor: error ? colors.destructive : colors.border,
-          paddingHorizontal: 12,
-          paddingVertical: 12,
-          minHeight: 48,
-          color: colors.foreground,
-          fontSize: 16,
-        }}
-        {...props}
-        keyboardType={keyboardType}
-        value={numeric && keepDraft ? (numberDraft as string) : value}
-        onChangeText={(text) => {
-          if (numeric) setNumberDraft(text);
-          onChangeText?.(text);
-        }}
-        onBlur={(e) => {
-          setNumberDraft(null);
-          onBlur?.(e);
-        }}
-      />
+      <View style={{ justifyContent: "center" }}>
+        <TextInput
+          placeholderTextColor={colors.mutedForeground}
+          accessibilityLabel={label}
+          style={{
+            backgroundColor: colors.input,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: error ? colors.destructive : colors.border,
+            paddingHorizontal: 12,
+            paddingRight: secureTextEntry ? 48 : 12,
+            paddingVertical: 12,
+            minHeight: 48,
+            color: colors.foreground,
+            fontSize: 16,
+          }}
+          {...props}
+          secureTextEntry={secureTextEntry && !revealed}
+          keyboardType={keyboardType}
+          value={numeric && keepDraft ? (numberDraft as string) : value}
+          onChangeText={(text) => {
+            if (numeric) setNumberDraft(text);
+            onChangeText?.(text);
+          }}
+          onBlur={(e) => {
+            setNumberDraft(null);
+            onBlur?.(e);
+          }}
+        />
+        {secureTextEntry ? (
+          <Pressable
+            onPress={() => setRevealed((r) => !r)}
+            accessibilityRole="button"
+            accessibilityLabel={revealed ? t("cl.hidePassword") : t("cl.showPassword")}
+            hitSlop={8}
+            style={{ position: "absolute", right: 4, width: 40, height: 40, alignItems: "center", justifyContent: "center" }}
+          >
+            <Ionicons name={revealed ? "eye-off-outline" : "eye-outline"} size={22} color={colors.mutedForeground} />
+          </Pressable>
+        ) : null}
+      </View>
       {error ? <Text style={{ color: colors.destructive, fontSize: 13 }}>{error}</Text> : null}
     </View>
   );

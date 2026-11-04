@@ -1,8 +1,11 @@
 import { dashboardPath, LANGS, PRIVACY_VERSION, TERMS_VERSION, toE164 } from "@bseva/config";
 import { LANG_LABELS, type Lang } from "@bseva/locales";
 import { registerSchema } from "@bseva/validation";
+import { ApiError, isCaptchaErrorCode, type CaptchaFlags } from "@bseva/api-client";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { CaptchaField, type CaptchaHandle } from "@/components/CaptchaField";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from "react-native";
 import { InlineLink } from "@/components/InlineLink";
 import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
@@ -25,6 +28,12 @@ export default function RegisterScreen() {
   const [accountType, setAccountType] = useState<"customer" | "pujari">(
     variantRole ?? (role === "pujari" ? "pujari" : "customer"),
   );
+  const config = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
+  const flags = (config.data?.captcha || {}) as Partial<CaptchaFlags>;
+  // Super Admin switch for this account type, or the server asked for it.
+  const [captchaAsked, setCaptchaAsked] = useState(false);
+  const showCaptcha = captchaAsked || Boolean(flags[`${accountType}_register`]);
+  const captchaRef = useRef<CaptchaHandle>(null);
   const [name, setName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -38,7 +47,7 @@ export default function RegisterScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [otpSentTo, setOtpSentTo] = useState("");
-  const [otpValidMins, setOtpValidMins] = useState(10);
+  const [otpValidMins, setOtpValidMins] = useState(5);
   const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
   const [consent, setConsent] = useState(false);
@@ -57,7 +66,8 @@ export default function RegisterScreen() {
   }, [otpExpiresAt]);
   const otpExpired = otpSent && otpExpiresAt != null && otpSecondsLeft <= 0;
   // Short cooldown before Resend so the code isn't re-requested by double taps.
-  const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= otpValidMins * 60 - 30);
+  // The server refuses a new code within 60 seconds of the last one.
+  const canResendOtp = !otpSending && (!otpSent || otpSecondsLeft <= otpValidMins * 60 - 60);
   const mmss = `${Math.floor(otpSecondsLeft / 60)}:${String(otpSecondsLeft % 60).padStart(2, "0")}`;
 
   async function sendOtp() {
@@ -71,18 +81,27 @@ export default function RegisterScreen() {
     }
     setOtpSending(true);
     try {
-      const out = (await apiClient.requestOtp({ phone: e164 || undefined, email: emailNorm, purpose: "register" })) as {
+      const out = (await apiClient.requestOtp({
+        phone: e164 || undefined,
+        email: emailNorm,
+        purpose: "register",
+        account_type: accountType,
+        ...(showCaptcha ? captchaRef.current?.values() : {}),
+      })) as {
         expires_in_minutes?: number;
         email?: string;
       };
-      const mins = out?.expires_in_minutes ?? 10;
+      const mins = out?.expires_in_minutes ?? 5;
       setOtpSentTo(out?.email || emailNorm);
       setOtpValidMins(mins);
       setOtpExpiresAt(Date.now() + mins * 60 * 1000);
       setOtpSent(true);
     } catch (e: unknown) {
+      if (e instanceof ApiError && isCaptchaErrorCode(e.code)) setCaptchaAsked(true);
       setError(e instanceof Error ? e.message : "Could not send OTP");
     } finally {
+      // Each image works once.
+      if (showCaptcha) captchaRef.current?.refresh();
       setOtpSending(false);
     }
   }
@@ -181,23 +200,24 @@ export default function RegisterScreen() {
               <ErrorBanner message={error} />
               {accountType === "pujari" ? (
                 <>
-                  <Field label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
+                  <Field required label={t("auth.firstName")} value={firstName} onChangeText={setFirstName} />
                   <Field label={t("auth.middleName")} value={middleName} onChangeText={setMiddleName} />
-                  <Field label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
+                  <Field required label={t("auth.lastName")} value={lastName} onChangeText={setLastName} />
                 </>
               ) : (
-                <Field label={t("auth.name")} value={name} onChangeText={setName} />
+                <Field required label={t("auth.name")} value={name} onChangeText={setName} />
               )}
-              <Field label={t("auth.email")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+              <Field required label={t("auth.email")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
               <PhoneWithCountryCode
+                required
                 label={t("auth.phone")}
                 countryCode={countryCode}
                 national={phone}
                 onCountryCodeChange={setCountryCode}
                 onNationalChange={setPhone}
               />
-              <Field label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
-              <Field label={t("auth.confirmPassword")} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              <Field required label={t("auth.password")} value={password} onChangeText={setPassword} secureTextEntry />
+              <Field required label={t("auth.confirmPassword")} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
               <AppText variant="small">{t("profile.preferredLanguage")}</AppText>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {LANGS.map((code) => (
@@ -221,6 +241,7 @@ export default function RegisterScreen() {
               <AppText variant="small" color={colors.mutedForeground}>
                 {t("auth.emailOtp.help")}
               </AppText>
+              {showCaptcha ? <CaptchaField ref={captchaRef} purpose="register" disabled={otpSending} /> : null}
               <PrimaryButton
                 title={otpSent ? t("auth.resendOtp") : t("auth.emailOtp.send")}
                 variant="outline"
@@ -251,6 +272,7 @@ export default function RegisterScreen() {
                 </View>
               ) : null}
               <Field
+                required
                 label={t("auth.emailOtp.label")}
                 placeholder={t("auth.emailOtp.placeholder")}
                 value={otp}

@@ -712,7 +712,7 @@ def _run_completion_pipeline(db: Session, b, booking_id: str, actor_id: str) -> 
         {"id": str(b["service_id"])},
     ).mappings().first()
     base = int(b["base_price_paise"])
-    payable = pujari_dakshina_paise(svc, base)
+    payable = pujari_dakshina_paise(svc, base, b.get("package_type"))
     platform = base - payable
     reimbursement = int(b.get("pujari_reimbursement_paise") or 0)
     settlement_total = payable + reimbursement
@@ -1581,15 +1581,14 @@ def public_config(db: Session = Depends(get_db)):
         "pujari_arrival_radius_meters": int(get_setting(db, "pujari_arrival_radius_meters", 100)),
         "puja_complete_otp_before_minutes": int(get_setting(db, "puja_complete_otp_before_minutes", 15)),
         "puja_otp_resend_cooldown_seconds": int(get_setting(db, "puja_otp_resend_cooldown_seconds", 60)),
-        "registration_captcha_enabled": bool(get_setting(db, "registration_captcha_enabled", False)),
-        "recaptcha_site_key": __import__("os").environ.get("VITE_RECAPTCHA_SITE_KEY")
-        or __import__("os").environ.get("RECAPTCHA_SITE_KEY")
-        or "",
         "customer_cancel_fee_over_48h_percent": int(get_setting(db, "customer_cancel_fee_over_48h_percent", 10)),
         "customer_cancel_fee_24_48h_percent": int(get_setting(db, "customer_cancel_fee_24_48h_percent", 50)),
         "customer_cancel_fee_under_24h_percent": int(get_setting(db, "customer_cancel_fee_under_24h_percent", 100)),
         "customer_cancel_min_hours": int(get_setting(db, "customer_cancel_min_hours", 24)),
         "email_from_contact": str(get_setting(db, "email_from_contact", "contact@b-seva.com")),
         "email_from_support": str(get_setting(db, "email_from_support", "support@b-seva.com")),
-        "email_delivery": smtp_status(),
+        # Public: whether mail works, not which host or mailbox sends it (admins see the details elsewhere).
+        "email_delivery": {"configured": bool(smtp_status().get("configured"))},
+        # Which forms show the self-hosted CAPTCHA (web and the mobile apps).
+        **__import__("app.captcha_settings", fromlist=["public_flags"]).public_flags(db),
     }

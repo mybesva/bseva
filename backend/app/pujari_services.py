@@ -145,6 +145,21 @@ def dakshina_paise_for_service(db: Session, row: dict) -> int:
     return max(min_display, int(round(ref_base * share / 100)))
 
 
+def premium_dakshina_paise_for_service(row: dict) -> int | None:
+    """Pujari's estimated share on a Premium booking, or None when the puja has no Premium price.
+    Same rule as booking pricing: Premium = main puja price + (Premium − Standard) when a main price is set."""
+    premium = int(row.get("premium_price_paise") or 0)
+    if premium <= 0:
+        return None
+    standard = int(row.get("standard_price_paise") or 0)
+    main = row.get("main_puja_price_paise")
+    base = int(main) + max(0, premium - standard) if main is not None else premium
+    fixed = dakshina_fixed_paise(row, "premium")
+    if fixed is not None:
+        return min(fixed, base) if base > 0 else fixed
+    return int(round(base * dakshina_share_percent(row, "premium") / 100))
+
+
 def list_catalog_services_for_offers(db: Session) -> list[dict]:
     try:
         rows = db.execute(
@@ -154,7 +169,9 @@ def list_catalog_services_for_offers(db: Session) -> list[dict]:
                        basic_price_paise, standard_price_paise, premium_price_paise,
                        main_puja_price_paise, duration_minutes, active, pricing_status,
                        display_order, dakshina_share_percent,
-                       (to_jsonb(services) ->> 'dakshina_amount_paise')::int AS dakshina_amount_paise
+                       (to_jsonb(services) ->> 'dakshina_amount_paise')::int AS dakshina_amount_paise,
+                       (to_jsonb(services) ->> 'premium_dakshina_amount_paise')::int AS premium_dakshina_amount_paise,
+                       (to_jsonb(services) ->> 'premium_dakshina_share_percent')::numeric AS premium_dakshina_share_percent
                 FROM services
                 WHERE active = TRUE
                    OR COALESCE(pricing_status, 'priced') = 'awaiting_pricing'
@@ -296,6 +313,8 @@ def _service_row_payload(db: Session, s: dict, applied_ids: set[str]) -> dict:
         "dakshina_paise": dakshina_paise_for_service(db, s),
         "dakshina_share_percent": dakshina_share_percent(s),
         "dakshina_amount_paise": dakshina_fixed_paise(s),
+        "premium_price_paise": int(s.get("premium_price_paise") or 0) or None,
+        "premium_dakshina_paise": premium_dakshina_paise_for_service(s),
         "applied": sid in applied_ids,
         "categories": cats,
         "section_slugs": [c.get("slug") for c in cats if c.get("slug")],

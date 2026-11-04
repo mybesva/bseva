@@ -5,6 +5,8 @@ import { MandalaOutline } from "@/components/landing/DevotionalPatterns";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePublicConfig, telHref, whatsappHref } from "@/hooks/usePublicConfig";
 import { api } from "@/lib/api";
+import { CaptchaField, HoneypotField, useFormTimer, type CaptchaHandle } from "@/components/BotProtection";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { CATEGORY_LABELS } from "@/lib/supportTickets";
 import { CUSTOMER_SUPPORT_CATS } from "@bseva/config";
 import {
@@ -146,6 +148,12 @@ export default function Contact() {
   const search = useSearch();
   const formCardRef = useRef<HTMLDivElement>(null);
   const [highlightForm, setHighlightForm] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const captchaRef = useRef<CaptchaHandle>(null);
+  const { user } = useAuth();
+  // Signed-in users are exempt on the server, so only signed-out visitors see the image.
+  const showCaptcha = Boolean(config.captcha?.contact) && !user;
+  const formTimer = useFormTimer();
 
   useEffect(() => {
     const subject = new URLSearchParams(search).get("subject");
@@ -198,6 +206,10 @@ export default function Contact() {
     }
     const subjectLabel =
       form.subject === CUSTOM_PUJA_SUBJECT ? "Custom puja request" : CATEGORY_LABELS[form.subject] || form.subject;
+    if (showCaptcha && !captchaRef.current?.values().captcha_answer) {
+      toast.error("Please type the characters shown in the security image.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await api<{ ok: boolean; message?: string }>("/support/contact", {
@@ -209,6 +221,10 @@ export default function Contact() {
           phone: form.phone.trim(),
           subject: subjectLabel,
           message: form.message.trim(),
+          website: honeypot,
+          elapsed_ms: formTimer.elapsedMs(),
+          ...(showCaptcha ? captchaRef.current?.values() : {}),
+          source: "web_contact",
         }),
       });
       setSubmitted(true);
@@ -218,6 +234,8 @@ export default function Contact() {
     } catch (err: any) {
       toast.error(err?.message || t("contact.errSend"));
     } finally {
+      // Each CAPTCHA image works once: show a fresh one after every attempt.
+      if (showCaptcha) captchaRef.current?.refresh();
       setSubmitting(false);
     }
   }
@@ -345,7 +363,10 @@ export default function Contact() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSubmitted(false)}
+                  onClick={() => {
+                    formTimer.restart();
+                    setSubmitted(false);
+                  }}
                   className="mt-4 inline-flex h-11 items-center justify-center rounded-lg border border-[#FF7A00] px-5 text-sm font-bold text-[#FF7A00]"
                 >
                   {t("contact.sendAnother")}
@@ -353,6 +374,7 @@ export default function Contact() {
               </div>
             ) : (
               <form className="relative mt-6 space-y-4" onSubmit={onSubmit} noValidate>
+                <HoneypotField value={honeypot} onChange={setHoneypot} />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label htmlFor={`${formId}-name`} className="text-sm font-bold text-[#0E1830] dark:text-white">
@@ -508,6 +530,7 @@ export default function Contact() {
                   ) : null}
                 </div>
 
+                {showCaptcha ? <CaptchaField ref={captchaRef} purpose="contact" disabled={submitting} /> : null}
                 <button
                   type="submit"
                   disabled={submitting}
