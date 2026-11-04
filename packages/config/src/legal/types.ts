@@ -16,10 +16,7 @@ export type LegalDoc = {
   slug: string;
   title: string;
   version: string;
-  /** "{{TO_CONFIRM: effective date}}" until confirmed. */
   effectiveDate: string;
   intro?: string[];
   sections: LegalSection[];
-  /** Every unconfirmed placeholder used in the document; shown in a banner on QA. */
-  toConfirm: string[];
 };

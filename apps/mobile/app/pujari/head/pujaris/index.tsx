@@ -1,3 +1,4 @@
+import { formatIndianPhone } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -11,6 +12,7 @@ type Row = {
   id: string;
   public_id?: string | null;
   name: string;
+  phone?: string | null;
   location?: string | null;
   verification_status?: string | null;
 };
@@ -56,6 +58,11 @@ export default function HeadPujariDirectory() {
               {row.public_id ? (
                 <AppText variant="small" color={colors.mutedForeground}>
                   {row.public_id}
+                </AppText>
+              ) : null}
+              {row.phone ? (
+                <AppText variant="small" color={colors.mutedForeground}>
+                  {formatIndianPhone(row.phone)}
                 </AppText>
               ) : null}
               {row.location ? (

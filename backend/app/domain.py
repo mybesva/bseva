@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.geo import haversine_km
-from app.pujari_levels import filter_rows_for_required_level
+from app.pujari_levels import dispatch_level_sql, filter_rows_for_required_level
 
 
 def row_dict(row) -> dict:
@@ -160,6 +160,18 @@ def slot_conflict(
 
 
 SERVICE_RADIUS_KM = 10.0
+# Each pujari's own Service Radius decides how far they get bookings (no platform cap). The profile form allows
+# 1–100 km; a pujari who never set one gets SERVICE_RADIUS_KM.
+MAX_SERVICE_RADIUS_KM = 100.0
+
+
+def pujari_reach_km(service_radius_km) -> float:
+    """How far from their saved location a pujari receives bookings."""
+    try:
+        r = float(service_radius_km or 0)
+    except (TypeError, ValueError):
+        r = 0.0
+    return min(r, MAX_SERVICE_RADIUS_KM) if r > 0 else SERVICE_RADIUS_KM
 
 
 def _eligible_pujari_location_rows(db: Session, required_level: int):
@@ -174,10 +186,10 @@ def _eligible_pujari_location_rows(db: Session, required_level: int):
             JOIN users u ON u.id = p.user_id
             WHERE u.blocked = FALSE AND u.role IN ('pujari', 'head_pujari')
               AND p.verification_status = 'approved'
-              AND p.approved_level IS NOT NULL AND p.approved_level >= :lvl
+              {level}
               AND p.available = TRUE
               AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
-            """
+            """.format(level=dispatch_level_sql())
         ),
         {"lvl": required_level},
     ).mappings().all()
@@ -198,7 +210,8 @@ def service_available_near(
     With service_id, that pujari must also be verified for this puja with a complete profile:
     the same pujaris who would receive the booking request. Busy pujaris still count, because
     the customer can choose another time."""
-    pad = (radius_km * 1.2) / 111.0
+    # Pre-filter by the largest radius any pujari can choose; the exact check uses each pujari's own radius.
+    pad = (MAX_SERVICE_RADIUS_KM * 1.05) / 111.0
     lng_pad = pad / max(0.2, abs(cos(radians(lat))))
     capable = ""
     if service_id:
@@ -220,7 +233,7 @@ def service_available_near(
             JOIN users u ON u.id = p.user_id
             WHERE u.blocked = FALSE AND u.role IN ('pujari', 'head_pujari')
               AND p.verification_status = 'approved'
-              AND p.approved_level IS NOT NULL AND p.approved_level >= :lvl
+              {dispatch_level_sql()}
               AND p.available = TRUE
               AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
               AND p.latitude BETWEEN :min_lat AND :max_lat
@@ -240,8 +253,7 @@ def service_available_near(
     rows = filter_rows_for_required_level(rows, required_level)
     for r in rows:
         dist = haversine_km(lat, lng, float(r["latitude"]), float(r["longitude"]))
-        effective = min(radius_km, float(r["service_radius_km"] or radius_km))
-        if dist <= effective:
+        if dist <= pujari_reach_km(r["service_radius_km"]):
             return True
     return False
 
@@ -271,8 +283,7 @@ def pujari_covers_location(
     if row["latitude"] is None or row["longitude"] is None:
         return False
     dist = haversine_km(lat, lng, float(row["latitude"]), float(row["longitude"]))
-    effective = min(radius_km, float(row["service_radius_km"] or radius_km))
-    return dist <= effective
+    return dist <= pujari_reach_km(row["service_radius_km"])
 
 
 def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, radius_km: float = SERVICE_RADIUS_KM):
@@ -280,7 +291,7 @@ def nearby_pujaris(db: Session, lat: float, lng: float, required_level: int, rad
     out = []
     for r in rows:
         dist = haversine_km(lat, lng, float(r["latitude"]), float(r["longitude"]))
-        if dist <= min(radius_km, float(r["service_radius_km"] or radius_km)):
+        if dist <= pujari_reach_km(r["service_radius_km"]):
             item = row_dict(r)
             item["distance_km"] = round(dist, 2)
             # Strip coords and internal radius from public response

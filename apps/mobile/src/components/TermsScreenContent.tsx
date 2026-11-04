@@ -1,53 +1,30 @@
-import type { LegalPolicy } from "@bseva/types";
+import { appTerms, customerTerms, privacyPolicy, pujariTerms, refundPolicy, type LegalDoc } from "@bseva/config";
 import { spacing } from "@bseva/tokens";
-import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { AppText, Card, ErrorBanner, LoadingBlock } from "@/components/ui";
-import { useI18n } from "@/providers/I18nProvider";
-import { apiClient } from "@/services/api";
-import { useAppTheme } from "@/theme/ThemeContext";
+import { AppText, Card } from "@/components/ui";
 import { isPujariApp } from "@/config/appVariant";
+import { useAppTheme } from "@/theme/ThemeContext";
 
-// All four policies are read inside the app (no links out to the website).
-const TERMS_SLUGS = ["platform_terms", isPujariApp ? "pujari_booking_terms" : "booking_terms", "cancellation_policy", "privacy"] as const;
+/**
+ * Profile → Terms & Policies. Shows the same documents (same text, version and effective date) as the
+ * website legal pages, from the shared @bseva/config/legal source, so app review sees one consistent policy set.
+ */
+const DOCS: { doc: LegalDoc; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  {
+    doc: isPujariApp ? pujariTerms : customerTerms,
+    label: isPujariApp ? "Pujari Terms" : "Customer Terms",
+    icon: "document-text-outline",
+  },
+  { doc: privacyPolicy, label: "Privacy", icon: "shield-checkmark-outline" },
+  { doc: refundPolicy, label: "Refunds", icon: "refresh-circle-outline" },
+  { doc: appTerms, label: "App Terms", icon: "phone-portrait-outline" },
+];
 
-const SECTION_LABEL_KEYS: Record<string, string> = {
-  platform_terms: "legal.section.platform",
-  booking_terms: "legal.section.booking",
-  pujari_booking_terms: "legal.section.booking",
-  cancellation_policy: "legal.section.cancellation",
-  privacy: "legal.section.privacy",
-};
-
-const SECTION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  platform_terms: "document-text-outline",
-  booking_terms: "calendar-outline",
-  pujari_booking_terms: "calendar-outline",
-  cancellation_policy: "refresh-circle-outline",
-  privacy: "shield-checkmark-outline",
-};
-
-function orderPolicies(rows: LegalPolicy[]): LegalPolicy[] {
-  // Pujaris fall back to the general booking terms if their own version isn't published.
-  const pick = (slug: string) => rows.find((p) => p.slug === slug) || (slug === "pujari_booking_terms" ? rows.find((p) => p.slug === "booking_terms") : undefined);
-  return TERMS_SLUGS.map(pick).filter(Boolean) as LegalPolicy[];
-}
-
-/** Second-level switcher under the profile tabs: soft card with equal-width segments. */
-function TermsSectionBar({
-  policies,
-  selectedSlug,
-  onSelect,
-}: {
-  policies: LegalPolicy[];
-  selectedSlug: string | null;
-  onSelect: (slug: string) => void;
-}) {
-  const { t } = useI18n();
+/** Second-level switcher under the profile tabs: soft card, two segments per row. */
+function DocBar({ selected, onSelect }: { selected: string; onSelect: (slug: string) => void }) {
   const { colors } = useAppTheme();
-
   return (
     <View
       accessibilityRole="tablist"
@@ -62,17 +39,15 @@ function TermsSectionBar({
         backgroundColor: colors.card,
       }}
     >
-      {policies.map((policy) => {
-        const active = selectedSlug === policy.slug;
-        const labelKey = SECTION_LABEL_KEYS[policy.slug];
-        const label = labelKey ? t(labelKey) : policy.title;
+      {DOCS.map(({ doc, label, icon }) => {
+        const active = selected === doc.slug;
         return (
           <Pressable
-            key={policy.slug}
+            key={doc.slug}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={label}
-            onPress={() => onSelect(policy.slug)}
+            accessibilityLabel={doc.title}
+            onPress={() => onSelect(doc.slug)}
             style={({ pressed }) => ({
               flexGrow: 1,
               flexBasis: "45%",
@@ -89,11 +64,7 @@ function TermsSectionBar({
               backgroundColor: active ? `${colors.primary}1A` : pressed ? `${colors.primary}0D` : "transparent",
             })}
           >
-            <Ionicons
-              name={SECTION_ICONS[policy.slug] || "document-outline"}
-              size={16}
-              color={active ? colors.primary : colors.mutedForeground}
-            />
+            <Ionicons name={icon} size={16} color={active ? colors.primary : colors.mutedForeground} />
             <AppText
               numberOfLines={1}
               style={{ fontWeight: active ? "700" : "600", fontSize: 13, flexShrink: 1 }}
@@ -108,71 +79,70 @@ function TermsSectionBar({
   );
 }
 
+/** A legal table (first row = header) as stacked label/value rows, readable on a phone. */
+function DocTable({ rows }: { rows: string[][] }) {
+  const { colors } = useAppTheme();
+  const [header, ...body] = rows;
+  return (
+    <View style={{ gap: 8 }}>
+      {body.map((row, i) => (
+        <View key={i} style={{ gap: 2, paddingTop: i ? 8 : 0, borderTopWidth: i ? 1 : 0, borderTopColor: `${colors.border}66` }}>
+          {row.map((cell, j) => (
+            <AppText
+              key={j}
+              variant={j === 0 ? undefined : "small"}
+              style={j === 0 ? { fontWeight: "700" } : { lineHeight: 20 }}
+              color={j === 0 ? colors.foreground : colors.mutedForeground}
+            >
+              {j > 0 && header?.[j] && row.length > 2 ? `${header[j]}: ${cell}` : cell}
+            </AppText>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export function TermsScreenContent() {
-  const { t } = useI18n();
   const { colors } = useAppTheme();
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-
-  const q = useQuery({
-    queryKey: ["legal", "terms-sections"],
-    queryFn: () => apiClient.legal() as Promise<LegalPolicy[]>,
-  });
-
-  const policies = useMemo(() => orderPolicies(Array.isArray(q.data) ? q.data : []), [q.data]);
-
-  useEffect(() => {
-    if (!policies.length) return;
-    setSelectedSlug((prev) => prev || policies[0].slug);
-  }, [policies]);
-
-  const selected = policies.find((p) => p.slug === selectedSlug) || policies[0];
-
-  if (q.isLoading) return <LoadingBlock />;
+  const [selectedSlug, setSelectedSlug] = useState(DOCS[0].doc.slug);
+  const doc = DOCS.find((d) => d.doc.slug === selectedSlug)?.doc || DOCS[0].doc;
 
   return (
-    <>
-      {q.error ? (
-        <ErrorBanner message={q.error instanceof Error ? q.error.message : t("errors.generic")} />
-      ) : null}
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          paddingBottom: 40,
-          gap: spacing.md,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {policies.length ? (
-          <TermsSectionBar
-            policies={policies}
-            selectedSlug={selectedSlug}
-            onSelect={setSelectedSlug}
-          />
-        ) : null}
-
-        {selected ? (
-          <View style={{ gap: spacing.md }}>
-            <View>
-              <AppText variant="h2">{selected.title}</AppText>
-              {selected.version ? (
-                <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 4 }}>
-                  {t("common.version", { version: selected.version })}
-                </AppText>
-              ) : null}
-            </View>
-            {(selected.points || []).map((point, i) => (
-              <Card key={`${point.title || "section"}-${i}`} style={{ gap: 6 }}>
-                {point.title ? <AppText variant="h3">{point.title}</AppText> : null}
-                <AppText color={colors.mutedForeground} style={{ lineHeight: 22 }}>
-                  {point.body}
-                </AppText>
-              </Card>
+    <ScrollView
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 40, gap: spacing.md }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <DocBar selected={doc.slug} onSelect={setSelectedSlug} />
+      <View style={{ gap: spacing.md }}>
+        <View>
+          <AppText variant="h2">{doc.title}</AppText>
+          <AppText variant="small" color={colors.mutedForeground} style={{ marginTop: 4 }}>
+            Version {doc.version} · Effective {doc.effectiveDate}
+          </AppText>
+        </View>
+        {(doc.intro || []).map((p, i) => (
+          <AppText key={`intro-${i}`} color={colors.mutedForeground} style={{ lineHeight: 22 }}>
+            {p}
+          </AppText>
+        ))}
+        {doc.sections.map((section) => (
+          <Card key={section.id} style={{ gap: 6 }}>
+            <AppText variant="h3">{section.heading}</AppText>
+            {(section.paragraphs || []).map((p, i) => (
+              <AppText key={`p-${i}`} color={colors.mutedForeground} style={{ lineHeight: 22 }}>
+                {p}
+              </AppText>
             ))}
-          </View>
-        ) : null}
-      </ScrollView>
-    </>
+            {(section.bullets || []).map((b, i) => (
+              <AppText key={`b-${i}`} color={colors.mutedForeground} style={{ lineHeight: 22 }}>
+                • {b}
+              </AppText>
+            ))}
+            {section.table?.length ? <DocTable rows={section.table} /> : null}
+          </Card>
+        ))}
+      </View>
+    </ScrollView>
   );
 }

@@ -1,5 +1,5 @@
+import type { LegalDoc } from "./types";
 import {
-  CIN,
   COMPANY,
   DELETE_ACCOUNT_URL,
   EFFECTIVE_DATE,
@@ -9,17 +9,15 @@ import {
   PHONE,
   REGISTERED_OFFICE,
   grievanceTable,
-  toConfirm,
-  withToConfirm,
 } from "./shared";
 
-export const pujariTerms = withToConfirm({
+export const pujariTerms: LegalDoc = {
   slug: "pujari-terms",
   title: "Pujari / Service Provider Terms & Conditions",
   version: LEGAL_VERSION,
   effectiveDate: EFFECTIVE_DATE,
   intro: [
-    `Operated by: ${COMPANY}. CIN: ${CIN}. Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Partner support: ${PHONE} | ${PARTNER_EMAIL}`,
+    `Operated by: ${COMPANY}. Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Partner support: ${PHONE} | ${PARTNER_EMAIL}`,
     "Please read these Provider Terms carefully before you register as a Pujari or Service Provider on B-Seva. By submitting your onboarding form or accepting a Booking, you agree to these terms.",
   ],
   sections: [
@@ -183,7 +181,7 @@ export const pujariTerms = withToConfirm({
         "For a confirmed in-person Booking, the Partner app shares your device’s location with B-Seva and with the Customer of that Booking during the travel window, so that the Customer can see that you are on the way and when you arrive. This includes while the Partner app is in the background or your screen is off. The app asks for your permission, and explains this use, before it collects background location.",
         "The travel window currently begins 15 minutes before the scheduled start time and ends when you arrive at the Service Location or, at the latest, 120 minutes after the scheduled start time. While the window is open, the app records your location about once every 60 seconds, or when you have moved about 35 metres. Location is not shared for this purpose outside the travel window, and it is not shared for virtual Bookings. If B-Seva changes these settings, the Partner app will show the current travel window.",
         "The Customer sees your position on a map provided by a mapping service, which receives the coordinates needed to display it. B-Seva uses the recorded locations to show your arrival, to support the Customer, and to investigate complaints, disputes, no-shows, and safety incidents.",
-        `Location points recorded during the travel window are kept for ${toConfirm("location history retention")} and are then deleted, unless they are needed for an open complaint, dispute, or safety investigation, as explained in the Privacy Policy.`,
+        `Location points recorded during the travel window are kept for 30 days and are then deleted, unless they are needed for an open complaint, dispute, or safety investigation, as explained in the Privacy Policy.`,
         "You can withdraw location permission at any time in your device settings. If you do, the Customer will not see your travel progress, and you must still keep the Customer and B-Seva informed about your arrival through the Platform as required by Section 6.",
       ],
     },
@@ -397,4 +395,4 @@ export const pujariTerms = withToConfirm({
       ],
     },
   ],
-});
+};

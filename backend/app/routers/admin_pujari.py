@@ -11,6 +11,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.pujari_levels import DISPATCH_LEVEL_RULE_ENABLED
+
 from app.audit import write_audit
 from app.booking_state import set_booking_status
 from app.db import get_db
@@ -399,7 +401,8 @@ def available_pujaris_for_booking(
             ORDER BY p.approved_level DESC, u.name
             """
         ),
-        {"lvl": required},
+        # Level rule is switched off for dispatch (see DISPATCH_LEVEL_RULE_ENABLED); 0 lets every level through.
+        {"lvl": required if DISPATCH_LEVEL_RULE_ENABLED else 0},
     ).mappings().all()
     from app.pujari_levels import filter_rows_for_required_level
 
@@ -569,15 +572,10 @@ def assign_pujari_to_booking(
         raise HTTPException(400, "Pujari is not verified/available")
     if not pujari.get("profile_complete"):
         raise HTTPException(400, "Pujari profile is incomplete")
-    from app.pujari_levels import is_specialized_level, pujari_meets_required_level
+    from app.pujari_levels import dispatch_level_ok
 
-    approved_level = pujari["approved_level"]
-    required_level = int(b["required_level"] or 1)
-    if is_specialized_level(approved_level) or is_specialized_level(required_level):
-        if not pujari_meets_required_level(approved_level, required_level):
-            raise HTTPException(400, "Pujari is not eligible for this service")
-    elif int(approved_level or 0) < required_level:
-        raise HTTPException(400, "Pujari level is below service requirement")
+    if not dispatch_level_ok(pujari["approved_level"], int(b["required_level"] or 1)):
+        raise HTTPException(400, "Pujari is not eligible for this service")
     from app.pujari_services import pujari_has_verified_service
 
     if not pujari_has_verified_service(db, body.pujari_id, str(b["service_id"])):
