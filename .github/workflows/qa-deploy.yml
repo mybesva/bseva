@@ -47,7 +47,36 @@ jobs:
       - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
       - uses: docker/setup-buildx-action@v3
+      # ECR tags are immutable and the tag is derived from this commit, so an image already stored under it was
+      # built from this exact commit. Re-running the workflow (e.g. to load changed SSM settings) reuses it instead
+      # of failing to push the same tag again. Any lookup error other than "not found" fails the job.
+      - name: Find images already built for this commit
+        id: existing
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          digest() {
+            local out
+            if out="$(aws ecr describe-images --repository-name "$1" --image-ids imageTag="$TAG" \
+                --query 'imageDetails[0].imageDigest' --output text 2>&1)"; then
+              echo "$out"
+            elif grep -q ImageNotFoundException <<<"$out"; then
+              echo none
+            else
+              echo "$out" >&2
+              return 1
+            fi
+          }
+          api="$(digest bseva-api)"
+          web="$(digest bseva-web)"
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+          echo "web=$web" >> "$GITHUB_OUTPUT"
+          echo "bseva-api:$TAG ${api/none/not built yet}; bseva-web:$TAG ${web/none/not built yet}"
+          if [ "$api" != none ] || [ "$web" != none ]; then
+            echo "Reusing images already built for \`$TAG\`: api \`$api\`, web \`$web\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Build and push API image (arm64)
+        if: steps.existing.outputs.api == 'none'
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           TAG: ${{ steps.meta.outputs.tag }}
@@ -55,6 +84,7 @@ jobs:
           docker buildx build --platform linux/arm64 -f deploy/docker/api.Dockerfile \
             --build-arg APP_VERSION="$TAG" -t "$REGISTRY/bseva-api:$TAG" --push .
       - name: Build web image (arm64)
+        if: steps.existing.outputs.web == 'none'
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           TAG: ${{ steps.meta.outputs.tag }}
@@ -70,6 +100,14 @@ jobs:
             --build-arg VITE_FIREBASE_APP_ID="${{ vars.VITE_FIREBASE_APP_ID }}" \
             --build-arg VITE_FIREBASE_VAPID_KEY="${{ vars.VITE_FIREBASE_VAPID_KEY }}" \
             -t "$REGISTRY/bseva-web:$TAG" .
+      - name: Pull reused web image and verify its digest
+        if: steps.existing.outputs.web != 'none'
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/bseva-web:${{ steps.meta.outputs.tag }}
+          DIGEST: ${{ steps.existing.outputs.web }}
+        run: |
+          docker pull --quiet "$IMAGE"
+          docker image inspect --format '{{join .RepoDigests "\n"}}' "$IMAGE" | grep -qx "${IMAGE%:*}@$DIGEST"
       - name: Validate Nginx configuration
         env:
           IMAGE: ${{ steps.ecr.outputs.registry }}/bseva-web:${{ steps.meta.outputs.tag }}
@@ -81,7 +119,17 @@ jobs:
           docker pull --quiet "$IMAGE"
           docker run --rm -e DATABASE_URL=postgresql://ci:ci@127.0.0.1:1/ci -e ENVIRONMENT=development \
             "$IMAGE" python -c "import app.main, app.worker, app.db_bootstrap, weasyprint; print('ok')"
+      - name: Verify reused API image belongs to this commit
+        if: steps.existing.outputs.api != 'none'
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/bseva-api:${{ steps.meta.outputs.tag }}
+          DIGEST: ${{ steps.existing.outputs.api }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          docker image inspect --format '{{join .RepoDigests "\n"}}' "$IMAGE" | grep -qx "${IMAGE%:*}@$DIGEST"
+          test "$(docker run --rm "$IMAGE" printenv APP_VERSION)" = "$TAG"
       - name: Push web image
+        if: steps.existing.outputs.web == 'none'
         env:
           IMAGE: ${{ steps.ecr.outputs.registry }}/bseva-web:${{ steps.meta.outputs.tag }}
         run: docker push "$IMAGE"
