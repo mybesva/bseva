@@ -46,8 +46,32 @@ def pujari_next_payday(db: Session, pujari_id: str) -> date:
     return next_payday(joined or today, today, cycle_days(db))
 
 
+def payout_mode(db: Session) -> str:
+    """"wallet" (default): credit the pujari's B-Seva wallet on payday. "bank": leave it eligible for a
+    Super Admin approved bank/UPI payout (app.payouts), and never credit the wallet as well."""
+    mode = str(get_setting(db, "settlement_payout_mode", "wallet") or "wallet").strip().lower()
+    return mode if mode in ("wallet", "bank") else "wallet"
+
+
 def run_due_settlements(db: Session) -> dict:
     """Pay every settlement whose payday has arrived. The caller commits."""
+    if payout_mode(db) == "bank":
+        marked = db.execute(
+            text(
+                """
+                UPDATE settlements SET status = 'eligible', updated_at = NOW()
+                WHERE status = 'pending' AND due_date IS NOT NULL AND due_date <= :today
+                RETURNING booking_id
+                """
+            ),
+            {"today": today_ist()},
+        ).all()
+        for (booking_id,) in marked:
+            db.execute(
+                text("UPDATE bookings SET settlement_status = 'eligible' WHERE id = :id AND settlement_status = 'pending'"),
+                {"id": booking_id},
+            )
+        return {"settled": 0, "marked_eligible": len(marked), "mode": "bank"}
     every = cycle_days(db)
     due = db.execute(
         text(

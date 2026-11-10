@@ -120,12 +120,21 @@ def _settlements(db) -> dict:
     return run_due_settlements(db)
 
 
+def _payments(db) -> dict:
+    from app.payments.service import run_payment_jobs
+    from app.payouts.service import run_payout_jobs
+
+    return {**run_payment_jobs(db), "payouts": run_payout_jobs(db)}
+
+
 # name -> (interval seconds, job). Matches the documented cron cadence.
 JOBS: dict[str, tuple[int, Callable[[], dict]]] = {
     "puja_lifecycle": (int(os.environ.get("WORKER_LIFECYCLE_SECONDS", 60)), _with_session(_puja_lifecycle)),
     "booking_reminders": (int(os.environ.get("WORKER_REMINDER_SECONDS", 300)), _with_session(_reminders)),
     "booking_offers": (int(os.environ.get("WORKER_OFFERS_SECONDS", 300)), _with_session(_offers)),
     "settlements": (int(os.environ.get("WORKER_SETTLEMENT_SECONDS", 3600)), _with_session(_settlements)),
+    # Expire unpaid bookings, re-verify open gateway payments, submit refunds, recover payout status.
+    "payments": (int(os.environ.get("WORKER_PAYMENTS_SECONDS", 60)), _with_session(_payments)),
     "prune": (86400, _with_session(_prune)),
     "privacy": (int(os.environ.get("WORKER_PRIVACY_SECONDS", 3600)), _with_session(_privacy)),
 }

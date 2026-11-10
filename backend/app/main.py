@@ -26,6 +26,8 @@ from app.routers import (
     meetings,
     notifications,
     ops,
+    payments,
+    payouts,
     promos,
     pujari,
     reports,
@@ -94,6 +96,8 @@ app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(seva.router, prefix="/api/v1")
 app.include_router(admin_seva.router, prefix="/api/v1")
 app.include_router(whatsapp_webhook.router, prefix="/api/v1")
+app.include_router(payments.router, prefix="/api/v1")
+app.include_router(payouts.router, prefix="/api/v1")
 
 try:
     from fastapi.staticfiles import StaticFiles

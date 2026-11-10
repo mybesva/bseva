@@ -164,6 +164,16 @@ export default function BookingReceipt() {
     <Layout>
       <div className="container max-w-3xl py-10 print:py-0 print:max-w-none">
         <PrintableBSevaHeader documentTitle={t("web.booking.receipt")} reference={booking.booking_number} />
+        {booking.status === "awaiting_payment" && (
+          <Card className="mb-6 border-amber-300 bg-amber-50 print:hidden dark:bg-amber-950/30">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium">{t("pay.awaiting")}</p>
+              <Button size="sm" onClick={() => setLocation(`/payment/return?booking_id=${encodeURIComponent(String(booking.id))}`)}>
+                {t("pay.complete")}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         <div className="flex flex-wrap gap-2 mb-6 print:hidden">
           <Button variant="outline" size="sm" onClick={() => setLocation(bookingListReturnPath())}>
             <ArrowLeft className="w-4 h-4 mr-1" /> {t("nav.bookings")}

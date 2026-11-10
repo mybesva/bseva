@@ -132,6 +132,13 @@ const PLATFORM_KEYS: PlatformKey[] = [
   { key: "puja_otp_max_verify_attempts", label: "OTP Max Verify Attempts", type: "number", group: "booking", hint: "Default 5, then a short lockout." },
   { key: "puja_otp_lock_minutes", label: "OTP lockout minutes after failed attempts", type: "number", group: "booking", hint: "Default 10." },
   { key: "pujari_settlement_days", label: "Pujari Payment Cycle (Days)", type: "number", group: "pujari", hint: "Default 3. Paydays repeat every N days from each pujari's joining date." },
+  {
+    key: "settlement_payout_mode",
+    label: "Settlement Payout Mode",
+    type: "string",
+    group: "pujari",
+    hint: 'Super Admin only. "wallet" (default): paydays credit the pujari B-Seva wallet. "bank": paydays only mark settlements eligible; each one is paid to the pujari bank/UPI by an MPIN + OTP approved Cashfree payout. Never both.',
+  },
   { key: "reschedule_enabled", label: "Allow Customer Rescheduling", type: "boolean", group: "rescheduling", superOnly: true },
   {
     key: "reschedule_cutoff_hours",

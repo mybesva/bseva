@@ -46,9 +46,9 @@ export type DeletionBooking = {
   booking_date: string;
   start_time: string;
   status: string;
-  kind: "upcoming" | "ongoing";
+  kind: "upcoming" | "ongoing" | "unpaid";
   cancellation?: { allowed: boolean; refund_paise: number; fee_paise: number; policy_note: string };
-  action?: "reassign";
+  action?: "reassign" | "close";
 };
 
 export type DeletionObligations = {

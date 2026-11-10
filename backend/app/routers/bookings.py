@@ -36,33 +36,6 @@ router = APIRouter(tags=["bookings"])
 logger = logging.getLogger(__name__)
 
 
-def _post_create_booking_side_effects(booking_id: str, email_payload: dict[str, Any] | None) -> None:
-    """Confirmation email + invoice PDF — must not block the booking API response."""
-    from app.db import SessionLocal
-
-    db = SessionLocal()
-    try:
-        if email_payload:
-            try:
-                from app.email_service import send_booking_preparation_email
-
-                send_booking_preparation_email(**email_payload)
-            except Exception:
-                logger.exception("booking_confirmation_email_failed booking=%s", booking_id)
-        try:
-            from app.invoice_docs import issue_paid_booking_invoice
-
-            paid_row = db.execute(
-                text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
-                {"id": booking_id},
-            ).mappings().first()
-            if paid_row:
-                issue_paid_booking_invoice(db, dict(paid_row))
-        except Exception:
-            logger.exception("booking_invoice_failed booking=%s", booking_id)
-    finally:
-        db.close()
-
 # Stable code for clients — map to a friendly consumer message; never show raw geo errors.
 SERVICE_AREA_UNAVAILABLE = "SERVICE_AREA_UNAVAILABLE"
 PUJA_UNAVAILABLE_AT_ADDRESS = "PUJA_UNAVAILABLE_AT_ADDRESS"
@@ -89,7 +62,7 @@ def _existing_idempotent_response(
     row = db.execute(
         text(
             """
-            SELECT b.id, b.booking_number, b.total_paise, b.status, b.pujari_id,
+            SELECT b.id, b.booking_number, b.total_paise, b.status, b.payment_status, b.pujari_id,
                    b.needs_reassignment, b.idempotency_request_hash, b.idempotency_response,
                    (SELECT COUNT(*) FROM booking_pujari_offers o
                     WHERE o.booking_id = b.id) AS offers_sent
@@ -114,7 +87,13 @@ def _existing_idempotent_response(
         saved = json.loads(saved)
     if saved:
         response = dict(saved)
-        # This endpoint only persists a successful paid booking response.
+        if response.get("payment_required"):
+            # Online checkout: report where the payment is now; the client resumes it via /payments/.../checkout.
+            response["status"] = row["status"]
+            response["customer_display_status"] = "confirmed" if row["payment_status"] == "paid" else row["status"]
+            response["payment_status"] = row["payment_status"]
+            return {**response, "idempotent_replay": True}
+        # Wallet bookings persist only a successful paid booking response.
         response["status"] = "confirmed"
         response["customer_display_status"] = "confirmed"
         return {**response, "idempotent_replay": True}
@@ -874,9 +853,16 @@ def create_booking(
     gst_pct = float(bill["gstPercent"])
     gst_amt = int(bill["gstAmount"])
     total = int(bill["totalAmount"])
-    wallet = db.execute(text("SELECT balance_paise FROM wallets WHERE user_id = :id"), {"id": user["id"]}).first()
-    if not wallet or wallet[0] < total:
-        raise HTTPException(400, "Insufficient wallet balance")
+    pay_online = body.payment_method == "cashfree"
+    if pay_online:
+        from app.payments.providers import active_gateway
+
+        if not active_gateway() or active_gateway().name != body.payment_method:
+            raise HTTPException(503, "Online payment is not available right now. Please try again later.")
+    else:
+        wallet = db.execute(text("SELECT balance_paise FROM wallets WHERE user_id = :id"), {"id": user["id"]}).first()
+        if not wallet or wallet[0] < total:
+            raise HTTPException(400, "Insufficient wallet balance")
 
     from app.pujari_team import pujaris_required_for_package
 
@@ -886,7 +872,8 @@ def create_booking(
     number = f"BSV-{datetime.utcnow().strftime('%y%m%d')}-{booking_id[:8].upper()}"
     meeting = None
     public_invite = None
-    initial_status = "pending_acceptance"
+    # An online-paid booking waits for a verified payment before any pujari sees it.
+    initial_status = "awaiting_payment" if pay_online else "pending_acceptance"
     needs_reassignment = False
     # Paid bookings: with pujari → that pujari accepts; without → broadcast offers within 10 km
     try:
@@ -910,7 +897,7 @@ def create_booking(
               idempotency_key, idempotency_request_hash
             ) VALUES (
               CAST(:id AS uuid), :num, :cid, CAST(:pid AS uuid), CAST(:sid AS uuid), :pkg, :mode, 'puja',
-              :d, :st, :et, :loc, :addr, :lat, :lng, :meet, :bstatus, 'paid', 'pending', 'not_applicable',
+              :d, :st, :et, :loc, :addr, :lat, :lng, :meet, :bstatus, :pstatus, 'pending', 'not_applicable',
               :base, :peak, :plat, :payable, :cpfee, :gwfee, :gwpct, :gwname, :gstp, :gsta, :total, TRUE, :instr,
               :mainc, :samc, :alanc, :foodc, :reimb, :samreq, :alanreq, :foodreq,
               :needs_reassign, :team,
@@ -924,6 +911,7 @@ def create_booking(
             "cid": user["id"],
             "pid": str(body.pujari_id) if body.pujari_id else None,
             "bstatus": initial_status,
+            "pstatus": "pending" if pay_online else "paid",
             "needs_reassign": needs_reassignment,
             "sid": str(body.service_id),
             "pkg": body.package_type,
@@ -974,15 +962,22 @@ def create_booking(
         if replay:
             return replay
         raise
-    try:
-        apply_wallet(db, str(user["id"]), -total, "debit", f"Booking {number}", booking_id, number)
-    except ValueError as e:
-        db.rollback()
-        raise HTTPException(400, str(e))
-    db.execute(
-        text("INSERT INTO payments (booking_id, amount_paise, status, provider) VALUES (CAST(:id AS uuid), :amt, 'successful', 'wallet')"),
-        {"id": booking_id, "amt": total},
-    )
+    if not pay_online:
+        try:
+            apply_wallet(db, str(user["id"]), -total, "debit", f"Booking {number}", booking_id, number)
+        except ValueError as e:
+            db.rollback()
+            raise HTTPException(400, str(e))
+        db.execute(
+            text(
+                """
+                INSERT INTO payments (booking_id, customer_id, amount_paise, status, provider, paid_at, verified_at)
+                VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), :amt, 'successful', 'wallet', NOW(), NOW())
+                """
+            ),
+            {"id": booking_id, "cid": str(user["id"]), "amt": total},
+        )
+        db.execute(text("UPDATE bookings SET paid_at = NOW(), payment_provider = 'wallet' WHERE id = CAST(:id AS uuid)"), {"id": booking_id})
     save_booking_tax(
         db,
         booking_id,
@@ -995,94 +990,6 @@ def create_booking(
             "country": body.customer_country,
         },
     )
-
-    # Virtual puja: create Google Meet (when configured) + public invite token
-    if body.mode == "virtual" and has_pujari:
-        try:
-            from app.meetings.service import ensure_virtual_meeting
-
-            pujari_email_row = db.execute(
-                text("SELECT email FROM users WHERE id = CAST(:id AS uuid)"),
-                {"id": str(body.pujari_id)},
-            ).mappings().first()
-            b_for_meet = {
-                "id": booking_id,
-                "booking_number": number,
-                "mode": "virtual",
-                "booking_date": body.booking_date,
-                "start_time": start,
-                "end_time": end,
-                "meeting_url": None,
-                "meeting_invite_token": None,
-                "google_calendar_event_id": None,
-            }
-            meet_info = ensure_virtual_meeting(
-                db,
-                b_for_meet,
-                service_name=str(svc.get("name") or "Virtual Puja"),
-                customer_email=str(user.get("email") or ""),
-                pujari_email=str((pujari_email_row or {}).get("email") or ""),
-                duration_minutes=duration,
-                send_google_invites=True,
-            )
-            meeting = meet_info.get("meeting_url")
-            public_invite = meet_info.get("public_invite_url")
-        except Exception:
-            meeting = None
-            public_invite = None
-
-    # Snapshot preparation / Samagri (localized, package-aware, frozen)
-    prep_view: dict = {}
-    try:
-        from app.preparation import create_booking_preparation_snapshot
-
-        b_row = db.execute(
-            text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
-            {"id": booking_id},
-        ).mappings().first()
-        prep_view = create_booking_preparation_snapshot(
-            db,
-            booking_id=booking_id,
-            booking=dict(b_row) if b_row else {},
-            service_id=str(body.service_id),
-            customer_id=str(user["id"]),
-        )
-    except Exception:
-        prep_view = {}
-    email_payload: dict[str, Any] | None = None
-    try:
-        from app.platform_config import get_setting as _gs
-        from app.preparation import customer_preferred_language
-
-        cust = db.execute(
-            text("SELECT email, name FROM users WHERE id = CAST(:id AS uuid)"),
-            {"id": user["id"]},
-        ).mappings().first()
-        lang = customer_preferred_language(db, str(user["id"]))
-        if cust and cust.get("email"):
-            email_payload = {
-                "to": str(cust["email"]),
-                "customer_name": str(cust.get("name") or ""),
-                "booking_number": number,
-                "booking_id": booking_id,
-                "service_name": str(prep_view.get("display_name") or svc.get("name") or "Puja"),
-                "booking_date": str(body.booking_date),
-                "start_time": str(body.start_time),
-                "preparation": prep_view,
-                "language": lang,
-                "from_addr": str(_gs(db, "email_from_accounts", "admin@b-seva.com")),
-                "package": str(body.package_type or ""),
-                "location": str(body.location_label or body.address or body.city or ""),
-                "main_puja_paise": int(bill.get("mainPuja") or bill.get("basePrice") or 0),
-                "samagri_paise": int(bill.get("samagri") or 0),
-                "alankaram_paise": int(bill.get("alankaram") or 0),
-                "food_prasadam_paise": int(bill.get("foodPrasadam") or 0),
-                "total_paise": int(bill.get("total") or bill.get("totalPaise") or total or 0),
-                "payment_status": "paid",
-                "booking_status": "confirmed",
-            }
-    except Exception:
-        email_payload = None
     # Recurring series (first occurrence is this booking; more dates recorded for follow-up)
     series_id = None
     next_dates: list[str] = []
@@ -1276,86 +1183,26 @@ def create_booking(
             apply_referral_code(db, str(user["id"]), body.referral_code)
         except Exception:
             pass
-    is_virtual = str(getattr(body, "mode", "") or "") == "virtual"
+    meeting = None
+    public_invite = None
     invited_pujari_ids: list[str] = []
-    # Offers must not depend on notification code (a push/in-app failure used to skip invites entirely).
-    if not has_pujari and not is_virtual:
-        try:
-            from app.booking_offers import create_offers_for_booking
+    email_queued = False
+    checkout = None
+    if pay_online:
+        # Nothing is charged here: the booking waits for a verified gateway payment (app.payments.service).
+        # Opened last, so a validation error above can never leave a payable order behind.
+        from app.payments.service import checkout_payload, start_booking_checkout
 
-            invited_pujari_ids = create_offers_for_booking(db, booking_id)
-            if not invited_pujari_ids:
-                logger.warning(
-                    "booking_no_pujari_offers booking=%s number=%s date=%s",
-                    booking_id,
-                    number,
-                    body.booking_date,
-                )
-        except Exception:
-            logger.exception("create_offers_failed booking=%s", booking_id)
+        booking_row = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().one()
+        checkout = checkout_payload(start_booking_checkout(db, dict(booking_row), user))
+    else:
+        from app.booking_finalize import finalize_paid_booking
 
-    try:
-        from app.booking_offers import notify_pujaris_new_offer
-        from app.routers.notifications import create_notification, customer_booking_link, notify_ops_staff, pujari_booking_link
-
-        create_notification(
-            db,
-            user_id=str(user["id"]),
-            title="Booking Created",
-            body=f"Your booking {number} is confirmed. We will update you as it progresses.",
-            category="booking",
-            link=customer_booking_link(booking_id),
-            extra_data={"booking_id": booking_id},
-            message_key="bookingCreated",
-            message_vars={"number": number},
-        )
-        notify_ops_staff(
-            db,
-            title="New Virtual Puja Booking" if is_virtual else "New Booking",
-            body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date} ({body.mode}).",
-            category="booking",
-            link="/admin/virtual-puja" if is_virtual else "/admin/bookings",
-        )
-        if has_pujari:
-            create_notification(
-                db,
-                user_id=str(body.pujari_id),
-                title="New Booking Request",
-                body=f"New booking {number} awaiting your acceptance.",
-                category="booking",
-                link=pujari_booking_link(booking_id),
-                extra_data={"booking_id": booking_id},
-                message_key="awaiting",
-                message_vars={"number": number},
-            )
-        elif not is_virtual:
-            if invited_pujari_ids:
-                notify_pujaris_new_offer(
-                    db,
-                    pujari_ids=invited_pujari_ids,
-                    booking_id=booking_id,
-                    booking_number=number,
-                    service_name=str(svc.get("name") or "Puja"),
-                    service_id=str(body.service_id),
-                )
-            else:
-                notify_ops_staff(
-                    db,
-                    title="Booking Needs Pujari Assignment",
-                    body=f"{number} — {svc.get('name') or 'Puja'} on {body.booking_date}. No eligible pujari in range — assign manually.",
-                    category="booking",
-                    link="/admin/bookings?status=needs_reassignment",
-                )
-        else:
-            notify_ops_staff(
-                db,
-                title="Virtual Puja Needs Pujari Assignment",
-                body=f"{number} — assign a pujari using India time for this Virtual Puja.",
-                category="booking",
-                link="/admin/virtual-puja",
-            )
-    except Exception:
-        logger.exception("booking_post_create_notifications_failed booking=%s", booking_id)
+        fin = finalize_paid_booking(db, booking_id) or {}
+        meeting = fin.get("meeting_url")
+        public_invite = fin.get("public_invite_url")
+        invited_pujari_ids = fin.get("invited_pujari_ids") or []
+        email_queued = bool(fin.get("email_queued"))
     response = {
         "id": booking_id,
         "booking_number": number,
@@ -1385,8 +1232,18 @@ def create_booking(
             "gstAmount": gst_amt,
             "totalAmount": total,
         },
-        "recommended_list_email": "queued" if email_payload else "skipped",
+        "recommended_list_email": "queued" if email_queued else "skipped",
     }
+    if pay_online:
+        response.update(
+            {
+                "status": "awaiting_payment",
+                "customer_display_status": "awaiting_payment",
+                "payment_status": "pending",
+                "payment_required": True,
+                "payment": checkout,
+            }
+        )
     if idempotency_key:
         db.execute(
             text(
@@ -1399,7 +1256,10 @@ def create_booking(
         )
     rate_limit.count_user_action(db, user, "booking")
     db.commit()
-    background_tasks.add_task(_post_create_booking_side_effects, booking_id, email_payload)
+    if not pay_online:
+        from app.booking_finalize import post_commit_side_effects
+
+        background_tasks.add_task(post_commit_side_effects, booking_id)
     return response
 
 
@@ -1606,7 +1466,7 @@ def list_bookings(
                     FROM bookings b
                     LEFT JOIN booking_pujari_offers o
                       ON o.booking_id = b.id AND o.pujari_id = CAST(:id AS uuid) AND o.status = 'invited'
-                    WHERE COALESCE(b.booking_kind, 'puja') = 'puja'
+                    WHERE COALESCE(b.booking_kind, 'puja') = 'puja' AND b.status <> 'awaiting_payment'
                       AND (
                         b.pujari_id = CAST(:id AS uuid)
                         OR (
@@ -1632,7 +1492,7 @@ def list_bookings(
                 JOIN services s ON s.id = b.service_id
                 LEFT JOIN booking_pujari_offers o
                   ON o.booking_id = b.id AND o.pujari_id = CAST(:id AS uuid) AND o.status = 'invited'
-                WHERE COALESCE(b.booking_kind, 'puja') = 'puja'
+                WHERE COALESCE(b.booking_kind, 'puja') = 'puja' AND b.status <> 'awaiting_payment'
                   AND (
                     b.pujari_id = CAST(:id AS uuid)
                     OR (
@@ -2037,8 +1897,15 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             "reason": reason_full,
         },
     )
+    refund_result: dict[str, Any] = {"method": None}
     if refund:
-        apply_wallet(db, str(b["customer_id"]), refund, "credit", f"Refund {b['booking_number']}", booking_id)
+        from app.payments.service import refund_booking_payment
+
+        # Back to where the money came from: wallet bookings to the wallet, gateway bookings to the card/UPI/bank.
+        refund_result = refund_booking_payment(
+            db, dict(b), refund, reason=f"Cancellation {b['booking_number']}", initiated_by=str(user["id"])
+        )
+    refund_to_wallet = refund_result.get("method") == "wallet"
     try:
         from app.routers.notifications import (
             create_notification,
@@ -2049,8 +1916,10 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
 
         num = str(b.get("booking_number") or booking_id[:8])
         refund_note = ""
-        if refund:
+        if refund and refund_to_wallet:
             refund_note = f" A refund of ₹{int(refund) / 100:.0f} was credited to your wallet."
+        elif refund:
+            refund_note = f" A refund of ₹{int(refund) / 100:.0f} has been sent to your original payment method."
         create_notification(
             db,
             user_id=str(b["customer_id"]),
@@ -2098,10 +1967,19 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
                     to=ctx["email"],
                     data=data,
                     refund_paise=refund,
-                    refund_method="Wallet credit",
+                    refund_method="Wallet credit" if refund_to_wallet else "Original payment method",
                 )
     except Exception:
         pass
+    if refund and refund_result.get("refund_id"):
+        from app.payments.service import submit_open_refunds
+
+        try:
+            # Best effort now; the payments reconciler retries with the same refund id if this fails.
+            submit_open_refunds(db)
+        except Exception:
+            db.rollback()
+            logger.exception("refund_submit_after_cancel_failed booking=%s", booking_id)
     if refund:
         try:
             from app.invoice_docs import create_credit_note, existing_customer_invoice
@@ -2120,6 +1998,7 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
         "actor": actor,
         "fee_paise": fee,
         "refund_paise": refund,
+        "refund_method": refund_result.get("method"),
         "policy": policy["policy"],
     }
 

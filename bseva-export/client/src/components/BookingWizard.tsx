@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import { formatDisplayDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { openCashfreeCheckout, paymentConfig, type CheckoutSession } from "@/lib/cashfreeCheckout";
 import type { CustomerAddress } from "@bseva/types";
 import { formatAddressLines } from "@bseva/validation";
 import { MapLocationPicker, type AddressValue } from "@/components/AddressFields";
@@ -247,6 +248,18 @@ function buildBookingBill(input: {
   };
 }
 
+type RefundMethod = "cashfree" | "wallet" | "either";
+
+// The admin-managed cancellation policy names one refund destination ("... refund to your Customer Wallet"); the
+// percentages stay as written and where the refund goes is shown separately, for the payment method used.
+function refundPointBody(body: string): string {
+  return body.replace(/\s+to\s+(your\s+)?Customer Wallet(?=[.,;]|$)/i, "");
+}
+
+function refundDestinationKey(method: RefundMethod): string {
+  return method === "cashfree" ? "pay.refundToOriginal" : method === "wallet" ? "pay.refundToWallet" : "pay.refundEither";
+}
+
 export default function BookingWizard({
   serviceId,
   pujaName,
@@ -303,6 +316,12 @@ export default function BookingWizard({
   const [includeFood, setIncludeFood] = useState(false);
   const [addonConfirm, setAddonConfirm] = useState<null | "samagri" | "alankaram" | "food">(null);
   const [wallet, setWallet] = useState<{ balance?: number; wallet?: { balance_paise: number } } | null>(null);
+  // Online checkout is offered only when the server says the gateway is configured; wallet stays available.
+  const [onlineEnabled, setOnlineEnabled] = useState(false);
+  const [payMethod, setPayMethod] = useState<"cashfree" | "wallet">("wallet");
+  // The default selection is not a choice: until the customer picks a method, Review shows both refund cases.
+  const [payMethodChosen, setPayMethodChosen] = useState(false);
+  const reviewRefundMethod: RefundMethod = !onlineEnabled ? "wallet" : payMethodChosen ? payMethod : "either";
   const [quote, setQuote] = useState<any>(null);
   const [panchang, setPanchang] = useState<any>(null);
   const [recurring, setRecurring] = useState<"none" | "weekly" | "monthly" | "selected_dates">("none");
@@ -413,6 +432,12 @@ export default function BookingWizard({
     api<{ wallet: { balance_paise: number } }>("/wallet")
       .then((w) => setWallet({ balance: w.wallet.balance_paise, wallet: w.wallet }))
       .catch(() => setWallet(null));
+    paymentConfig()
+      .then((c) => {
+        setOnlineEnabled(Boolean(c.online_enabled));
+        if (c.online_enabled) setPayMethod("cashfree");
+      })
+      .catch(() => setOnlineEnabled(false));
   }, [isAuthenticated]);
 
   const selectedSavedAddress = useMemo(
@@ -1035,7 +1060,7 @@ export default function BookingWizard({
         specialInstructions, includeSamagri, includeAlankaram, includeFood,
         recurring, recurringCount,
         selectedDates: selectedDates.map((d) => format(d, "yyyy-MM-dd")),
-        customerTimezone, customerCountry,
+        customerTimezone, customerCountry, payMethod,
       });
       const requestKey =
         lastSubmitSignature.current && lastSubmitSignature.current !== submitSignature
@@ -1057,6 +1082,8 @@ export default function BookingWizard({
         eligible_pujari_found?: boolean;
         admin_assignment_required?: boolean;
         assignment_status?: string;
+        payment_required?: boolean;
+        payment?: CheckoutSession;
       }>("/bookings", {
         method: "POST",
         headers: { "Idempotency-Key": requestKey },
@@ -1087,8 +1114,23 @@ export default function BookingWizard({
               : undefined,
           customer_timezone: isVirtual ? customerTimezone : undefined,
           customer_country: isVirtual ? customerCountry : undefined,
+          payment_method: payMethod === "cashfree" ? "cashfree" : undefined,
         }),
       });
+      if (result.payment_required && result.payment) {
+        // Not confirmed yet: the booking is confirmed only after the server verifies the payment.
+        bookingCompleted.current = true;
+        if (draftKey) sessionStorage.removeItem(draftKey);
+        setIdempotencyKey(newIdempotencyKey());
+        toast.message(t("pay.redirecting"));
+        try {
+          await openCashfreeCheckout(result.payment);
+        } catch (e: any) {
+          toast.error(e?.message || t("pay.unavailable"));
+          setLocation(`/payment/return?booking_id=${encodeURIComponent(result.id)}`);
+        }
+        return;
+      }
       toast.success(
         result.awaiting_pujari_assignment
           ? Number((result as { offers_sent?: number }).offers_sent || 0) > 0
@@ -1698,9 +1740,10 @@ export default function BookingWizard({
                 {(cancellationPolicy?.points || []).map((p, i) => (
                   <p key={i}>
                     {p.title ? <strong>{p.title}: </strong> : null}
-                    {p.body}
+                    {refundPointBody(p.body)}
                   </p>
                 ))}
+                <p className="pt-1 font-medium">{t(refundDestinationKey(reviewRefundMethod))}</p>
               </div>
             </CardContent>
           </Card>
@@ -1748,17 +1791,48 @@ export default function BookingWizard({
           {isAuthenticated && (
             <Card>
               <CardContent className="p-6 space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span>{t("customer.balance")}</span>
-                  <span className="font-semibold">
-                    ₹{((wallet?.balance || 0) / 100).toLocaleString("en-IN")}
-                  </span>
-                </div>
+                {onlineEnabled && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">{t("pay.method")}</Label>
+                    <RadioGroup
+                      value={payMethod}
+                      onValueChange={(v) => {
+                        setPayMethod(v === "wallet" ? "wallet" : "cashfree");
+                        setPayMethodChosen(true);
+                      }}
+                      className="gap-2"
+                    >
+                      <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                        <RadioGroupItem value="cashfree" id="pay-online" className="mt-0.5" />
+                        <span>
+                          <span className="block text-sm font-medium">{t("pay.online")}</span>
+                          <span className="block text-xs text-muted-foreground">{t("pay.onlineHint")}</span>
+                        </span>
+                      </label>
+                      <label className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                        <RadioGroupItem value="wallet" id="pay-wallet" className="mt-0.5" />
+                        <span className="block text-sm font-medium">{t("pay.wallet")}</span>
+                      </label>
+                    </RadioGroup>
+                  </div>
+                )}
+                {payMethod === "wallet" && (
+                  <div className="flex justify-between text-sm">
+                    <span>{t("customer.balance")}</span>
+                    <span className="font-semibold">
+                      ₹{((wallet?.balance || 0) / 100).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-lg">
                   <span>{t("booking.total")}</span>
                   <span className="text-primary">₹{(bill.totalAmount / 100).toLocaleString("en-IN")}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">{t("booking.walletPaidVia")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {payMethod === "cashfree"
+                    ? t("pay.refundToOriginal")
+                    : `${t("booking.walletPaidVia")} ${t("pay.refundToWallet")}`}
+                </p>
                 <div className="flex items-start gap-2 pt-2">
                   <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(v) => setTermsAccepted(!!v)} />
                   <label htmlFor="terms" className="text-sm leading-snug">
@@ -1812,6 +1886,8 @@ export default function BookingWizard({
                 <>
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" /> {t("booking.processing")}
                 </>
+              ) : payMethod === "cashfree" ? (
+                t("pay.payNow")
               ) : (
                 t("booking.payWallet")
               )}
@@ -1831,9 +1907,12 @@ export default function BookingWizard({
                 {policy!.points.map((p, i) => (
                   <div key={i}>
                     {p.title ? <p className="font-medium text-foreground">{p.title}</p> : null}
-                    <p>{p.body}</p>
+                    <p>{policy!.slug === "cancellation_policy" ? refundPointBody(p.body) : p.body}</p>
                   </div>
                 ))}
+                {policy!.slug === "cancellation_policy" && (
+                  <p className="font-medium text-foreground">{t(refundDestinationKey(onlineEnabled ? payMethod : "wallet"))}</p>
+                )}
               </div>
             ))}
           </div>

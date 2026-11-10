@@ -69,6 +69,33 @@ class Settings(BaseSettings):
     whatsapp_request_timeout_seconds: float = 10.0
     # Extra attempts after a send that certainly did not reach Meta (connection refused, 429, 5xx).
     whatsapp_send_retries: int = 2
+    # Online payments. PAYMENT_GATEWAY names the gateway new checkouts use ("cashfree"; empty = wallet only).
+    # Each stored payment keeps its own provider, so refunds and status checks never follow this setting.
+    payment_gateway: str = ""
+    payment_order_ttl_minutes: int = 20
+    # Public HTTPS origin Cashfree calls back (defaults to PUBLIC_APP_URL; set to a tunnel for local tests).
+    payment_webhook_base_url: str = ""
+    # Cashfree Payment Gateway (collection). sandbox | production; production is refused outside production.
+    cashfree_pg_env: str = "sandbox"
+    cashfree_pg_app_id: str = ""
+    cashfree_pg_secret_key: str = ""
+    cashfree_pg_api_version: str = "2026-01-01"
+    # Cashfree Payouts (pujari bank/UPI transfers): a separate product with its own keys.
+    cashfree_payout_env: str = "sandbox"
+    cashfree_payout_client_id: str = ""
+    cashfree_payout_client_secret: str = ""
+    # 2FA public key (PEM) from Payouts > Developers > Two-Factor Authentication, inline or as a file path.
+    cashfree_payout_public_key: str = ""
+    cashfree_payout_public_key_file: str = ""
+    cashfree_payout_api_version: str = "2024-01-01"
+
+    @property
+    def cashfree_pg_configured(self) -> bool:
+        return bool(self.cashfree_pg_app_id.strip() and self.cashfree_pg_secret_key.strip())
+
+    @property
+    def cashfree_payouts_configured(self) -> bool:
+        return bool(self.cashfree_payout_client_id.strip() and self.cashfree_payout_client_secret.strip())
 
     @property
     def wallet_self_topup_allowed(self) -> bool:
@@ -109,6 +136,17 @@ def insecure_settings_problems(s: Settings, env: Mapping[str, str] | None = None
             problems.append(
                 f"JWT_SECRET must be set to a random value of at least {MIN_JWT_SECRET_LENGTH} characters"
             )
+    for label, mode, key in (
+        ("CASHFREE_PG_ENV", s.cashfree_pg_env, s.cashfree_pg_app_id),
+        ("CASHFREE_PAYOUT_ENV", s.cashfree_payout_env, s.cashfree_payout_client_id),
+    ):
+        mode = (mode or "").strip().lower()
+        if mode not in ("sandbox", "production"):
+            problems.append(f"{label} must be sandbox or production")
+        elif mode == "production" and environment != "production":
+            problems.append(f"{label}=production (live money) is allowed only when ENVIRONMENT=production")
+        elif mode == "sandbox" and (key or "").strip().upper().startswith("PROD"):
+            problems.append(f"{label}=sandbox but a production key is configured")
     if environment == "production" and (s.otp_test_email_domains or s.otp_test_code):
         problems.append("OTP_TEST_EMAIL_DOMAINS / OTP_TEST_CODE are QA-only and must not be set in production")
     if environment == "production" and s.whatsapp_send_enabled:
