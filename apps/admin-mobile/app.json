@@ -15,10 +15,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bseva.admin",
+      "appleTeamId": "67ZN9U655H",
+      "googleServicesFile": "./GoogleService-Info.admin.plist",
       "buildNumber": "1",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "B-Seva Admin needs photo library access to attach verification documents and promo images.",
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -51,15 +56,32 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "bsevaadmin" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "bsevaadmin"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
     "plugins": [
-      ["../mobile/plugins/withBsevaAndroid.js", { "keyName": "admin" }],
+      [
+        "../mobile/plugins/withBsevaAndroid.js",
+        {
+          "keyName": "admin"
+        }
+      ],
       "expo-router",
-      ["expo-secure-store", { "faceIDPermission": false }],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       [
         "expo-image-picker",
         {

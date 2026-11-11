@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bseva.app",
+      "appleTeamId": "67ZN9U655H",
       "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "infoPlist": {
@@ -25,7 +26,8 @@
         "LSSupportsOpeningDocumentsInPlace": true,
         "UIBackgroundModes": [
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -82,9 +84,20 @@
       ]
     },
     "plugins": [
-      ["./plugins/withBsevaAndroid.js", { "keyName": "customer", "variants": true }],
+      [
+        "./plugins/withBsevaAndroid.js",
+        {
+          "keyName": "customer",
+          "variants": true
+        }
+      ],
       "expo-router",
-      ["expo-secure-store", { "faceIDPermission": false }],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       [
         "expo-location",
         {
