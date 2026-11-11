@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     firebase_web_messaging_sender_id: str = ""
     firebase_web_app_id: str = ""
     firebase_web_vapid_key: str = ""
+    # iPhone push straight to Apple (app.services.apns_push). Key file on servers: /run/bseva-secrets/apns_auth_key.p8
+    apns_key_id: str = ""
+    apns_team_id: str = ""
+    apns_auth_key_file: str = ""
+    apns_auth_key: str = ""
+    apns_topics: str = ""
     # Customer self top-up via POST /wallet/load credits money without a payment gateway.
     # "" = automatic (allowed only in development/qa/test), "off" = always refused,
     # "unverified" = always allowed (explicit risk acceptance until a gateway exists).
