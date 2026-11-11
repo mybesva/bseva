@@ -31,7 +31,7 @@ import { api, rupees, apiBase, getToken } from "@/lib/api";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "sonner";
-import { Copy, FolderTree, ImageIcon, Package, Pencil, Plus } from "lucide-react";
+import { Copy, FolderTree, ImageIcon, Package, Pencil, Plus, Search, X } from "lucide-react";
 
 const KIT_PROVIDERS = ["BSEVA", "PUJARI", "INCLUDED_IN_SAMAGRI_PACKAGE"];
 const isKitItem = (it: { provided_by?: string | null }) =>
@@ -167,6 +167,7 @@ export default function ServicesAdmin() {
   const virtualFlagOn = Boolean(publicConfig.virtual_puja_enabled);
 
   const [rows, setRows] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
   const [catalogCategories, setCatalogCategories] = useState<CategoryRow[]>([]);
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -505,6 +506,28 @@ export default function ServicesAdmin() {
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="relative mb-4 max-w-md">
+        <Search size="1rem" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, slug, category or alias"
+          aria-label="Search services"
+          className="pl-9 pr-9"
+        />
+        {search ? (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+          >
+            <X size="1rem" />
+          </button>
+        ) : null}
       </div>
 
       {!virtualFlagOn && isSuper && (
@@ -1941,8 +1964,23 @@ export default function ServicesAdmin() {
         </TableHeader>
           <TableBody>
             {(() => {
-              const available = rows.filter((s) => isAvailable(s));
-              const upcoming = rows.filter((s) => !isAvailable(s));
+              // Search matches name, slug, category names, aliases and short description (case-insensitive).
+              const needle = search.trim().toLowerCase();
+              const shown = needle
+                ? rows.filter((s) =>
+                    [
+                      s.name,
+                      s.slug,
+                      s.short_description,
+                      ...(s.categories || []).map((c: { name?: string; slug?: string }) => `${c.name || ""} ${c.slug || ""}`),
+                      ...(Array.isArray(s.search_aliases) ? s.search_aliases : []),
+                    ]
+                      .filter(Boolean)
+                      .some((v) => String(v).toLowerCase().includes(needle)),
+                  )
+                : rows;
+              const available = shown.filter((s) => isAvailable(s));
+              const upcoming = shown.filter((s) => !isAvailable(s));
               const renderRow = (s: any) => {
               const avail = isAvailable(s);
               const hasBookings = Number(s.booking_count || 0) > 0;
@@ -2104,11 +2142,11 @@ export default function ServicesAdmin() {
                   </TableRow>
                 );
               };
-              if (rows.length === 0) {
+              if (rows.length === 0 || shown.length === 0) {
                 return (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                      No services yet. Add your first puja service.
+                      {rows.length === 0 ? "No services yet. Add your first puja service." : `No services match "${search.trim()}".`}
                     </TableCell>
                   </TableRow>
                 );
