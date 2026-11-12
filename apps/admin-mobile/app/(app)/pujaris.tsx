@@ -1,6 +1,7 @@
 import {
   ADMIN_PUJARI_STATUS_FILTERS,
   DEFAULT_ADMIN_PAGE_SIZE,
+  displayTokenLabel,
   formatIndianPhone,
   normalizeIndianMobile,
   personLocation,
@@ -16,6 +17,7 @@ import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { AdminFormModal } from "@/components/admin/AdminFormModal";
 import { AdminListHeader } from "@/components/admin/AdminListHeader";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { confirmAdminAction, showAdminActionSheet } from "@/components/admin/adminActionSheet";
 import {
   AppText,
   Card,
@@ -101,12 +103,12 @@ export default function AdminPujaris() {
   const levelsQuery = useQuery({
     queryKey: ["pujari-roles"],
     queryFn: () => apiClient.api<PujariLevel[] | { items?: PujariLevel[] }>("/pujari-roles"),
-    enabled: addOpen,
   });
   const levels = useMemo(() => {
     const raw = levelsQuery.data;
     if (Array.isArray(raw)) return raw;
-    return raw?.items || [
+    if (raw?.items?.length) return raw.items;
+    return [
       { level: 1, title: "Level 1" },
       { level: 2, title: "Level 2" },
       { level: 3, title: "Level 3" },
@@ -129,6 +131,109 @@ export default function AdminPujaris() {
   const items = list.data?.items || [];
   const total = list.data?.total ?? 0;
   const pages = list.data?.pages ?? 1;
+
+  const canVerify = can("verify_pujaris");
+  const canSetLevel = can(["approve_pujaris", "verify_pujaris", "edit_pujaris"]);
+  const canHead = can("approve_pujaris");
+  const canBlock = can("block_pujaris");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function rowAction(row: PujariRow, okMessage: string, fn: () => Promise<unknown>) {
+    setError(null);
+    setSuccess(null);
+    setBusyId(row.id);
+    try {
+      await fn();
+      setSuccess(okMessage);
+      await qc.invalidateQueries({ queryKey: ["admin-pujaris"] });
+      await qc.invalidateQueries({ queryKey: ["admin-pujari", row.id] });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Action failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function currentLevel(row: PujariRow) {
+    return Number(row.approved_level || row.requested_level || 1);
+  }
+
+  function saveLevel(row: PujariRow, next: number) {
+    const approved = Number(row.approved_level);
+    if (Number.isFinite(approved) && next === approved) return;
+    void rowAction(row, `Level ${next} saved`, () =>
+      apiClient.api(`/admin/pujaris/${row.id}/level`, {
+        method: "POST",
+        body: JSON.stringify({ approved_level: next }),
+      })
+    );
+  }
+
+  function openLevelSheet(row: PujariRow) {
+    showAdminActionSheet(
+      `Approved level · requested ${row.requested_level ?? "—"}`,
+      levels.map((l) => ({
+        label: `${Number(row.approved_level) === l.level ? "✓ " : ""}Level ${l.level}${l.title ? ` — ${l.title}` : ""}`,
+        onPress: () => saveLevel(row, l.level),
+      }))
+    );
+  }
+
+  function setVerification(row: PujariRow, verificationStatus: string) {
+    void rowAction(row, displayTokenLabel(verificationStatus), () =>
+      apiClient.api(`/admin/pujaris/${row.id}/verify`, {
+        method: "POST",
+        body: JSON.stringify({ verification_status: verificationStatus, approved_level: currentLevel(row) }),
+      })
+    );
+  }
+
+  function openActions(row: PujariRow) {
+    const isHead = Boolean(row.is_head_pujari || row.role === "head_pujari");
+    showAdminActionSheet(row.name || "Pujari", [
+      { label: "Set Approved Level", onPress: () => openLevelSheet(row), disabled: !canSetLevel },
+      { label: "Approve Profile", onPress: () => setVerification(row, "approved"), disabled: !canVerify },
+      { label: "Request Correction", onPress: () => setVerification(row, "correction_required"), disabled: !canVerify },
+      {
+        label: "Reject Profile",
+        destructive: true,
+        disabled: !canVerify,
+        onPress: () =>
+          confirmAdminAction("Reject profile?", `Reject ${row.name || "this pujari"}'s profile?`, () =>
+            setVerification(row, "rejected")
+          ),
+      },
+      { label: "Review Services", onPress: () => router.push(`/pujari/${row.id}`) },
+      {
+        label: isHead ? "Remove Head Pujari" : "Make Head Pujari",
+        disabled: !canHead,
+        onPress: () =>
+          void rowAction(row, isHead ? "Removed Head Pujari" : "Marked Head Pujari", () =>
+            apiClient.api(`/admin/pujaris/${row.id}/head`, {
+              method: "POST",
+              body: JSON.stringify({ is_head_pujari: !isHead, scope_cities: [] }),
+            })
+          ),
+      },
+      {
+        label: row.blocked ? "Unblock Account" : "Block Account",
+        destructive: !row.blocked,
+        disabled: !canBlock,
+        onPress: () =>
+          confirmAdminAction(
+            row.blocked ? "Unblock account?" : "Block account?",
+            `${row.blocked ? "Unblock" : "Block"} ${row.name || "this pujari"}?`,
+            () =>
+              void rowAction(row, row.blocked ? "Unblocked" : "Blocked", () =>
+                apiClient.api(`/admin/users/${row.id}/block`, {
+                  method: "POST",
+                  body: JSON.stringify({ blocked: !row.blocked, reason: "Admin action" }),
+                })
+              )
+          ),
+      },
+    ]);
+  }
 
   async function handleAdd() {
     setError(null);
@@ -274,10 +379,52 @@ export default function AdminPujaris() {
                     borderTopColor: colors.border,
                   }}
                 >
-                  <AppText variant="small" color={colors.primary} style={{ fontWeight: "600" }}>
-                    View / Manage
-                  </AppText>
-                  <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <AppText variant="small" color={colors.primary} style={{ fontWeight: "600" }}>
+                      View / Manage
+                    </AppText>
+                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {canSetLevel ? (
+                      <Pressable
+                        onPress={() => openLevelSheet(p)}
+                        disabled={busyId === p.id}
+                        accessibilityRole="button"
+                        accessibilityLabel="Set level"
+                        hitSlop={6}
+                        style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}
+                      >
+                        <AppText variant="small" style={{ fontWeight: "600" }}>
+                          L{currentLevel(p)} ▾
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                    {canVerify || canHead || canBlock || canSetLevel ? (
+                      <Pressable
+                        onPress={() => openActions(p)}
+                        disabled={busyId === p.id}
+                        accessibilityRole="button"
+                        accessibilityLabel="Actions"
+                        hitSlop={6}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 4,
+                          paddingHorizontal: 10,
+                          paddingVertical: 6,
+                          borderRadius: 8,
+                          backgroundColor: colors.secondary,
+                          opacity: busyId === p.id ? 0.5 : 1,
+                        }}
+                      >
+                        <AppText variant="small" style={{ fontWeight: "600" }}>
+                          {busyId === p.id ? "Saving…" : "Actions"}
+                        </AppText>
+                        <Ionicons name="chevron-down" size={14} color={colors.foreground} />
+                      </Pressable>
+                    ) : null}
+                  </View>
                 </View>
               </Card>
             </Pressable>
