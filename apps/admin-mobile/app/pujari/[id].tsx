@@ -40,7 +40,14 @@ export default function AdminPujariDetail() {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState<string[] | null>(null);
-  const p = q.data;
+  // GET /admin/pujaris/:id returns { profile, documents, public_id, ... } (same as web PujariDetail).
+  const p = useMemo(() => {
+    const d = q.data as (Record<string, unknown> & { profile?: Record<string, unknown>; documents?: Doc[] }) | undefined;
+    if (!d) return undefined;
+    return { ...(d.profile || {}), public_id: d.public_id ?? d.profile?.public_id, documents: d.documents } as Record<string, any> & {
+      documents?: Doc[];
+    };
+  }, [q.data]);
   const documents = (p?.documents || []) as Doc[];
   const offerServices = offers.data?.services || [];
   const verifiedIds = useMemo(() => {

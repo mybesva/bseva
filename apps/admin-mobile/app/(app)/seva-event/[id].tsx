@@ -2,10 +2,13 @@ import { displayTokenLabel } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { ScrollView } from "react-native";
-import { AppText, LoadingBlock, Screen, ScreenHeader } from "@/components/ui";
+import { AppText, LoadingBlock, Screen } from "@/components/ui";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { apiClient } from "@/services/api";
+import { useAppTheme } from "@/theme/ThemeContext";
 
 export default function AdminSevaEventDetailScreen() {
+  const { colors } = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const regs = useQuery({
     queryKey: ["admin-seva-regs", id],
@@ -20,13 +23,13 @@ export default function AdminSevaEventDetailScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Event Detail" />
+      <ScreenHeader title="Event Detail" back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         {manifest.isLoading ? <LoadingBlock /> : null}
         {manifest.data?.event ? (
           <>
             <AppText variant="h2">{manifest.data.event.title || manifest.data.event.service_name}</AppText>
-            <AppText muted>
+            <AppText color={colors.mutedForeground}>
               {displayTokenLabel(manifest.data.event.participation_mode, "")} · {manifest.data.event.registration_count} registrations
             </AppText>
           </>

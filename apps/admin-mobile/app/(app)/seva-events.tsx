@@ -2,7 +2,8 @@ import { displayTokenLabel } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { RefreshControl, ScrollView, TouchableOpacity, View } from "react-native";
-import { AppText, EmptyState, LoadingBlock, Screen, ScreenHeader } from "@/components/ui";
+import { AppText, EmptyState, LoadingBlock, Screen } from "@/components/ui";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import type { SevaEvent } from "@bseva/types";
@@ -17,7 +18,7 @@ export default function AdminSevaEventsScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Seva Events" />
+      <ScreenHeader title="Seva Events" back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10 }}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
@@ -37,11 +38,11 @@ export default function AdminSevaEventsScreen() {
             }}
           >
             <AppText variant="h3">{ev.title || ev.service_name}</AppText>
-            <AppText muted>
+            <AppText color={colors.mutedForeground}>
               {displayTokenLabel(ev.service_type, "")} · {displayTokenLabel(ev.participation_mode, "")} · {ev.registration_count}
               {ev.capacity ? `/${ev.capacity}` : ""} regs
             </AppText>
-            <AppText muted>{String(ev.start_at || "").slice(0, 16)}</AppText>
+            <AppText color={colors.mutedForeground}>{String(ev.start_at || "").slice(0, 16)}</AppText>
             <View style={{ marginTop: 6 }}>
               <AppText>{ev.published ? "Published" : "Draft"}</AppText>
             </View>
