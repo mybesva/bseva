@@ -1,11 +1,13 @@
 import { filterPujariRoles, validateGstPercent } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Alert, ScrollView, Switch } from "react-native";
+import { Alert, ScrollView, Switch, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, SuccessBanner } from "@/components/ui";
+import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
+import { useAppTheme } from "@/theme/ThemeContext";
 
 function stringify(v: unknown) {
   if (v == null) return "";
@@ -23,6 +25,7 @@ function PujariRolesCard({
   setError: (v: string | null) => void;
   setSuccess: (v: string | null) => void;
 }) {
+  const { colors } = useAppTheme();
   const roles = useQuery({
     queryKey: ["admin-pujari-roles"],
     queryFn: () => apiClient.api<RoleRow[] | { items?: RoleRow[] }>("/admin/pujari-roles"),
@@ -130,25 +133,35 @@ function PujariRolesCard({
                     setEditExamplesText((role.examples || []).join("\n"));
                   }}
                 />
-                {role.can_delete !== false ? (
-                  <PrimaryButton
-                    title="Delete"
-                    variant="ghost"
-                    onPress={() =>
-                      Alert.alert("Delete role?", `Level ${role.level} — ${role.title}`, [
-                        { text: "Cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: () =>
-                            void apiClient
-                              .api(`/admin/pujari-roles/${role.id}`, { method: "DELETE" })
-                              .then(() => roles.refetch())
-                              .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed")),
+                <PrimaryButton
+                  title="Delete"
+                  variant="ghost"
+                  disabled={role.can_delete === false}
+                  onPress={() =>
+                    Alert.alert("Delete role?", `Delete Level ${role.level} — ${role.title}?`, [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: () => {
+                          setError(null);
+                          setSuccess(null);
+                          void apiClient
+                            .api(`/admin/pujari-roles/${role.id}`, { method: "DELETE" })
+                            .then(async () => {
+                              setSuccess("Role deleted");
+                              await roles.refetch();
+                            })
+                            .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed"));
                         },
-                      ])
-                    }
-                  />
+                      },
+                    ])
+                  }
+                />
+                {role.can_delete === false ? (
+                  <AppText variant="small" color={colors.mutedForeground}>
+                    Cannot delete — pujaris or services still use this level
+                  </AppText>
                 ) : null}
               </>
             )}
@@ -160,6 +173,136 @@ function PujariRolesCard({
       <Field label="Summary" value={addSummary} onChangeText={setAddSummary} />
       <Field label="Examples (One per Line)" value={addExamplesText} onChangeText={setAddExamplesText} multiline />
       <PrimaryButton title="Add Role" loading={saving && !editingId} onPress={() => void saveNew()} />
+    </Card>
+  );
+}
+
+type CaptchaMandatory = { feature: string; label: string; enabled: true; locked: true };
+type CaptchaConfigurable = {
+  feature: string;
+  label: string;
+  enabled: boolean;
+  updated_by_name: string | null;
+  updated_at: string | null;
+};
+type CaptchaView = {
+  mandatory: CaptchaMandatory[];
+  configurable: CaptchaConfigurable[];
+  enforcement_active: boolean;
+  history: { actor_name: string; reason: string; created_at: string }[];
+};
+
+function captchaWhen(iso: string | null) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+}
+
+/** Super Admin only. Contact Us and Custom Puja are always on; the four switches are saved on the server. */
+function CaptchaSettingsCard({
+  setError,
+  setSuccess,
+}: {
+  setError: (v: string | null) => void;
+  setSuccess: (v: string | null) => void;
+}) {
+  const { colors } = useAppTheme();
+  const [saving, setSaving] = useState<string | null>(null);
+  const captcha = useQuery({
+    queryKey: ["admin-security-captcha"],
+    queryFn: () => apiClient.api<CaptchaView>("/admin/security/captcha"),
+  });
+  const view = captcha.data;
+
+  async function toggle(item: CaptchaConfigurable, enabled: boolean) {
+    setSaving(item.feature);
+    setError(null);
+    setSuccess(null);
+    try {
+      await apiClient.api<CaptchaView>(`/admin/security/captcha/${item.feature}`, {
+        method: "PUT",
+        body: JSON.stringify({ enabled }),
+      });
+      await captcha.refetch();
+      setSuccess(`${item.label} CAPTCHA turned ${enabled ? "on" : "off"}.`);
+    } catch (e: unknown) {
+      setError(e instanceof Error && e.message ? e.message : "Could not save the setting");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <Card style={{ gap: 10 }}>
+      <AppText variant="h3">CAPTCHA Settings</AppText>
+      <AppText variant="small" color={colors.mutedForeground}>
+        The 5-character security image shown to people who are not signed in. Applies to the website and the Customer and
+        Pujari apps.
+      </AppText>
+      {captcha.error ? (
+        <ErrorBanner message={captcha.error instanceof Error ? captcha.error.message : "Could not load CAPTCHA settings"} />
+      ) : null}
+      {captcha.isLoading ? <LoadingBlock /> : null}
+      {view ? (
+        <>
+          {!view.enforcement_active ? (
+            <Card compact style={{ borderColor: colors.primary }}>
+              <AppText variant="small">
+                Registration and sign-in switches are saved but not enforced yet. They start working once the updated mobile
+                apps are released and enforcement is turned on for this server. Contact Us and Custom Puja are enforced now.
+              </AppText>
+            </Card>
+          ) : null}
+          <AppText variant="h3">Always on</AppText>
+          {view.mandatory.map((item) => (
+            <View key={item.feature} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <AppText style={{ flex: 1 }}>{item.label}</AppText>
+              <AppText variant="small" color={colors.mutedForeground}>
+                Always Enabled
+              </AppText>
+            </View>
+          ))}
+          <AppText variant="small" color={colors.mutedForeground}>
+            Required for visitors who are not signed in and cannot be turned off. Signed-in customers and pujaris are not asked.
+          </AppText>
+          <AppText variant="h3">Registration and sign-in</AppText>
+          {view.configurable.map((item) => (
+            <View key={item.feature} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <AppText>{item.label}</AppText>
+                <AppText variant="small" color={colors.mutedForeground}>
+                  {item.updated_by_name ? `Changed by ${item.updated_by_name}, ${captchaWhen(item.updated_at)}` : "Default (on)"}
+                </AppText>
+              </View>
+              <AppText variant="small" color={colors.mutedForeground}>
+                {item.enabled ? "On" : "Off"}
+              </AppText>
+              <Switch
+                value={item.enabled}
+                disabled={saving !== null}
+                accessibilityLabel={`${item.label} CAPTCHA`}
+                onValueChange={(on) => void toggle(item, on)}
+              />
+            </View>
+          ))}
+          <AppText variant="small" color={colors.mutedForeground}>
+            Admin and Super Admin sign-in never shows a CAPTCHA.
+          </AppText>
+          {view.history.length > 0 ? (
+            <>
+              <AppText variant="h3">Recent changes</AppText>
+              {view.history.slice(0, 10).map((row, i) => (
+                <AppText key={i} variant="small" color={colors.mutedForeground}>
+                  {row.reason.replace("->", "→")} by {row.actor_name}, {captchaWhen(row.created_at)}
+                </AppText>
+              ))}
+            </>
+          ) : null}
+        </>
+      ) : null}
     </Card>
   );
 }
@@ -181,6 +324,8 @@ function parseValue(raw: string, original: unknown) {
 
 export default function AdminSettings() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const isSuper = user?.role === "super_admin";
   const [gst, setGst] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -243,6 +388,7 @@ export default function AdminSettings() {
         </Card>
         <Field label="Search Platform Settings" value={filter} onChangeText={setFilter} placeholder="Filter config keys…" />
         <PujariRolesCard setError={setError} setSuccess={setSuccess} />
+        {isSuper ? <CaptchaSettingsCard setError={setError} setSuccess={setSuccess} /> : null}
         {keys.map((k) => {
           const original = config.data?.[k];
           const isBool = typeof original === "boolean";

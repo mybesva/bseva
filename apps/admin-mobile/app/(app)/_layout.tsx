@@ -45,6 +45,9 @@ export default function AdminTabs() {
         name="more"
         options={{ title: t("mobile.more"), tabBarIcon: ({ color, size }) => <Ionicons name="menu" color={color} size={size} /> }}
       />
+      {/* Opened from More, not footer tabs (expo-router adds every route in this folder as a tab unless hidden). */}
+      <Tabs.Screen name="seva-events" options={{ href: null }} />
+      <Tabs.Screen name="seva-event/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

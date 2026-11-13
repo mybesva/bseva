@@ -24,6 +24,14 @@ export default function AdminSupport() {
     queryFn: () => apiClient.listSupportTickets(),
   });
 
+  const chats = useQuery({
+    queryKey: ["support-conversations"],
+    queryFn: () => apiClient.api<{ id: string; status?: string | null }[]>("/support/conversations"),
+  });
+  const liveChatOpen = (Array.isArray(chats.data) ? chats.data : []).filter(
+    (c) => !["closed", "resolved"].includes(String(c.status || "open"))
+  ).length;
+
   useEffect(() => {
     const next = typeof params.status === "string" ? params.status : "";
     if (next) setStatusFilter(next);
@@ -45,9 +53,17 @@ export default function AdminSupport() {
       <ScreenHeader title={t("admin.support")} back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isFetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<RefreshControl refreshing={list.isFetching} onRefresh={() => {
+              void list.refetch();
+              void chats.refetch();
+            }} />}
         keyboardShouldPersistTaps="handled"
       >
+        <PrimaryButton
+          title={liveChatOpen > 0 ? `Live Chat (In-App) · ${liveChatOpen} open` : "Live Chat (In-App)"}
+          variant="navy"
+          onPress={() => router.push("/support/conversations")}
+        />
         <PrimaryButton title="+ Create Ticket" onPress={() => router.push("/support/create")} />
         <View style={{ gap: 8 }}>
           <AppText variant="small" style={{ fontWeight: "700" }}>
