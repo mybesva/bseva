@@ -5,6 +5,7 @@ psycopg[binary]==3.2.6
 pydantic==2.11.3
 pydantic-settings==2.8.1
 email-validator==2.2.0
+dnspython==2.8.0  # email domain check before sign-up OTP (app.email_domain)
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 PyJWT==2.10.1

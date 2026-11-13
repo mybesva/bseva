@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     # QA-only OTP test delivery: addresses in these domains (e.g. "@bseva.test", non-routable) receive no email;
     # their OTP is the secret OTP_TEST_CODE instead. Ignored outside qa/test; refused at startup in production.
     otp_test_email_domains: str = ""
+    # Refuse sign-up OTPs to email domains that cannot receive mail (DNS check, app.email_domain). Tests turn it off.
+    email_domain_check: bool = True
     otp_test_code: str = ""
     # Self-hosted image CAPTCHA (app.captcha). Contact Us and Custom Puja always ask signed-out visitors; no
     # setting turns that off. The Super Admin switches for registration and password sign-in (customer and

@@ -144,6 +144,20 @@ def request_otp(body: OtpRequestIn, request: Request, db: Session = Depends(get_
     account_type = body.account_type if purpose == "register" else None
     if purpose == "register" and captcha_settings.register_required(db, account_type):
         captcha.require(db, body.captcha_id, body.captcha_answer, purpose="register", ip=ip)
+    # Sign-up codes: refuse a domain that cannot receive mail (gmail.con, test.hom) before "sending", instead of
+    # reporting "OTP sent" for a message that bounces. QA's synthetic test domains are skipped.
+    if purpose in ("register", "verify") and settings.email_domain_check:
+        from app.email_domain import email_domain_can_receive
+
+        test_domains = tuple(d.strip() for d in (settings.otp_test_email_domains or "").split(",") if d.strip())
+        if not email_domain_can_receive(email, skip_domains=test_domains):
+            from app.i18n import coded_http, customer_error_message, resolve_request_lang
+
+            raise coded_http(
+                400,
+                "EMAIL_DOMAIN_UNDELIVERABLE",
+                customer_error_message("EMAIL_DOMAIN_UNDELIVERABLE", resolve_request_lang(request=request)),
+            )
     # Counted before the account lookup, for known and unknown addresses alike.
     try:
         gate = reserve_otp_send(db, email=email, scope=purpose, ip=ip)

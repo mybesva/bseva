@@ -29,6 +29,9 @@ if _host not in LOOPBACK:
     # A placeholder that can only ever point at this machine; tests that need a database bring their own.
     os.environ["DATABASE_URL"] = "postgresql+psycopg://bseva-tests@127.0.0.1:5432/bseva_unit_tests_placeholder"
 
+# Unit tests must not do DNS lookups for the sign-up email domain check.
+os.environ.setdefault("EMAIL_DOMAIN_CHECK", "false")
+
 for _key in (
     "PAYMENT_GATEWAY", "CASHFREE_PG_APP_ID", "CASHFREE_PG_SECRET_KEY", "CASHFREE_PAYOUT_CLIENT_ID",
     "CASHFREE_PAYOUT_CLIENT_SECRET", "CASHFREE_PAYOUT_PUBLIC_KEY", "CASHFREE_PAYOUT_PUBLIC_KEY_FILE",
