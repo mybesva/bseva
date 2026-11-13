@@ -470,15 +470,31 @@ export default function BookService() {
       setUnavailableMessage(result.message || null);
       return result.service_available;
     } catch (e: unknown) {
-      setServiceAvailable(false);
+      // A failed check (slow network, timeout) is "unknown", not "unavailable": marking it false greyed out
+      // Payment until the customer went Back and Next again. Pay re-checks, and the server enforces the area anyway.
+      setServiceAvailable(null);
       setError(e instanceof Error ? e.message : t("web.availability.errorBody"));
-      return false;
+      return true;
     }
   }
 
+  // A booking reopened from its saved draft jumps straight to step 3/4 without passing step 2's "Next", so the
+  // area check never ran and Payment looked available until the server refused it at "Pay & Book". Check once per
+  // service + location whenever we are past step 2 without a result.
+  const areaCheckedKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (step < 3 || mode !== "in_person" || lat == null || lng == null || !svc || serviceAvailable !== null) return;
+    const key = `${svc.id}:${lat}:${lng}`;
+    if (areaCheckedKey.current === key) return;
+    areaCheckedKey.current = key;
+    void checkPhysicalAvailability();
+  }, [step, mode, lat, lng, svc?.id, serviceAvailable]);
+
   async function submit() {
     if (!svc) return;
-    if (mode === "in_person" && serviceAvailable === false) {
+    // Re-check right before paying when the earlier check could not finish (same as web, which checks at submit).
+    const areaOk = mode === "in_person" && serviceAvailable === null ? await checkPhysicalAvailability() : serviceAvailable !== false;
+    if (mode === "in_person" && !areaOk) {
       setError(t("web.availability.bookingUnavailable"));
       return;
     }
@@ -1135,10 +1151,14 @@ export default function BookService() {
               termsSlug="booking_terms"
               cancellationSlug="cancellation_policy"
             />
+            {serviceAvailable === false && mode === "in_person" ? (
+              <ErrorBanner message={unavailableMessage || t("web.availability.bookingUnavailable")} />
+            ) : null}
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(3)} />
             <PrimaryButton
               title={pending ? t("mobile.booking") : method === "cashfree" ? t("pay.payNow") : t("mobile.payBook")}
               loading={pending}
+              disabled={serviceAvailable === false && mode === "in_person"}
               onPress={submit}
             />
           </>
