@@ -17,6 +17,9 @@ import { withInfoPlist, type ConfigPlugin } from "expo/config-plugins";
 
 type Variant = "customer" | "pujari";
 
+/** Canonical website hosts (www.b-seva.com redirects, so it cannot carry app links). */
+const APP_LINK_HOSTS = ["b-seva.com", "qa.b-seva.com"];
+
 const PUJARI_LOCATION_ALWAYS =
   "B-Seva Pujari uses your location during the pre-Puja travel period, including when the app is in the background, so the customer can track your arrival.";
 const PUJARI_LOCATION_WHEN_IN_USE =
@@ -96,6 +99,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   infoPlist.UIBackgroundModes = IOS_BACKGROUND_MODES[variant];
   ios.infoPlist = infoPlist;
+  // Universal links: b-seva.com links (WhatsApp, email, SMS) open in the app instead of the website. Which paths
+  // go to which app is set on the website (deploy/nginx/well-known/apple-app-site-association).
+  ios.associatedDomains = APP_LINK_HOSTS.map((host) => `applinks:${host}`);
 
   return {
     ...base,

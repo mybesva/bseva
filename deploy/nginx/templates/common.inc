@@ -71,6 +71,21 @@ location = /index.html {
     include /etc/nginx/bseva-templates/security.inc;
 }
 
+# App links: iOS and Android fetch these to let the B-Seva apps open b-seva.com links (deploy/nginx/well-known).
+# Served as JSON straight from this host, never redirected, as both platforms require.
+location = /.well-known/apple-app-site-association {
+    default_type application/json;
+    add_header Cache-Control "public, max-age=3600" always;
+    include /etc/nginx/bseva-templates/security.inc;
+    try_files $uri =404;
+}
+location = /.well-known/assetlinks.json {
+    default_type application/json;
+    add_header Cache-Control "public, max-age=3600" always;
+    include /etc/nginx/bseva-templates/security.inc;
+    try_files $uri =404;
+}
+
 location / {
     try_files $uri $uri/ /index.html;
 }

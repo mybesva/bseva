@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bseva.app",
+      "sha256_cert_fingerprints": [
+        "96:85:35:9A:DE:CA:5C:C4:7F:2E:7B:14:5D:90:6F:41:51:80:CA:63:48:D7:C4:18:48:72:9E:E6:1E:22:0B:1F"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bseva.pujari",
+      "sha256_cert_fingerprints": [
+        "55:21:7B:FA:6E:01:C7:1E:54:FB:EC:DA:48:ED:9C:8D:98:F3:19:2A:2A:60:61:1E:D2:47:18:C1:10:71:FC:13"
+      ]
+    }
+  }
+]
