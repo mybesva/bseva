@@ -1,5 +1,6 @@
 import { isPujariRole, rupees } from "@bseva/config";
 import { formatPujaTitleText } from "@bseva/locales";
+import type { ChargeCheckout } from "@bseva/api-client";
 import type { Booking, BookingPreparation, PreparationItem } from "@bseva/types";
 import { normalizePreparationSections, PREPARATION_SECTION_KEYS } from "@bseva/types";
 import { formatPujaDuration } from "@bseva/locales";
@@ -19,6 +20,7 @@ import { TrackingMap } from "@/components/TrackingMap";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
+import { openChargeCheckout } from "@/services/onlinePayment";
 import { isPujariTrackingStarted } from "@/services/pujariTracking";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { confirmDestructiveAction, showSuccessAlert } from "@/utils/actionFeedback";
@@ -242,6 +244,8 @@ export default function BookingDetail() {
   }
   const q = useQuery({ queryKey: ["booking", id], queryFn: () => apiClient.getBooking(id), enabled: !!id });
   const prep = useQuery({ queryKey: ["prep", id], queryFn: () => apiClient.bookingPreparation(id), enabled: !!id });
+  const paymentConfigQ = useQuery({ queryKey: ["payment-config"], queryFn: () => apiClient.paymentConfig() });
+  const walletEnabled = paymentConfigQ.data?.wallet_enabled !== false;
   const [otp, setOtp] = useState("");
   const [completeCode, setCompleteCode] = useState("");
   const [stars, setStars] = useState("5");
@@ -618,14 +622,34 @@ export default function BookingDetail() {
 
         {!pujari && b.payment_status === "pending" ? (
           <PrimaryButton
-            title={busyAction === "pay" ? t("mobile.processing") : t("mobile.payWallet")}
+            title={
+              busyAction === "pay"
+                ? t("mobile.processing")
+                : walletEnabled
+                  ? t("mobile.payWallet")
+                  : t("pay.charge.payOnline", { amount: rupees(Number(b.total_paise)) })
+            }
             loading={busyAction === "pay"}
             disabled={busy}
-            onPress={() =>
-              void run("pay", () => apiClient.payBooking(b.id), () =>
-                showSuccessAlert(t("mobile.paymentSuccess")),
-              )
-            }
+            onPress={() => {
+              let checkout: ChargeCheckout | null | undefined;
+              void run(
+                "pay",
+                async () => {
+                  const out = await apiClient.payBooking(b.id);
+                  // Wallet off: the server opens (or resumes) a Cashfree order instead of charging the wallet.
+                  if (out?.payment_required && out.checkout) checkout = out.checkout;
+                },
+                () => {
+                  if (checkout) {
+                    router.push(`/customer/payment/charge/${checkout.payment_id}`);
+                    void openChargeCheckout(checkout);
+                  } else {
+                    showSuccessAlert(t("mobile.paymentSuccess"));
+                  }
+                },
+              );
+            }}
           />
         ) : null}
 

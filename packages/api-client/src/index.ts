@@ -49,6 +49,44 @@ export type PaymentStatus = {
   attempt?: { provider: string; status: string; attempt_no: number; provider_status?: string | null; message?: string | null } | null;
 };
 
+/** Gateway checkout for an online charge (reschedule fee, consultation, Seva registration, later-date booking pay). */
+export type ChargeCheckout = CheckoutSession & { payment_id: string };
+
+/**
+ * Returned (alongside the endpoint's normal fields) when the customer wallet is off and an amount is due:
+ * nothing is finished until the customer pays this checkout.
+ */
+export type ChargeRequired = { payment_required?: boolean; checkout?: ChargeCheckout | null };
+
+export type ChargePurpose = "reschedule_fee" | "consultation" | "seva_registration" | "booking_payment";
+
+export type ChargeStatus = {
+  payment_id: string;
+  purpose: ChargePurpose;
+  status: "paid" | "pending" | "failed" | "closed" | "refunded";
+  closed_reason?: "abandoned" | "expired" | null;
+  refund_reason?: string | null;
+  amount_paise: number;
+  reference?: string | null;
+  booking_id?: string | null;
+  consultation_id?: string | null;
+  registration_id?: string | null;
+  event_id?: string | null;
+  link?: string | null;
+  attempt?: { provider?: string; status?: string; attempt_no?: number; provider_status?: string | null; message?: string | null } | null;
+};
+
+export type PaymentsConfig = {
+  online_enabled: boolean;
+  provider: string | null;
+  environment: string | null;
+  /** False when Super Admin has switched the customer wallet off: customers pay online only. */
+  wallet_enabled?: boolean;
+};
+
+/** Wallet summary; `customer_wallet_enabled` is false when customers can no longer pay from or top up the wallet. */
+export type WalletSummary = Wallet & { customer_wallet_enabled?: boolean; self_topup_enabled?: boolean };
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -616,7 +654,9 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     rescheduleBooking(id: string, new_date: string, new_start_time: string, expected_fee_paise?: number) {
-      return api(`/bookings/${id}/reschedule`, {
+      return api<
+        ChargeRequired & { ok?: boolean; booking_id?: string; fee_paise?: number; [key: string]: unknown }
+      >(`/bookings/${id}/reschedule`, {
         method: "POST",
         body: JSON.stringify({ new_date, new_start_time, expected_fee_paise }),
       });
@@ -632,7 +672,9 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     payBooking(id: string) {
-      return api(`/bookings/${id}/pay`, { method: "POST" });
+      return api<ChargeRequired & { ok?: boolean; total_paise?: number; [key: string]: unknown }>(`/bookings/${id}/pay`, {
+        method: "POST",
+      });
     },
 
     acceptBooking(id: string) {
@@ -719,12 +761,27 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     getWallet() {
-      return api<Wallet>("/wallet");
+      return api<WalletSummary>("/wallet");
     },
 
     /** Whether online (gateway) checkout is available, and in which environment. Never returns keys. */
     paymentConfig() {
-      return api<{ online_enabled: boolean; provider: string | null; environment: string | null }>("/payments/config");
+      return api<PaymentsConfig>("/payments/config");
+    },
+
+    /** Online charge state, verified server-side with the gateway. */
+    chargeStatus(paymentId: string) {
+      return api<ChargeStatus>(`/payments/charges/${encodeURIComponent(paymentId)}/status`);
+    },
+
+    /** Session for a charge still awaiting payment (409 when it can no longer be paid). */
+    resumeChargeCheckout(paymentId: string) {
+      return api<ChargeCheckout>(`/payments/charges/${encodeURIComponent(paymentId)}/checkout`, { method: "POST" });
+    },
+
+    /** Customer gave up on a charge; nothing it was for is changed (409 when already paid). */
+    abandonCharge(paymentId: string) {
+      return api<{ ok: boolean }>(`/payments/charges/${encodeURIComponent(paymentId)}/abandon`, { method: "POST" });
     },
 
     /** Session for a booking still awaiting payment (reuses the open attempt, or opens a new one). */
@@ -940,6 +997,11 @@ export function createApiClient(opts: ApiClientOptions) {
       return api<PujariProfile>("/pujari/profile", { method: "PATCH", body: JSON.stringify(body) });
     },
 
+    /** One tap: the pujari agrees that B-Seva may verify their payout details (a UPI check sends ₹1). */
+    givePayoutVerificationConsent() {
+      return api<{ ok: boolean }>("/pujari/payout-verification-consent", { method: "POST" });
+    },
+
     submitPujariProfile(body?: Record<string, unknown>) {
       return api("/pujari/profile/submit", { method: "POST", body: JSON.stringify(body || {}) });
     },
@@ -1038,7 +1100,10 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     createMuhurta(body: Record<string, unknown>) {
-      return api("/muhurta-consultations", { method: "POST", body: JSON.stringify(body) });
+      return api<ChargeRequired & { [key: string]: unknown }>("/muhurta-consultations", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
     },
 
     listMuhurta() {
@@ -1146,7 +1211,7 @@ export function createApiClient(opts: ApiClientOptions) {
     },
 
     registerSevaEvent(eventId: string, body: Record<string, unknown>) {
-      return api<SevaRegistration>(`/seva/events/${encodeURIComponent(eventId)}/register`, {
+      return api<SevaRegistration & ChargeRequired>(`/seva/events/${encodeURIComponent(eventId)}/register`, {
         method: "POST",
         body: JSON.stringify(body),
       });

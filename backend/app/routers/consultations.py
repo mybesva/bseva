@@ -254,9 +254,15 @@ def create_muhurta_consultation(
     cid = str(uuid4())
     cnum = f"MUH-{cid[:8].upper()}"
     prefs = [d.isoformat() for d in (body.preferred_dates or [body.appointment_date])]
-    # Charge wallet when fee > 0
+    from app.customer_wallet import online_charges_required
+
+    # Charge the fee: online through the payment gateway when the customer wallet is off (the request reaches
+    # the team once the payment is verified), otherwise from the wallet.
     pay_status = "not_required"
-    if fee > 0:
+    pay_online = fee > 0 and online_charges_required(db)
+    if pay_online:
+        pay_status = "awaiting_payment"
+    elif fee > 0:
         try:
             apply_wallet(
                 db,
@@ -277,7 +283,7 @@ def create_muhurta_consultation(
               id, customer_id, service_id, fee_paise, payment_status, status,
               preferred_dates, guidance_notes, appointment_date, appointment_time, consultation_number
             ) VALUES (
-              CAST(:id AS uuid), CAST(:cid AS uuid), CAST(:sid AS uuid), :fee, :pay, 'requested',
+              CAST(:id AS uuid), CAST(:cid AS uuid), CAST(:sid AS uuid), :fee, :pay, :st,
               CAST(:prefs AS jsonb), :notes, :adate, :atime, :cnum
             )
             """
@@ -288,6 +294,7 @@ def create_muhurta_consultation(
             "sid": str(body.service_id),
             "fee": fee,
             "pay": pay_status,
+            "st": "awaiting_payment" if pay_online else "requested",
             "prefs": __import__("json").dumps(prefs),
             "notes": body.notes,
             "adate": body.appointment_date.isoformat(),
@@ -296,23 +303,33 @@ def create_muhurta_consultation(
         },
     )
     write_audit(db, str(user["id"]), "muhurta_request", "muhurta_consultation", cid)
-    from app.routers.notifications import notify_ops_staff
+    checkout = None
+    if pay_online:
+        from app.payments import charges
 
-    notify_ops_staff(
-        db,
-        title="New Muhurtham Consultation",
-        body=f"{cnum} — {svc.get('name') or 'Muhurtham'} on {body.appointment_date.isoformat()} at {raw_time[:5]}.",
-        category="muhurtham",
-        link="/admin/muhurtham",
-    )
+        checkout = charges.start_charge(
+            db, purpose="consultation", customer=user, amount_paise=fee, subject_id=cid, reference=cnum,
+        )
+    else:
+        from app.routers.notifications import notify_ops_staff
+
+        notify_ops_staff(
+            db,
+            title="New Muhurtham Consultation",
+            body=f"{cnum} — {svc.get('name') or 'Muhurtham'} on {body.appointment_date.isoformat()} at {raw_time[:5]}.",
+            category="muhurtham",
+            link="/admin/muhurtham",
+        )
     db.commit()
     return {
+        "payment_required": pay_online,
+        "checkout": checkout,
         "ok": True,
         "id": cid,
         "consultation_number": cnum,
         "fee_paise": fee,
         "payment_status": pay_status,
-        "status": "requested",
+        "status": "awaiting_payment" if pay_online else "requested",
         "appointment_date": body.appointment_date.isoformat(),
         "appointment_time": appt_time,
         "service_name": svc.get("name"),
@@ -332,6 +349,8 @@ def list_muhurta_consultations(user=Depends(current_user), db: Session = Depends
                 FROM muhurta_consultations m
                 JOIN services s ON s.id = m.service_id
                 JOIN users u ON u.id = m.customer_id
+                -- Requests still waiting for (or abandoned before) their online payment are not the team's work.
+                WHERE COALESCE(m.payment_status, '') NOT IN ('awaiting_payment', 'failed')
                 ORDER BY m.created_at DESC LIMIT 200
                 """
             )

@@ -202,6 +202,17 @@ def _profile_out(row: dict, user: dict, angikara=None) -> dict:
     }
     pct = _completion(merged)
     d["profile_completion_percentage"] = pct
+    # Where payouts go: the pujari's choice when complete, else bank account first, then UPI (app.payouts.service).
+    has_bank = bool(row.get("bank_account_number") and row.get("bank_ifsc"))
+    has_upi = bool(row.get("upi_id"))
+    choice = str(row.get("payout_method") or "")
+    d["payout_method_effective"] = (
+        choice if (choice == "upi" and has_upi) or (choice == "bank" and has_bank)
+        else ("bank" if has_bank else "upi" if has_upi else None)
+    )
+    # UPI payouts are verified with a Rs 1 check, which needs the pujari's consent first.
+    d["payout_consent_needed"] = d["payout_method_effective"] == "upi" and not row.get("payout_details_consent_at")
+
     d["profile_complete"] = pct >= 100
     d["profile_status"] = pujari_profile_status({**merged, "profile_completion_percentage": pct}, (angikara or {}).get("status"))
     d["angikara"] = angikara
@@ -219,6 +230,18 @@ def _load_profile(db: Session, user: dict):
 @router.get("/profile")
 def get_profile(user=Depends(require_roles("pujari")), db: Session = Depends(get_db)):
     return _load_profile(db, user)
+
+
+@router.post("/payout-verification-consent")
+def give_payout_verification_consent(user=Depends(require_roles("pujari", "head_pujari")), db: Session = Depends(get_db)):
+    """One tap: the pujari agrees that B-Seva may verify their payout details (a UPI check sends Rs 1)."""
+    from app.audit import write_audit
+    from app.payouts.verification import record_consent
+
+    record_consent(db, str(user["id"]))
+    write_audit(db, str(user["id"]), "payout_verification_consent", "user", str(user["id"]))
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/apply-level")
@@ -425,6 +448,7 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
               bank_holder_name = COALESCE(:holder, bank_holder_name),
               bank_name = COALESCE(:bank_name, bank_name),
               upi_id = COALESCE(:upi_id, upi_id),
+              payout_method = COALESCE(:payout_method, payout_method),
               onboarding_step = COALESCE(:step, onboarding_step),
               licence_type = COALESCE(:licence_type, licence_type),
               licence_number = COALESCE(:licence_number, licence_number),
@@ -471,12 +495,35 @@ def patch_profile(body: PujariProfileIn, user=Depends(require_roles("pujari", "h
             "holder": settlement.get("bank_holder_name", body.bank_holder_name),
             "bank_name": settlement.get("bank_name", body.bank_name),
             "upi_id": settlement.get("upi_id", body.upi_id),
+            "payout_method": body.payout_method,
             "step": body.onboarding_step,
             "licence_type": body.licence_type,
             "licence_number": body.licence_number,
             "id": user["id"],
         },
     )
+    if body.payout_method:
+        chosen = db.execute(
+            text("SELECT upi_id, bank_account_number, bank_ifsc FROM pujari_profiles WHERE user_id = CAST(:id AS uuid)"),
+            {"id": user["id"]},
+        ).mappings().first() or {}
+        complete = bool(chosen.get("upi_id")) if body.payout_method == "upi" else bool(
+            chosen.get("bank_account_number") and chosen.get("bank_ifsc")
+        )
+        if not complete:
+            db.rollback()
+            raise HTTPException(
+                400,
+                "Add your UPI ID to receive payouts by UPI."
+                if body.payout_method == "upi"
+                else "Add your bank account and IFSC to receive payouts to your bank account.",
+            )
+    if touching_settlement:
+        # Saving payout details on the Bank & UPI screen includes agreeing that B-Seva may verify them
+        # (app.payouts.verification; a UPI check sends Rs 1). The screens state this next to the Save button.
+        from app.payouts.verification import record_consent
+
+        record_consent(db, str(user["id"]))
     if resolved_full:
         db.execute(
             text(

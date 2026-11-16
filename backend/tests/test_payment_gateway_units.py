@@ -99,3 +99,17 @@ def test_payout_remarks_are_cleaned_for_cashfree(monkeypatch):
     monkeypatch.setattr(cashfree_payouts, "_request", lambda m, p, json=None, params=None: seen.update(json) or {})
     cashfree_payouts.create_transfer(transfer_id="t1", amount_paise=100, beneficiary_id="b", mode="imps", remarks="B-Seva settlement #12")
     assert re.fullmatch(r"[A-Za-z0-9 ]{1,70}", seen["transfer_remarks"]), seen["transfer_remarks"]
+
+
+def test_local_name_match_for_payout_verification():
+    # Used when Cashfree Secure ID returns no name-match result (its sandbox never does).
+    from app.payouts.verification import local_name_match as m
+
+    assert m("JOHN DOE", "JOHN DOE") == "DIRECT_MATCH"
+    assert m("Mr John Doe", "JOHN DOE") == "DIRECT_MATCH"
+    assert m("John D", "JOHN DOE") == "GOOD_PARTIAL_MATCH"
+    assert m("Ravi Kumar Sharma", "RAVI SHARMA") == "GOOD_PARTIAL_MATCH"
+    assert m("jane d", "JOHN DOE") == "NO_MATCH"
+    assert m("John Doe", "JOHN SNOW") == "NO_MATCH"
+    assert m("Ravi", "R K SHARMA") == "NO_MATCH"
+    assert m("John Doe", None) is None

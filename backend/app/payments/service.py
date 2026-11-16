@@ -230,7 +230,12 @@ def apply_order_state(db: Session, payment: dict, order: ProviderOrder) -> dict[
     """Move one payment (and its booking) to match verified provider state. Idempotent; caller commits.
 
     Returns {"outcome": ..., "finalize": {...} | None}; when "finalize" is set the caller must run
-    post_commit_side_effects after committing."""
+    post_commit_side_effects after committing. Online charges (reschedule fees, consultations, Seva
+    registrations, later recurring dates) are applied by app.payments.charges."""
+    if str(payment.get("purpose") or "booking") != "booking":
+        from app.payments.charges import apply_charge_state
+
+        return apply_charge_state(db, payment, order)
     pay = _lock_payment(db, str(payment["id"]))
     if pay["status"] in ("successful", "failed", "expired", "cancelled") and pay["verified_at"]:
         # Terminal and already verified: a replayed webhook or a slow reconciler changes nothing.
@@ -437,6 +442,11 @@ def _confirm(db: Session, b: dict, pay: dict) -> dict[str, Any]:
 def refresh_payment(db: Session, payment: dict) -> dict[str, Any]:
     """Fetch the order from its own provider and apply it. Commits; runs side effects after commit."""
     from app.booking_finalize import post_commit_side_effects
+
+    if str(payment.get("purpose") or "booking") != "booking":
+        from app.payments.charges import refresh_charge
+
+        return refresh_charge(db, payment)
 
     try:
         state = gateway(str(payment["provider"])).fetch_order(str(payment["provider_order_id"]))
@@ -667,9 +677,12 @@ def reconcile_open_payments(db: Session, *, limit: int = 50) -> dict:
 
 def run_payment_jobs(db: Session) -> dict:
     from app.booking_finalize import run_due_side_effects
+    from app.payments.charges import expire_open_charges
 
     return {
         "expiry": expire_unpaid_bookings(db),
+        # Reschedule fees, consultations, Seva registrations and recurring dates not paid in time.
+        "charge_expiry": expire_open_charges(db),
         "reconcile": reconcile_open_payments(db),
         # Booking offers, notifications, email and invoice left pending by an error or a crash.
         "booking_follow_ups": run_due_side_effects(db),

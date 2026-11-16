@@ -40,6 +40,7 @@ type WalletPayload = {
     created_at?: string;
   }[];
   self_topup_enabled?: boolean;
+  customer_wallet_enabled?: boolean;
 };
 
 export default function WalletScreen() {
@@ -67,6 +68,8 @@ export default function WalletScreen() {
   });
   const balance = q.data?.wallet?.balance_paise ?? q.data?.balance_paise ?? 0;
   const txns = q.data?.transactions || [];
+  // Super Admin switched the customer wallet off: customers pay online only; history stays visible.
+  const walletOff = q.data?.customer_wallet_enabled === false;
   return (
     <Screen>
       <SafeAreaView edges={["top"]} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
@@ -83,6 +86,15 @@ export default function WalletScreen() {
             {rupees(Number(balance))}
           </AppText>
         </Card>
+        {walletOff ? (
+          <Card style={{ gap: 8 }}>
+            <AppText variant="h3">{tr("wallet.off.title")}</AppText>
+            <AppText variant="small" color={colors.mutedForeground}>{tr("wallet.off.body")}</AppText>
+            {Number(balance) > 0 ? (
+              <AppText variant="small">{tr("wallet.off.balance", { amount: rupees(Number(balance)) })}</AppText>
+            ) : null}
+          </Card>
+        ) : (
         <Card>
           <AppText variant="h3">{tr("mobile.loadWallet")}</AppText>
           {q.data?.self_topup_enabled === false ? (
@@ -101,6 +113,7 @@ export default function WalletScreen() {
             </>
           )}
         </Card>
+        )}
         <AppText variant="h3">{tr("mobile.transactions")}</AppText>
         {txns.map((t) => (
           <Card key={t.id || `${t.created_at}-${t.amount_paise}`}>

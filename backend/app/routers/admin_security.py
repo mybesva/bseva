@@ -81,6 +81,10 @@ def request_challenge(
 
         settlement_id = str(body.settlement_id)
         settlement = sa.settlement_for_action(db, settlement_id)
+        from app.payouts.verification import require_payable
+
+        # No OTP for a payout that would be refused: the pujari's bank / UPI details must be verified first.
+        require_payable(db, str(settlement["pujari_id"]))
         sa.require_mpin_usable(db, user)
         amount = int(settlement["settlement_amount_paise"] or 0)
         # Bound server-side to the pujari's current bank/UPI details: a change after the OTP voids it.

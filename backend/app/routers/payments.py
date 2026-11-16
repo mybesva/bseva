@@ -26,14 +26,47 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/payments/config")
-def payment_config(user=Depends(require_roles("customer"))):
+def payment_config(user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+    from app.customer_wallet import customer_wallet_enabled
+
     provider = active_gateway()
     return {
         "online_enabled": provider is not None,
         "provider": provider.name if provider else None,
         "environment": provider.environment() if provider else None,
-        "wallet_enabled": True,
+        # Off: customers pay only online (bookings, reschedule fees, consultations, Seva, recurring dates).
+        "wallet_enabled": customer_wallet_enabled(db),
     }
+
+
+# ---------------------------------------------------------------- online charges (not a new booking)
+
+
+@router.get("/payments/charges/{payment_id}/status")
+def charge_status(payment_id: str, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+    """Reschedule fee, consultation, Seva registration or recurring-date payment, verified with the gateway."""
+    from app.payments import charges
+
+    return charges.charge_status(db, payment_id, user, verify=True)
+
+
+@router.post("/payments/charges/{payment_id}/checkout")
+def resume_charge_checkout(payment_id: str, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+    from app.payments import charges
+
+    out = charges.resume_charge(db, payment_id, user)
+    db.commit()
+    return out
+
+
+@router.post("/payments/charges/{payment_id}/abandon")
+def abandon_charge(payment_id: str, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+    from app.payments import charges
+
+    out = charges.abandon_charge(db, payment_id, user)
+    if out["paid"]:
+        raise HTTPException(409, "This has already been paid")
+    return {"ok": out["ok"]}
 
 
 @router.post("/payments/bookings/{booking_id}/checkout")
@@ -214,13 +247,17 @@ def admin_list_payments(
         where.append("p.provider = :provider")
         params["provider"] = provider
     if q:
-        where.append("(b.booking_number ILIKE :q OR p.provider_order_id ILIKE :q OR p.provider_payment_id ILIKE :q OR cu.name ILIKE :q)")
+        where.append(
+            "(b.booking_number ILIKE :q OR p.provider_order_id ILIKE :q OR p.provider_payment_id ILIKE :q OR cu.name ILIKE :q"
+            " OR p.meta->>'reference' ILIKE :q)"
+        )
         params["q"] = f"%{q.strip()}%"
     clause = " AND ".join(where)
     rows = db.execute(
         text(
             f"""
-            SELECT p.id, p.booking_id, p.provider, p.status, p.amount_paise, p.currency, p.provider_order_id,
+            SELECT p.id, p.booking_id, p.purpose, p.subject_id, p.meta->>'reference' AS charge_reference,
+                   p.provider, p.status, p.amount_paise, p.currency, p.provider_order_id,
                    p.provider_payment_id, p.payment_method, p.provider_status, p.failure_reason, p.attempt_no,
                    p.duplicate_of, p.created_at, p.paid_at, p.verified_at, p.last_checked_at,
                    b.booking_number, b.status AS booking_status, b.payment_status AS booking_payment_status,

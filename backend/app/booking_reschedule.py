@@ -321,7 +321,7 @@ def _send_emails(db: Session, booking: dict[str, Any], *, old_date: str, old_tim
         )
 
 
-def reschedule_booking(
+def reschedule_quote(
     db: Session,
     booking_id: str,
     user: dict,
@@ -329,11 +329,7 @@ def reschedule_booking(
     new_time: time,
     expected_fee_paise: int | None = None,
 ) -> dict[str, Any]:
-    """Move a paid booking, release its pujari and send it back out through the normal offer flow.
-
-    Everything up to the commit is one transaction, so a failure leaves the booking unchanged."""
-    from app.booking_offers import create_offers_for_booking, withdraw_open_offers
-
+    """Lock the booking, check the move is allowed and price it. Raises coded_http when it is not allowed."""
     row = db.execute(
         text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": booking_id}
     ).mappings().first()
@@ -353,8 +349,65 @@ def reschedule_booking(
     fee, fee_rule = reschedule_fee(rules, prior, rating)
     if expected_fee_paise is not None and expected_fee_paise != fee:
         raise coded_http(409, "RESCHEDULE_FEE_CHANGED", "The rescheduling charge has changed. Please review it and try again.")
+    return {
+        "booking": b,
+        "slot": slot,
+        "prior": prior,
+        "previous_pujari": previous_pujari,
+        "performance": performance,
+        "rating": rating,
+        "fee": fee,
+        "fee_rule": fee_rule,
+    }
+
+
+def reschedule_booking(
+    db: Session,
+    booking_id: str,
+    user: dict,
+    new_date: date,
+    new_time: time,
+    expected_fee_paise: int | None = None,
+) -> dict[str, Any]:
+    """Move a paid booking, release its pujari and send it back out through the normal offer flow.
+
+    With the customer wallet off, a reschedule that carries a fee is paid online first: this returns
+    {"payment_required": True, "checkout": ...} and the move happens once the gateway confirms the payment
+    (app.payments.charges). Everything up to the commit is one transaction, so a failure leaves the booking
+    unchanged."""
+    from app.customer_wallet import online_charges_required
+
+    quote = reschedule_quote(db, booking_id, user, new_date, new_time, expected_fee_paise)
+    if quote["fee"] > 0 and online_charges_required(db):
+        from app.payments import charges
+
+        checkout = charges.start_reschedule_charge(db, quote, user, new_date=new_date, new_time=new_time)
+        db.commit()
+        return {
+            "ok": False,
+            "payment_required": True,
+            "booking_id": booking_id,
+            "fee_paise": quote["fee"],
+            "checkout": checkout,
+        }
+    result, after_commit = apply_reschedule(db, quote, user)
+    db.commit()
+    after_commit()
+    return result
+
+
+def apply_reschedule(db: Session, quote: dict[str, Any], user: dict, *, paid_online: bool = False) -> tuple[dict[str, Any], Any]:
+    """Apply a priced move (see reschedule_quote). Does not commit. Returns (result, after_commit), where
+    after_commit sends the emails once the caller has committed. The fee is taken from the wallet unless it
+    was already paid online (paid_online)."""
+    from app.booking_offers import create_offers_for_booking, withdraw_open_offers
+
+    b, slot, prior = quote["booking"], quote["slot"], quote["prior"]
+    previous_pujari, performance, rating = quote["previous_pujari"], quote["performance"], quote["rating"]
+    fee, fee_rule = quote["fee"], quote["fee_rule"]
+    booking_id = str(b["id"])
     num = str(b.get("booking_number") or booking_id[:8])
-    if fee > 0:
+    if fee > 0 and not paid_online:
         try:
             apply_wallet(db, str(user["id"]), -fee, "debit", f"Reschedule fee {num}", booking_id)
         except ValueError as e:
@@ -437,19 +490,21 @@ def reschedule_booking(
             )
     except Exception:
         logger.exception("reschedule_notifications_failed booking=%s", booking_id)
-    db.commit()
-    try:
-        _send_emails(
-            db,
-            {**moved, "pujari_id": None, "previous_pujari_id": previous_pujari},
-            old_date=old_date.isoformat(),
-            old_time=old_start.strftime("%H:%M"),
-            old_label=old_label,
-            new_label=new_label,
-        )
-    except Exception:
-        logger.exception("reschedule_email_failed booking=%s", booking_id)
-    return {
+
+    def after_commit() -> None:
+        try:
+            _send_emails(
+                db,
+                {**moved, "pujari_id": None, "previous_pujari_id": previous_pujari},
+                old_date=old_date.isoformat(),
+                old_time=old_start.strftime("%H:%M"),
+                old_label=old_label,
+                new_label=new_label,
+            )
+        except Exception:
+            logger.exception("reschedule_email_failed booking=%s", booking_id)
+
+    result = {
         "ok": True,
         "status": "pending_acceptance",
         "booking_id": booking_id,
@@ -459,3 +514,4 @@ def reschedule_booking(
         "booking_date": slot["date"].isoformat(),
         "start_time": slot["start"].isoformat(),
     }
+    return result, after_commit

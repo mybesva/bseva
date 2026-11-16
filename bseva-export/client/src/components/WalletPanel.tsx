@@ -15,6 +15,8 @@ type WalletResp = {
   wallet: { balance_paise: number };
   transactions: { id: string; amount_paise: number; type: string; description: string; created_at: string }[];
   self_topup_enabled?: boolean;
+  /** False when Super Admin has switched the customer wallet off (customers then pay online only). */
+  customer_wallet_enabled?: boolean;
 };
 
 export default function WalletPanel({
@@ -43,6 +45,7 @@ export default function WalletPanel({
   const balance = data.wallet.balance_paise || 0;
   const credits = data.transactions.filter((x) => x.type === "credit").reduce((s, x) => s + Number(x.amount_paise), 0);
   const debits = data.transactions.filter((x) => x.type === "debit").reduce((s, x) => s + Number(x.amount_paise), 0);
+  const walletOff = variant === "customer" && data.customer_wallet_enabled === false;
 
   return (
     <Card>
@@ -53,6 +56,13 @@ export default function WalletPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {walletOff && (
+          <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-sm" role="status">
+            <p className="font-medium text-foreground">{t("wallet.off.title")}</p>
+            <p className="text-muted-foreground">{t("wallet.off.body")}</p>
+            {balance > 0 && <p className="text-foreground">{t("wallet.off.balance", { amount: rupees(balance) })}</p>}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="@container min-w-0 p-3 rounded-lg bg-orange-50">
             <p className="text-xs text-muted-foreground">{t("wallet.balance")}</p>
@@ -67,10 +77,10 @@ export default function WalletPanel({
             <p className="whitespace-nowrap tabular-nums tracking-tight leading-tight text-[clamp(0.95rem,11cqi,1.375rem)] font-semibold text-blue-700">{rupees(debits)}</p>
           </div>
         </div>
-        {variant === "customer" && data.self_topup_enabled === false && (
+        {variant === "customer" && !walletOff && data.self_topup_enabled === false && (
           <p className="text-sm text-muted-foreground">{t("wallet.topupUnavailable")}</p>
         )}
-        {variant === "customer" && data.self_topup_enabled !== false && (
+        {variant === "customer" && !walletOff && data.self_topup_enabled !== false && (
           <div className="flex gap-2 items-end">
             <div className="space-y-1">
               <Label>{t("wallet.amount")}</Label>

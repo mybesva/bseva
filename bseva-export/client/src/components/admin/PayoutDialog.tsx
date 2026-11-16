@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, rupees } from "@/lib/api";
 import { adminPath } from "@/const";
+import PayoutDetailsVerification, { type PayoutVerification } from "./PayoutDetailsVerification";
 
 type Preview = {
   amount_paise: number;
@@ -34,7 +35,7 @@ export default function PayoutDialog({
   onClose,
   onDone,
 }: {
-  settlement: { id: string; settlement_amount_paise: number; pujari_name?: string } | null;
+  settlement: { id: string; settlement_amount_paise: number; pujari_name?: string; pujari_id?: string } | null;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -45,6 +46,8 @@ export default function PayoutDialog({
   const [mpin, setMpin] = useState("");
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
+  // Payouts go only to bank / UPI details verified with Cashfree Secure ID (the server refuses otherwise too).
+  const [verification, setVerification] = useState<PayoutVerification | null>(null);
 
   useEffect(() => {
     setPreview(null);
@@ -58,7 +61,8 @@ export default function PayoutDialog({
       .catch((e: any) => setError(e.message));
   }, [settlement]);
 
-  const ready = preview && preview.mode === "bank" && preview.configured;
+  const verified = !verification || !verification.required || verification.payable;
+  const ready = preview && preview.mode === "bank" && preview.configured && verified;
 
   async function requestOtp() {
     if (!settlement) return;
@@ -131,6 +135,9 @@ export default function PayoutDialog({
                 </p>
               )}
               {!preview.configured && <p className="text-muted-foreground">Cashfree Payouts keys are not configured on this server.</p>}
+              {settlement?.pujari_id && (
+                <PayoutDetailsVerification pujariId={settlement.pujari_id} onChange={setVerification} compact />
+              )}
               <p className="text-xs text-muted-foreground">
                 The OTP is tied to this settlement, amount and destination. If the pujari changes bank details, request a new OTP.
               </p>

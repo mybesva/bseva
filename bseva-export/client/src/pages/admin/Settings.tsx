@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { api } from "@/lib/api";
@@ -37,6 +38,8 @@ type PlatformKey = {
   /** Stored as paise in the DB; edited and shown as rupees. */
   money?: boolean;
   multiline?: boolean;
+  /** Fixed choices for a string setting (rendered as a select). */
+  options?: { value: string; label: string }[];
 };
 
 const SETTING_GROUPS: { id: string; title: string; description?: string }[] = [
@@ -46,6 +49,11 @@ const SETTING_GROUPS: { id: string; title: string; description?: string }[] = [
     id: "service_area",
     title: "Service Area Unavailable Message",
     description: "Message shown when a customer is outside the locations currently served by BSeva.",
+  },
+  {
+    id: "payments",
+    title: "Payments",
+    description: "Customer wallet and online payment gateway fees. Fee changes apply to new bookings only.",
   },
   { id: "booking", title: "Booking & Puja Day", description: "When OTP, tracking, and full booking details become available." },
   {
@@ -184,13 +192,43 @@ const PLATFORM_KEYS: PlatformKey[] = [
     money: true,
     hint: "Added to every booking and shown on the invoice. Example: 9.",
   },
-  { key: "payment_gateway_name", label: "Payment Gateway Name", type: "string", group: "booking", hint: "Shown on invoices. Example: Razorpay or Cashfree." },
+  {
+    key: "customer_wallet_enabled",
+    label: "Customer Wallet",
+    type: "boolean",
+    group: "payments",
+    superOnly: true,
+    hint:
+      "When off, customers pay only online (Cashfree): no wallet payments, top-ups or wallet rewards. Reschedule fees, Muhurtham consultations, Seva registrations and later booking dates are paid online too. Existing balances stay visible; record refunds under Payments → Customer Wallet Balances. Needs the online gateway to be set up first. Pujari wallets are not affected.",
+  },
+  {
+    key: "customer_fee_gateway",
+    label: "Gateway Fee Charged to Customers",
+    type: "string",
+    group: "payments",
+    options: [
+      { value: "auto", label: "Auto (the gateway that collects payments)" },
+      { value: "cashfree", label: "Cashfree" },
+      { value: "razorpay", label: "Razorpay" },
+    ],
+    hint:
+      "Which gateway's fee name and % are added to bookings. Auto uses the gateway that actually collects payments (Cashfree when it is configured). Cashfree or Razorpay always uses that entry below.",
+  },
+  { key: "cashfree_fee_name", label: "Cashfree Fee Name (on invoices)", type: "string", group: "payments", hint: "Default Cashfree." },
+  {
+    key: "cashfree_fee_percent",
+    label: "Cashfree Fee (%)",
+    type: "number",
+    group: "payments",
+    hint: "Between 0 and 10. Default 2.",
+  },
+  { key: "payment_gateway_name", label: "Razorpay Fee Name (on invoices)", type: "string", group: "payments", hint: "Example: Razorpay." },
   {
     key: "payment_gateway_fee_percent",
-    label: "Payment Gateway Fee (%)",
+    label: "Razorpay Fee (%)",
     type: "number",
-    group: "booking",
-    hint: "Percentage added to every booking. Example: 2 for Razorpay or 1.8 for Cashfree.",
+    group: "payments",
+    hint: "Between 0 and 10. Example: 2.",
   },
   {
     key: "pujari_joining_fee_enabled",
@@ -806,6 +844,22 @@ export default function Settings() {
                 }
               />
             </div>
+          ) : item.options ? (
+            <Select
+              value={String(platformDraft[item.key] ?? "")}
+              onValueChange={(v) => setPlatformDraft((prev) => ({ ...prev, [item.key]: v }))}
+            >
+              <SelectTrigger className="w-full sm:w-80">
+                <SelectValue placeholder="Choose…" />
+              </SelectTrigger>
+              <SelectContent>
+                {item.options.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : item.multiline ? (
             <Textarea
               rows={3}

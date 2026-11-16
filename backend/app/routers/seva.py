@@ -174,6 +174,10 @@ def register_for_event(
     except RegistrationError as exc:
         raise HTTPException(exc.status, detail={"code": exc.code, "message": exc.message}) from exc
 
+    if reg.get("payment_required"):
+        # Paid online first (customer wallet off): confirmed, and notified, once the payment is verified.
+        db.commit()
+        return {**registration_row(db, str(reg["id"])), "payment_required": True, "checkout": reg["checkout"]}
     try:
         from app.routers.notifications import create_notification
 
@@ -271,6 +275,13 @@ def cancel_my_registration(registration_id: str, user=Depends(current_user), db:
     except RegistrationError as exc:
         raise HTTPException(exc.status, detail={"code": exc.code, "message": exc.message}) from exc
     db.commit()
+    # A registration paid online is refunded to the original payment method: send it to the gateway now.
+    from app.payments.charges import paid_charge_for
+    from app.payments.service import submit_open_refunds
+
+    paid = paid_charge_for(db, "seva_registration", registration_id)
+    if paid:
+        submit_open_refunds(db, payment_id=str(paid["id"]))
     return reg
 
 

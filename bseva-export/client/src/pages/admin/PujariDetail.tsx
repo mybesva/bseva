@@ -27,6 +27,7 @@ import { PUJARI_SPECIALIZATIONS } from "@/lib/pujariSpecializations";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { notifyBadgesChanged } from "@/components/NotificationBell";
 import { useAdminCan } from "@/hooks/useAdminPermissions";
+import PayoutDetailsVerification from "@/components/admin/PayoutDetailsVerification";
 
 const DOC_LABELS: Record<string, string> = {
   identity: "Aadhaar (Required)",
@@ -136,7 +137,7 @@ export default function PujariDetailPage({ headView = false }: { headView?: bool
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { levels } = usePujariLevels();
-  const { can } = useAdminCan();
+  const { can, isSuper } = useAdminCan();
   const canEdit = !headView && can("edit_pujaris");
   const canVerify = !headView && can("verify_pujaris");
   const canHead = !headView && can("approve_pujaris");
@@ -909,6 +910,12 @@ export default function PujariDetailPage({ headView = false }: { headView?: bool
                       ? `****${p.bank_account_last4}`
                       : "—"}
                 </Field>
+                {isSuper && id ? (
+                  <div className="sm:col-span-2">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">Payout details verification</p>
+                    <PayoutDetailsVerification pujariId={id} />
+                  </div>
+                ) : null}
               </>
             )}
           </CardContent>

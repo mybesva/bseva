@@ -104,11 +104,13 @@ export default function BookService() {
   const addressesQ = useQuery({ queryKey: ["customer-addresses"], queryFn: () => apiClient.listCustomerAddresses() });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const configQ = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
-  // Online checkout only when the server reports the gateway configured; the wallet stays available.
+  // Online checkout only when the server reports the gateway configured. The wallet is offered too, unless
+  // Super Admin has switched the customer wallet off: then customers pay online only.
   const paymentConfigQ = useQuery({ queryKey: ["payment-config"], queryFn: () => apiClient.paymentConfig() });
   const onlineEnabled = Boolean(paymentConfigQ.data?.online_enabled);
+  const walletEnabled = paymentConfigQ.data?.wallet_enabled !== false;
   const [payMethod, setPayMethod] = useState<"cashfree" | "wallet" | null>(null);
-  const method = payMethod ?? (onlineEnabled ? "cashfree" : "wallet");
+  const method = !walletEnabled ? "cashfree" : payMethod ?? (onlineEnabled ? "cashfree" : "wallet");
   const legalQ = useQuery({
     queryKey: ["legal-policies"],
     queryFn: () => apiClient.legal() as Promise<LegalPolicy[]>,
@@ -956,7 +958,7 @@ export default function BookService() {
                   </AppText>
                 ))}
                 <AppText variant="small">
-                  {t(refundDestinationKey(!onlineEnabled ? "wallet" : payMethod ?? "either"))}
+                  {t(refundDestinationKey(!walletEnabled ? "cashfree" : !onlineEnabled ? "wallet" : payMethod ?? "either"))}
                 </AppText>
               </View>
             </Card>
@@ -1105,7 +1107,7 @@ export default function BookService() {
         ) : null}
         {step === 4 ? (
           <>
-            {onlineEnabled ? (
+            {onlineEnabled && walletEnabled ? (
               <Card style={{ gap: 8 }}>
                 <AppText variant="small">{t("pay.method")}</AppText>
                 <OptionCard

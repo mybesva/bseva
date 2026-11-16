@@ -854,6 +854,10 @@ def create_booking(
     gst_amt = int(bill["gstAmount"])
     total = int(bill["totalAmount"])
     pay_online = body.payment_method == "cashfree"
+    if not pay_online:
+        from app.customer_wallet import require_customer_wallet
+
+        require_customer_wallet(db)
     if pay_online:
         from app.payments.providers import active_gateway
 
@@ -2052,6 +2056,10 @@ def cancel_recurring_series(series_id: str, reason: str | None = None, user=Depe
 
 @router.post("/bookings/{booking_id}/pay")
 def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer")), db: Session = Depends(get_db)):
+    """Pay a booking created unpaid (later dates of a recurring booking). From the wallet, or online through the
+    payment gateway when the customer wallet is off ({"payment_required": True, "checkout": ...})."""
+    from app.customer_wallet import online_charges_required
+
     # Row lock so two concurrent pay requests cannot both debit the wallet.
     b = db.execute(
         text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": booking_id}
@@ -2064,7 +2072,22 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
         raise HTTPException(400, "Already paid")
     if b["status"] == "cancelled":
         raise HTTPException(400, "Booking cancelled")
+    if b["status"] == "awaiting_payment":
+        raise HTTPException(409, "This booking is waiting for its online payment")
     total = int(b["total_paise"])
+    if online_charges_required(db):
+        from app.payments import charges
+
+        open_charge = charges.open_charge_for(db, "booking_payment", booking_id)
+        if open_charge:
+            checkout = charges.resume_charge(db, str(open_charge["id"]), user)
+        else:
+            checkout = charges.start_charge(
+                db, purpose="booking_payment", customer=user, amount_paise=total, subject_id=booking_id,
+                reference=str(b["booking_number"]), booking_id=booking_id,
+            )
+        db.commit()
+        return {"ok": False, "payment_required": True, "total_paise": total, "checkout": checkout}
     try:
         apply_wallet(db, str(user["id"]), -total, "debit", f"Pay booking {b['booking_number']}", booking_id)
     except ValueError as e:
@@ -2100,11 +2123,20 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
     except Exception:
         pass
     db.commit()
+    after_pending_booking_paid(db, booking_id, str(user["id"]), method="Wallet", transaction_id=str(b.get("booking_number") or booking_id))
+    return {"ok": True, "payment_status": "paid", "total_paise": total}
+
+
+def after_pending_booking_paid(db: Session, booking_id: str, customer_id: str, *, method: str, transaction_id: str) -> None:
+    """After a pending booking's payment is committed: the payment email and the invoice. Never raises."""
+    b = db.execute(text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"), {"id": booking_id}).mappings().first()
+    if not b:
+        return
     try:
         from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
         from app.mail.senders import send_payment_confirmation_email
 
-        ctx = load_customer_email_context(db, str(user["id"]))
+        ctx = load_customer_email_context(db, customer_id)
         if ctx.get("email"):
             svc_name = load_service_name(db, str(b["service_id"]), ctx["language"])
             data = booking_email_data_from_row(
@@ -2114,26 +2146,15 @@ def pay_pending_booking(booking_id: str, user=Depends(require_roles("customer"))
                 language=ctx["language"],
                 extra={"payment_status": "paid"},
             )
-            send_payment_confirmation_email(
-                to=ctx["email"],
-                data=data,
-                method="Wallet",
-                transaction_id=str(b.get("booking_number") or booking_id),
-            )
+            send_payment_confirmation_email(to=ctx["email"], data=data, method=method, transaction_id=transaction_id)
     except Exception:
         pass
     try:
         from app.invoice_docs import issue_paid_booking_invoice
 
-        paid_row = db.execute(
-            text("SELECT * FROM bookings WHERE id = CAST(:id AS uuid)"),
-            {"id": booking_id},
-        ).mappings().first()
-        if paid_row:
-            issue_paid_booking_invoice(db, dict(paid_row))
+        issue_paid_booking_invoice(db, dict(b))
     except Exception:
         pass
-    return {"ok": True, "payment_status": "paid", "total_paise": total}
 
 
 @router.get("/pujaris/{pujari_id}/public")

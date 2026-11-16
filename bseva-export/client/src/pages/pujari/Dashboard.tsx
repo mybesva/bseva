@@ -367,8 +367,30 @@ function PujariDashboardContent() {
   const expiredPreview = expiredOnly.slice(0, DASHBOARD_LIST_LIMIT);
   const profileStatus = pujariProfile?.profile_status || "profile_incomplete";
 
+  async function allowPayoutVerification() {
+    try {
+      await api("/pujari/payout-verification-consent", { method: "POST" });
+      setPujariProfile((prev: any) => (prev ? { ...prev, payout_consent_needed: false } : prev));
+      toast.success(t("payout.consent.done"));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   return (
     <>
+      {pujariProfile?.payout_consent_needed ? (
+        // One tap: UPI payouts are verified with a ₹1 check, which needs the pujari's consent first.
+        <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-amber-700 dark:bg-amber-950/40">
+          <div>
+            <p className="font-semibold text-foreground">{t("payout.consent.title")}</p>
+            <p className="text-muted-foreground">{t("payout.consent.body")}</p>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={() => void allowPayoutVerification()}>
+            {t("payout.consent.allow")}
+          </Button>
+        </div>
+      ) : null}
       <section className="relative isolate mb-6 overflow-hidden rounded-3xl bg-[#071A33] text-white">
         <div
           aria-hidden

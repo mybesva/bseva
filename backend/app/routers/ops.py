@@ -461,18 +461,45 @@ def set_samagri_review(
 
 @router.get("/admin/config")
 def admin_config(user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
-    return get_all_settings(db)
+    from app.customer_wallet import customer_wallet_enabled
+
+    out = get_all_settings(db)
+    # Shown as it is in effect (automatic default: off wherever online payment works).
+    out["customer_wallet_enabled"] = customer_wallet_enabled(db)
+    return out
 
 
 @router.put("/admin/config")
 def update_config(body: SettingIn, user=Depends(require_permission("manage_config")), db: Session = Depends(get_db)):
     super_only = body.key.startswith("reschedule_") or body.key in (
         "bseva_whatsapp_number", "support_phone", "support_email", "settlement_payout_mode",
+        "payout_require_verified_details",
     )
     if super_only and not is_super_admin(user):
         raise HTTPException(403, "Super Admin only")
     if body.key == "settlement_payout_mode" and body.value not in ("wallet", "bank"):
         raise HTTPException(400, 'Settlement payout mode must be "wallet" or "bank"')
+    if body.key == "customer_wallet_enabled":
+        if not is_super_admin(user):
+            raise HTTPException(403, "Super Admin only")
+        if not isinstance(body.value, bool):
+            raise HTTPException(400, "Customer wallet must be on (true) or off (false)")
+        if body.value is False:
+            from app.payments.providers import active_gateway
+
+            if not active_gateway():
+                raise HTTPException(400, "Set up the online payment gateway before switching the customer wallet off.")
+    if body.key == "customer_fee_gateway" and body.value not in ("auto", "cashfree", "razorpay"):
+        raise HTTPException(400, 'Fee gateway must be "auto", "cashfree" or "razorpay"')
+    if body.key in ("payment_gateway_fee_percent", "cashfree_fee_percent"):
+        try:
+            pct = float(body.value)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Enter the fee as a percentage, e.g. 2") from None
+        if not 0 <= pct <= 10:
+            raise HTTPException(400, "The gateway fee must be between 0 and 10 percent")
+    if body.key in ("payment_gateway_name", "cashfree_fee_name") and not str(body.value or "").strip():
+        raise HTTPException(400, "Enter the name shown on invoices")
     set_setting(db, body.key, body.value, str(user["id"]))
     write_audit(db, str(user["id"]), "config_update", "platform_settings", body.key)
     db.commit()

@@ -85,9 +85,10 @@ class Settings(BaseSettings):
     msg91_whatsapp_number: str = "919014654994"
     msg91_template_namespace: str = "a95fd426_accf_44f7_b1fe_43fc50769841"
     msg91_request_timeout_seconds: float = 10.0
-    # Online payments. PAYMENT_GATEWAY names the gateway new checkouts use ("cashfree"; empty = wallet only).
-    # Each stored payment keeps its own provider, so refunds and status checks never follow this setting.
-    payment_gateway: str = ""
+    # Online payments. PAYMENT_GATEWAY names the gateway new checkouts use. Default "cashfree": it is used wherever
+    # its keys are configured (CASHFREE_PG_*); with no keys there is no online gateway. Set it empty to turn online
+    # payments off. Each stored payment keeps its own provider, so refunds and status checks never follow this.
+    payment_gateway: str = "cashfree"
     payment_order_ttl_minutes: int = 20
     # Public HTTPS origin Cashfree calls back (defaults to PUBLIC_APP_URL; set to a tunnel for local tests).
     payment_webhook_base_url: str = ""
@@ -104,10 +105,21 @@ class Settings(BaseSettings):
     cashfree_payout_public_key: str = ""
     cashfree_payout_public_key_file: str = ""
     cashfree_payout_api_version: str = "2024-01-01"
+    # Cashfree Secure ID (verification of pujari bank accounts / UPI IDs before payouts): its own keys.
+    cashfree_vrs_env: str = "sandbox"
+    cashfree_vrs_client_id: str = ""
+    cashfree_vrs_client_secret: str = ""
+    # 2FA public key (PEM) from Secure ID > Developers > Two-Factor Authentication, inline or as a file path.
+    cashfree_vrs_public_key: str = ""
+    cashfree_vrs_public_key_file: str = ""
 
     @property
     def cashfree_pg_configured(self) -> bool:
         return bool(self.cashfree_pg_app_id.strip() and self.cashfree_pg_secret_key.strip())
+
+    @property
+    def cashfree_vrs_configured(self) -> bool:
+        return bool(self.cashfree_vrs_client_id.strip() and self.cashfree_vrs_client_secret.strip())
 
     @property
     def cashfree_payouts_configured(self) -> bool:
@@ -155,6 +167,7 @@ def insecure_settings_problems(s: Settings, env: Mapping[str, str] | None = None
     for label, mode, key in (
         ("CASHFREE_PG_ENV", s.cashfree_pg_env, s.cashfree_pg_app_id),
         ("CASHFREE_PAYOUT_ENV", s.cashfree_payout_env, s.cashfree_payout_client_id),
+        ("CASHFREE_VRS_ENV", s.cashfree_vrs_env, s.cashfree_vrs_client_id),
     ):
         mode = (mode or "").strip().lower()
         if mode not in ("sandbox", "production"):

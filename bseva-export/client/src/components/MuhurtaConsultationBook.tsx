@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { api, rupees } from "@/lib/api";
+import { startChargeCheckoutIfRequired, type ChargeRequired } from "@/lib/cashfreeCheckout";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatPujaTitleText } from "@bseva/locales";
 import { PujaTitle } from "@/components/PujaTitle";
 
-type BookingResult = {
+type BookingResult = ChargeRequired & {
   id: string;
   consultation_number?: string;
   fee_paise: number;
@@ -51,6 +53,7 @@ export default function MuhurtaConsultationBook({
   feePaise,
 }: Props) {
   const { t } = useI18n();
+  const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const [apptDate, setApptDate] = useState<Date | undefined>();
   const [apptTime, setApptTime] = useState("10:00");
@@ -79,6 +82,12 @@ export default function MuhurtaConsultationBook({
           notes: notes.trim() || undefined,
         }),
       });
+      if (out.payment_required && out.checkout) {
+        // With the wallet off the fee is paid online; the request is sent once the server confirms the payment.
+        toast.message(t("pay.redirecting"));
+        await startChargeCheckoutIfRequired(out, setLocation);
+        return;
+      }
       setReceipt(out);
       setOpen(false);
       toast.success(
