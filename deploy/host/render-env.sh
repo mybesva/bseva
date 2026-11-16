@@ -1,7 +1,7 @@
 #!/bin/bash
 # Render runtime configuration from SSM Parameter Store (instance-role credentials; values never printed).
 #   /bseva/<env>/app/<NAME>    -> /opt/bseva/env/app.env      (NAME=value, mode 600)
-#   /bseva/<env>/files/<NAME>  -> /opt/bseva/secrets/<NAME>   (JSON credentials as files, mode 640)
+#   /bseva/<env>/files/<NAME>  -> /opt/bseva/secrets/<NAME>   (credential files, mode 600, owned by the API user)
 set -euo pipefail
 ENV_NAME="${ENV_NAME:-qa}"
 REGION="${AWS_REGION:-ap-south-1}"
@@ -23,10 +23,14 @@ fi
 chmod 600 "$TMP" && mv "$TMP" "$OUT"
 trap - EXIT
 
+# The API container runs as uid 10001 (deploy/docker/api.Dockerfile) and reads these through the
+# read-only mount /run/bseva-secrets, so the folder and files belong to that uid; nobody else can read them.
+APP_UID=10001
+install -d -m 0700 -o "$APP_UID" -g "$APP_UID" /opt/bseva/secrets
 fetch "/bseva/${ENV_NAME}/files/" | jq -c '.[]' | while read -r item; do
   name="$(jq -r '.[0] | split("/") | last' <<<"$item")"
   jq -r '.[1]' <<<"$item" > "/opt/bseva/secrets/${name}"
-  chmod 640 "/opt/bseva/secrets/${name}"
-  chgrp 10001 "/opt/bseva/secrets/${name}" 2>/dev/null || true
+  chmod 600 "/opt/bseva/secrets/${name}"
+  chown "$APP_UID:$APP_UID" "/opt/bseva/secrets/${name}"
 done
 echo "render-env: ${count} app parameters rendered for ${ENV_NAME}"

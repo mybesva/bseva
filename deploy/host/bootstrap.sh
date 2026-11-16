@@ -26,5 +26,7 @@ if ! swapon --show | grep -q /swapfile; then
 fi
 
 install -d -m 0755 /opt/bseva /opt/bseva/bin /opt/bseva/compose /opt/bseva/certbot-www /opt/bseva/letsencrypt
-install -d -m 0700 /opt/bseva/env /opt/bseva/secrets /opt/bseva/state
+install -d -m 0700 /opt/bseva/env /opt/bseva/state
+# Credential files are read by the API container user (uid 10001); render-env.sh keeps this on every deploy.
+install -d -m 0700 -o 10001 -g 10001 /opt/bseva/secrets
 echo "bootstrap complete $(date -Is)"
