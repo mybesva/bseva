@@ -1931,7 +1931,11 @@ def cancel_booking(booking_id: str, reason: str | None = None, user=Depends(curr
             message_key="cancelled",
             message_vars={"number": num},
         )
+        from app.whatsapp import msg91
+
+        msg91.notify(db, "booking_cancelled", booking_id, b["customer_id"])
         if b.get("pujari_id"):
+            msg91.notify(db, "pujari_booking_cancelled", booking_id, b["pujari_id"])
             create_notification(
                 db,
                 user_id=str(b["pujari_id"]),

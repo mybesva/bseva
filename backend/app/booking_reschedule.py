@@ -239,8 +239,13 @@ def _send_notifications(
     from app.booking_offers import notify_pujaris_new_offer
     from app.routers.notifications import create_notification, customer_booking_link, notify_ops_staff
 
+    from app.whatsapp import msg91
+
     booking_id = str(booking["id"])
     num = str(booking.get("booking_number") or booking_id[:8])
+    msg91.notify(db, "booking_rescheduled", booking_id, booking["customer_id"])
+    if booking.get("pujari_id"):
+        msg91.notify(db, "pujari_booking_rescheduled", booking_id, booking["pujari_id"])
     create_notification(
         db,
         user_id=str(booking["customer_id"]),

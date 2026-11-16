@@ -35,6 +35,7 @@ CHECKS = [
     "store_failure_returns_503_and_retry_succeeds",
     "bad_signature_changes_nothing",
     "worker_prunes_old_events",
+    "msg91_booking_notifications",
 ]
 # Present in the repo .env files; blanked so nothing can reach a real mailbox or service.
 BLANKED = (

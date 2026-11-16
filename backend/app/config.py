@@ -77,6 +77,14 @@ class Settings(BaseSettings):
     whatsapp_request_timeout_seconds: float = 10.0
     # Extra attempts after a send that certainly did not reach Meta (connection refused, 429, 5xx).
     whatsapp_send_retries: int = 2
+    # Booking notifications on WhatsApp through MSG91 (app.whatsapp.msg91). Off until MSG91_WHATSAPP_ENABLED is
+    # true and MSG91_AUTHKEY is set. Outside production the WHATSAPP_RECIPIENT_ALLOWLIST above also applies, and
+    # QA uses the qa_-prefixed templates. The key only works from IPs whitelisted on it in MSG91 (IPv4).
+    msg91_whatsapp_enabled: bool = False
+    msg91_authkey: str = ""
+    msg91_whatsapp_number: str = "919014654994"
+    msg91_template_namespace: str = "a95fd426_accf_44f7_b1fe_43fc50769841"
+    msg91_request_timeout_seconds: float = 10.0
     # Online payments. PAYMENT_GATEWAY names the gateway new checkouts use ("cashfree"; empty = wallet only).
     # Each stored payment keeps its own provider, so refunds and status checks never follow this setting.
     payment_gateway: str = ""

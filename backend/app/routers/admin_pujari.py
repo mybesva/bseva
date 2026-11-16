@@ -644,6 +644,9 @@ def assign_pujari_to_booking(
         "booking",
         booking_id,
     )
+    from app.whatsapp import msg91
+
+    msg91.notify(db, "pujari_new_booking", booking_id, body.pujari_id)
     db.commit()
     try:
         from app.mail.booking_payload import booking_email_data_from_row, load_customer_email_context, load_service_name
