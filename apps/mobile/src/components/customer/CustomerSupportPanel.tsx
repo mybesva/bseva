@@ -1,15 +1,15 @@
 import { CUSTOMER_SUPPORT_CATS, PUJARI_SUPPORT_CATS, isPujariRole } from "@bseva/config";
-import { supportSchema } from "@bseva/validation";
+import { isMeaningfulText } from "@bseva/validation";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { View } from "react-native";
 import { SelectField } from "@/components/SelectField";
+import { useAppTheme } from "@/theme/ThemeContext";
 import { AppText, Card, EmptyState, ErrorBanner, Field, PrimaryButton, StatusBadge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { useI18n } from "@/providers/I18nProvider";
-import { userMessage } from "@/utils/userMessage";
 
 function categoryLabel(t: (key: string) => string, id: string) {
   const key = `web.support.category.${id}`;
@@ -98,6 +98,7 @@ function TicketCard({
 
 export function CustomerSupportPanel() {
   const { t } = useI18n();
+  const { colors } = useAppTheme();
   const { user } = useAuth();
   const cats = isPujariRole(user?.role) ? [...PUJARI_SUPPORT_CATS] : [...CUSTOMER_SUPPORT_CATS];
   const q = useQuery({ queryKey: ["tickets"], queryFn: () => apiClient.listSupportTickets() });
@@ -107,6 +108,7 @@ export function CustomerSupportPanel() {
   const [category, setCategory] = useState<string>(cats[0]);
   const [bookingId, setBookingId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ subject?: string; body?: string }>({});
   const [busy, setBusy] = useState(false);
   const bookings = bookingsQ.data || [];
 
@@ -137,17 +139,40 @@ export function CustomerSupportPanel() {
           onChange={setBookingId}
         />
       ) : null}
-      <Field label={t("mobile.subject")} value={subject} onChangeText={setSubject} />
-      <Field label={t("mobile.description")} value={body} onChangeText={setBody} multiline />
+      <AppText variant="small" color={colors.mutedForeground}>
+        {t("contact.requiredNote")}
+      </AppText>
+      <Field
+        required
+        label={t("mobile.subject")}
+        value={subject}
+        onChangeText={(v) => {
+          setSubject(v);
+          setFieldErrors((e) => ({ ...e, subject: undefined }));
+        }}
+        error={fieldErrors.subject}
+      />
+      <Field
+        required
+        label={t("mobile.description")}
+        value={body}
+        onChangeText={(v) => {
+          setBody(v);
+          setFieldErrors((e) => ({ ...e, body: undefined }));
+        }}
+        multiline
+        error={fieldErrors.body}
+      />
       <PrimaryButton
         title={busy ? t("mobile.submitting") : t("mobile.submitTicket")}
         loading={busy}
         onPress={async () => {
-          const parsed = supportSchema.safeParse({ subject, body });
-          if (!parsed.success) {
-            const field = String(parsed.error.issues[0]?.path?.[0] || "");
-            const issueKey = parsed.error.issues[0]?.message;
-            setError(userMessage(t, issueKey, field === "subject" ? t("validation.subject") : t("validation.issue")) || (field === "subject" ? t("validation.subject") : t("validation.issue")));
+          const errs: { subject?: string; body?: string } = {};
+          if (!isMeaningfulText(subject, 5)) errs.subject = t("web.support.subjectValidation");
+          if (!isMeaningfulText(body, 10)) errs.body = t("web.support.descriptionValidation");
+          setFieldErrors(errs);
+          if (errs.subject || errs.body) {
+            setError(null);
             return;
           }
           setBusy(true);

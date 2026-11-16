@@ -1,10 +1,12 @@
 import { MUHURTA_TIME_SLOTS, rupees } from "@bseva/config";
-import { useState } from "react";
-import { View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { AppState, View } from "react-native";
 import { formatPujaTitleText } from "@bseva/locales";
 import { DateCalendar } from "@/components/DateCalendar";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { openChargeCheckout } from "@/services/onlinePayment";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
 import { formatDisplayDate } from "@/utils/formatDate";
@@ -45,6 +47,47 @@ export function MuhurtaConsultation({
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  // Customer wallet off: the fee is paid online first. Until the server confirms it, the receipt is held here.
+  const [pendingCharge, setPendingCharge] = useState<{ paymentId: string; row: MuhurtaReceipt } | null>(null);
+
+  const checkCharge = useCallback(async () => {
+    if (!pendingCharge) return;
+    try {
+      const s = await apiClient.chargeStatus(pendingCharge.paymentId);
+      if (s.status === "paid") {
+        setPendingCharge(null);
+        setOpen(false);
+        onBooked({ ...pendingCharge.row, payment_status: "paid" });
+      } else if (s.status === "closed" || s.status === "refunded") {
+        setPendingCharge(null);
+        setError(
+          t(
+            s.status === "refunded"
+              ? "pay.charge.refunded"
+              : s.closed_reason === "abandoned"
+                ? "pay.charge.closedAbandoned"
+                : "pay.charge.closedExpired",
+          ),
+        );
+      }
+    } catch {
+      // Keep waiting; the next focus or app resume checks again.
+    }
+  }, [pendingCharge, onBooked, t]);
+
+  // Re-check when the customer comes back from the browser / UPI app, or from the payment result screen.
+  useFocusEffect(
+    useCallback(() => {
+      void checkCharge();
+    }, [checkCharge]),
+  );
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void checkCharge();
+    });
+    return () => sub.remove();
+  }, [checkCharge]);
 
   async function confirm() {
     if (!date) {
@@ -64,8 +107,14 @@ export function MuhurtaConsultation({
         appointment_time: time,
         preferred_dates: [date],
         notes: notes.trim() || undefined,
-      }) as MuhurtaReceipt;
-      onBooked(out);
+      });
+      if (out.payment_required && out.checkout) {
+        const checkout = out.checkout;
+        setPendingCharge({ paymentId: checkout.payment_id, row: out as unknown as MuhurtaReceipt });
+        await openChargeCheckout(checkout);
+        return;
+      }
+      onBooked(out as unknown as MuhurtaReceipt);
       setOpen(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t("web.muhurta.bookFailed"));
@@ -112,11 +161,21 @@ export function MuhurtaConsultation({
             <AppText>{t("common.total")}</AppText>
             <AppText color={colors.primary}>{feePaise > 0 ? rupees(feePaise) : t("web.muhurta.free")}</AppText>
           </View>
-          <PrimaryButton
-            title={busy ? t("web.muhurta.confirming") : feePaise > 0 ? t("web.muhurta.confirmPay", { amount: rupees(feePaise) }) : t("web.muhurta.confirmAppointment")}
-            loading={busy}
-            onPress={() => void confirm()}
-          />
+          {pendingCharge ? (
+            <>
+              <AppText variant="small" color={colors.mutedForeground}>{t("pay.charge.pending")}</AppText>
+              <PrimaryButton
+                title={t("pay.charge.continue")}
+                onPress={() => router.push(`/customer/payment/charge/${pendingCharge.paymentId}`)}
+              />
+            </>
+          ) : (
+            <PrimaryButton
+              title={busy ? t("web.muhurta.confirming") : feePaise > 0 ? t("web.muhurta.confirmPay", { amount: rupees(feePaise) }) : t("web.muhurta.confirmAppointment")}
+              loading={busy}
+              onPress={() => void confirm()}
+            />
+          )}
           <PrimaryButton title={t("common.cancel")} variant="ghost" onPress={() => setOpen(false)} />
         </>
       )}

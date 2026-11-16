@@ -1,5 +1,5 @@
+import type { LegalDoc } from "./types";
 import {
-  CIN,
   COMPANY,
   DELETE_ACCOUNT_URL,
   EFFECTIVE_DATE,
@@ -9,16 +9,15 @@ import {
   REGISTERED_OFFICE,
   SUPPORT_EMAIL,
   grievanceTable,
-  withToConfirm,
 } from "./shared";
 
-export const appTerms = withToConfirm({
+export const appTerms: LegalDoc = {
   slug: "app-terms",
   title: "Mobile App Terms of Use & End-User Licence Agreement",
   version: LEGAL_VERSION,
   effectiveDate: EFFECTIVE_DATE,
   intro: [
-    `Applies to: B-Seva apps on Google Play (Android) and the Apple App Store (iOS). Developer: ${COMPANY}. CIN: ${CIN}. Address: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Support: ${PHONE} | ${SUPPORT_EMAIL}. Web version of these terms: https://www.b-seva.com/app-terms`,
+    `Applies to: B-Seva apps on Google Play (Android) and the Apple App Store (iOS). Developer: ${COMPANY}. Address: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Support: ${PHONE} | ${SUPPORT_EMAIL}. Web version of these terms: https://www.b-seva.com/app-terms`,
     "These Terms of Use apply to the B-Seva mobile applications downloaded from Google Play or the Apple App Store. By installing, opening, or using the app, you agree to these terms. If you do not agree, please uninstall the app.",
   ],
   sections: [
@@ -238,4 +237,4 @@ export const appTerms = withToConfirm({
       ],
     },
   ],
-});
+};

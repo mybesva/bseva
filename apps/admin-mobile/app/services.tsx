@@ -12,18 +12,27 @@ import {
   type AdminServiceForm,
 } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 import { useMemo, useState } from "react";
-import { ScrollView, Switch, View } from "react-native";
+import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
 import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
+import { OptionPicker } from "@/components/admin/SevaEventForm";
+import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
+import { useAdmin } from "@/providers/AdminProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { apiClient } from "@/services/api";
 
-type Svc = AdminServiceForm & { id?: string; bookable?: boolean; available?: boolean; [key: string]: unknown };
+// Premium dakshina fields (same as web ServicesAdmin); declared here too so the form type always has them.
+type ServiceForm = AdminServiceForm & {
+  premium_dakshina_share_percent?: number | null;
+  premium_dakshina_amount_paise?: number | null;
+};
 
-function formFromRow(s: Svc): AdminServiceForm {
+type Svc = ServiceForm & { id?: string; bookable?: boolean; available?: boolean; [key: string]: unknown };
+
+function formFromRow(s: Svc): ServiceForm {
   const base = emptyAdminServiceForm();
   return {
     ...base,
@@ -36,6 +45,8 @@ function formFromRow(s: Svc): AdminServiceForm {
     category_slugs: Array.isArray(s.category_slugs) ? (s.category_slugs as string[]) : [],
     pricing_status: s.pricing_status === "priced" ? "priced" : "awaiting_pricing",
     samagri_review_status: (s.samagri_review_status as AdminServiceForm["samagri_review_status"]) || "UNVERIFIED",
+    premium_dakshina_amount_paise: Number(s.premium_dakshina_amount_paise) > 0 ? Number(s.premium_dakshina_amount_paise) : null,
+    premium_dakshina_share_percent: s.premium_dakshina_share_percent != null ? Number(s.premium_dakshina_share_percent) : null,
   };
 }
 
@@ -138,14 +149,254 @@ function ServiceCategories({ onError, search }: { onError: (v: string | null) =>
   );
 }
 
+const KIT_PROVIDERS = ["BSEVA", "PUJARI", "INCLUDED_IN_SAMAGRI_PACKAGE"];
+const isKitItem = (it: { provided_by?: string | null }) => KIT_PROVIDERS.includes(String(it.provided_by || "").toUpperCase());
+
+/** Stored quantities sometimes include the unit: "50g" → 50 + g, "15 pcs" → 15 + pcs. */
+function splitQty(value: unknown, unit?: string | null): { qty: string; unit: string } {
+  const text = String(value ?? "").trim();
+  const m = text.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+  return m ? { qty: m[1], unit: m[2] || unit || "" } : { qty: text, unit: unit || "" };
+}
+
+/** "15" + "pcs" → "15 pcs"; "15 pcs" + "pcs" → "15 pcs". */
+function qtyWithUnit(value: unknown, unit?: string | null): string {
+  const v = String(value ?? "").trim();
+  if (!v || !unit || /[a-z]/i.test(v)) return v;
+  return `${v} ${unit}`;
+}
+
+type LinkedItem = {
+  id?: string;
+  samagri_item_id?: string;
+  name?: string;
+  qty_small?: string | null;
+  quantity?: number | string | null;
+  unit?: string | null;
+  category?: string | null;
+  provided_by?: string | null;
+  optional?: boolean;
+};
+type MasterItem = { id: string; name: string; unit?: string | null };
+
+/** Samagri items linked to one service: GET /services/:id/samagri, POST/DELETE /admin/services/:id/samagri. */
+function ServiceSamagri({ serviceId, canManage }: { serviceId: string; canManage: boolean }) {
+  const { colors } = useAppTheme();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [linkItemId, setLinkItemId] = useState("");
+  const [linkQty, setLinkQty] = useState("");
+  const [linkUnit, setLinkUnit] = useState("");
+  const [linkCategory, setLinkCategory] = useState("PUJA_SAMAGRI");
+  const [linkProvidedBy, setLinkProvidedBy] = useState("CUSTOMER");
+  const [linkOptional, setLinkOptional] = useState(false);
+  const linkedQ = useQuery({
+    queryKey: ["admin-service-samagri", serviceId],
+    queryFn: async () => {
+      try {
+        const data = await apiClient.api<LinkedItem[] | { items?: LinkedItem[] }>(`/services/${serviceId}/samagri`);
+        return Array.isArray(data) ? data : data?.items || [];
+      } catch {
+        return [] as LinkedItem[];
+      }
+    },
+  });
+  const itemsQ = useQuery({
+    queryKey: ["samagri"],
+    queryFn: () => apiClient.api<MasterItem[] | { items?: MasterItem[] }>("/samagri/items"),
+  });
+  const linked = linkedQ.data || [];
+  const master = Array.isArray(itemsQ.data) ? itemsQ.data : itemsQ.data?.items || [];
+  const addedIds = new Set(linked.map((it) => String(it.samagri_item_id)));
+  const itemOptions = master.map((it) => ({
+    id: String(it.id),
+    label: it.name,
+    subtitle: addedIds.has(String(it.id)) ? "Already added (pick to edit)" : it.unit || undefined,
+  }));
+
+  function resetLinkForm() {
+    setLinkItemId("");
+    setLinkQty("");
+    setLinkUnit("");
+    setLinkCategory("PUJA_SAMAGRI");
+    setLinkProvidedBy("CUSTOMER");
+    setLinkOptional(false);
+  }
+
+  function editLinkedItem(it: LinkedItem) {
+    const parts = splitQty(it.qty_small ?? it.quantity, it.unit);
+    const provider = String(it.provided_by || "CUSTOMER").toUpperCase();
+    setLinkItemId(String(it.samagri_item_id));
+    setLinkQty(parts.qty);
+    setLinkUnit(parts.unit);
+    setLinkCategory(String(it.category || "PUJA_SAMAGRI"));
+    setLinkProvidedBy(provider === "OPTIONAL" ? "CUSTOMER" : provider);
+    setLinkOptional(Boolean(it.optional) || provider === "OPTIONAL");
+  }
+
+  function removeItem(it: LinkedItem) {
+    Alert.alert("Remove item?", `Remove "${it.name}" from this puja's Samagri list?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          setError(null);
+          try {
+            await apiClient.api(`/admin/services/${serviceId}/samagri/${it.samagri_item_id}`, { method: "DELETE" });
+            if (String(linkItemId) === String(it.samagri_item_id)) resetLinkForm();
+            await linkedQ.refetch();
+          } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Remove failed");
+          }
+        },
+      },
+    ]);
+  }
+
+  async function saveLink() {
+    if (!linkItemId) return;
+    const parsedQty = parseFloat(linkQty);
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.api(`/admin/services/${serviceId}/samagri`, {
+        method: "POST",
+        body: JSON.stringify({
+          samagri_item_id: linkItemId,
+          required: !linkOptional,
+          optional: linkOptional,
+          customer_provided: linkProvidedBy === "CUSTOMER",
+          sort_order: linked.length,
+          quantity: Number.isFinite(parsedQty) ? parsedQty : null,
+          unit: linkUnit || null,
+          category: linkCategory,
+          provided_by: linkProvidedBy,
+          qty_small: linkQty || null,
+        }),
+      });
+      resetLinkForm();
+      await linkedQ.refetch();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const kit = isKitItem({ provided_by: linkProvidedBy });
+  return (
+    <View style={{ gap: 8 }}>
+      <ErrorBanner message={error} />
+      {linkedQ.isLoading ? <LoadingBlock /> : null}
+      {[
+        { title: "Included in Kit", items: linked.filter(isKitItem) },
+        { title: "Customer Arranges", items: linked.filter((it) => !isKitItem(it)) },
+      ].map((group) => (
+        <View key={group.title} style={{ gap: 4 }}>
+          <AppText style={{ fontWeight: "700" }}>
+            {group.title} ({group.items.length})
+          </AppText>
+          {group.items.length === 0 ? (
+            <AppText variant="small" color={colors.mutedForeground}>
+              None yet
+            </AppText>
+          ) : null}
+          {group.items.map((it) => (
+            <View key={String(it.samagri_item_id || it.id)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <AppText variant="small" style={{ flex: 1 }}>
+                {it.name}
+                {it.qty_small || it.quantity != null ? ` — ${qtyWithUnit(it.qty_small || it.quantity, it.unit)}` : ""}
+                {it.optional ? " (optional)" : ""}
+              </AppText>
+              {canManage && it.samagri_item_id ? (
+                <>
+                  <Pressable accessibilityRole="button" hitSlop={8} onPress={() => editLinkedItem(it)} style={{ padding: 6 }}>
+                    <AppText variant="small" color={colors.primary}>
+                      Edit
+                    </AppText>
+                  </Pressable>
+                  <Pressable accessibilityRole="button" hitSlop={8} onPress={() => removeItem(it)} style={{ padding: 6 }}>
+                    <AppText variant="small" color={colors.destructive}>
+                      Remove
+                    </AppText>
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      ))}
+      {canManage ? (
+        <Card style={{ gap: 8 }}>
+          <OptionPicker
+            label="Item"
+            options={itemOptions}
+            value={linkItemId}
+            placeholder="Search or select an item"
+            loading={itemsQ.isLoading}
+            onChange={(id) => {
+              const existing = linked.find((it) => String(it.samagri_item_id) === id);
+              if (existing) {
+                editLinkedItem(existing);
+                return;
+              }
+              setLinkItemId(id);
+              setLinkUnit(String(master.find((it) => String(it.id) === id)?.unit || ""));
+            }}
+          />
+          <AppText variant="small" color={colors.mutedForeground}>
+            Can&apos;t find it here? Add it first in Samagri, then come back and pick it.
+          </AppText>
+          <Field label="Quantity" placeholder="e.g. 2" value={linkQty} onChangeText={setLinkQty} keyboardType="decimal-pad" />
+          <Field label="Unit" placeholder="e.g. pcs" value={linkUnit} onChangeText={setLinkUnit} autoCapitalize="none" />
+          <AppText variant="small" color={colors.mutedForeground}>
+            Who provides this?
+          </AppText>
+          <ChoiceChips
+            options={[
+              { id: "kit", label: "Included in Kit" },
+              { id: "customer", label: "Customer Arranges" },
+            ]}
+            value={kit ? "kit" : "customer"}
+            onChange={(v) => {
+              if (v === "kit" && !kit) setLinkProvidedBy("BSEVA");
+              if (v === "customer") setLinkProvidedBy("CUSTOMER");
+            }}
+          />
+          <AppText variant="small" color={colors.mutedForeground}>
+            If the customer doesn&apos;t buy the kit, kit items move to their &quot;arrange&quot; list.
+          </AppText>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <AppText>Optional item</AppText>
+            <Switch value={linkOptional} onValueChange={setLinkOptional} />
+          </View>
+          <PrimaryButton
+            title={addedIds.has(linkItemId) ? "Update Item" : "Add Item"}
+            variant="outline"
+            disabled={!linkItemId}
+            loading={busy}
+            onPress={() => void saveLink()}
+          />
+          {linkItemId ? <PrimaryButton title="Clear" variant="ghost" onPress={resetLinkForm} /> : null}
+        </Card>
+      ) : null}
+    </View>
+  );
+}
+
 export default function AdminServices() {
   const { t } = useI18n();
   const { colors } = useAppTheme();
   const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<AdminServiceForm | null>(null);
+  const [form, setForm] = useState<ServiceForm | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
+  const { can } = useAdmin();
+  const canServices = can("manage_services");
+  const canSamagri = can("manage_samagri");
   const list = useQuery({
     queryKey: ["admin-services"],
     queryFn: () => apiClient.api<Svc[] | { items?: Svc[] }>("/admin/services"),
@@ -187,7 +438,79 @@ export default function AdminServices() {
     }
   }
 
-  function set<K extends keyof AdminServiceForm>(key: K, value: AdminServiceForm[K]) {
+  async function uploadImage() {
+    if (!editId) return;
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+    if (picked.canceled || !picked.assets[0]) return;
+    const asset = picked.assets[0];
+    if (asset.fileSize && asset.fileSize > 8 * 1024 * 1024) {
+      setError("Image must be 8MB or smaller");
+      return;
+    }
+    setImageBusy(true);
+    setError(null);
+    try {
+      const body = new FormData();
+      body.append("file", {
+        uri: asset.uri,
+        name: asset.fileName || "service.jpg",
+        type: asset.mimeType || "image/jpeg",
+      } as unknown as Blob);
+      const data = await apiClient.upload<{ image_path?: string; image_url?: string }>(`/admin/services/${editId}/image`, body);
+      setForm((f) => (f ? { ...f, image_path: data.image_path || f.image_path, image_url: data.image_url || f.image_url } : f));
+      await list.refetch();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setImageBusy(false);
+    }
+  }
+
+  function removeImage() {
+    if (!editId) return;
+    Alert.alert("Remove image?", "Remove this service image? The catalog will use the default placeholder.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          setImageBusy(true);
+          setError(null);
+          try {
+            await apiClient.api(`/admin/services/${editId}/image`, { method: "DELETE" });
+            setForm((f) => (f ? { ...f, image_path: "", image_url: "" } : f));
+            await list.refetch();
+          } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Remove failed");
+          } finally {
+            setImageBusy(false);
+          }
+        },
+      },
+    ]);
+  }
+
+  function deleteService(s: Svc) {
+    if (Number(s.booking_count || 0) > 0) return;
+    Alert.alert("Delete service?", `Permanently remove ${s.name}? Only pujas with no bookings can be deleted.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          setError(null);
+          try {
+            await apiClient.api(`/admin/services/${s.id}`, { method: "DELETE" });
+            await list.refetch();
+          } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Failed");
+          }
+        },
+      },
+    ]);
+  }
+
+  function set<K extends keyof ServiceForm>(key: K, value: ServiceForm[K]) {
     setForm((f) => (f ? { ...f, [key]: value } : f));
   }
 
@@ -258,7 +581,7 @@ export default function AdminServices() {
             ].map(([key, label]) => (
               <View key={key} style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <AppText>{label}</AppText>
-                <Switch value={Boolean(form[key as keyof AdminServiceForm])} onValueChange={(v) => set(key as keyof AdminServiceForm, v as never)} />
+                <Switch value={Boolean(form[key as keyof ServiceForm])} onValueChange={(v) => set(key as keyof ServiceForm, v as never)} />
               </View>
             ))}
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -268,6 +591,62 @@ export default function AdminServices() {
                 onValueChange={(v) => set("pricing_status", v ? "priced" : "awaiting_pricing")}
               />
             </View>
+            <AppText variant="h3" style={{ marginTop: 8 }}>
+              Image
+            </AppText>
+            {editId ? (
+              canServices ? (
+                <>
+                  <AppText variant="small" color={colors.mutedForeground}>
+                    Upload a new file to replace the catalog image for this puja. JPG, PNG, WebP, or GIF up to 8MB.
+                  </AppText>
+                  <PrimaryButton
+                    title={imageBusy ? "Uploading…" : form.image_url || form.image_path ? "Replace Image" : "Upload Image"}
+                    variant="outline"
+                    loading={imageBusy}
+                    onPress={() => void uploadImage()}
+                  />
+                  {form.image_url || form.image_path ? (
+                    <PrimaryButton title="Remove Image" variant="ghost" disabled={imageBusy} onPress={removeImage} />
+                  ) : null}
+                </>
+              ) : null
+            ) : (
+              <AppText variant="small" color={colors.mutedForeground}>
+                Save the new service first, then reopen Edit to upload or replace its image.
+              </AppText>
+            )}
+            {form.image_url || form.image_path ? (
+              <AppText variant="small" color={colors.mutedForeground}>
+                Stored as: {form.image_url || form.image_path}
+              </AppText>
+            ) : null}
+            <Field label="Image Path (Advanced)" placeholder="/images/services/example.jpg" value={form.image_path} onChangeText={(v) => set("image_path", v)} autoCapitalize="none" />
+            <Field label="Image URL (Advanced)" placeholder="/images/services/example.jpg" value={form.image_url} onChangeText={(v) => set("image_url", v)} autoCapitalize="none" />
+            <AppText variant="h3" style={{ marginTop: 8 }}>
+              Samagri Items for This Puja
+            </AppText>
+            {editId ? (
+              <>
+                <ChoiceChips
+                  options={[
+                    { id: "VERIFIED", label: "Ready for Customers" },
+                    { id: "UNVERIFIED", label: "Not Ready" },
+                    { id: "NEEDS_REVIEW", label: "Needs Review" },
+                  ]}
+                  value={form.samagri_review_status}
+                  onChange={(v) => set("samagri_review_status", String(v) as AdminServiceForm["samagri_review_status"])}
+                />
+                <AppText variant="small" color={colors.mutedForeground}>
+                  Customers see this list on their booking receipt only when it is Ready for customers (saved with the service).
+                </AppText>
+                <ServiceSamagri serviceId={editId} canManage={canSamagri} />
+              </>
+            ) : (
+              <AppText variant="small" color={colors.mutedForeground}>
+                Save the service first to manage samagri items.
+              </AppText>
+            )}
             <PrimaryButton title={busy ? t("admin.save") : t("admin.save")} loading={busy} onPress={() => void save()} />
             <PrimaryButton title="Back to List" variant="outline" onPress={() => { setForm(null); setEditId(null); }} />
           </Card>
@@ -296,6 +675,21 @@ export default function AdminServices() {
                 </View>
                 <AppText variant="small">{s.slug} · {rupees(s.standard_price_paise)}</AppText>
                 <PrimaryButton title="Edit" variant="outline" onPress={() => { setEditId(String(s.id)); setForm(formFromRow(s)); }} />
+                {canServices ? (
+                  <>
+                    <PrimaryButton
+                      title={Number(s.booking_count || 0) > 0 ? "Delete (Has Bookings)" : "Delete"}
+                      variant="ghost"
+                      disabled={Number(s.booking_count || 0) > 0}
+                      onPress={() => deleteService(s)}
+                    />
+                    {Number(s.booking_count || 0) > 0 ? (
+                      <AppText variant="small" color={colors.mutedForeground}>
+                        Cannot delete — this puja has bookings. Set Coming Soon to hide it from customers.
+                      </AppText>
+                    ) : null}
+                  </>
+                ) : null}
               </Card>
             ))}
           </>

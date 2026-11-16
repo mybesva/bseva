@@ -2,12 +2,13 @@ import { mapNotificationLinkToMobile } from "@bseva/config";
 import type { AppNotification } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Pressable, RefreshControl, ScrollView } from "react-native";
+import { Pressable, ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, EmptyState, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 export default function AdminNotifications() {
   const { t } = useI18n();
@@ -20,7 +21,7 @@ export default function AdminNotifications() {
   return (
     <Screen>
       <ScreenHeader title={t("admin.notifications")} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }} refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }} refreshControl={<PullToRefresh onRefresh={() => q.refetch()} />}>
         <PrimaryButton title={t("mobile.markAllRead")} variant="outline" onPress={() => void apiClient.markAllNotificationsRead().then(() => q.refetch())} />
         {q.isLoading ? <LoadingBlock /> : null}
         {(q.data?.items || []).length === 0 && !q.isLoading ? <EmptyState title={t("mobile.emptyNotifications")} /> : null}

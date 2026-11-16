@@ -1020,6 +1020,12 @@ def _maybe_referral_reward(db: Session, customer_id: str, booking_id: str) -> No
             {"b": booking_id, "id": ref["id"]},
         )
         return
+    if scope != "pujari":
+        from app.customer_wallet import customer_wallet_enabled
+
+        if not customer_wallet_enabled(db):
+            # Customer rewards are wallet credit: with the customer wallet off none is given (and none is owed).
+            return
     if scope == "pujari":
         reward = int(get_setting(db, "referral_pujari_reward_paise", 10000))
         rtype = "pujari_referral"
@@ -1508,7 +1514,7 @@ def override_settlement(
     s = db.execute(
         text("SELECT * FROM settlements WHERE id = CAST(:id AS uuid) FOR UPDATE"), {"id": settlement_id}
     ).mappings().first()
-    if s["status"] in ("settled", "blocked") or int(s["settlement_amount_paise"] or 0) != amount:
+    if s["status"] in ("settled", "blocked", "processing") or int(s["settlement_amount_paise"] or 0) != amount:
         sa.log_failure(db, user, action, f"state_changed:{s['status']}", **audit)
         raise HTTPException(400, "This settlement changed while it was being verified. Nothing was paid.")
     sa.log_event(db, user, "approved", "success", **audit)

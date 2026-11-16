@@ -1,12 +1,15 @@
+import { formatDisplayDate } from "@bseva/locales";
 import { displayTokenLabel, rupees } from "@bseva/config";
+import type { AssignablePujari } from "@bseva/config";
 import type { Booking } from "@bseva/types";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
+import { AssignPujariPicker, type AvailablePujarisResponse } from "@/components/admin/AssignPujariPicker";
 import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
+import { AppText, Card, ErrorBanner, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
@@ -19,28 +22,41 @@ export default function AdminBookingDetail() {
   const q = useQuery({ queryKey: ["booking", id], queryFn: () => apiClient.getBooking(id), enabled: !!id });
   const available = useQuery({
     queryKey: ["available-pujaris", id],
-    queryFn: () => apiClient.api<{ id: string; name?: string; distance_km?: number }[]>(`/admin/bookings/${id}/available-pujaris`),
+    queryFn: () => apiClient.api<AvailablePujarisResponse>(`/admin/bookings/${id}/available-pujaris`),
     enabled: !!id && can("manage_bookings"),
   });
-  const [pujariId, setPujariId] = useState("");
+  const [selected, setSelected] = useState<AssignablePujari | null>(null);
   const [force, setForce] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const b = q.data as Booking | undefined;
 
-  async function assign() {
-    if (!pujariId.trim()) {
-      setError("Pujari ID is required.");
+  function requestAssign() {
+    if (!selected) {
+      setError("Select a pujari from the list.");
       return;
     }
+    if (selected.schedule_conflict && !force) {
+      Alert.alert(
+        "Schedule conflict",
+        `${selected.name || "This pujari"} has another confirmed booking around this time (including buffer time). Assign anyway?`,
+        [{ text: "Cancel", style: "cancel" }, { text: "Assign anyway", onPress: () => void assign(selected.id, true) }],
+      );
+      return;
+    }
+    void assign(selected.id, force);
+  }
+
+  async function assign(pujariId: string, forceAssign: boolean) {
     setBusy(true);
     setError(null);
     try {
       await apiClient.api(`/admin/bookings/${id}/assign`, {
         method: "POST",
-        body: JSON.stringify({ pujari_id: pujariId, force_assign: force }),
+        body: JSON.stringify({ pujari_id: pujariId, force_assign: forceAssign }),
       });
-      await q.refetch();
+      setSelected(null);
+      await Promise.all([q.refetch(), available.refetch()]);
       await qc.invalidateQueries({ queryKey: ["admin-bookings"] });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Assign failed");
@@ -66,22 +82,20 @@ export default function AdminBookingDetail() {
     );
   }
 
-  const rows = Array.isArray(available.data) ? available.data : [];
-
   return (
     <Screen>
       <ScreenHeader title={b.booking_number || "Booking"} back />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         <ErrorBanner message={error} />
         <Card>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <PujaTitle name={b.service_name} variant="h2" />
+          <PujaTitle name={b.service_name} variant="h2" />
+          <View style={{ alignSelf: "flex-start", marginTop: 4 }}>
             <StatusBadge status={b.status} />
           </View>
           <AppText>Customer: {b.customer_name}</AppText>
           <AppText>Pujari: {b.pujari_name ? (["pending", "pending_acceptance"].includes(String(b.status)) ? `${b.pujari_name} (awaiting acceptance)` : b.pujari_name) : "Unassigned"}</AppText>
           <AppText>
-            {b.booking_date} {b.start_time}
+            {`${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)}`}
           </AppText>
           <AppText>{b.location_label || b.address}</AppText>
           <AppText variant="price">{rupees(b.total_paise)}</AppText>
@@ -90,17 +104,25 @@ export default function AdminBookingDetail() {
         {can("manage_bookings") ? (
           <>
             <AppText variant="h3">{t("admin.assign")}</AppText>
-            <Field label="Pujari ID" value={pujariId} onChangeText={setPujariId} placeholder="Select below or enter ID" />
-            {rows.slice(0, 12).map((p) => (
-              <PrimaryButton
-                key={p.id}
-                title={`${p.name || p.id}${p.distance_km != null ? ` · ${p.distance_km} km` : ""}`}
-                variant={pujariId === p.id ? "primary" : "outline"}
-                onPress={() => setPujariId(p.id)}
-              />
-            ))}
+            <AssignPujariPicker
+              data={available.data}
+              loading={available.isLoading}
+              selectedId={selected?.id ?? null}
+              onSelect={(p) => {
+                setSelected(p);
+                setError(null);
+              }}
+            />
+            {available.error ? (
+              <ErrorBanner message={available.error instanceof Error ? available.error.message : "Could not load pujaris"} />
+            ) : null}
             <PrimaryButton title={force ? "Force Assign ON" : "Force Assign OFF"} variant="ghost" onPress={() => setForce((v) => !v)} />
-            <PrimaryButton title={t("admin.assign")} loading={busy} onPress={() => void assign()} />
+            <PrimaryButton
+              title={selected ? `${t("admin.assign")}: ${selected.name || "pujari"}` : t("admin.assign")}
+              loading={busy}
+              disabled={!selected}
+              onPress={requestAssign}
+            />
             <PrimaryButton
               title="No-show penalty"
               variant="outline"

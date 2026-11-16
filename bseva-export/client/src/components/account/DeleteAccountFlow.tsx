@@ -98,6 +98,7 @@ function Obligations({ overview }: { overview: DeletionOverview }) {
   const isPujari = account.role === "pujari" || account.role === "head_pujari";
   const upcoming = obligations.bookings.filter((b) => b.kind === "upcoming");
   const ongoing = obligations.bookings.filter((b) => b.kind === "ongoing");
+  const unpaid = obligations.bookings.filter((b) => b.kind === "unpaid");
   const wallet = Number(obligations.wallet_balance_paise || 0);
   const settlement = Number(obligations.pending_settlement_paise || 0);
   const refunds = Number(obligations.pending_refunds || 0);
@@ -120,6 +121,28 @@ function Obligations({ overview }: { overview: DeletionOverview }) {
           <ul className="mt-1 list-disc space-y-1 pl-5">
             {obligations.blocking.map((m, i) => (
               <li key={i}>{m}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {unpaid.length ? (
+        <div>
+          <p className="mb-2 font-semibold text-foreground">Unpaid online bookings</p>
+          <p className="mb-2 text-muted-foreground">
+            Payment for these was never completed, so nothing was charged. They will be closed.
+          </p>
+          <ul className="space-y-2">
+            {unpaid.map((b) => (
+              <li key={b.id} className="rounded-md border border-border p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-medium text-foreground">{b.service_name || "Booking"}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{b.booking_number}</span>
+                </div>
+                <p className="text-muted-foreground">
+                  {formatDisplayDate(b.booking_date)} {b.start_time || ""}
+                </p>
+              </li>
             ))}
           </ul>
         </div>

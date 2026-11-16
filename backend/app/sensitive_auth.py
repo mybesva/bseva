@@ -84,6 +84,9 @@ def settlement_for_action(db: Session, settlement_id: str) -> dict:
         raise HTTPException(400, "Already settled")
     if row["status"] == "blocked":
         raise HTTPException(400, "This settlement is blocked for a pujari no-show and cannot be paid out")
+    if row["status"] == "processing":
+        # A bank/UPI payout is in flight: marking it settled here as well could pay the pujari twice.
+        raise HTTPException(400, "A bank payout is in progress for this settlement")
     return dict(row)
 
 

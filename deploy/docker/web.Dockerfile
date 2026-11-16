@@ -35,6 +35,7 @@ RUN cd bseva-export && NODE_ENV=production VITE_API_URL= \
 
 FROM nginx:1.27-alpine
 COPY --from=build /src/bseva-export/dist/public /usr/share/nginx/html
+COPY deploy/nginx/well-known /usr/share/nginx/html/.well-known
 COPY deploy/nginx/templates /etc/nginx/bseva-templates
 COPY deploy/nginx/40-bseva-config.sh /docker-entrypoint.d/40-bseva-config.sh
 ENV DOMAIN=qa.b-seva.com

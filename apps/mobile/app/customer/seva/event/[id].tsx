@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
+import { openChargeCheckout } from "@/services/onlinePayment";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { formatDisplaySlot } from "@/utils/formatDate";
@@ -153,8 +154,15 @@ export default function CustomerSevaEventDetail() {
         })),
       };
       if (packageId) body.package_id = packageId;
-      await apiClient.registerSevaEvent(String(id), body);
+      const reg = await apiClient.registerSevaEvent(String(id), body);
       await qc.invalidateQueries({ queryKey: ["my-seva-registrations"] });
+      if (reg?.payment_required && reg.checkout) {
+        // Customer wallet off: pay online first; the registration is confirmed once the payment is verified.
+        const checkout = reg.checkout;
+        router.push(`/customer/payment/charge/${checkout.payment_id}`);
+        await openChargeCheckout(checkout);
+        return;
+      }
       showSuccessAlert(t("seva.registrationConfirmed"));
       router.replace(`/customer/(tabs)/bookings?type=${sevaTypeFilter(event?.service_type)}` as never);
     } catch (e: unknown) {

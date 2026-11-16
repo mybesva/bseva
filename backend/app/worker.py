@@ -86,6 +86,7 @@ def _prune(db) -> dict:
         ("job_dedupe", "created_at", 30, ""),
         ("security_rate_limits", "window_start", 2, ""),
         ("otp_send_events", "created_at", 2, ""),
+        ("whatsapp_webhook_events", "received_at", 30, ""),
         # Refused contact messages are kept only long enough to investigate abuse; real ones are kept.
         ("contact_submissions", "created_at", 90, " AND status IN ('spam', 'duplicate')"),
     ):
@@ -119,12 +120,21 @@ def _settlements(db) -> dict:
     return run_due_settlements(db)
 
 
+def _payments(db) -> dict:
+    from app.payments.service import run_payment_jobs
+    from app.payouts.service import run_payout_jobs
+
+    return {**run_payment_jobs(db), "payouts": run_payout_jobs(db)}
+
+
 # name -> (interval seconds, job). Matches the documented cron cadence.
 JOBS: dict[str, tuple[int, Callable[[], dict]]] = {
     "puja_lifecycle": (int(os.environ.get("WORKER_LIFECYCLE_SECONDS", 60)), _with_session(_puja_lifecycle)),
     "booking_reminders": (int(os.environ.get("WORKER_REMINDER_SECONDS", 300)), _with_session(_reminders)),
     "booking_offers": (int(os.environ.get("WORKER_OFFERS_SECONDS", 300)), _with_session(_offers)),
     "settlements": (int(os.environ.get("WORKER_SETTLEMENT_SECONDS", 3600)), _with_session(_settlements)),
+    # Expire unpaid bookings, re-verify open gateway payments, submit refunds, recover payout status.
+    "payments": (int(os.environ.get("WORKER_PAYMENTS_SECONDS", 60)), _with_session(_payments)),
     "prune": (86400, _with_session(_prune)),
     "privacy": (int(os.environ.get("WORKER_PRIVACY_SECONDS", 3600)), _with_session(_privacy)),
 }

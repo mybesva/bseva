@@ -89,6 +89,7 @@ def _env(database: str) -> dict[str, str]:
         "ENVIRONMENT": "development",
         "JWT_SECRET": "abuse-checks-jwt-secret-0123456789abcdef",
         "OTP_DEV_CODE": "246810",
+        "EMAIL_DOMAIN_CHECK": "false",  # test addresses use example.org, which accepts no mail
         "DATABASE_URL": _server_url(database).replace("postgresql://", "postgresql+psycopg://", 1),
         **{key: "" for key in BLANKED},
     }

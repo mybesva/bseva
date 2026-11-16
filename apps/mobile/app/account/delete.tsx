@@ -77,12 +77,26 @@ function Obligations({ overview, pujari }: { overview: DeletionOverview; pujari:
   const o = overview.obligations;
   const upcoming = o.bookings.filter((b) => b.kind === "upcoming");
   const ongoing = o.bookings.filter((b) => b.kind === "ongoing");
+  const unpaid = o.bookings.filter((b) => b.kind === "unpaid");
   const nothing =
     !o.bookings.length && !o.wallet_balance_paise && !o.pending_refunds && !o.pending_settlement_paise && !o.blocking.length;
   return (
     <Card style={{ gap: 10 }}>
       <AppText variant="h3">{text.obligationsTitle}</AppText>
       {nothing ? <AppText color={colors.mutedForeground}>{text.noObligations}</AppText> : null}
+      {unpaid.length ? (
+        <View style={{ gap: 4 }}>
+          <AppText style={{ fontWeight: "700" }}>
+            {text.unpaidBookings} ({unpaid.length})
+          </AppText>
+          <AppText variant="small" color={colors.mutedForeground}>
+            {text.unpaidNote}
+          </AppText>
+          {unpaid.map((b) => (
+            <BookingRow key={b.id} b={b} pujari={pujari} />
+          ))}
+        </View>
+      ) : null}
       {upcoming.length ? (
         <View style={{ gap: 4 }}>
           <AppText style={{ fontWeight: "700" }}>

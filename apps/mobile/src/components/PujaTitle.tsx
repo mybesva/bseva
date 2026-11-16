@@ -35,7 +35,7 @@ export function PujaTitle({
       <Text style={{ color: nameColor, fontSize: size, fontWeight: "700", lineHeight: typography[variant].lineHeight }}>
         {clean}
       </Text>
-      <Text style={{ color: colors.primary, fontSize: symbolSize, fontWeight: "600" }}> 卐</Text>
+      <Text style={{ color: colors.primary, fontSize: symbolSize, fontWeight: "600" }}>{"\u00A0"}卐</Text>
     </Text>
   );
 }

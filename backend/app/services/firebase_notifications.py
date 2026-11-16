@@ -16,6 +16,8 @@ from typing import Any, Mapping
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services import apns_push
+
 logger = logging.getLogger(__name__)
 
 _initialized = False
@@ -205,13 +207,37 @@ def send_to_tokens(
     unique = list(dict.fromkeys(unique))
     if not unique:
         return PushResult(skipped_reason="no_tokens")
-    if not firebase_ready() or messaging is None:
-        return PushResult(skipped_reason="firebase_not_configured")
 
     payload = stringify_data(data)
     invalid: list[str] = []
     success = 0
     failure = 0
+
+    # iPhone apps register raw APNs tokens; Firebase rejects those (and we would wrongly deactivate them),
+    # so deliver them straight to Apple.
+    apns_tokens = [t for t in unique if apns_push.is_apns_token(t)]
+    unique = [t for t in unique if not apns_push.is_apns_token(t)]
+    skipped: str | None = None
+    if apns_tokens:
+        if apns_push.apns_configured():
+            try:
+                ok, bad, dead = apns_push.send_to_apns_tokens(apns_tokens, title=title, body=body, data=payload)
+                success += ok
+                failure += bad
+                invalid.extend(dead)
+            except Exception:
+                logger.exception("APNs send failed")
+                failure += len(apns_tokens)
+        else:
+            skipped = "apns_not_configured"
+            logger.info("Skipping %d iOS device token(s): APNs is not configured", len(apns_tokens))
+    if not unique:
+        if success or failure:
+            skipped = None
+        return PushResult(success=success, failure=failure, invalid_tokens=invalid, skipped_reason=skipped)
+    if not firebase_ready() or messaging is None:
+        return PushResult(success=success, failure=failure, invalid_tokens=invalid, skipped_reason="firebase_not_configured")
+
     chunk_size = 500
     for i in range(0, len(unique), chunk_size):
         chunk = unique[i : i + chunk_size]

@@ -9,6 +9,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
 
 from app.config import settings
 from app import env_loader  # noqa: F401 — load .env into os.environ
+from app import access_log
 from app.routers import (
     account,
     admin_compliance,
@@ -25,6 +26,8 @@ from app.routers import (
     meetings,
     notifications,
     ops,
+    payments,
+    payouts,
     promos,
     pujari,
     reports,
@@ -33,10 +36,13 @@ from app.routers import (
     temples,
     tickets,
     wallet,
+    whatsapp_webhook,
 )
 
 
 logger = logging.getLogger("bseva.api")
+# Query strings (e.g. the WhatsApp webhook verify token) never reach the access log.
+access_log.install()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -89,6 +95,9 @@ app.include_router(tickets.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(seva.router, prefix="/api/v1")
 app.include_router(admin_seva.router, prefix="/api/v1")
+app.include_router(whatsapp_webhook.router, prefix="/api/v1")
+app.include_router(payments.router, prefix="/api/v1")
+app.include_router(payouts.router, prefix="/api/v1")
 
 try:
     from fastapi.staticfiles import StaticFiles

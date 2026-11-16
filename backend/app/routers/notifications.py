@@ -482,6 +482,7 @@ def remove_fcm_token(body: FcmTokenRemoveIn, user=Depends(current_user), db: Ses
 @router.post("/notifications/fcm/test")
 def send_test_fcm(user=Depends(current_user), db: Session = Depends(get_db)):
     """Send a test push to every active device token for the signed-in user."""
+    from app.services.apns_push import apns_configured
     from app.services.firebase_notifications import firebase_ready, push_to_user
 
     role = str(user.get("role") or "")
@@ -491,8 +492,8 @@ def send_test_fcm(user=Depends(current_user), db: Session = Depends(get_db)):
         link = "/pujari/bookings"
     else:
         link = "/customer/bookings"
-    if not firebase_ready():
-        raise HTTPException(503, "Firebase Admin SDK is not configured on the server")
+    if not firebase_ready() and not apns_configured():
+        raise HTTPException(503, "Push notifications are not configured on the server")
     result = push_to_user(
         db,
         str(user["id"]),

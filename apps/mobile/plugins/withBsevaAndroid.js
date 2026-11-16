@@ -71,6 +71,7 @@ const VARIANT_SOURCES = `    if (bsevaApp) {
         sourceSets {
             debug.res.srcDirs += "src/variants/\${bsevaApp}/res"
             release.res.srcDirs += "src/variants/\${bsevaApp}/res"
+            release.manifest.srcFile "src/variants/\${bsevaApp}/AndroidManifest.xml"
         }
     } else {
         sourceSets {

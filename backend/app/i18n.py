@@ -40,6 +40,14 @@ CUSTOMER_ERRORS: dict[str, dict[str, str]] = {
         "kn": "ಈ ಪೂಜೆ ಈ ವಿಳಾಸಕ್ಕೆ ಲಭ್ಯವಿಲ್ಲ.",
         "ta": "இந்த பூஜை இந்த முகவரிக்கு கிடைக்கவில்லை.",
     },
+    "EMAIL_DOMAIN_UNDELIVERABLE": {
+        "en": "This email domain doesn't exist. Please check the email address.",
+        "hi": "यह ईमेल डोमेन मौजूद नहीं है। कृपया ईमेल पता जाँचें।",
+        "te": "ఈ ఇమెయిల్ డొమైన్ ఉనికిలో లేదు. దయచేసి ఇమెయిల్ చిరునామాను సరిచూడండి.",
+        "mr": "हे ईमेल डोमेन अस्तित्वात नाही. कृपया ईमेल पत्ता तपासा.",
+        "kn": "ಈ ಇಮೇಲ್ ಡೊಮೇನ್ ಅಸ್ತಿತ್ವದಲ್ಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಇಮೇಲ್ ವಿಳಾಸವನ್ನು ಪರಿಶೀಲಿಸಿ.",
+        "ta": "இந்த மின்னஞ்சல் டொமைன் இல்லை. மின்னஞ்சல் முகவரியைச் சரிபார்க்கவும்.",
+    },
     "SERVICE_AREA_UNAVAILABLE": {
         "en": "BSeva service is not available at this location yet. Please try another address.",
         "hi": "इस स्थान पर BSeva सेवा अभी उपलब्ध नहीं है। कृपया दूसरा पता आज़माएँ।",

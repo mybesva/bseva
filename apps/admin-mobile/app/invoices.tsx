@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, EmptyState, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { formatDisplayDateTime } from "@bseva/locales";
@@ -27,6 +27,7 @@ export default function AdminInvoices() {
         <ErrorBanner message={error} />
         <Field label={t("admin.search")} value={q} onChangeText={setQ} />
         {list.isLoading ? <LoadingBlock /> : null}
+        {!list.isLoading && !list.isError && rows.length === 0 ? <EmptyState title="No invoices found" /> : null}
         {rows.map((inv) => (
           <Card key={inv.id}>
             <AppText variant="h3">{inv.invoice_number || inv.id}</AppText>

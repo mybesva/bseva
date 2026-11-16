@@ -30,6 +30,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { PujaTitle } from "@/components/PujaTitle";
 import { AppText, Card, ChoiceChips, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { openHostedCheckout } from "@/services/onlinePayment";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
@@ -74,6 +75,16 @@ function newIdempotencyKey(slug: string) {
   return `mobile-${slug}-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+// The admin-managed cancellation policy names one refund destination ("... refund to your Customer Wallet"); the
+// percentages stay as written and where the refund goes is shown separately, for the payment method used.
+function refundPointBody(body: string): string {
+  return body.replace(/\s+to\s+(your\s+)?Customer Wallet(?=[.,;]|$)/i, "");
+}
+
+function refundDestinationKey(method: "cashfree" | "wallet" | "either"): string {
+  return method === "cashfree" ? "pay.refundToOriginal" : method === "wallet" ? "pay.refundToWallet" : "pay.refundEither";
+}
+
 export default function BookService() {
   const { slug, initialMode } = useLocalSearchParams<{ slug: string; initialMode?: string }>();
   const router = useRouter();
@@ -93,6 +104,13 @@ export default function BookService() {
   const addressesQ = useQuery({ queryKey: ["customer-addresses"], queryFn: () => apiClient.listCustomerAddresses() });
   const walletQ = useQuery({ queryKey: ["wallet"], queryFn: () => apiClient.getWallet() as Promise<{ wallet?: { balance_paise?: number }; balance_paise?: number }> });
   const configQ = useQuery({ queryKey: ["public-config"], queryFn: () => apiClient.publicConfig() });
+  // Online checkout only when the server reports the gateway configured. The wallet is offered too, unless
+  // Super Admin has switched the customer wallet off: then customers pay online only.
+  const paymentConfigQ = useQuery({ queryKey: ["payment-config"], queryFn: () => apiClient.paymentConfig() });
+  const onlineEnabled = Boolean(paymentConfigQ.data?.online_enabled);
+  const walletEnabled = paymentConfigQ.data?.wallet_enabled !== false;
+  const [payMethod, setPayMethod] = useState<"cashfree" | "wallet" | null>(null);
+  const method = !walletEnabled ? "cashfree" : payMethod ?? (onlineEnabled ? "cashfree" : "wallet");
   const legalQ = useQuery({
     queryKey: ["legal-policies"],
     queryFn: () => apiClient.legal() as Promise<LegalPolicy[]>,
@@ -416,8 +434,13 @@ export default function BookService() {
     return true;
   }
 
+  // Only the latest request may set the quote: a slower reply to an earlier one (e.g. before the date was
+  // picked) must not replace it, or the screen shows a different total from the one charged.
+  const quoteRequest = useRef(0);
+
   async function loadQuote() {
     if (!svc) return;
+    const request = ++quoteRequest.current;
     setError(null);
     try {
       const q = await apiClient.quote({
@@ -431,8 +454,9 @@ export default function BookService() {
         country: mode === "virtual" ? customerCountry : undefined,
         mode,
       });
-      setQuote(q);
+      if (request === quoteRequest.current) setQuote(q);
     } catch (e: unknown) {
+      if (request !== quoteRequest.current) return;
       setError(e instanceof Error ? e.message : t("mobile.quoteFailed"));
     }
   }
@@ -454,15 +478,31 @@ export default function BookService() {
       setUnavailableMessage(result.message || null);
       return result.service_available;
     } catch (e: unknown) {
-      setServiceAvailable(false);
+      // A failed check (slow network, timeout) is "unknown", not "unavailable": marking it false greyed out
+      // Payment until the customer went Back and Next again. Pay re-checks, and the server enforces the area anyway.
+      setServiceAvailable(null);
       setError(e instanceof Error ? e.message : t("web.availability.errorBody"));
-      return false;
+      return true;
     }
   }
 
+  // A booking reopened from its saved draft jumps straight to step 3/4 without passing step 2's "Next", so the
+  // area check never ran and Payment looked available until the server refused it at "Pay & Book". Check once per
+  // service + location whenever we are past step 2 without a result.
+  const areaCheckedKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (step < 3 || mode !== "in_person" || lat == null || lng == null || !svc || serviceAvailable !== null) return;
+    const key = `${svc.id}:${lat}:${lng}`;
+    if (areaCheckedKey.current === key) return;
+    areaCheckedKey.current = key;
+    void checkPhysicalAvailability();
+  }, [step, mode, lat, lng, svc?.id, serviceAvailable]);
+
   async function submit() {
     if (!svc) return;
-    if (mode === "in_person" && serviceAvailable === false) {
+    // Re-check right before paying when the earlier check could not finish (same as web, which checks at submit).
+    const areaOk = mode === "in_person" && serviceAvailable === null ? await checkPhysicalAvailability() : serviceAvailable !== false;
+    if (mode === "in_person" && !areaOk) {
       setError(t("web.availability.bookingUnavailable"));
       return;
     }
@@ -533,7 +573,8 @@ export default function BookService() {
         });
       }
       const created = await apiClient.createBooking(
-        buildCreateBookingPayload({
+        {
+          ...buildCreateBookingPayload({
           service_id: svc.id,
           package_type: pkg,
           mode,
@@ -553,11 +594,20 @@ export default function BookService() {
           customer_country: customerCountry,
           customer_timezone: customerTimezone,
           idempotency_key: idempotencyKey,
-        }),
+          }),
+          payment_method: method === "cashfree" ? "cashfree" : undefined,
+        },
         idempotencyKey
       );
       await AsyncStorage.removeItem(`bseva.booking-draft.${slug}`);
-      router.replace(`/customer/booking/${(created as { id: string }).id}`);
+      const out = created as { id: string; payment_required?: boolean; payment?: import("@bseva/api-client").CheckoutSession };
+      if (out.payment_required && out.payment) {
+        // Not confirmed yet: the payment screen shows the server-verified result once the customer returns.
+        router.replace(`/customer/payment/${out.id}`);
+        await openHostedCheckout(out.id, out.payment);
+        return;
+      }
+      router.replace(`/customer/booking/${out.id}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t("mobile.bookingFailed"));
     } finally {
@@ -910,9 +960,12 @@ export default function BookService() {
                 {(cancellationPolicy?.points || []).map((p, i) => (
                   <AppText key={`${p.title || i}`} variant="small" color={colors.mutedForeground}>
                     {p.title ? `${p.title}: ` : ""}
-                    {p.body}
+                    {refundPointBody(p.body)}
                   </AppText>
                 ))}
+                <AppText variant="small">
+                  {t(refundDestinationKey(!walletEnabled ? "cashfree" : !onlineEnabled ? "wallet" : payMethod ?? "either"))}
+                </AppText>
               </View>
             </Card>
             <Card style={{ gap: 10 }}>
@@ -1060,13 +1113,29 @@ export default function BookService() {
         ) : null}
         {step === 4 ? (
           <>
-            <Card>
-              <AppText variant="small">{t("mobile.walletBalance")}</AppText>
-              <AppText variant="h2" color={colors.primary}>{rupees(Number(balance))}</AppText>
-              <AppText variant="small" color={colors.mutedForeground}>
-                {t("mobile.walletBookingHelp")}
-              </AppText>
-            </Card>
+            {onlineEnabled && walletEnabled ? (
+              <Card style={{ gap: 8 }}>
+                <AppText variant="small">{t("pay.method")}</AppText>
+                <OptionCard
+                  selected={method === "cashfree"}
+                  onPress={() => setPayMethod("cashfree")}
+                  title={t("pay.online")}
+                  subtitle={t("pay.onlineHint")}
+                />
+                <OptionCard selected={method === "wallet"} onPress={() => setPayMethod("wallet")} title={t("pay.wallet")} />
+              </Card>
+            ) : null}
+            {method === "wallet" ? (
+              <Card>
+                <AppText variant="small">{t("mobile.walletBalance")}</AppText>
+                <AppText variant="h2" color={colors.primary}>{rupees(Number(balance))}</AppText>
+                <AppText variant="small" color={colors.mutedForeground}>
+                  {t("mobile.walletBookingHelp")} {t("pay.refundToWallet")}
+                </AppText>
+              </Card>
+            ) : (
+              <AppText variant="small" color={colors.mutedForeground}>{t("pay.refundToOriginal")}</AppText>
+            )}
             {quote ? (
               <Card style={{ gap: 6 }}>
                 <AppText>{t("booking.service")} ({pkg === "premium" ? t("booking.premium") : t("booking.standard")}) {rupees(Number(quote.basePrice))}</AppText>
@@ -1090,8 +1159,16 @@ export default function BookService() {
               termsSlug="booking_terms"
               cancellationSlug="cancellation_policy"
             />
+            {serviceAvailable === false && mode === "in_person" ? (
+              <ErrorBanner message={unavailableMessage || t("web.availability.bookingUnavailable")} />
+            ) : null}
             <PrimaryButton title={t("mobile.back")} variant="outline" onPress={() => setStep(3)} />
-            <PrimaryButton title={pending ? t("mobile.booking") : t("mobile.payBook")} loading={pending} onPress={submit} />
+            <PrimaryButton
+              title={pending ? t("mobile.booking") : method === "cashfree" ? t("pay.payNow") : t("mobile.payBook")}
+              loading={pending}
+              disabled={serviceAvailable === false && mode === "in_person"}
+              onPress={submit}
+            />
           </>
         ) : null}
       </ScrollView>

@@ -82,6 +82,25 @@ def pujari_meets_required_level(approved_level, required_level) -> bool:
     return hierarchy_level_eligible(approved_level, required_level)
 
 
+# Approved levels are kept on profiles and shown to admins, but are NOT used when sending bookings to pujaris
+# (applied + admin-verified puja is what matters). Set True to bring the level rule back everywhere at once.
+DISPATCH_LEVEL_RULE_ENABLED = False
+
+
+def dispatch_level_ok(approved_level, required_level) -> bool:
+    """Level check used when offering or assigning a booking; always True while the rule is switched off."""
+    if not DISPATCH_LEVEL_RULE_ENABLED:
+        return True
+    return pujari_meets_required_level(approved_level, required_level)
+
+
+def dispatch_level_sql(column: str = "p.approved_level") -> str:
+    """SQL condition for the Level 1–4 hierarchy (`:lvl` = required level); empty while the rule is off."""
+    if not DISPATCH_LEVEL_RULE_ENABLED:
+        return ""
+    return f"AND {column} IS NOT NULL AND {column} >= :lvl"
+
+
 def filter_rows_for_required_level(rows, required_level):
     """Drop specialized providers from Level 1–4 results, and keep exact matches for Levels 5 and 6.
 
@@ -89,4 +108,4 @@ def filter_rows_for_required_level(rows, required_level):
     This filter only removes rows that the hierarchy comparison would otherwise accept
     because 5 and 6 are numerically greater.
     """
-    return [row for row in rows if pujari_meets_required_level(row.get("approved_level"), required_level)]
+    return [row for row in rows if dispatch_level_ok(row.get("approved_level"), required_level)]

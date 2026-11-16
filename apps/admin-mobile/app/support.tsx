@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import {
@@ -13,6 +13,7 @@ import { AppText, EmptyState, LoadingBlock, PrimaryButton, Screen } from "@/comp
 import { OPEN_TICKET_STATUSES } from "@/lib/supportLabels";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 export default function AdminSupport() {
   const { t } = useI18n();
@@ -23,6 +24,14 @@ export default function AdminSupport() {
     queryKey: ["support-tickets"],
     queryFn: () => apiClient.listSupportTickets(),
   });
+
+  const chats = useQuery({
+    queryKey: ["support-conversations"],
+    queryFn: () => apiClient.api<{ id: string; status?: string | null }[]>("/support/conversations"),
+  });
+  const liveChatOpen = (Array.isArray(chats.data) ? chats.data : []).filter(
+    (c) => !["closed", "resolved"].includes(String(c.status || "open"))
+  ).length;
 
   useEffect(() => {
     const next = typeof params.status === "string" ? params.status : "";
@@ -45,9 +54,14 @@ export default function AdminSupport() {
       <ScreenHeader title={t("admin.support")} back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isFetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => Promise.all([list.refetch(), chats.refetch()])} />}
         keyboardShouldPersistTaps="handled"
       >
+        <PrimaryButton
+          title={liveChatOpen > 0 ? `Live Chat (In-App) · ${liveChatOpen} open` : "Live Chat (In-App)"}
+          variant="navy"
+          onPress={() => router.push("/support/conversations")}
+        />
         <PrimaryButton title="+ Create Ticket" onPress={() => router.push("/support/create")} />
         <View style={{ gap: 8 }}>
           <AppText variant="small" style={{ fontWeight: "700" }}>

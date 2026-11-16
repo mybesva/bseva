@@ -9,7 +9,7 @@ from app.db import get_db
 from app.deps import current_user
 from app.domain import apply_wallet, row_dict
 from app.rbac import require_super_admin
-from app.schemas import WalletAdminCreditIn, WalletLoadIn
+from app.schemas import WalletAdminCreditIn, WalletLoadIn, WalletManualRefundIn
 from app.wallet_copy import public_wallet_description
 
 router = APIRouter(prefix="/wallet", tags=["wallet"])
@@ -38,10 +38,15 @@ def get_wallet(user=Depends(current_user), db: Session = Depends(get_db)):
         if d.get("note"):
             d["note"] = public_wallet_description(d.get("note"))
         out.append(d)
+    from app.customer_wallet import customer_wallet_enabled
+
+    wallet_on = customer_wallet_enabled(db) or user.get("role") != "customer"
     return {
         "wallet": row_dict(w),
         "transactions": out,
-        "self_topup_enabled": settings.wallet_self_topup_allowed,
+        "self_topup_enabled": settings.wallet_self_topup_allowed and wallet_on,
+        # Customer wallet switched off: customers pay online; any balance left is refunded by B-Seva.
+        "customer_wallet_enabled": wallet_on,
     }
 
 
@@ -51,6 +56,10 @@ def load_wallet(body: WalletLoadIn, user=Depends(current_user), db: Session = De
     # explicitly allowed (development/QA, or WALLET_SELF_TOPUP=unverified).
     if not settings.wallet_self_topup_allowed:
         raise HTTPException(403, SELF_TOPUP_DISABLED)
+    if user.get("role") == "customer":
+        from app.customer_wallet import require_customer_wallet
+
+        require_customer_wallet(db)
     try:
         bal = apply_wallet(db, str(user["id"]), body.amount_paise, "credit", "Wallet load")
     except ValueError as e:
@@ -80,6 +89,11 @@ def admin_credit_wallet(
     ).mappings().first()
     if not target:
         raise HTTPException(404, "User not found")
+    if target["role"] == "customer":
+        from app.customer_wallet import customer_wallet_enabled
+
+        if not customer_wallet_enabled(db):
+            raise HTTPException(400, "The customer wallet is switched off, so customer wallets cannot be credited.")
     sa.verify_challenge(
         db,
         admin,
@@ -129,5 +143,88 @@ def admin_credit_wallet(
         raise HTTPException(400, str(e))
     write_audit(db, str(admin["id"]), "wallet_admin_credit", "user", user_id, reason=reference)
     sa.log_event(db, admin, "wallet_credit", "success", amount_paise=body.amount_paise, reference=bound_reference, ip=ip)
+    db.commit()
+    return {"ok": True, "balance_paise": bal}
+
+
+# ---------------------------------------------------------------- customer wallet switched off: balances left
+
+
+@admin_router.get("/customer-balances")
+def customer_balances(admin=Depends(require_super_admin), db: Session = Depends(get_db)):
+    """Customers who still hold wallet money, to be paid back outside the app."""
+    rows = db.execute(
+        text(
+            """
+            SELECT u.id AS user_id, u.name, u.email, u.phone, w.balance_paise, w.status,
+                   (SELECT MAX(t.created_at) FROM wallet_transactions t WHERE t.wallet_id = w.id) AS last_activity_at,
+                   (SELECT COALESCE(SUM(r.amount_paise), 0) FROM wallet_manual_refunds r WHERE r.user_id = u.id) AS refunded_paise
+            FROM wallets w JOIN users u ON u.id = w.user_id
+            WHERE u.role = 'customer' AND w.balance_paise > 0
+            ORDER BY w.balance_paise DESC
+            LIMIT 500
+            """
+        )
+    ).mappings().all()
+    return {"items": [row_dict(r) for r in rows], "total_paise": sum(int(r["balance_paise"]) for r in rows)}
+
+
+@admin_router.get("/{user_id}/manual-refunds")
+def manual_refunds(user_id: str, admin=Depends(require_super_admin), db: Session = Depends(get_db)):
+    rows = db.execute(
+        text("SELECT * FROM wallet_manual_refunds WHERE user_id = CAST(:u AS uuid) ORDER BY created_at DESC"),
+        {"u": user_id},
+    ).mappings().all()
+    return [row_dict(r) for r in rows]
+
+
+@admin_router.post("/{user_id}/manual-refund")
+def record_manual_refund(
+    user_id: str,
+    body: WalletManualRefundIn,
+    admin=Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    """Record that B-Seva paid a customer's wallet balance back (UPI / bank) and take it off the wallet.
+
+    Never moves money itself. The reference is unique per customer, so a retried request cannot record the same
+    payment twice, and the amount can never exceed the balance."""
+    reference = body.reference.strip()
+    target = db.execute(
+        text("SELECT id, role FROM users WHERE id = CAST(:id AS uuid)"), {"id": user_id}
+    ).mappings().first()
+    if not target or target["role"] != "customer":
+        raise HTTPException(404, "Customer not found")
+    wallet = db.execute(
+        text("SELECT id, balance_paise FROM wallets WHERE user_id = CAST(:uid AS uuid) FOR UPDATE"), {"uid": user_id}
+    ).mappings().first()
+    if not wallet:
+        raise HTTPException(404, "Wallet not found")
+    if body.amount_paise > int(wallet["balance_paise"]):
+        raise HTTPException(400, "The amount is more than the customer's wallet balance")
+    duplicate = db.execute(
+        text("SELECT 1 FROM wallet_manual_refunds WHERE user_id = CAST(:u AS uuid) AND reference = :r"),
+        {"u": user_id, "r": reference},
+    ).first()
+    if duplicate:
+        raise HTTPException(409, "This payment reference is already recorded for this customer")
+    method_label = {"upi": "UPI", "bank_transfer": "bank transfer", "other": "offline payment"}[body.method]
+    try:
+        bal = apply_wallet(
+            db, user_id, -body.amount_paise, "debit", f"Wallet balance refunded by {method_label}", reference=reference,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    db.execute(
+        text(
+            """
+            INSERT INTO wallet_manual_refunds (user_id, amount_paise, method, reference, note, created_by)
+            VALUES (CAST(:u AS uuid), :amt, :m, :r, :n, CAST(:by AS uuid))
+            """
+        ),
+        {"u": user_id, "amt": body.amount_paise, "m": body.method, "r": reference,
+         "n": (body.note or "").strip() or None, "by": str(admin["id"])},
+    )
+    write_audit(db, str(admin["id"]), "wallet_manual_refund", "user", user_id, reason=reference)
     db.commit()
     return {"ok": True, "balance_paise": bal}

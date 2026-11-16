@@ -48,6 +48,6 @@ export function formatDisplaySlot(
 ): string {
   const d = formatDisplayDate(date, "");
   if (!d) return fallback;
-  const t = (time || "").toString().trim().slice(0, 8);
+  const t = (time || "").toString().trim().slice(0, 5);
   return t ? `${d} ${t}` : d;
 }

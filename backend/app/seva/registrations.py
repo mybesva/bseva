@@ -126,6 +126,28 @@ def create_registration(
         {"eid": event_id, "cid": customer_id},
     ).first()
     if dup:
+        pending = db.execute(
+            text(
+                """
+                SELECT * FROM seva_event_registrations
+                WHERE id = CAST(:id AS uuid) AND status = 'pending' AND payment_status = 'pending'
+                """
+            ),
+            {"id": str(dup[0])},
+        ).mappings().first()
+        if pending:
+            from app.payments import charges
+
+            open_charge = charges.open_charge_for(db, "seva_registration", str(dup[0]))
+            if open_charge:
+                customer = db.execute(
+                    text("SELECT id, name, email, phone, role FROM users WHERE id = CAST(:id AS uuid)"), {"id": customer_id}
+                ).mappings().one()
+                try:
+                    checkout = charges.resume_charge(db, str(open_charge["id"]), dict(customer))
+                except HTTPException as exc:
+                    raise RegistrationError("PAYMENT_CLOSED", str(exc.detail), 409) from exc
+                return {**row_dict(pending), "payment_required": True, "checkout": checkout}
         raise RegistrationError("DUPLICATE_REGISTRATION", "You are already registered for this event", 409)
 
     if not gotra_unknown and not (gotra or "").strip():
@@ -152,7 +174,14 @@ def create_registration(
     payment_status = "free" if amount == 0 else "pending"
     reg_status = "confirmed"
 
-    if amount > 0:
+    from app.customer_wallet import online_charges_required
+
+    # With the customer wallet off a paid registration holds its seat as 'pending' until the online payment is
+    # verified (app.payments.charges); an unpaid hold is released when the payment window closes.
+    pay_online = amount > 0 and online_charges_required(db)
+    if pay_online:
+        reg_status = "pending"
+    elif amount > 0:
         try:
             apply_wallet(
                 db,
@@ -229,11 +258,27 @@ def create_registration(
     if needs_online and event.get("online_enabled"):
         ensure_join_token(db, reg_id)
 
+    checkout = None
+    if pay_online:
+        from app.payments import charges
+
+        customer = db.execute(
+            text("SELECT id, name, email, phone, role FROM users WHERE id = CAST(:id AS uuid)"), {"id": customer_id}
+        ).mappings().one()
+        checkout = charges.start_charge(
+            db, purpose="seva_registration", customer=dict(customer), amount_paise=amount, subject_id=reg_id,
+            reference=reg_number,
+        )
+
     row = db.execute(
         text("SELECT * FROM seva_event_registrations WHERE id = CAST(:id AS uuid)"),
         {"id": reg_id},
     ).mappings().first()
-    return row_dict(row)
+    out = row_dict(row)
+    if checkout:
+        out["payment_required"] = True
+        out["checkout"] = checkout
+    return out
 
 
 def cancel_registration(db: Session, *, registration_id: str, customer_id: str) -> dict[str, Any]:
@@ -265,7 +310,14 @@ def cancel_registration(db: Session, *, registration_id: str, customer_id: str) 
         raise RegistrationError("EVENT_STARTED", "This seva has already started, so the registration can no longer be cancelled", 409)
 
     amount = int(row.get("total_amount_paise") or 0)
-    if amount > 0 and row.get("payment_status") == "paid":
+    from app.payments import charges
+
+    online = charges.paid_charge_for(db, "seva_registration", registration_id) if amount > 0 else None
+    if amount > 0 and row.get("payment_status") == "paid" and online:
+        from app.payments.service import queue_refund
+
+        queue_refund(db, online, amount, kind="cancellation", reason=f"Cancelled registration {row.get('registration_number')}")
+    elif amount > 0 and row.get("payment_status") == "paid":
         apply_wallet(
             db,
             customer_id,

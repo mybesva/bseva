@@ -3,11 +3,12 @@ import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import { RefreshControl, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { PujariDashboardSection } from "@/components/PujariDashboardSection";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { PujariQuickActions } from "@/components/PujariQuickActions";
 import { PujariPhotoPrompt } from "@/components/PujariPhotoPrompt";
+import { PujariPayoutConsentPrompt } from "@/components/PujariPayoutConsentPrompt";
 import { PujariStatGrid } from "@/components/PujariStatGrid";
 import { PujariTodaySchedule } from "@/components/PujariTodaySchedule";
 import { PujariVerificationAlert } from "@/components/PujariVerificationAlert";
@@ -27,6 +28,7 @@ import {
   pujariDashboardStats,
 } from "@/utils/pujariBookings";
 import { shouldShowPujariVerificationAlert } from "@/utils/pujariVerification";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type FeaturedSection = {
   title: string;
@@ -127,17 +129,22 @@ export default function PujariHome() {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, gap: 16, paddingBottom: 100 }}
         refreshControl={
-          <RefreshControl
-            refreshing={bookings.isRefetching || profile.isRefetching}
-            onRefresh={() => {
-              void bookings.refetch();
-              void profile.refetch();
-            }}
+          <PullToRefresh
+            onRefresh={() =>
+              Promise.all([
+                bookings.refetch(),
+                profile.refetch(),
+              ])
+            }
           />
         }
       >
         {profile.isLoading ? <LoadingBlock /> : null}
         <PujariPhotoPrompt profile={profile.data as Record<string, unknown> | undefined} />
+        <PujariPayoutConsentPrompt
+          profile={profile.data as Record<string, unknown> | undefined}
+          onDone={() => void profile.refetch()}
+        />
 
         <PujariWelcomeHero pujariName={pujariName} />
 

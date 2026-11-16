@@ -1,0 +1,24 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["67ZN9U655H.com.bseva.app"],
+        "components": [
+          { "/": "/my-bookings", "comment": "Customer: booking list" },
+          { "/": "/booking/*", "comment": "Customer: one booking" },
+          { "/": "/customer/*", "comment": "Customer screens" },
+          { "/": "/services", "comment": "Puja list (promotions)" },
+          { "/": "/services/*", "comment": "One puja, e.g. /services/diwali-puja (promotions)" },
+          { "/": "/book/*", "comment": "Book a puja" },
+          { "/": "/astrology", "comment": "Astrology" }
+        ]
+      },
+      {
+        "appIDs": ["67ZN9U655H.com.bseva.pujari"],
+        "components": [
+          { "/": "/pujari/*", "comment": "Pujari screens, e.g. /pujari/bookings/<id>" }
+        ]
+      }
+    ]
+  }
+}

@@ -11,7 +11,7 @@ import { spacing } from "@bseva/tokens";
 import type { MoreMenuIcon } from "@/components/MoreMenuRow";
 
 export default function AdminMore() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { can, badges } = useAdmin();
   const { t } = useI18n();
   const router = useRouter();
@@ -59,6 +59,14 @@ export default function AdminMore() {
     { href: "/settings", label: t("admin.settings"), show: can("manage_config"), icon: "settings-outline" },
     { href: "/support", label: t("admin.support"), show: can("manage_support"), icon: "help-circle-outline" },
     { href: "/legal", label: t("admin.legal"), show: can("manage_legal"), icon: "book-outline" },
+    { href: "/reports-queue", label: "User Reports", show: can(["view_complaints", "manage_complaints"]), icon: "flag-outline" },
+    {
+      href: "/account-deletions",
+      label: "Account Deletions",
+      show: can(["view_account_deletions", "manage_account_deletions"]),
+      icon: "person-remove-outline",
+    },
+    { href: "/security", label: "Security", show: user?.role === "super_admin", icon: "lock-closed-outline" },
     { href: "/head-ratings", label: t("admin.headRatings"), show: can("view_pujaris"), icon: "ribbon-outline" },
     { href: "/about", label: t("mobile.about"), show: true, icon: "information-circle-outline" },
   ];

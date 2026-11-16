@@ -1,4 +1,12 @@
-import { adminBookingDisplayStatus, assignmentEligibilityLead, displayTokenLabel } from "@bseva/config";
+import {
+  ASSIGN_SORT_OPTIONS,
+  adminBookingDisplayStatus,
+  assignmentEligibilityLead,
+  displayTokenLabel,
+  formatPujariDistance,
+  searchAndSortPujaris,
+  type AssignSort,
+} from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -123,6 +131,8 @@ export default function Bookings() {
   const [reassignFor, setReassignFor] = useState<any | null>(null);
   const [available, setAvailable] = useState<AvailableResponse | null>(null);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [pujariQuery, setPujariQuery] = useState("");
+  const [pujariSort, setPujariSort] = useState<AssignSort>("nearest");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [penaltyFor, setPenaltyFor] = useState<string | null>(null);
   const search = useSearch();
@@ -208,6 +218,8 @@ export default function Bookings() {
   async function openReassign(booking: any) {
     setReassignFor(booking);
     setAvailable(null);
+    setPujariQuery("");
+    setPujariSort("nearest");
     setLoadingAvailable(true);
     try {
       setAvailable(await api<AvailableResponse>(`/admin/bookings/${booking.id}/available-pujaris`));
@@ -533,9 +545,12 @@ export default function Bookings() {
                 </p>
 
                 {(() => {
-                  const nearby = available.nearby_pujaris ?? [];
-                  const other = available.other_pujaris ?? available.pujaris ?? [];
+                  const allNearby = available.nearby_pujaris ?? [];
+                  const allOther = available.other_pujaris ?? available.pujaris ?? [];
+                  const nearby = searchAndSortPujaris(allNearby, pujariQuery, pujariSort);
+                  const other = searchAndSortPujaris(allOther, pujariQuery, pujariSort);
                   const ring = available.primary_ring_km ?? 10;
+                  const searching = pujariQuery.trim().length > 0;
 
                   const renderPujari = (p: AvailablePujari) => {
                     const specializations = parseList(p.specializations);
@@ -555,9 +570,7 @@ export default function Bookings() {
                             )}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {p.distance_km != null
-                              ? `${p.distance_km} km away · `
-                              : "Distance unknown · "}
+                            {`${formatPujariDistance(p.distance_km)} · `}
                             {p.experience_years != null
                               ? `${p.experience_years} yrs experience`
                               : "Experience —"}
@@ -588,7 +601,32 @@ export default function Bookings() {
                     );
                   };
 
-                  if (nearby.length === 0 && other.length === 0) {
+                  const controls = (
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        value={pujariQuery}
+                        onChange={(e) => setPujariQuery(e.target.value)}
+                        placeholder="Search pujari by name, phone, area or puja"
+                        aria-label="Search pujaris"
+                        className="sm:flex-1"
+                        autoFocus
+                      />
+                      <Select value={pujariSort} onValueChange={(v) => setPujariSort(v as AssignSort)}>
+                        <SelectTrigger className="sm:w-48" aria-label="Sort pujaris">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ASSIGN_SORT_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+
+                  if (allNearby.length === 0 && allOther.length === 0) {
                     return (
                       <p className="text-sm text-muted-foreground py-6 text-center">
                         No eligible pujari is free for this slot.
@@ -596,15 +634,29 @@ export default function Bookings() {
                     );
                   }
 
+                  if (searching && nearby.length === 0 && other.length === 0) {
+                    return (
+                      <div className="space-y-3">
+                        {controls}
+                        <p className="text-sm text-muted-foreground py-6 text-center">
+                          No pujari matches “{pujariQuery.trim()}”.
+                        </p>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="space-y-5">
+                      {controls}
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-foreground">
                           Default — within {ring} km
                         </p>
                         {nearby.length === 0 ? (
                           <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                            No default pujari available within {ring} km.
+                            {searching && allNearby.length > 0
+                              ? `No pujari within ${ring} km matches this search.`
+                              : `No default pujari available within ${ring} km.`}
                           </p>
                         ) : (
                           nearby.map(renderPujari)

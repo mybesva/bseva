@@ -66,6 +66,9 @@ def booking_for_role(db: Session, booking: dict, user: dict) -> dict:
     """Return role/time-appropriate booking representation."""
     data = row_dict(booking) if not isinstance(booking, dict) else dict(booking)
     role = user.get("role")
+    if role in ("pujari", "head_pujari") and data.get("status") == "awaiting_payment":
+        # Not a booking yet for the pujari: it exists only once the customer's payment is verified.
+        raise PermissionError("awaiting_payment")
 
     def _finish() -> dict:
         from app.pujari_team import enrich_booking_pujari_team

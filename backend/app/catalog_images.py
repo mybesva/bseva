@@ -37,6 +37,21 @@ def seva_type_default_image(service_type: str | None) -> Path | None:
     return path if path.is_file() else None
 
 
+# Same slug aliases and default as the web (client/src/lib/serviceImage.ts), so a puja without its own cover
+# shows the same picture on the website and in the apps.
+SLUG_IMAGE_ALIASES = {
+    "hanuman-puja": "hanuman-jayanti.jpg",
+    "saraswati-puja": "saraswati-homam.jpg",
+}
+DEFAULT_SERVICE_IMAGE = "puja-thali.jpg"
+
+
+def default_service_image() -> Path | None:
+    root = public_images_root()
+    path = root / DEFAULT_SERVICE_IMAGE if root else None
+    return path if path and path.is_file() else None
+
+
 def catalog_image_file(slug: str | None, image_url: str | None, image_path: str | None) -> Path | None:
     names: list[str] = []
     for raw in (image_url, image_path):
@@ -48,6 +63,8 @@ def catalog_image_file(slug: str | None, image_url: str | None, image_path: str 
     if slug:
         for ext in (".jpg", ".jpeg", ".png", ".webp"):
             names.append(f"{slug}{ext}")
+        if slug in SLUG_IMAGE_ALIASES:
+            names.append(SLUG_IMAGE_ALIASES[slug])
     for directory in _DIRS:
         if not directory.is_dir():
             continue

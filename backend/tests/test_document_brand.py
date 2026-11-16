@@ -20,7 +20,7 @@ def test_html_document_wrap_includes_official_chrome():
         document_title="Samagri List",
         body_html="<p>Turmeric 100g</p>",
         reference="BK-9",
-        company={"legal_name": "BSeva Services Private Limited", "email": "support@b-seva.com"},
+        company={"legal_name": "B-SEVA PRIVATE LIMITED", "email": "support@b-seva.com"},
     )
     assert 'class="bseva-doc-watermark"' in html
     assert 'class="bseva-doc-viewport"' in html
@@ -73,7 +73,7 @@ def test_pdf_chrome_repeats_motto_and_page_numbers():
     pdf = build_bseva_pdf(
         [Paragraph("Page one content", styles["Normal"]), PageBreak(), Paragraph("Page two content", styles["Normal"])],
         document_title="Booking Confirmation",
-        company={"legal_name": "BSeva Services Private Limited", "email": "support@b-seva.com"},
+        company={"legal_name": "B-SEVA PRIVATE LIMITED", "email": "support@b-seva.com"},
     )
     raw = pdf.decode("latin-1", "replace")
     assert pdf.startswith(b"%PDF")
@@ -107,8 +107,8 @@ def test_render_invoice_pdf_from_snapshot_keeps_content_and_branding():
                 "start_time": "09:00:00",
                 "company": {
                     "brand_name": "BSeva",
-                    "legal_name": "BSeva Services Private Limited",
-                    "address": "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India",
+                    "legal_name": "B-SEVA PRIVATE LIMITED",
+                    "address": "Divyasree Holdings Pvt Ltd, Plot No. 5 & 43, HITEC City Layout, Madhapur, Shaikpet, Hyderabad – 500081, Telangana, India",
                     "email": "support@b-seva.com",
                     "website": "www.b-seva.com",
                     "gstin": "36AAAAA0000A1Z5",
@@ -120,7 +120,7 @@ def test_render_invoice_pdf_from_snapshot_keeps_content_and_branding():
                     "address": "1, Sample Street",
                     "city": "Hyderabad",
                     "state": "Telangana",
-                    "pincode": "500034",
+                    "pincode": "500081",
                     "phone": "9000000000",
                     "email": "customer@example.com",
                 },

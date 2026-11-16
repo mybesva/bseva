@@ -1,3 +1,4 @@
+import { mapNotificationLinkToMobile } from "@bseva/config";
 import { Linking } from "react-native";
 
 const PRODUCTION_SITE = "https://www.b-seva.com";
@@ -46,4 +47,51 @@ export async function openWebPage(url: string): Promise<void> {
 
 export function openLegal(key: LegalPathKey): Promise<void> {
   return openWebPage(legalUrl(key));
+}
+
+/** Website paths that have a matching app screen (via mapNotificationLinkToMobile). */
+const IN_APP_PATHS = [
+  /^\/services\/[^/]+$/,
+  /^\/services$/,
+  /^\/book\/[^/]+$/,
+  /^\/booking\/[^/]+$/,
+  /^\/my-bookings$/,
+  /^\/astrology$/,
+  /^\/customer(\/.*)?$/,
+  /^\/pujari(\/.*)?$/,
+];
+
+/** App screen for a B-Seva link (relative path or *.b-seva.com URL), or null when it should open in the browser. */
+export function inAppRouteForLink(link: string | null | undefined): string | null {
+  const raw = String(link || "").trim();
+  if (!raw) return null;
+  let path = raw;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const u = new URL(raw);
+      const host = u.hostname.toLowerCase();
+      if (host !== "b-seva.com" && !host.endsWith(".b-seva.com")) return null;
+      path = `${u.pathname}${u.search}`;
+    } catch {
+      return null;
+    }
+  } else if (!raw.startsWith("/")) {
+    return null;
+  }
+  const pathname = (path.split("?")[0] || "/").replace(/\/+$/, "") || "/";
+  if (!IN_APP_PATHS.some((re) => re.test(pathname))) return null;
+  if (pathname === "/services") return "/customer/services";
+  return mapNotificationLinkToMobile(path, "consumer");
+}
+
+/** Banners and popups: our own pages open inside the app, anything else in the browser. */
+export async function openPromoLink(link: string | null | undefined, push: (route: string) => void): Promise<void> {
+  const route = inAppRouteForLink(link);
+  if (route) {
+    push(route);
+    return;
+  }
+  const raw = String(link || "").trim();
+  if (!raw) return;
+  await openWebPage(raw.startsWith("/") ? `${resolveWebBase()}${raw}` : raw);
 }

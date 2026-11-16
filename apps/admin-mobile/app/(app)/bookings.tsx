@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@bseva/locales";
 import {
   ADMIN_ASSIGNMENT_FILTERS,
   ADMIN_BOOKING_STATUS_FILTERS,
@@ -11,7 +12,7 @@ import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -20,6 +21,7 @@ import { AppText, Card, EmptyState, ErrorBanner, Field, LoadingBlock, PrimaryBut
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type BookingRow = Booking & {
   customer_country?: string;
@@ -98,7 +100,7 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
       )}
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
         keyboardShouldPersistTaps="handled"
       >
         {isVirtual ? (
@@ -187,15 +189,15 @@ export default function AdminBookings({ mode = "physical" }: { mode?: string }) 
                       {(b.customer_country || "—") + " · " + (b.customer_timezone || "—")}
                     </AppText>
                     <AppText variant="small">
-                      Customer: {b.schedule_display?.customer_local || `${b.booking_date} ${b.start_time}`}
+                      Customer: {b.schedule_display?.customer_local || `${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)}`}
                     </AppText>
                     <AppText variant="small">
-                      India: {b.schedule_display?.india_local || `${b.booking_date} ${b.start_time} IST`}
+                      India: {b.schedule_display?.india_local || `${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)} IST`}
                     </AppText>
                   </>
                 ) : (
                   <AppText variant="small" color={colors.mutedForeground}>
-                    {b.booking_date} {b.start_time}
+                    {`${formatDisplayDate(b.booking_date)} ${String(b.start_time || "").slice(0, 5)}`}
                   </AppText>
                 )}
                 <AppText variant="small">

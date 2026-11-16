@@ -2,12 +2,13 @@ import { mapNotificationLinkToMobile } from "@bseva/config";
 import type { AppNotification } from "@bseva/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, EmptyState, ErrorBanner, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 export function NotificationsInbox({ app }: { app: "consumer" | "admin" }) {
   const { t } = useI18n();
@@ -41,12 +42,13 @@ export function NotificationsInbox({ app }: { app: "consumer" | "admin" }) {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl
-            refreshing={q.isRefetching}
-            onRefresh={() => {
-              void q.refetch();
-              void qc.invalidateQueries({ queryKey: ["notifications-unread"] });
-            }}
+          <PullToRefresh
+            onRefresh={() =>
+              Promise.all([
+                q.refetch(),
+                qc.invalidateQueries({ queryKey: ["notifications-unread"] }),
+              ])
+            }
           />
         }
       >

@@ -39,6 +39,8 @@ import AdminSMSTemplates from "./pages/admin/SMSTemplates";
 import AdminReports from "./pages/admin/Reports";
 import Book from "./pages/Book";
 import BookingConfirmation from "./pages/BookingConfirmation";
+import PaymentReturn from "./pages/PaymentReturn";
+import PaymentCheckout from "./pages/PaymentCheckout";
 import BookingReceipt from "./pages/BookingReceipt";
 import JoinMeetPage from "./pages/JoinMeetPage";
 import MyBookings from "./pages/MyBookings";
@@ -166,6 +168,8 @@ function Router() {
       <Route path="/my-bookings" component={MyBookings} />
       <Route path="/booking/:id" component={BookingReceipt} />
       <Route path="/booking-confirmation" component={BookingConfirmation} />
+      <Route path="/payment/return" component={PaymentReturn} />
+      <Route path="/payment/checkout" component={PaymentCheckout} />
       <Route path="/services/:slug" component={ServiceDetail} />
       <Route path="/services" component={Services} />
       <Route path="/seva/events/:id" component={SevaEventDetail} />

@@ -5,6 +5,7 @@ psycopg[binary]==3.2.6
 pydantic==2.11.3
 pydantic-settings==2.8.1
 email-validator==2.2.0
+dnspython==2.8.0  # email domain check before sign-up OTP (app.email_domain)
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 PyJWT==2.10.1
@@ -14,6 +15,7 @@ reportlab==4.4.1
 pillow>=10.1,<13
 playwright==1.51.0
 httpx==0.28.1
+h2==4.2.0  # HTTP/2 for APNs (app.services.apns_push)
 google-auth==2.40.3
 google-auth-oauthlib==1.2.2
 google-auth-httplib2==0.2.0

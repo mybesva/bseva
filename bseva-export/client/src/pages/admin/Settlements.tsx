@@ -35,6 +35,7 @@ import { api, rupees } from "@/lib/api";
 import { formatDisplayDate, lastNDaysRange } from "@/lib/formatDate";
 import { adminPath } from "@/const";
 import { toast } from "sonner";
+import PayoutDialog from "@/components/admin/PayoutDialog";
 import {
   AdminPager,
   BOOKING_PAGE_SIZES,
@@ -60,6 +61,7 @@ export default function AdminSettlements() {
   const [loading, setLoading] = useState(true);
   const [holdDays, setHoldDays] = useState(3);
   const [active, setActive] = useState<any | null>(null);
+  const [payoutFor, setPayoutFor] = useState<any | null>(null);
   const [reason, setReason] = useState("");
   const [ref, setRef] = useState("");
   const [saving, setSaving] = useState(false);
@@ -403,11 +405,17 @@ export default function AdminSettlements() {
                 <TableCell title={s.processed_by_email || undefined}>{settledBy(s, s.processed_by_name)}</TableCell>
                 <TableCell title={s.approved_by_email || undefined}>{settledBy(s, s.approved_by_name)}</TableCell>
                 <TableCell>
-                  {s.status !== "settled" && s.status !== "blocked" && (
-                    <Button size="sm" variant="outline" onClick={() => setActive(s)}>
-                      Settle / Override
-                    </Button>
+                  {["pending", "eligible"].includes(s.status) && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setActive(s)}>
+                        Settle / Override
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setPayoutFor(s)}>
+                        Pay to bank
+                      </Button>
+                    </div>
                   )}
+                  {s.status === "processing" && <span className="text-xs text-muted-foreground">Bank payout in progress</span>}
                 </TableCell>
               </TableRow>
             ))}
@@ -487,6 +495,7 @@ export default function AdminSettlements() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <PayoutDialog settlement={payoutFor} onClose={() => setPayoutFor(null)} onDone={() => void load()} />
     </AdminLayout>
   );
 }

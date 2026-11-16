@@ -381,6 +381,14 @@ export {
 } from "./pujariSpecializations";
 export { dateInputToIsoEnd, dateInputToIsoStart } from "./isoDateBounds";
 export {
+  ASSIGN_SORT_OPTIONS,
+  formatPujariDistance,
+  pujariMatchesQuery,
+  searchAndSortPujaris,
+  type AssignablePujari,
+  type AssignSort,
+} from "./pujariAssign";
+export {
   PUJARI_JOB_SEGMENTS,
   bookingStartAt,
   isExpiredBooking,
@@ -466,3 +474,6 @@ export {
   type PanchangCalendarType,
   type PanchangDateParts,
 } from "./panchangDisplay";
+
+// Legal documents shown on the website and in the apps (one source, same text everywhere).
+export * from "./legal";

@@ -1,9 +1,10 @@
+import { openPromoLink } from "@/utils/webLinks";
 import { pujaServicesOnly } from "@bseva/config";
 import type { Booking, CatalogService } from "@bseva/types";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { Image, Linking, Pressable, RefreshControl, ScrollView } from "react-native";
+import { Image, Pressable, ScrollView } from "react-native";
 import { CustomerWelcomeHero, customerGreetingName } from "@/components/CustomerWelcomeHero";
 import { PanchangCard } from "@/components/PanchangCard";
 import { HomeBrandBar } from "@/components/ScreenHeader";
@@ -21,12 +22,14 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 export default function CustomerHome() {
   const { user } = useAuth();
   const { t, lang } = useI18n();
   const { colors } = useAppTheme();
   const router = useRouter();
+  const qc = useQueryClient();
   const bookings = useQuery({ queryKey: ["bookings"], queryFn: () => apiClient.listBookings() });
   const services = useQuery({ queryKey: ["services", lang], queryFn: () => apiClient.listServices() });
   const recs = useQuery({ queryKey: ["recommendations"], queryFn: () => apiClient.recommendations() });
@@ -83,15 +86,20 @@ export default function CustomerHome() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl
-            refreshing={bookings.isRefetching || profile.isRefetching || availability.isRefetching}
-            onRefresh={() => {
-              void bookings.refetch();
-              void services.refetch();
-              void profile.refetch();
-              void availability.refetch();
-              void config.refetch();
-            }}
+          <PullToRefresh
+            onRefresh={() =>
+              Promise.all([
+                bookings.refetch(),
+                services.refetch(),
+                profile.refetch(),
+                availability.refetch(),
+                config.refetch(),
+                // Banners, recommendations and the seasonal popup change from admin, so reload them too.
+                banners.refetch(),
+                recs.refetch(),
+                qc.invalidateQueries({ queryKey: ["promo-popups"] }),
+              ])
+            }
           />
         }
       >
@@ -131,7 +139,7 @@ export default function CustomerHome() {
           <Pressable
             key={banner.id}
             disabled={!banner.target_url}
-            onPress={() => banner.target_url ? void Linking.openURL(banner.target_url) : undefined}
+            onPress={() => void openPromoLink(banner.target_url, (route) => router.push(route as never))}
           >
             <Card style={{ overflow: "hidden", gap: 8 }}>
               {banner.image_url ? (

@@ -24,6 +24,7 @@ import { gapTranslations } from "./resources/gapTranslations";
 import { mlCustomer } from "./resources/mlCustomer";
 import { mlCatalog } from "./resources/mlCatalog";
 import { sevaLocales } from "./resources/seva";
+import { paymentLocales } from "./resources/payments";
 
 export {
   DEFAULT_LANG,
@@ -82,6 +83,7 @@ const base: Record<string, string> = {
   ...servicesPageRedesign.en,
   ...mobileWelcome.en,
   ...sevaLocales.en,
+  ...paymentLocales.en,
 };
 
 function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): Record<string, string> {
@@ -106,12 +108,12 @@ function localeDict(lang: Exclude<Lang, "en">, locale: Record<string, string>): 
 }
 
 export const localeOverrides: Record<Exclude<Lang, "en">, Record<string, string>> = {
-  hi: { ...localeDict("hi", hi), ...sevaLocales.hi },
-  te: { ...localeDict("te", te), ...sevaLocales.te },
-  mr: { ...localeDict("mr", mr), ...sevaLocales.mr },
-  kn: { ...localeDict("kn", kn), ...sevaLocales.kn },
-  ta: { ...localeDict("ta", ta), ...sevaLocales.ta },
-  ml: { ...localeDict("ml", {}), ...mlCatalog, ...mlCustomer, ...sevaLocales.ml },
+  hi: { ...localeDict("hi", hi), ...sevaLocales.hi, ...paymentLocales.hi },
+  te: { ...localeDict("te", te), ...sevaLocales.te, ...paymentLocales.te },
+  mr: { ...localeDict("mr", mr), ...sevaLocales.mr, ...paymentLocales.mr },
+  kn: { ...localeDict("kn", kn), ...sevaLocales.kn, ...paymentLocales.kn },
+  ta: { ...localeDict("ta", ta), ...sevaLocales.ta, ...paymentLocales.ta },
+  ml: { ...localeDict("ml", {}), ...mlCatalog, ...mlCustomer, ...sevaLocales.ml, ...paymentLocales.ml },
 };
 
 export const dictionaries: Record<Lang, Record<string, string>> = {

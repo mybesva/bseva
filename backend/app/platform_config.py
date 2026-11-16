@@ -27,8 +27,20 @@ _DEFAULTS: dict[str, Any] = {
     "reschedule_performance_min_rating": 4,
     "reschedule_performance_fee_paise": 0,
     "customer_platform_fee_paise": 900,
+    # Gateway fee added to customer bills. One name + percentage per gateway; customer_fee_gateway picks which
+    # applies: "auto" (the gateway that collects payments, i.e. PAYMENT_GATEWAY), "cashfree" or "razorpay".
+    # payment_gateway_name / payment_gateway_fee_percent are the Razorpay entry (their original keys).
     "payment_gateway_name": "Razorpay",
     "payment_gateway_fee_percent": 2,
+    "cashfree_fee_name": "Cashfree",
+    "cashfree_fee_percent": 2,
+    "customer_fee_gateway": "auto",
+    # Customer wallet: when off, customers pay only through the payment gateway (no wallet payments, top-ups
+    # or wallet rewards). Pujari wallets are not affected. Not set (None) = automatic: off wherever an online gateway
+    # is configured, on only where there is none (app.customer_wallet). A Super Admin may set it either way.
+    "customer_wallet_enabled": None,
+    # Bank payouts go only to pujari bank / UPI details verified with Cashfree Secure ID (Super Admin only).
+    "payout_require_verified_details": True,
     "loyalty_pujari_puja_count": 10,
     "loyalty_pujari_reward_paise": 50000,
     "loyalty_pujari_active": True,
@@ -59,13 +71,13 @@ _DEFAULTS: dict[str, Any] = {
     "email_from_info": "info@b-seva.com",
     "email_from_contact": "contact@b-seva.com",
     "invoice_brand_name": "BSeva",
-    "invoice_company_name": "BSeva Services Private Limited",
-    "invoice_company_address": "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India",
+    "invoice_company_name": "B-SEVA PRIVATE LIMITED",
+    "invoice_company_address": "Divyasree Holdings Pvt Ltd, Plot No. 5 & 43, HITEC City Layout, Madhapur, Shaikpet, Hyderabad – 500081, Telangana, India",
     "invoice_company_state": "Telangana",
-    "invoice_company_pincode": "500034",
+    "invoice_company_pincode": "500081",
     "invoice_company_email": "support@b-seva.com",
     "invoice_company_phone": "",
-    "invoice_gstin": "",
+    "invoice_gstin": "36AAPCB2396C1ZK",
     "invoice_pan": "",
     "invoice_website": "www.b-seva.com",
     "invoice_logo_path": "",

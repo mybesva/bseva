@@ -13,6 +13,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useI18n } from "@/i18n/I18nProvider";
 import { api, rupees } from "@/lib/api";
+import { startChargeCheckoutIfRequired, type ChargeRequired } from "@/lib/cashfreeCheckout";
 import { formatDisplayDateTime } from "@/lib/formatDate";
 import { sevaErrorMessage } from "@/lib/sevaErrors";
 import { goBackOr } from "@/lib/browserActions";
@@ -85,8 +86,11 @@ export default function SevaEventDetail() {
     if (!isAuthenticated || user?.role !== "customer" || !eventId) return;
     api<SevaRegistration[]>("/seva/my-registrations")
       .then((rows) => {
+        // A 'pending' registration is waiting for its online payment: keep the form, since registering again
+        // resumes that same payment.
         const mine = (Array.isArray(rows) ? rows : []).some(
-          (r) => String(r.event_id) === eventId && !["cancelled", "refunded"].includes(String(r.status || ""))
+          (r) =>
+            String(r.event_id) === eventId && !["cancelled", "refunded", "pending"].includes(String(r.status || ""))
         );
         if (mine) setRegistered(true);
       })
@@ -132,7 +136,7 @@ export default function SevaEventDetail() {
 
     setSubmitting(true);
     try {
-      await api(`/seva/events/${encodeURIComponent(event.id)}/register`, {
+      const res = await api<ChargeRequired>(`/seva/events/${encodeURIComponent(event.id)}/register`, {
         method: "POST",
         body: JSON.stringify({
           participation_mode: participationMode,
@@ -145,6 +149,12 @@ export default function SevaEventDetail() {
           idempotency_key: crypto.randomUUID(),
         }),
       });
+      if (res?.payment_required && res.checkout) {
+        // Confirmed only after the server verifies the online payment (back on /payment/return).
+        toast.message(t("pay.redirecting"));
+        await startChargeCheckoutIfRequired(res, setLocation);
+        return;
+      }
       setRegistered(true);
       toast.success(t("seva.registrationConfirmed"));
       setLocation(`/customer/bookings?type=${sevaTypeFilter(event?.service_type)}`);

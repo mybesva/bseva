@@ -181,9 +181,8 @@ Legal content shape:
 ```ts
 export type LegalDoc = {
   slug: string; title: string; version: string;
-  effectiveDate: string;                 // "{{TO_CONFIRM: effective date}}" until confirmed
+  effectiveDate: string;                 // e.g. "4 November 2026"
   intro?: string[];
   sections: { id: string; heading: string; paragraphs?: string[]; bullets?: string[]; table?: string[][] }[];
-  toConfirm: string[];                   // list of unconfirmed items shown in a banner on QA
 };
 ```

@@ -416,8 +416,8 @@ _FOUNDATION_STMTS = [
       ALTER TABLE bookings ADD CONSTRAINT bookings_status_check
         CHECK (status IN (
           'pending', 'pending_acceptance', 'confirmed', 'in_progress',
-          'completed', 'cancelled', 'rejected'
-        ));
+          'completed', 'cancelled', 'rejected', 'awaiting_payment'
+        )) NOT VALID;
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$
     """,
@@ -1226,10 +1226,11 @@ def _seed_platform_settings(conn) -> None:
         "pujari_no_show_penalty_enabled": True,
         "assign_distance_rings_km": [10, 15, 20, 30],
         "invoice_brand_name": "BSeva",
-        "invoice_company_name": "BSeva Services Private Limited",
-        "invoice_company_address": "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India",
+        "invoice_company_name": "B-SEVA PRIVATE LIMITED",
+        "invoice_company_address": "Divyasree Holdings Pvt Ltd, Plot No. 5 & 43, HITEC City Layout, Madhapur, Shaikpet, Hyderabad – 500081, Telangana, India",
         "invoice_company_state": "Telangana",
-        "invoice_company_pincode": "500034",
+        "invoice_company_pincode": "500081",
+        "invoice_gstin": "36AAPCB2396C1ZK",
         "invoice_company_email": "support@b-seva.com",
         "invoice_website": "www.b-seva.com",
         "invoice_prefix_customer": "BSEVA",
@@ -1262,7 +1263,7 @@ def _seed_platform_settings(conn) -> None:
         ),
         {"v": json.dumps(20)},
     )
-    addr = "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India"
+    addr = "Divyasree Holdings Pvt Ltd, Plot No. 5 & 43, HITEC City Layout, Madhapur, Shaikpet, Hyderabad – 500081, Telangana, India"
     conn.execute(
         text(
             """
@@ -1286,7 +1287,7 @@ def _seed_platform_settings(conn) -> None:
               AND btrim(COALESCE(value #>> '{}', '')) IN ('', 'B-Seva', 'BSeva')
             """
         ),
-        {"v": json.dumps("BSeva Services Private Limited")},
+        {"v": json.dumps("B-SEVA PRIVATE LIMITED")},
     )
     conn.execute(
         text(

@@ -5,10 +5,12 @@ import type { CatalogService } from "@bseva/types";
 import { rupees } from "@bseva/config";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
-import { AppText, Card } from "@/components/ui";
+import { AppText, Card, PrimaryButton } from "@/components/ui";
 import { formatPujaTitleText } from "@bseva/locales";
 import { PujaTitle } from "@/components/PujaTitle";
 import { useI18n } from "@/providers/I18nProvider";
+import { useAuth } from "@/providers/AuthProvider";
+import { useRouter } from "expo-router";
 
 type Svc = { slug?: string; image_url?: string | null; image_path?: string | null; service_type?: string | null };
 
@@ -117,28 +119,60 @@ export function PujaServiceCard({
 }) {
   const { colors } = useAppTheme();
   const { t } = useI18n();
+  const { user } = useAuth();
+  const router = useRouter();
+  // Same rule as the service page: guests sign in first, customers go straight to booking.
+  const bookNow = () => {
+    if (!user) router.push({ pathname: "/login", params: { role: "customer" } });
+    else router.push(`/customer/book/${service.slug}`);
+  };
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={formatPujaTitleText(service.name)}>
-      <Card style={{ padding: 0, overflow: "hidden" }}>
+    // Orange outline so each puja card stands apart from the next one in a long list.
+    <Card style={{ padding: 0, overflow: "hidden", borderWidth: 1.5, borderColor: colors.primary }}>
+      {/* Image, title, price and description open the service page; Book Now sits outside this tap area. */}
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={formatPujaTitleText(service.name)}>
         <PujaImage service={service} height={168} imageStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }} />
-        <View style={{ padding: 12, gap: 4 }}>
+        <View style={{ paddingHorizontal: 12, paddingTop: 12, gap: 4 }}>
           <PujaTitle name={service.name} />
-          {service.short_description || service.description ? (
-            <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
-              {service.short_description || service.description}
-            </AppText>
-          ) : null}
+          {/* Same order and wording as the website card: price, then description with Read More. */}
           {service.standard_price_paise != null ? (
-            <AppText color={colors.primary} style={{ fontWeight: "700", marginTop: 2 }}>
-              {t("customer.from")} {rupees(service.standard_price_paise)}
+            <AppText color={colors.primary} style={{ fontWeight: "700" }}>
+              {t("services.startingFrom")} {rupees(service.standard_price_paise)}
             </AppText>
           ) : (
-            <AppText variant="small" color={colors.mutedForeground}>
+            <AppText variant="small" style={{ fontWeight: "700" }} color={colors.mutedForeground}>
               {t("services.comingSoonLabel")}
             </AppText>
           )}
+          {service.short_description || service.description ? (
+            <View style={{ gap: 2 }}>
+              <AppText variant="small" color={colors.mutedForeground} numberOfLines={2}>
+                {service.short_description || service.description}
+              </AppText>
+              <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={{ alignSelf: "flex-start" }}>
+                <AppText variant="small" color={colors.primary} style={{ fontWeight: "700" }}>
+                  {t("services.readMore")}
+                </AppText>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
-      </Card>
-    </Pressable>
+      </Pressable>
+      <View style={{ paddingHorizontal: 12, paddingBottom: 12, paddingTop: 8 }}>
+        {/* Book straight from the card, like the website card, so nobody has to open and scroll the service page. */}
+        {service.bookable ? (
+          <PrimaryButton title={t("customer.bookNow")} onPress={bookNow} />
+        ) : service.standard_price_paise != null ? (
+          // Priced but not bookable yet: the website card shows "Coming Soon" in the button's place.
+          <AppText
+            variant="small"
+            color={colors.warning}
+            style={{ textAlign: "center", fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 }}
+          >
+            {t("services.comingSoonLabel")}
+          </AppText>
+        ) : null}
+      </View>
+    </Card>
   );
 }

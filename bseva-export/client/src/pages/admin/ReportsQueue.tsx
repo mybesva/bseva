@@ -59,7 +59,7 @@ type HistoryItem = {
   to_status?: string | null;
   actor_name?: string | null;
   note?: string | null;
-  detail?: string | null;
+  detail?: unknown;
   resolution?: string | null;
   created_at: string;
 };
@@ -461,7 +461,7 @@ function ReportDetailView({ id }: { id: string }) {
                       {formatDisplayDateTime(h.created_at)} · {h.actor_name || "System"}
                     </p>
                     {h.resolution ? <p className="mt-1">Resolution: {h.resolution}</p> : null}
-                    {h.note || h.detail ? <p className="mt-1 whitespace-pre-line">{h.note || h.detail}</p> : null}
+                    {h.note || formatEventDetail(h.detail) ? <p className="mt-1 whitespace-pre-line">{h.note || formatEventDetail(h.detail)}</p> : null}
                   </li>
                 );
               })}
@@ -473,6 +473,17 @@ function ReportDetailView({ id }: { id: string }) {
       </Card>
     </div>
   );
+}
+
+/** History "detail" is JSONB on the server ({reason, source, deadline, ...}); show it as readable text, never as an object. */
+function formatEventDetail(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value !== "object") return String(value);
+  return Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v != null && v !== "" && !(typeof v === "object" && !Object.keys(v as object).length))
+    .map(([k, v]) => `${k.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+    .join("\n");
 }
 
 export default function ReportsQueuePage() {

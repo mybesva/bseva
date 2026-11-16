@@ -211,12 +211,37 @@ def customer_fee_settings(db: Session) -> dict:
         platform = max(0, int(get_setting(db, "customer_platform_fee_paise", 900)))
     except (TypeError, ValueError):
         platform = 900
+    fee = gateway_fee_entry(db, applied_fee_gateway(db))
+    return {"platform_fee_paise": platform, "gateway_fee_percent": fee["percent"], "gateway_name": fee["name"]}
+
+
+# Gateway fee entries Super Admin edits: (name setting, percent setting, default name).
+GATEWAY_FEE_KEYS = {
+    "cashfree": ("cashfree_fee_name", "cashfree_fee_percent", "Cashfree"),
+    "razorpay": ("payment_gateway_name", "payment_gateway_fee_percent", "Razorpay"),
+}
+
+
+def gateway_fee_entry(db: Session, key: str) -> dict:
+    name_key, percent_key, default_name = GATEWAY_FEE_KEYS.get(key, GATEWAY_FEE_KEYS["razorpay"])
     try:
-        percent = min(100.0, max(0.0, float(get_setting(db, "payment_gateway_fee_percent", 2))))
+        percent = min(100.0, max(0.0, float(get_setting(db, percent_key, 2))))
     except (TypeError, ValueError):
         percent = 2.0
-    name = str(get_setting(db, "payment_gateway_name", "Razorpay") or "").strip() or "Payment Gateway"
-    return {"platform_fee_paise": platform, "gateway_fee_percent": percent, "gateway_name": name}
+    name = str(get_setting(db, name_key, default_name) or "").strip() or default_name
+    return {"key": key, "name": name, "percent": percent}
+
+
+def applied_fee_gateway(db: Session) -> str:
+    """Which gateway's fee customers pay. "auto" follows the gateway collecting payments (PAYMENT_GATEWAY)
+    and, with none configured, keeps the Razorpay entry customers were charged before."""
+    chosen = str(get_setting(db, "customer_fee_gateway", "auto") or "auto").strip().lower()
+    if chosen in GATEWAY_FEE_KEYS:
+        return chosen
+    from app.payments.providers import active_gateway
+
+    provider = active_gateway()
+    return provider.name if provider and provider.name in GATEWAY_FEE_KEYS else "razorpay"
 
 
 def compute_quote(

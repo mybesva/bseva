@@ -67,7 +67,9 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                         body = f"Reminder: {service_name} ({booking_num}) is within {hours_ahead} hours."
                         cat = "booking_reminder"
                     from app.routers.notifications import create_notification, pujari_booking_link
+                    from app.whatsapp import msg91
 
+                    msg91.notify(session, "pujari_booking_reminder", b["id"], b["pujari_id"])
                     create_notification(
                         session,
                         user_id=str(b["pujari_id"]),
@@ -101,7 +103,9 @@ def send_upcoming_booking_reminders(db: Session | None = None, hours_ahead: int 
                 ).first()
                 if not c_exists:
                     from app.routers.notifications import create_notification
+                    from app.whatsapp import msg91
 
+                    msg91.notify(session, "booking_reminder", b["id"], b["customer_id"])
                     create_notification(
                         session,
                         user_id=str(b["customer_id"]),
@@ -320,7 +324,10 @@ def notify_location_unlocked(db: Session | None = None) -> dict:
                 continue
             from app.routers.notifications import create_notification, pujari_booking_link
 
+            from app.whatsapp import msg91
+
             num = b.get("booking_number") or str(b["id"])[:8]
+            msg91.notify(session, "pujari_location_available", b["id"], b["pujari_id"])
             create_notification(
                 session,
                 user_id=str(b["pujari_id"]),

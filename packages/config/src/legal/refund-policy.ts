@@ -1,5 +1,5 @@
+import type { LegalDoc } from "./types";
 import {
-  CIN,
   COMPANY,
   EFFECTIVE_DATE,
   GSTIN,
@@ -9,8 +9,6 @@ import {
   REGISTERED_OFFICE,
   SUPPORT_EMAIL,
   grievanceTable,
-  toConfirm,
-  withToConfirm,
 } from "./shared";
 
 /**
@@ -18,13 +16,13 @@ import {
  * backend/app/platform_config.py, backend/app/booking_reschedule.py, backend/app/no_show.py).
  * They are admin-configurable, so the live values must be checked in Admin → Settings before publishing.
  */
-export const refundPolicy = withToConfirm({
+export const refundPolicy: LegalDoc = {
   slug: "refund-policy",
   title: "Cancellation & Refund Policy",
   version: LEGAL_VERSION,
   effectiveDate: EFFECTIVE_DATE,
   intro: [
-    `Operated by: ${COMPANY}. CIN: ${CIN}. Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Customer support: ${PHONE} | ${SUPPORT_EMAIL}. Partner support: ${PARTNER_EMAIL}`,
+    `Operated by: ${COMPANY}. Registered office: ${REGISTERED_OFFICE}. GSTIN: ${GSTIN}. Customer support: ${PHONE} | ${SUPPORT_EMAIL}. Partner support: ${PARTNER_EMAIL}`,
     "This Cancellation & Refund Policy forms part of the B-Seva Customer Terms & Conditions and the Pujari / Service Provider Terms & Conditions. It explains what happens when a Booking is cancelled, rescheduled, or not performed, and how refunds are made. Capitalised terms have the meaning given in those terms.",
   ],
   sections: [
@@ -62,7 +60,7 @@ export const refundPolicy = withToConfirm({
       heading: "3. Rescheduling by the Customer",
       paragraphs: [
         "You can reschedule a paid Booking that is waiting for a Pujari or confirmed, to a new date and time, up to 48 hours before the scheduled start. Rescheduling closes 48 hours before the puja starts; after that, you can cancel under Section 2 or contact support.",
-        `A rescheduling fee may apply. Any fee is shown to you before you confirm the new date and time. ${toConfirm("rescheduling fee amounts (first and subsequent reschedule) currently configured in Admin settings")}`,
+        `A rescheduling fee may apply. Any fee is shown to you before you confirm the new date and time. The fee depends on how many times the Booking has been rescheduled and is set by B-Seva.`,
         "When you reschedule, the Booking may be offered again to available Pujaris for the new date and time.",
       ],
     },
@@ -94,14 +92,14 @@ export const refundPolicy = withToConfirm({
       paragraphs: [
         "If the assigned Pujari does not arrive or connect for a confirmed Booking, please report it promptly in the app or to support. A Pujari no-show may be marked by B-Seva or, after a grace period of 2 hours from the scheduled start, automatically. B-Seva may review and waive a no-show where the Pujari shows a genuine reason.",
         "For a no-show, 100% of that puja’s cost is deducted from the Pujari’s wallet, and the Pujari’s settlement for that Booking is held.",
-        `For the Customer, B-Seva will offer a substitute Pujari, a new date, a credit, or a full refund of the amount paid for the affected Booking to your B-Seva wallet. ${toConfirm("Customer remedy and refund process for a Pujari no-show")}`,
+        `For the Customer, B-Seva will offer a substitute Pujari, a new date, a credit, or a full refund of the amount paid for the affected Booking to your B-Seva wallet. You choose the option you prefer.`,
       ],
     },
     {
       id: "customer-no-show",
       heading: "6. Customer not available or Service Location unsuitable",
       paragraphs: [
-        `If you are not present, deny access, provide an unsafe Service Location, or do not provide required information or facilities, a cancellation or no-show charge may apply. ${toConfirm("Customer no-show charge")}`,
+        `If you are not present, deny access, provide an unsafe Service Location, or do not provide required information or facilities, a cancellation or no-show charge may apply. The charge can be up to the full amount paid for the Booking, depending on how much of the Service was prepared or performed.`,
       ],
     },
     {
@@ -119,7 +117,7 @@ export const refundPolicy = withToConfirm({
         "Refunds are credited to your B-Seva wallet. A refund for a cancellation you make in the Platform is credited when the cancellation is recorded, and you receive a notification and a refund email.",
         "Where a tax invoice was issued for the Booking, B-Seva issues a credit note for the refunded amount.",
         "You can use your wallet balance for future Bookings.",
-        `You can ask support to return an unused wallet balance to your bank account. ${toConfirm("process and timing for returning unused wallet balance to a bank account")} Your bank may take additional time to credit the amount.`,
+        `You can ask support to return an unused wallet balance to your bank account. We process the request within 7 working days of verifying your bank details. Your bank may take additional time to credit the amount.`,
         "Refunds that B-Seva approves after a complaint, a B-Seva cancellation, or a no-show are credited to your wallet once approved.",
       ],
     },
@@ -147,4 +145,4 @@ export const refundPolicy = withToConfirm({
       ],
     },
   ],
-});
+};

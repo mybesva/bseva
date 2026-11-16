@@ -2,6 +2,9 @@ import { displayTokenLabel } from "@bseva/config";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
+import GatewayPaymentsPanel from "@/components/admin/GatewayPaymentsPanel";
+import CustomerWalletBalancesPanel from "@/components/admin/CustomerWalletBalancesPanel";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { PujaTitle } from "@/components/PujaTitle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +52,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Payments() {
+  const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -139,6 +143,8 @@ export default function Payments() {
 
   return (
     <AdminLayout>
+      <GatewayPaymentsPanel />
+      {user?.role === "super_admin" && <CustomerWalletBalancesPanel />}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <div>
           <p className="text-sm text-muted-foreground">Live booking payments from the database</p>

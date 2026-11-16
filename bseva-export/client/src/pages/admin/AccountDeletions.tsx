@@ -86,7 +86,7 @@ type DeletionDetail = {
   };
   user: { name: string; email: string; phone: string; role: string; created_at: string };
   obligations: Partial<DeletionObligations>;
-  events: { action: string; actor_name: string | null; detail: string | null; created_at: string }[];
+  events: { action: string; actor_name: string | null; detail: unknown; created_at: string }[];
 };
 
 const STATUS_OPTIONS = [
@@ -651,7 +651,7 @@ function DeletionDetailView({ id }: { id: string }) {
                   <p className="text-xs text-muted-foreground">
                     {formatDisplayDateTime(ev.created_at)} · {ev.actor_name || "System"}
                   </p>
-                  {ev.detail ? <p className="mt-1 whitespace-pre-line">{ev.detail}</p> : null}
+                  {formatEventDetail(ev.detail) ? <p className="mt-1 whitespace-pre-line">{formatEventDetail(ev.detail)}</p> : null}
                 </li>
               ))}
             </ol>
@@ -714,6 +714,17 @@ function DeletionDetailView({ id }: { id: string }) {
       </Dialog>
     </div>
   );
+}
+
+/** History "detail" is JSONB on the server ({reason, source, deadline, ...}); show it as readable text, never as an object. */
+function formatEventDetail(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value !== "object") return String(value);
+  return Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v != null && v !== "" && !(typeof v === "object" && !Object.keys(v as object).length))
+    .map(([k, v]) => `${k.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+    .join("\n");
 }
 
 export default function AccountDeletionsPage() {

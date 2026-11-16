@@ -139,6 +139,8 @@ const textEn = {
   upcomingPujariNote: "These accepted bookings will be released for reassignment to another pujari.",
   ongoingBookings: "Ongoing bookings",
   ongoingNote: "Ongoing pujas are left to finish.",
+  unpaidBookings: "Unpaid online bookings",
+  unpaidNote: "Payment for these was never completed, so nothing was charged. They will be closed.",
   refund: "Refund",
   fee: "Fee",
   cancellationNotAllowed: "Cannot be cancelled now",

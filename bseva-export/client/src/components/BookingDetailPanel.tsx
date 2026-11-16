@@ -36,6 +36,7 @@ import { mapsDirectionsUrl, mapsSearchUrl } from "@/lib/googleMaps";
 import { pujariTeamAcceptNotice, pujariTeamPaymentNotice, pujarisIncludedShort } from "@/lib/pujariTeam";
 import PrintableBSevaHeader from "@/components/PrintableBSevaHeader";
 import { shareSafely } from "@/lib/browserActions";
+import { paymentConfig, startChargeCheckoutIfRequired, type ChargeRequired } from "@/lib/cashfreeCheckout";
 
 export type BookingDetail = {
   id: string;
@@ -163,6 +164,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
   const [cancelPreview, setCancelPreview] = useState<any>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const samagriLabels = samagriExportLabels(t);
+  // With the customer wallet off, "Pay pending booking" is paid online (Cashfree) instead of from the wallet.
+  const [walletEnabled, setWalletEnabled] = useState(true);
 
   async function load() {
     setLoading(true);
@@ -200,6 +203,34 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
     }, 30_000);
     return () => window.clearInterval(t);
   }, [bookingId]);
+
+  const paymentPending = viewerRole === "customer" && booking?.payment_status === "pending";
+  useEffect(() => {
+    if (!paymentPending) return;
+    paymentConfig()
+      .then((c) => setWalletEnabled(c.wallet_enabled !== false))
+      .catch(() => undefined);
+  }, [paymentPending]);
+
+  async function payPending() {
+    setBusy(true);
+    try {
+      const res = await api<ChargeRequired & { ok?: boolean }>(`/bookings/${bookingId}/pay`, { method: "POST" });
+      if (res?.payment_required && res.checkout) {
+        // Not paid yet: the server confirms the payment when Cashfree returns to /payment/return.
+        toast.message(t("pay.redirecting"));
+        await startChargeCheckoutIfRequired(res, (to) => window.location.assign(to));
+        return;
+      }
+      toast.success("Payment successful");
+      await load();
+      onUpdated?.();
+    } catch (e: any) {
+      toast.error(e.message || t("web.booking.actionFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (resendWait <= 0) return;
@@ -1025,16 +1056,8 @@ export default function BookingDetailPanel({ bookingId, seed, role, onUpdated, c
       ) : null}
 
       {viewerRole === "customer" && booking.payment_status === "pending" && status !== "cancelled" && (
-        <Button
-          disabled={busy}
-          onClick={() =>
-            run(
-              () => api(`/bookings/${bookingId}/pay`, { method: "POST" }).then(() => undefined),
-              "Payment successful"
-            )
-          }
-        >
-          {t("booking.payPending")}
+        <Button disabled={busy} onClick={() => void payPending()}>
+          {walletEnabled ? t("booking.payPending") : t("pay.charge.payOnline", { amount: rupees(total) })}
         </Button>
       )}
 

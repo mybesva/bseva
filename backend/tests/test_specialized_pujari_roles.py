@@ -70,7 +70,11 @@ def test_backend_rejects_cross_specialized_assignment():
     assert not pujari_meets_required_level(5, 6)
 
 
-def test_admin_assignment_filter_keeps_only_matching_specialized_providers():
+def test_admin_assignment_filter_keeps_only_matching_specialized_providers(monkeypatch):
+    # The level rule is switched off for dispatch today; it is kept (and tested) for when it is turned back on.
+    import app.pujari_levels as levels
+
+    monkeypatch.setattr(levels, "DISPATCH_LEVEL_RULE_ENABLED", True)
     rows = [{"id": n, "approved_level": n} for n in (1, 2, 3, 4, 5, 6)]
     chava = filter_rows_for_required_level(rows, 5)
     pravachana = filter_rows_for_required_level(rows, 6)

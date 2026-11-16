@@ -331,6 +331,7 @@ def build_preparation_view(
             "item_key": raw.get("item_key"),
             "name": name,
             "label": label,
+            "quantity_text": qty_text or None,
             "quantity": float(qty) if qty is not None else None,
             "unit": unit or None,
             "category": category,

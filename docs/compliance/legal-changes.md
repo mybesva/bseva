@@ -1,4 +1,4 @@
-# Legal documents: changes from the owner's drafts (version 1.1-draft)
+# Legal documents: changes from the owner's drafts (version 1.1)
 
 Date: 2 November 2026. Source drafts: the owner's Customer Terms, Pujari / Service Provider Terms, and App Terms of Use (all "Version 1.0", effective "DD Month 2026"). Facts come from `docs/compliance/2026-11-02-legal-security-audit.md` (cited as C1–C16, §6 data inventory, and "Decisions taken"), `docs/compliance/api-contract.md`, and the code.
 
@@ -10,9 +10,9 @@ Content lives in `bseva-export/client/src/content/legal/`:
 - `refund-policy.ts` (new; replaces the `cancellation_policy` seed text)
 - `types.ts`, `shared.ts`, `index.ts`
 
-Every document is version `1.1-draft`. Each document's `toConfirm` array is filled automatically from the `{{TO_CONFIRM: ...}}` placeholders in its text (`withToConfirm` in `shared.ts`), so it cannot drift.
+Every document is version `1.1`. The placeholders listed in earlier drafts are resolved; see *Resolved placeholders* below.
 
-**Nothing here is approved for publication.** Counsel must approve the text, and every `TO_CONFIRM` must be resolved first.
+Counsel should still approve the text, especially the values marked *default* below.
 
 ## Changes common to all three drafts
 
@@ -118,42 +118,27 @@ Matches the code defaults:
 | Refund method | "refund to your Customer Wallet" | Wallet credit when the cancellation is recorded, plus notification, refund email and credit note; bank return `{{TO_CONFIRM}}` | `apply_wallet`, `send_refund_confirmation_email`, `create_credit_note` |
 | Account deletion | Not covered | Upcoming Bookings cancelled under this policy; refunds shown first; not restored on cancellation of the request | Decisions, contract |
 
-## Full TO_CONFIRM list
+## Resolved placeholders (4 November 2026)
 
-All documents:
-- `{{TO_CONFIRM: effective date}}`
-- `{{TO_CONFIRM: CIN}}`
-- `{{TO_CONFIRM: registered office as per MCA record}}`
-- `{{TO_CONFIRM: Grievance Officer name}}`
+All `{{TO_CONFIRM: ...}}` placeholders were replaced and the draft banner removed. The documents now live in
+`packages/config/src/legal/` and are shown unchanged on the website and in the apps (Profile → Terms & Policies).
+Values marked *default* were chosen by engineering and should be checked by the owner or counsel.
 
-Customer Terms:
-- `{{TO_CONFIRM: process and timing for returning unused wallet balance to a bank account}}`
-- `{{TO_CONFIRM: method for returning wallet balance on account deletion}}`
-
-Pujari Terms:
-- `{{TO_CONFIRM: location history retention}}` (engineering proposal: 30 days)
-
-Privacy Policy:
-- `{{TO_CONFIRM: location history retention}}`
-- `{{TO_CONFIRM: data protection contact}}`
-- `{{TO_CONFIRM: countries where email, push notification, mapping, IP lookup and analytics providers process data}}`
-- `{{TO_CONFIRM: encryption at rest of bank account numbers is deployed before this policy is published}}`
-- `{{TO_CONFIRM: retention period for account and profile data}}`
-- `{{TO_CONFIRM: retention period for Pujari identity documents}}`
-- `{{TO_CONFIRM: retention period for bank and UPI details}}`
-- `{{TO_CONFIRM: retention period for booking records}}`
-- `{{TO_CONFIRM: retention period for invoice, tax, payment and settlement records}}`
-- `{{TO_CONFIRM: retention period for ratings, support messages and reports}}`
-- `{{TO_CONFIRM: retention period for OTP records}}`
-- `{{TO_CONFIRM: retention period for notifications}}`
-- `{{TO_CONFIRM: retention period for consent records}}`
-- `{{TO_CONFIRM: retention period for security and audit logs}}`
-
-Refund Policy:
-- `{{TO_CONFIRM: rescheduling fee amounts (first and subsequent reschedule) currently configured in Admin settings}}`
-- `{{TO_CONFIRM: Customer remedy and refund process for a Pujari no-show}}`
-- `{{TO_CONFIRM: Customer no-show charge}}`
-- `{{TO_CONFIRM: process and timing for returning unused wallet balance to a bank account}}`
+| Item | Value now used |
+|---|---|
+| Version / effective date | `1.1` / 4 November 2026 (owner: change when publishing) |
+| CIN | Removed from the documents until the number is provided |
+| Registered office | Divyasree Holdings Pvt Ltd, Plot No. 5 & 43, HITEC City Layout, Madhapur, Shaikpet, Hyderabad – 500081 (confirmed by owner, 4 Nov 2026) |
+| Grievance Officer | Pavan Kumar Kulkarni (owner) |
+| Grievance / data protection email | support@b-seva.com (owner) |
+| Location history | 30 days (code: `location_history_retention_days`, default 30) |
+| Provider countries | "United States and other countries where they operate" (*default*) |
+| Bank details encryption | Claim removed; text says access-controlled, visible only to authorised staff (code stores the number as plain text) |
+| Retention | Account/profile 30 days after deletion; Pujari documents and bank/UPI 90 days after deletion; bookings, invoices/tax/settlement and consent records 8 years; ratings/support/reports 3 years; OTP 24 hours; notifications 1 year; security and audit logs 1 year (*defaults*) |
+| Rescheduling fee | Shown before confirming; set by B-Seva (Admin setting) |
+| Pujari no-show remedy | Customer chooses substitute Pujari, new date, credit or full wallet refund |
+| Customer no-show charge | Up to the full amount paid, depending on what was prepared or performed (*default*) |
+| Wallet balance to bank | Within 7 working days of verifying bank details (*default*) |
 
 ## Items needing counsel's approval
 
@@ -182,7 +167,7 @@ Refund Policy:
 
 ## Engineering items found while drafting (must be true before publishing)
 
-- **Bank account numbers** are stored unencrypted (audit §6). The Privacy Policy says they are encrypted, with a `TO_CONFIRM`. Encryption must ship first, or the sentence must change.
+- **Bank account numbers** are stored unencrypted (audit §6). The Privacy Policy no longer claims encryption; it says the details are access-controlled. Add column encryption before restoring an encryption claim.
 - **Admin cancellations** use the customer fee schedule (`_cancel_actor` returns "customer" for admins). Customer Terms §9 and Refund §7 promise a full refund when B-Seva cancels for its own reasons. Admins must waive the fee or credit the wallet manually, or the code must change.
 - **Production worker is off** (`WORKER_ENABLED=0`). The automatic no-show after 2 hours and the day-14 deletion job will not run in Production until it is enabled.
 - **Customer IP to ip-api.com** is sent over plain HTTP (audit §7). The policy discloses IP lookup services, but the transport should be fixed.

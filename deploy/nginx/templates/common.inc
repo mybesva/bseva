@@ -26,6 +26,20 @@ location = /api/v1/captcha {
     include /etc/nginx/bseva-templates/proxy.inc;
 }
 
+# Meta WhatsApp Cloud API webhook: its own zone, so Meta's bursts neither hit the general API limit nor use it
+# up. Over the limit Nginx answers 429 and Meta retries. Bodies are at most 3 MB (Meta's cap). Logged without the
+# query string, which carries the verify token. Nginx error lines (rate-limit refusals, upstream failures) always
+# quote the full request, so this route records only critical errors; every request's status (429, 502, ...)
+# still appears in the access log above.
+location = /api/v1/webhooks/whatsapp {
+    limit_req zone=bseva_webhook burst=200 nodelay;
+    access_log /var/log/nginx/access.log bseva_noquery;
+    error_log /var/log/nginx/error.log crit;
+    limit_except GET POST { deny all; }
+    client_max_body_size 3m;
+    include /etc/nginx/bseva-templates/proxy.inc;
+}
+
 location = /api/v1/support/contact {
     limit_req zone=bseva_contact burst=3 nodelay;
     include /etc/nginx/bseva-templates/proxy.inc;
@@ -55,6 +69,21 @@ location = /firebase-messaging-sw.js {
 location = /index.html {
     add_header Cache-Control "no-cache" always;
     include /etc/nginx/bseva-templates/security.inc;
+}
+
+# App links: iOS and Android fetch these to let the B-Seva apps open b-seva.com links (deploy/nginx/well-known).
+# Served as JSON straight from this host, never redirected, as both platforms require.
+location = /.well-known/apple-app-site-association {
+    default_type application/json;
+    add_header Cache-Control "public, max-age=3600" always;
+    include /etc/nginx/bseva-templates/security.inc;
+    try_files $uri =404;
+}
+location = /.well-known/assetlinks.json {
+    default_type application/json;
+    add_header Cache-Control "public, max-age=3600" always;
+    include /etc/nginx/bseva-templates/security.inc;
+    try_files $uri =404;
 }
 
 location / {
