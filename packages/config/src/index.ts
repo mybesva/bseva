@@ -381,6 +381,14 @@ export {
 } from "./pujariSpecializations";
 export { dateInputToIsoEnd, dateInputToIsoStart } from "./isoDateBounds";
 export {
+  ASSIGN_SORT_OPTIONS,
+  formatPujariDistance,
+  pujariMatchesQuery,
+  searchAndSortPujaris,
+  type AssignablePujari,
+  type AssignSort,
+} from "./pujariAssign";
+export {
   PUJARI_JOB_SEGMENTS,
   bookingStartAt,
   isExpiredBooking,
