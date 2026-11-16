@@ -22,6 +22,8 @@ type BankDraft = {
   ifsc: string;
   accountNumber: string;
   accountConfirm: string;
+  /** How the pujari wants to receive payouts (their choice when both are filled in). */
+  method: "" | "upi" | "bank";
 };
 
 const empty: BankDraft = {
@@ -31,6 +33,7 @@ const empty: BankDraft = {
   ifsc: "",
   accountNumber: "",
   accountConfirm: "",
+  method: "",
 };
 
 function buildPayload(draft: BankDraft): Record<string, string> {
@@ -53,6 +56,8 @@ function buildPayload(draft: BankDraft): Record<string, string> {
     payload.bank_account_confirm = draft.accountConfirm.replace(/\D/g, "");
     payload.bank_account_last4 = digits.slice(-4);
   }
+  if (draft.method === "upi" && upi) payload.payout_method = "upi";
+  if (draft.method === "bank" && bankComplete) payload.payout_method = "bank";
   return payload;
 }
 
@@ -66,6 +71,22 @@ export default function PujariBankPage() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [walkthroughErrors, setWalkthroughErrors] = useState<Record<string, string>>({});
+  // UPI payouts are verified with a ₹1 check, which needs the pujari's one-tap consent first.
+  const [consentNeeded, setConsentNeeded] = useState(false);
+  const [consentBusy, setConsentBusy] = useState(false);
+
+  async function allowVerification() {
+    setConsentBusy(true);
+    try {
+      await api("/pujari/payout-verification-consent", { method: "POST" });
+      setConsentNeeded(false);
+      toast.success(t("payout.consent.done"));
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setConsentBusy(false);
+    }
+  }
 
   useEffect(() => {
     api<any>("/pujari/profile")
@@ -78,7 +99,9 @@ export default function PujariBankPage() {
           ifsc: p.bank_ifsc || "",
           accountNumber: acct,
           accountConfirm: acct,
+          method: p.payout_method || p.payout_method_effective || "",
         };
+        setConsentNeeded(Boolean(p.payout_consent_needed));
         setDraft(next);
         setBaseline(next);
         setEditing(!hasSettlementMethod(next));
@@ -96,7 +119,8 @@ export default function PujariBankPage() {
       draft.bankName.trim() !== baseline.bankName.trim() ||
       draft.ifsc.trim().toUpperCase() !== baseline.ifsc.trim().toUpperCase() ||
       draft.accountNumber !== baseline.accountNumber ||
-      draft.accountConfirm !== baseline.accountConfirm,
+      draft.accountConfirm !== baseline.accountConfirm ||
+      draft.method !== baseline.method,
     [draft, baseline],
   );
 
@@ -152,8 +176,10 @@ export default function PujariBankPage() {
         ifsc: draft.ifsc.trim().toUpperCase(),
         accountNumber: draft.accountNumber.replace(/\D/g, ""),
         accountConfirm: draft.accountConfirm.replace(/\D/g, ""),
+        method: draft.method,
       };
       setDraft(saved);
+      setConsentNeeded(false);
       setBaseline(saved);
       setEditing(onboardingActive);
       setErrors({});
@@ -202,6 +228,15 @@ export default function PujariBankPage() {
             <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <form className="space-y-4" onSubmit={save}>
+              {consentNeeded ? (
+                <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+                  <p className="font-semibold text-foreground">{t("payout.consent.title")}</p>
+                  <p className="text-muted-foreground">{t("payout.consent.body")}</p>
+                  <Button type="button" size="sm" onClick={() => void allowVerification()} disabled={consentBusy}>
+                    {t("payout.consent.allow")}
+                  </Button>
+                </div>
+              ) : null}
               {!onboardingActive && !editing ? (
                 <p className="flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm font-medium text-foreground">
                   <Lock size="1rem" className="mt-0.5 shrink-0 text-primary" aria-hidden />
@@ -287,6 +322,28 @@ export default function PujariBankPage() {
                 )}
               </div>
 
+              {draft.upiId.trim() && bankDraftTouched(draft) && draft.accountNumber.replace(/\D/g, "").length >= 9 ? (
+                <fieldset className="space-y-2" disabled={!inputsEnabled}>
+                  <legend className="text-sm font-medium">{t("payout.method.label")}</legend>
+                  <div className="flex flex-wrap gap-4">
+                    {(["upi", "bank"] as const).map((m) => (
+                      <label key={m} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="payout-method"
+                          value={m}
+                          checked={draft.method === m}
+                          onChange={() => setField("method", m)}
+                        />
+                        {t(m === "upi" ? "payout.method.upi" : "payout.method.bank")}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("payout.method.hint")}</p>
+                </fieldset>
+              ) : null}
+              {/* Saving records the pujari's consent to verification (backend app.payouts.verification). */}
+              <p className="text-xs text-muted-foreground">{t("payout.verifyConsent")}</p>
               {!onboardingActive ? (
                 <div className="flex flex-wrap gap-2">
                   {!editing ? (

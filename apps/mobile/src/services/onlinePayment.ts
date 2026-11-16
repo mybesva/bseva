@@ -1,5 +1,5 @@
 import * as Linking from "expo-linking";
-import type { CheckoutSession } from "@bseva/api-client";
+import type { ChargeCheckout, CheckoutSession } from "@bseva/api-client";
 import { resolveApiBase } from "@/services/api";
 
 /**
@@ -22,6 +22,20 @@ export async function openHostedCheckout(bookingId: string, session: CheckoutSes
     booking_id: bookingId,
     sid: session.payment_session_id,
     env: session.environment === "production" ? "production" : "sandbox",
+    app: "1",
+  }).toString();
+  await Linking.openURL(`${webBaseUrl()}/payment/checkout#${fragment}`);
+}
+
+/**
+ * Same hosted checkout for an online charge (reschedule fee, Muhurtham consultation, Seva registration, a later
+ * date of a recurring booking). The website returns to bseva://payment-return?payment_id=…
+ */
+export async function openChargeCheckout(checkout: ChargeCheckout): Promise<void> {
+  const fragment = new URLSearchParams({
+    payment_id: checkout.payment_id,
+    sid: checkout.payment_session_id,
+    env: checkout.environment === "production" ? "production" : "sandbox",
     app: "1",
   }).toString();
   await Linking.openURL(`${webBaseUrl()}/payment/checkout#${fragment}`);

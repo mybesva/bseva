@@ -705,6 +705,10 @@ export default function PujariOnboarding() {
               onChangeText={(v) => set("bank_account_confirm", v.replace(/\D/g, ""))}
               error={fieldErrors.accountConfirm}
             />
+            {/* Saving records the pujari's consent to verification (backend app.payouts.verification). */}
+            <AppText variant="small" color={colors.mutedForeground}>
+              {t("payout.verifyConsent")}
+            </AppText>
             <Nav
               onNext={() => {
                 const draft = {

@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, rupees } from "@/lib/api";
+import { paymentConfig, startChargeCheckoutIfRequired, type ChargeRequired } from "@/lib/cashfreeCheckout";
+import { useI18n } from "@/i18n/I18nProvider";
 import { isCalendarDayDisabled } from "@/lib/bookingLeadTime";
 import { formatDisplayDateTime, formatDisplaySlot } from "@/lib/formatDate";
 import { format } from "date-fns";
@@ -56,7 +58,10 @@ export default function RescheduleCard({
   virtual: boolean;
   onChanged: () => void | Promise<void>;
 }) {
+  const { t } = useI18n();
   const [, setLocation] = useLocation();
+  // With the customer wallet off, a rescheduling charge is paid online (Cashfree) before the booking moves.
+  const [walletEnabled, setWalletEnabled] = useState(true);
   const [info, setInfo] = useState<Summary | null>(null);
   const [step, setStep] = useState<"closed" | "slot" | "pay" | "done">("closed");
   const [date, setDate] = useState<Date | undefined>();
@@ -70,6 +75,9 @@ export default function RescheduleCard({
 
   useEffect(() => {
     load().catch(() => setInfo(null));
+    paymentConfig()
+      .then((c) => setWalletEnabled(c.wallet_enabled !== false))
+      .catch(() => undefined);
   }, [bookingId]);
 
   async function save() {
@@ -80,7 +88,7 @@ export default function RescheduleCard({
     const fee = info.next_fee_paise;
     setSaving(true);
     try {
-      await api(`/bookings/${bookingId}/reschedule`, {
+      const res = await api<ChargeRequired & { ok?: boolean }>(`/bookings/${bookingId}/reschedule`, {
         method: "POST",
         body: JSON.stringify({
           new_date: format(date, "yyyy-MM-dd"),
@@ -88,6 +96,12 @@ export default function RescheduleCard({
           expected_fee_paise: fee,
         }),
       });
+      if (res?.payment_required && res.checkout) {
+        // The booking moves only after the server confirms the payment (back on /payment/return).
+        toast.message(t("pay.redirecting"));
+        await startChargeCheckoutIfRequired(res, setLocation);
+        return;
+      }
       setDoneMessage(
         fee
           ? `${rupees(fee)} was paid from your wallet. We are finding a pujari for the new time.`
@@ -109,7 +123,7 @@ export default function RescheduleCard({
   const performance = info.pujari_performance;
   const rating = performance?.rating;
   const fee = info.next_fee_paise;
-  const shortfall = Math.max(0, fee - info.wallet_balance_paise);
+  const shortfall = walletEnabled ? Math.max(0, fee - info.wallet_balance_paise) : 0;
 
   return (
     <Card className="print:hidden">
@@ -220,7 +234,7 @@ export default function RescheduleCard({
                   <span className="text-muted-foreground">Rescheduling Charge</span>
                   <span className="font-medium">{rupees(fee)}</span>
                 </div>
-                {fee ? (
+                {fee && !walletEnabled ? null : fee ? (
                   <div className="flex justify-between gap-4">
                     <span className="text-muted-foreground">Wallet Balance</span>
                     <span className="font-medium">{rupees(info.wallet_balance_paise)}</span>
@@ -244,6 +258,8 @@ export default function RescheduleCard({
                   <Button onClick={() => void save()} disabled={saving}>
                     {saving ? (
                       "Saving…"
+                    ) : fee && !walletEnabled ? (
+                      t("pay.charge.payAndReschedule", { amount: rupees(fee) })
                     ) : fee ? (
                       <>
                         <Wallet className="size-4" aria-hidden /> Pay {rupees(fee)} from Wallet

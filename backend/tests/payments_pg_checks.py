@@ -113,7 +113,18 @@ def booking_body(svc: dict, **extra) -> dict:
     # 11–48 days ahead: after the demo seed's confirmed bookings for Pujari 1 (today + 7 at 09:00, today + 10 at
     # 11:00), which would otherwise block the 10:00 slot and leave a booking with no offer, and before the fixed
     # day 50 / 51 bookings used by one check.
-    day = date.today() + timedelta(days=11 + (uuid.uuid4().int % 38))
+    # Pick a day Pujari 1 is still free at 10:00: with many checks on one database, a random day would sometimes
+    # repeat and the second booking would find no pujari ("not available at this address").
+    taken = {
+        r[0] for r in sql(
+            "SELECT b.booking_date FROM bookings b JOIN users u ON u.id = b.pujari_id WHERE u.email = :e "
+            "AND b.start_time = '10:00' AND b.status NOT IN ('cancelled')", e=PUJARI,
+        ).all()
+    }
+    offsets = list(range(11, 49))
+    start = uuid.uuid4().int % len(offsets)
+    free = [date.today() + timedelta(days=o) for o in offsets[start:] + offsets[:start]]
+    day = next((d for d in free if d not in taken), free[0])
     return {
         "service_id": str(svc["id"]),
         "package_type": "basic",
@@ -190,11 +201,22 @@ import httpx  # noqa: E402
 
 from app.config import settings  # noqa: E402
 from app.payments import cashfree_pg  # noqa: E402
+from app.payouts import cashfree_vrs  # noqa: E402
 from app.payments import service as pay_service  # noqa: E402
 from app.payouts import cashfree_payouts  # noqa: E402
 
 PG_SECRET = "fake-pg-secret-for-local-tests"
 PAYOUT_SECRET = "fake-payout-secret-for-local-tests"
+VRS_SECRET = "fake-secure-id-secret-for-local-tests"
+# Secure ID answers in the fake: account -> (account_status, account_status_code, name_at_bank). Account numbers and
+# outcomes follow Cashfree's sandbox test data; the names are this suite's own test pujari names.
+FAKE_BANKS = {
+    "026291800001191": ("VALID", "ACCOUNT_IS_VALID", "PANDIT TEST"),
+    "00011020001772": ("VALID", "ACCOUNT_IS_VALID", "SOMEONE ELSE"),
+    "026291800001190": ("INVALID", "INVALID_ACCOUNT_FAIL", None),
+    "1233943142": ("VALID", "ACCOUNT_IS_VALID", "PANDIT TEST"),
+}
+FAKE_VPAS = {"success@upi": ("VALID", "PANDIT TEST"), "invalid@upi": ("INVALID", None)}
 
 
 class FakeCashfree:
@@ -214,6 +236,7 @@ class FakeCashfree:
         self.timeout_after_work = False
         self.next_transfer_status = "SUCCESS"
         self.refund_status = "SUCCESS"
+        self.verifications = 0
 
     def _maybe_timeout(self, key: str, before: bool):
         if key in self.timeouts and self.timeout_after_work != before:
@@ -271,6 +294,31 @@ class FakeCashfree:
                 return httpx.Response(200, json=self.refunds[key])
             if parts[1] == "eligibility":
                 return httpx.Response(200, json=[{"entity_value": "upi", "eligibility": True, "entity_type": "payment_methods"}])
+        if parts[0] == "verification":
+            assert request.headers.get("x-client-secret") == VRS_SECRET
+            self.verifications += 1
+            given = str(body.get("name") or "").strip().lower()
+
+            def match(at_bank):
+                if not at_bank:
+                    return None
+                bank = at_bank.lower()
+                if given == bank:
+                    return "DIRECT_MATCH"
+                return "GOOD_PARTIAL_MATCH" if given.split()[:1] == bank.split()[:1] else "POOR_PARTIAL_MATCH"
+
+            if parts[1:] == ["bank-account", "sync"]:
+                status, code, name = FAKE_BANKS.get(body["bank_account"], ("INVALID", "INVALID_ACCOUNT_FAIL", None))
+                return httpx.Response(200, json={"reference_id": 1000 + self.verifications, "name_at_bank": name,
+                                                 "account_status": status, "account_status_code": code,
+                                                 "name_match_result": match(name) if status == "VALID" else None,
+                                                 "name_match_score": "90.00" if name else None})
+            if parts[1:] == ["upi", "penny-drop"]:
+                assert body["user_consent"]["obtained"] is True and request.headers.get("x-api-version")
+                status, name = FAKE_VPAS.get(body["vpa"], ("INVALID", None))
+                return httpx.Response(200, json={"verification_id": body["verification_id"], "reference_id": 2000 + self.verifications,
+                                                 "status": status, "vpa": body["vpa"], "name_at_bank": name,
+                                                 "name_match_result": ("MATCH" if match(name) == "DIRECT_MATCH" else match(name)) if name else None})
         if parts[0] == "payout":
             assert request.headers.get("x-client-secret") == PAYOUT_SECRET
             if parts[1] == "beneficiary":
@@ -346,6 +394,12 @@ def enable_cashfree(fake: FakeCashfree | None = None) -> FakeCashfree:
     transport = httpx.MockTransport(FAKE.handler)
     cashfree_pg.transport = transport
     cashfree_payouts.transport = transport
+    cashfree_vrs.transport = transport
+    settings.cashfree_vrs_env = "sandbox"
+    settings.cashfree_vrs_client_id = "TEST_fake_vrs"
+    settings.cashfree_vrs_client_secret = VRS_SECRET
+    settings.cashfree_vrs_public_key = ""
+    settings.cashfree_vrs_public_key_file = ""
     settings.payment_gateway = "cashfree"
     settings.cashfree_pg_env = "sandbox"
     settings.cashfree_pg_app_id = "TEST_fake_app"
@@ -749,7 +803,9 @@ def _reset_otp_limits() -> None:
 def _completed_settlement(amount: int = 150_000) -> dict:
     svc = prepare_catalogue()
     set_wallet(CUSTOMER, 5_000_000)
-    out = call("POST", "/bookings", CUSTOMER, booking_body(svc)).json()
+    r = call("POST", "/bookings", CUSTOMER, booking_body(svc))
+    expect(r.status_code == 200, f"settlement booking failed: {r.status_code} {r.text[:300]}")
+    out = r.json()
     pujari = user(PUJARI)
     sql(
         """
@@ -798,6 +854,27 @@ def _payout_ready(mode: str = "bank") -> None:
     )
     _reset_otp_limits()
     set_wallet(PUJARI, 0)
+    _verify_pujari_details()
+
+
+def _verify_pujari_details(expect: str = "verified") -> dict:
+    sql("DO $$ BEGIN IF to_regclass('security_rate_limits') IS NOT NULL THEN "
+        "DELETE FROM security_rate_limits WHERE bucket = 'payout_details_check'; END IF; END $$")
+    r = call("POST", f"/admin/pujaris/{user(PUJARI)['id']}/payout-verification", SUPER)
+    expect_ok = r.status_code == 200 and r.json()["status"] == expect
+    if not expect_ok:
+        raise AssertionError(f"payout details check: {r.status_code} {r.text[:300]}")
+    return r.json()
+
+
+def _mark_details_verified(pujari_id: str) -> None:
+    from app.payouts.service import pujari_payout_details
+
+    db = _db()
+    d = pujari_payout_details(db, pujari_id)
+    db.close()
+    sql("INSERT INTO pujari_payout_verifications (pujari_id, instrument, details_fingerprint, masked_details, status) "
+        "VALUES (CAST(:p AS uuid), :i, :fp, :m, 'verified')", p=pujari_id, i=d["instrument"], fp=d["fingerprint"], m=d["masked"])
 
 
 def _approve_payout(settlement_id: str):
@@ -937,6 +1014,10 @@ def check_payout_otp_bound_to_bank_details_and_override_blocked():
     _reset_otp_limits()
     ch = call("POST", "/admin/security/challenge", SUPER, {"action": "settlement_payout", "settlement_id": str(s["id"])}).json()
     sql("UPDATE pujari_profiles SET bank_account_number = '1233943142', bank_ifsc = 'ICIC0000009' WHERE user_id = (SELECT id FROM users WHERE email = :e)", e=PUJARI)
+    # Unverified new details are refused outright; once verified, the OTP sent for the old details still is.
+    blocked = call("POST", f"/admin/payouts/settlements/{s['id']}", SUPER, {"challenge_id": ch["challenge_id"], "otp": OTP, "mpin": MPIN})
+    expect(blocked.status_code == 409 and "Verify" in blocked.text and FAKE.transfer_creates == 0, f"unverified details paid {blocked.text}")
+    _verify_pujari_details()
     r = call("POST", f"/admin/payouts/settlements/{s['id']}", SUPER, {"challenge_id": ch["challenge_id"], "otp": OTP, "mpin": MPIN})
     expect(r.status_code == 400 and "changed" in r.text and FAKE.transfer_creates == 0, f"details change not caught {r.text}")
     FAKE.next_transfer_status = "PENDING"
@@ -970,6 +1051,7 @@ def check_payout_reuses_cashfree_beneficiary_for_same_bank_account():
     s2 = _completed_settlement(90_000)
     sql("UPDATE settlements SET pujari_id = CAST(:u AS uuid) WHERE id = CAST(:id AS uuid)", u=str(other["id"]), id=s2["id"])
     sql("UPDATE bookings SET pujari_id = CAST(:u AS uuid) WHERE id = CAST(:b AS uuid)", u=str(other["id"]), b=s2["booking_id"])
+    _mark_details_verified(str(other["id"]))  # verification passed; the shared-account rule must still refuse
     r2 = _approve_payout(str(s2["id"]))
     expect(r2.status_code == 409 and "another pujari" in r2.text and FAKE.transfer_creates == 1, f"shared account paid {r2.status_code} {r2.text[:200]}")
     st = one("SELECT status FROM settlements WHERE id = :id", id=s2["id"])["status"]
@@ -1262,9 +1344,464 @@ def check_dot_form_signature_is_accepted_and_recorded():
     expect("sig:dot" in ev["outcome"], f"variant not recorded {ev}")
 
 
+# ---------------------------------------------------------------- customer wallet off: online charges (MOCKED Cashfree)
+
+
+def _wallet_off() -> None:
+    r = call("PUT", "/admin/config", SUPER, {"key": "customer_wallet_enabled", "value": False})
+    expect(r.status_code == 200, f"wallet off {r.status_code} {r.text[:200]}")
+
+
+def _wallet_on() -> None:
+    _set_setting("customer_wallet_enabled", True)
+
+
+def _paid_online_booking() -> dict:
+    out = online_booking()
+    FAKE.pay(out["payment"]["order_id"], "SUCCESS")
+    webhook(out["payment"]["order_id"])
+    expect(bk(out["id"])["payment_status"] == "paid", "booking not paid")
+    return out
+
+
+def _charge_rows(group: str) -> list[dict]:
+    return [dict(r) for r in sql(
+        "SELECT * FROM payments WHERE meta->>'group' = :g ORDER BY attempt_no", g=group
+    ).mappings().all()]
+
+
+def check_wallet_off_refuses_wallet_paths():
+    enable_cashfree()
+    svc = prepare_catalogue()
+    set_wallet(CUSTOMER, 5_000_000)
+    try:
+        # Switching the wallet off needs a working gateway.
+        settings.payment_gateway = ""
+        r = call("PUT", "/admin/config", SUPER, {"key": "customer_wallet_enabled", "value": False})
+        expect(r.status_code == 400, f"wallet switched off without a gateway: {r.status_code}")
+        settings.payment_gateway = "cashfree"
+        _wallet_off()
+        expect(call("GET", "/payments/config", CUSTOMER).json()["wallet_enabled"] is False, "config still offers the wallet")
+        r = call("POST", "/bookings", CUSTOMER, booking_body(svc))
+        expect(r.status_code == 400 and "online" in r.text, f"wallet booking allowed: {r.status_code} {r.text[:200]}")
+        r = call("POST", "/wallet/load", CUSTOMER, {"amount_paise": 10_000})
+        expect(r.status_code == 400, f"wallet top-up allowed: {r.status_code}")
+        expect(wallet(CUSTOMER) == 5_000_000, "wallet balance changed")
+        w = call("GET", "/wallet", CUSTOMER).json()
+        expect(w["customer_wallet_enabled"] is False and w["self_topup_enabled"] is False, f"wallet page flags {w}")
+        _paid_online_booking()  # paying online still works
+        expect(wallet(CUSTOMER) == 5_000_000, "online booking touched the wallet")
+    finally:
+        _wallet_on()
+
+
+def check_reschedule_fee_paid_online_moves_booking_once():
+    enable_cashfree()
+    set_wallet(CUSTOMER, 0)
+    _set_setting("reschedule_fee_enabled", True)
+    _set_setting("reschedule_first_fee_paise", 50_000)
+    try:
+        _wallet_off()
+        out = _paid_online_booking()
+        before = bk(out["id"])
+        new_day = before["booking_date"] + timedelta(days=1)
+        r = call("POST", f"/bookings/{out['id']}/reschedule", CUSTOMER,
+                 {"new_date": new_day.isoformat(), "new_start_time": "10:00", "expected_fee_paise": 50_000})
+        expect(r.status_code == 200 and r.json().get("payment_required"), f"reschedule {r.status_code} {r.text[:300]}")
+        checkout = r.json()["checkout"]
+        expect(bk(out["id"])["booking_date"] == before["booking_date"], "booking moved before the fee was paid")
+        expect(int(checkout["amount_paise"]) == 50_000, "fee amount")
+        FAKE.pay(checkout["order_id"], "SUCCESS")
+        webhook(checkout["order_id"])
+        webhook(checkout["order_id"])  # redelivered: changes nothing
+        after = bk(out["id"])
+        expect(after["booking_date"] == new_day and int(after["reschedule_count"]) == 1, f"not moved once: {after['booking_date']} {after['reschedule_count']}")
+        expect(count("SELECT COUNT(*) FROM booking_reschedules WHERE booking_id = CAST(:id AS uuid)", id=out["id"]) == 1, "two reschedule rows")
+        st = call("GET", f"/payments/charges/{checkout['payment_id']}/status", CUSTOMER).json()
+        expect(st["status"] == "paid" and st["purpose"] == "reschedule_fee" and st["booking_id"] == out["id"], f"status {st}")
+        expect(wallet(CUSTOMER) == 0, "reschedule used the wallet")
+        # The booking's own refundable payment is still the booking payment, not the fee.
+        expect(one("SELECT booking_id FROM payments WHERE provider_order_id = :o", o=checkout["order_id"])["booking_id"] is None,
+               "fee payment linked as the booking payment")
+    finally:
+        _wallet_on()
+        _set_setting("reschedule_fee_enabled", False)
+        _set_setting("reschedule_first_fee_paise", 0)
+
+
+def check_reschedule_charge_refunded_when_move_no_longer_possible():
+    enable_cashfree()
+    _set_setting("reschedule_fee_enabled", True)
+    _set_setting("reschedule_first_fee_paise", 50_000)
+    try:
+        _wallet_off()
+        out = _paid_online_booking()
+        new_day = bk(out["id"])["booking_date"] + timedelta(days=1)
+        checkout = call("POST", f"/bookings/{out['id']}/reschedule", CUSTOMER,
+                        {"new_date": new_day.isoformat(), "new_start_time": "10:00", "expected_fee_paise": 50_000}).json()["checkout"]
+        expect(call("POST", f"/bookings/{out['id']}/cancel?reason=Plans%20changed%20for%20family", CUSTOMER).status_code == 200, "cancel")
+        FAKE.pay(checkout["order_id"], "SUCCESS")  # the fee is paid after the booking was cancelled
+        webhook(checkout["order_id"])
+        pay = one("SELECT id FROM payments WHERE provider_order_id = :o", o=checkout["order_id"])
+        refunds = sql("SELECT kind, status, amount_paise FROM refunds WHERE payment_id = :p", p=pay["id"]).mappings().all()
+        expect([(r["kind"], int(r["amount_paise"])) for r in refunds] == [("late_payment", 50_000)], f"fee refund {refunds}")
+        expect(int(bk(out["id"])["reschedule_count"]) == 0, "cancelled booking was moved")
+        st = call("GET", f"/payments/charges/{checkout['payment_id']}/status", CUSTOMER).json()
+        expect(st["status"] == "refunded", f"status {st['status']}")
+    finally:
+        _wallet_on()
+        _set_setting("reschedule_fee_enabled", False)
+        _set_setting("reschedule_first_fee_paise", 0)
+
+
+def _consultation_service() -> dict:
+    svc = prepare_catalogue()
+    sql("UPDATE services SET muhurta_consultation_enabled = TRUE, muhurta_fee_paise = 30000 WHERE id = CAST(:id AS uuid)", id=str(svc["id"]))
+    return svc
+
+
+def _consultation_body(svc: dict) -> dict:
+    return {"service_id": str(svc["id"]), "appointment_date": (date.today() + timedelta(days=3)).isoformat(), "appointment_time": "10:00"}
+
+
+def check_consultation_paid_online_reaches_team_once():
+    enable_cashfree()
+    svc = _consultation_service()
+    set_wallet(CUSTOMER, 0)
+    try:
+        _wallet_off()
+        r = call("POST", "/muhurta-consultations", CUSTOMER, _consultation_body(svc))
+        expect(r.status_code == 200 and r.json()["payment_required"], f"consultation {r.status_code} {r.text[:300]}")
+        out = r.json()
+        row = one("SELECT * FROM muhurta_consultations WHERE id = CAST(:id AS uuid)", id=out["id"])
+        expect(row["payment_status"] == "awaiting_payment", f"{row['payment_status']}")
+        admin_ids = [c["id"] for c in call("GET", "/muhurta-consultations", SUPER).json()]
+        expect(out["id"] not in admin_ids, "unpaid request shown to the team")
+        notices = lambda: count("SELECT COUNT(*) FROM notifications WHERE title = 'New Muhurtham Consultation' AND body LIKE :n",  # noqa: E731
+                                n=f"{out['consultation_number']}%")
+        expect(notices() == 0, "team notified before payment")
+        FAKE.pay(out["checkout"]["order_id"], "SUCCESS")
+        webhook(out["checkout"]["order_id"])
+        webhook(out["checkout"]["order_id"])
+        row = one("SELECT * FROM muhurta_consultations WHERE id = CAST(:id AS uuid)", id=out["id"])
+        expect(row["payment_status"] == "paid" and row["status"] == "requested", f"{row['payment_status']} {row['status']}")
+        expect(out["id"] in [c["id"] for c in call("GET", "/muhurta-consultations", SUPER).json()], "paid request hidden")
+        expect(notices() >= 1, "team not notified")
+        before = notices()
+        webhook(out["checkout"]["order_id"])
+        expect(notices() == before, "team notified twice")
+        expect(wallet(CUSTOMER) == 0, "consultation used the wallet")
+    finally:
+        _wallet_on()
+
+
+def _seva_event(price: int = 50_100) -> str:
+    svc = service()
+    eid = str(uuid.uuid4())
+    sql(
+        """
+        INSERT INTO seva_events (id, service_id, title, start_at, status, published, price_paise, participation_mode)
+        VALUES (CAST(:id AS uuid), CAST(:s AS uuid), 'Test Seva', NOW() + INTERVAL '20 days', 'published', TRUE, :p, 'offline')
+        """,
+        id=eid, s=str(svc["id"]), p=price,
+    )
+    return eid
+
+
+def _seva_register(event_id: str):
+    return call("POST", f"/seva/events/{event_id}/register", CUSTOMER,
+                {"primary_name": "Test Devotee", "gotra_unknown": True, "participation_mode": "offline"})
+
+
+def check_seva_paid_online_cancel_refunds_to_original_method():
+    enable_cashfree()
+    set_wallet(CUSTOMER, 0)
+    try:
+        _wallet_off()
+        eid = _seva_event()
+        r = _seva_register(eid)
+        expect(r.status_code == 200 and r.json().get("payment_required"), f"register {r.status_code} {r.text[:300]}")
+        reg = r.json()
+        expect(reg["status"] == "pending" and reg["payment_status"] == "pending", f"{reg['status']} {reg['payment_status']}")
+        again = _seva_register(eid)  # same customer again: resumes the open payment, no second seat
+        expect(again.status_code == 200 and again.json()["checkout"]["order_id"] == reg["checkout"]["order_id"], f"resume {again.text[:200]}")
+        expect(int(one("SELECT registration_count FROM seva_events WHERE id = CAST(:id AS uuid)", id=eid)["registration_count"]) == 1, "two seats held")
+        FAKE.pay(reg["checkout"]["order_id"], "SUCCESS")
+        webhook(reg["checkout"]["order_id"])
+        row = one("SELECT * FROM seva_event_registrations WHERE id = CAST(:id AS uuid)", id=reg["id"])
+        expect(row["status"] == "confirmed" and row["payment_status"] == "paid", f"{row['status']} {row['payment_status']}")
+        expect(count("SELECT COUNT(*) FROM notifications WHERE title = 'Registration Confirmed' AND body LIKE :n",
+                     n=f"%{row['registration_number']}%") == 1, "confirmation notice")
+        FAKE.refund_status = "SUCCESS"
+        c = call("POST", f"/seva/my-registrations/{reg['id']}/cancel", CUSTOMER)
+        expect(c.status_code == 200, f"cancel {c.status_code} {c.text[:200]}")
+        pay = one("SELECT id FROM payments WHERE provider_order_id = :o", o=reg["checkout"]["order_id"])
+        refunds = sql("SELECT kind, status, amount_paise FROM refunds WHERE payment_id = :p", p=pay["id"]).mappings().all()
+        expect([(r["kind"], r["status"], int(r["amount_paise"])) for r in refunds] == [("cancellation", "successful", 50_100)], f"{refunds}")
+        expect(wallet(CUSTOMER) == 0 and FAKE.refund_creates == 1, "refund went to the wallet or twice")
+    finally:
+        _wallet_on()
+
+
+def check_unpaid_holds_released_on_expiry_and_late_payment_refunded():
+    from app.payments import charges
+
+    enable_cashfree()
+    svc = _consultation_service()
+    try:
+        _wallet_off()
+        cons = call("POST", "/muhurta-consultations", CUSTOMER, _consultation_body(svc)).json()
+        eid = _seva_event()
+        reg = _seva_register(eid).json()
+        for group, order_id in ((cons["checkout"]["payment_id"], cons["checkout"]["order_id"]),
+                                (reg["checkout"]["payment_id"], reg["checkout"]["order_id"])):
+            sql("UPDATE payments SET expires_at = NOW() - INTERVAL '40 minutes', "
+                "meta = jsonb_set(meta, '{window_expires_at}', to_jsonb((NOW() - INTERVAL '40 minutes')::text)) "
+                "WHERE meta->>'group' = :g", g=group)
+            FAKE.expire(order_id)
+        res = charges.expire_open_charges(_db())
+        expect(res["closed"] == 2, f"expiry {res}")
+        c = one("SELECT status, payment_status FROM muhurta_consultations WHERE id = CAST(:id AS uuid)", id=cons["id"])
+        expect((c["status"], c["payment_status"]) == ("cancelled", "failed"), f"consultation {dict(c)}")
+        r = one("SELECT status, payment_status FROM seva_event_registrations WHERE id = CAST(:id AS uuid)", id=reg["id"])
+        expect((r["status"], r["payment_status"]) == ("cancelled", "failed"), f"registration {dict(r)}")
+        expect(int(one("SELECT registration_count FROM seva_events WHERE id = CAST(:id AS uuid)", id=eid)["registration_count"]) == 0, "seat not released")
+        st = call("GET", f"/payments/charges/{reg['checkout']['payment_id']}/status", CUSTOMER).json()
+        expect(st["status"] == "closed" and st["closed_reason"] == "expired", f"status {st}")
+        # A payment the bank completes after that is refunded in full, and nothing is reopened.
+        FAKE.orders[reg["checkout"]["order_id"]]["order_status"] = "ACTIVE"
+        FAKE.pay(reg["checkout"]["order_id"], "SUCCESS")
+        webhook(reg["checkout"]["order_id"])
+        pay = one("SELECT id FROM payments WHERE provider_order_id = :o", o=reg["checkout"]["order_id"])
+        refunds = sql("SELECT kind, amount_paise FROM refunds WHERE payment_id = :p", p=pay["id"]).mappings().all()
+        expect([(x["kind"], int(x["amount_paise"])) for x in refunds] == [("late_payment", 50_100)], f"{refunds}")
+        r = one("SELECT status FROM seva_event_registrations WHERE id = CAST(:id AS uuid)", id=reg["id"])
+        expect(r["status"] == "cancelled", "late payment reopened the registration")
+    finally:
+        _wallet_on()
+
+
+def check_recurring_date_pay_now_uses_gateway():
+    enable_cashfree()
+    svc = prepare_catalogue()
+    set_wallet(CUSTOMER, 5_000_000)
+    created = call("POST", "/bookings", CUSTOMER, booking_body(svc)).json()  # wallet still on
+    # Make it look like a later date of a recurring booking: created unpaid.
+    sql("DELETE FROM payments WHERE booking_id = CAST(:id AS uuid)", id=created["id"])
+    sql("UPDATE bookings SET status = 'pending', payment_status = 'pending', paid_at = NULL WHERE id = CAST(:id AS uuid)", id=created["id"])
+    try:
+        _wallet_off()
+        balance = wallet(CUSTOMER)
+        first = call("POST", f"/bookings/{created['id']}/pay", CUSTOMER)
+        expect(first.status_code == 200 and first.json()["payment_required"], f"pay {first.status_code} {first.text[:300]}")
+        second = call("POST", f"/bookings/{created['id']}/pay", CUSTOMER).json()
+        expect(second["checkout"]["order_id"] == first.json()["checkout"]["order_id"], "second checkout instead of resuming")
+        oid = first.json()["checkout"]["order_id"]
+        FAKE.pay(oid, "SUCCESS")
+        webhook(oid)
+        b = bk(created["id"])
+        expect(b["payment_status"] == "paid" and b["status"] == "pending_acceptance", f"{b['status']} {b['payment_status']}")
+        expect(wallet(CUSTOMER) == balance, "Pay now used the wallet")
+        r = call("POST", f"/bookings/{created['id']}/cancel?reason=Plans%20changed%20for%20family", CUSTOMER)
+        expect(r.status_code == 200 and r.json()["refund_method"] == "cashfree", f"cancel refund {r.text[:300]}")
+        expect(wallet(CUSTOMER) == balance, "refund went to the wallet")
+    finally:
+        _wallet_on()
+
+
+def check_abandoned_charge_closes_and_can_start_again():
+    enable_cashfree()
+    svc = _consultation_service()
+    try:
+        _wallet_off()
+        cons = call("POST", "/muhurta-consultations", CUSTOMER, _consultation_body(svc)).json()
+        group = cons["checkout"]["payment_id"]
+        r = call("POST", f"/payments/charges/{group}/abandon", CUSTOMER)
+        expect(r.status_code == 200, f"abandon {r.text}")
+        expect(FAKE.orders[cons["checkout"]["order_id"]]["order_status"] == "TERMINATED", "order not terminated")
+        c = one("SELECT status, payment_status FROM muhurta_consultations WHERE id = CAST(:id AS uuid)", id=cons["id"])
+        expect((c["status"], c["payment_status"]) == ("cancelled", "failed"), f"{dict(c)}")
+        st = call("GET", f"/payments/charges/{group}/status", CUSTOMER).json()
+        expect(st["status"] == "closed" and st["closed_reason"] == "abandoned", f"{st}")
+        expect(call("POST", f"/payments/charges/{group}/checkout", CUSTOMER).status_code == 409, "closed charge resumed")
+        # Another customer cannot see or touch it.
+        expect(call("GET", f"/payments/charges/{group}/status", "customer2@bseva.test").status_code == 404, "other customer saw it")
+    finally:
+        _wallet_on()
+
+
+def check_wallet_balances_refunded_manually_by_super_admin():
+    enable_cashfree()
+    set_wallet(CUSTOMER, 12_345)
+    try:
+        _wallet_off()
+        listed = call("GET", "/admin/wallets/customer-balances", SUPER).json()
+        uid = str(user(CUSTOMER)["id"])
+        expect(any(i["user_id"] == uid and int(i["balance_paise"]) == 12_345 for i in listed["items"]), "customer not listed")
+        expect(call("GET", "/admin/wallets/customer-balances", CUSTOMER).status_code in (401, 403), "customer saw the list")
+        body = {"amount_paise": 99_999, "method": "upi", "reference": "UPIREF0001"}
+        expect(call("POST", f"/admin/wallets/{uid}/manual-refund", SUPER, body).status_code == 400, "more than the balance")
+        body["amount_paise"] = 12_345
+        r = call("POST", f"/admin/wallets/{uid}/manual-refund", SUPER, body)
+        expect(r.status_code == 200 and r.json()["balance_paise"] == 0, f"refund {r.text[:200]}")
+        expect(call("POST", f"/admin/wallets/{uid}/manual-refund", SUPER, body).status_code in (400, 409), "same reference twice")
+        expect(wallet(CUSTOMER) == 0, "balance not cleared")
+        expect(count("SELECT COUNT(*) FROM wallet_manual_refunds WHERE user_id = CAST(:u AS uuid)", u=uid) == 1, "refund record")
+    finally:
+        _wallet_on()
+
+
+def check_gateway_fee_per_gateway_and_auto_selection():
+    svc = prepare_catalogue()
+    quote = lambda: call("GET", f"/quote?service_id={svc['id']}&package_type=basic&city=Bengaluru", CUSTOMER).json()  # noqa: E731
+    _set_setting("customer_fee_gateway", "auto")
+    q = quote()
+    expect(q["gatewayName"] == "Razorpay", f"no gateway configured: {q['gatewayName']}")
+    enable_cashfree()
+    expect(call("PUT", "/admin/config", SUPER, {"key": "cashfree_fee_percent", "value": 1.9}).status_code == 200, "cashfree %")
+    q = quote()
+    expect(q["gatewayName"] == "Cashfree" and float(q["gatewayFeePercent"]) == 1.9, f"auto {q['gatewayName']} {q['gatewayFeePercent']}")
+    expect(call("PUT", "/admin/config", SUPER, {"key": "customer_fee_gateway", "value": "razorpay"}).status_code == 200, "choose razorpay")
+    q = quote()
+    expect(q["gatewayName"] == "Razorpay" and float(q["gatewayFeePercent"]) == 2, f"razorpay {q['gatewayName']}")
+    expect(call("PUT", "/admin/config", SUPER, {"key": "customer_fee_gateway", "value": "stripe"}).status_code == 400, "unknown gateway")
+    expect(call("PUT", "/admin/config", SUPER, {"key": "cashfree_fee_percent", "value": 50}).status_code == 400, "absurd fee")
+    expect(call("PUT", "/admin/config", SUPER, {"key": "customer_wallet_enabled", "value": "no"}).status_code == 400, "non-bool switch")
+    _set_setting("customer_fee_gateway", "auto")
+    _set_setting("cashfree_fee_percent", 2)
+
+
+def check_wallet_off_by_default_wherever_cashfree_works():
+    sql("DELETE FROM platform_settings WHERE key = 'customer_wallet_enabled'")  # automatic default
+    svc = prepare_catalogue()
+    set_wallet(CUSTOMER, 5_000_000)
+    settings.payment_gateway = "cashfree"
+    settings.cashfree_pg_app_id = ""  # no keys: no online gateway, so the wallet stays available
+    expect(call("GET", "/payments/config", CUSTOMER).json()["wallet_enabled"] is True, "no gateway but wallet off")
+    # Day 49 is free: random checks use days 11-48 and one check fixes days 50 / 51.
+    day49 = (date.today() + timedelta(days=49)).isoformat()
+    r = call("POST", "/bookings", CUSTOMER, booking_body(svc, booking_date=day49))
+    expect(r.status_code == 200, f"wallet booking refused without a gateway: {r.status_code} {r.text[:200]}")
+    enable_cashfree()  # keys present (as on QA / Production): wallet off without anyone switching it
+    cfg = call("GET", "/payments/config", CUSTOMER).json()
+    expect(cfg["online_enabled"] is True and cfg["wallet_enabled"] is False, f"default config {cfg}")
+    r = call("POST", "/bookings", CUSTOMER, booking_body(svc))
+    expect(r.status_code == 400 and "online" in r.text, f"wallet booking allowed by default {r.status_code}")
+    admin_cfg = call("GET", "/admin/config", SUPER).json()
+    expect(admin_cfg["customer_wallet_enabled"] is False, "admin settings show the wrong default")
+    _paid_online_booking()
+    # A Super Admin can still switch it back on explicitly.
+    expect(call("PUT", "/admin/config", SUPER, {"key": "customer_wallet_enabled", "value": True}).status_code == 200, "switch on")
+    expect(call("GET", "/payments/config", CUSTOMER).json()["wallet_enabled"] is True, "explicit setting ignored")
+
+
+def _restore_demo_pujari_bookable() -> None:
+    # Saving a pujari profile recalculates "profile complete"; the demo pujari's seed profile is mostly empty, so
+    # a save marks it incomplete and it stops getting bookings. Later checks need it bookable again.
+    sql("UPDATE pujari_profiles SET profile_complete = TRUE WHERE user_id = (SELECT id FROM users WHERE email = :e)", e=PUJARI)
+
+
+def check_pujari_chooses_upi_or_bank_and_gives_one_tap_consent():
+    from app.payouts.service import pujari_payout_details
+
+    pid = str(user(PUJARI)["id"])
+    sql("UPDATE pujari_profiles SET bank_account_number = '026291800001191', bank_ifsc = 'YESB0000262', "
+        "bank_holder_name = 'Pandit Test', upi_id = 'success@upi', payout_method = NULL, payout_details_consent_at = NULL "
+        "WHERE user_id = CAST(:p AS uuid)", p=pid)
+
+    def instrument() -> str:
+        db = _db()
+        try:
+            return pujari_payout_details(db, pid)["instrument"]
+        finally:
+            db.close()
+
+    expect(instrument() == "bank", "automatic choice should be the bank account")
+    prof = call("GET", "/pujari/profile", PUJARI).json()
+    expect(prof["payout_method_effective"] == "bank" and prof["payout_consent_needed"] is False, f"profile {prof.get('payout_method_effective')}")
+    # The pujari picks UPI: payouts go to UPI, and the one-tap consent prompt appears.
+    r = call("PATCH", "/pujari/profile", PUJARI, {"payout_method": "upi"})
+    expect(r.status_code == 200, f"choose upi {r.status_code} {r.text[:200]}")
+    expect(instrument() == "upi", "choice ignored by payouts")
+    prof = call("GET", "/pujari/profile", PUJARI).json()
+    expect(prof["payout_method_effective"] == "upi", "effective method")
+    # Choosing UPI on its own saves no UPI details, so consent was not given by that save.
+    sql("UPDATE pujari_profiles SET payout_details_consent_at = NULL WHERE user_id = CAST(:p AS uuid)", p=pid)
+    expect(call("GET", "/pujari/profile", PUJARI).json()["payout_consent_needed"] is True, "consent prompt missing")
+    c = call("POST", "/pujari/payout-verification-consent", PUJARI)
+    expect(c.status_code == 200, f"consent {c.status_code}")
+    expect(call("GET", "/pujari/profile", PUJARI).json()["payout_consent_needed"] is False, "consent not recorded")
+    expect(call("POST", "/pujari/payout-verification-consent", CUSTOMER).status_code in (401, 403), "customer gave pujari consent")
+    # A choice needs those details: no UPI ID means UPI cannot be chosen.
+    sql("UPDATE pujari_profiles SET upi_id = NULL, payout_method = NULL WHERE user_id = CAST(:p AS uuid)", p=pid)
+    r = call("PATCH", "/pujari/profile", PUJARI, {"payout_method": "upi"})
+    expect(r.status_code == 400 and "UPI" in r.text, f"upi chosen without a UPI ID {r.status_code}")
+    expect(one("SELECT payout_method FROM pujari_profiles WHERE user_id = CAST(:p AS uuid)", p=pid)["payout_method"] is None, "invalid choice saved")
+    _restore_demo_pujari_bookable()
+
+
+def _set_pujari_bank(account: str | None, ifsc: str | None, upi: str | None = None, holder: str = "Pandit Test") -> None:
+    sql("UPDATE pujari_profiles SET bank_account_number = :a, bank_ifsc = :i, upi_id = :u, bank_holder_name = :h "
+        "WHERE user_id = (SELECT id FROM users WHERE email = :e)", a=account, i=ifsc, u=upi, h=holder, e=PUJARI)
+
+
+def check_payout_details_verification_gates_payouts():
+    enable_cashfree()
+    # Earlier checks may already have verified these exact details (and a verified result is reused).
+    sql("DELETE FROM pujari_payout_verifications WHERE pujari_id = (SELECT id FROM users WHERE email = :e)", e=PUJARI)
+    _payout_ready("bank")  # verifies 026291800001191 (valid, name matches)
+    pid = str(user(PUJARI)["id"])
+    expect(FAKE.verifications == 1, f"verification calls {FAKE.verifications}")
+    again = _verify_pujari_details()
+    expect(again["reused"] is True and FAKE.verifications == 1, "verified details were checked (and billed) again")
+    # Only a Super Admin may run checks.
+    expect(call("POST", f"/admin/pujaris/{pid}/payout-verification", "admin@bseva.test").status_code in (401, 403), "admin ran a check")
+    # Invalid account: recorded, and payouts (even the OTP) are refused.
+    _set_pujari_bank("026291800001190", "YESB0000262")
+    _verify_pujari_details("invalid")
+    s = _completed_settlement()
+    prev = call("GET", f"/admin/payouts/settlements/{s['id']}/preview", SUPER).json()
+    expect(prev["verification"]["payable"] is False, f"preview {prev['verification']}")
+    _reset_otp_limits()
+    ch = call("POST", "/admin/security/challenge", SUPER, {"action": "settlement_payout", "settlement_id": str(s["id"])})
+    expect(ch.status_code == 409 and "invalid" in ch.text, f"OTP sent for invalid details {ch.status_code} {ch.text[:200]}")
+    expect(FAKE.transfer_creates == 0, "transfer to invalid details")
+    # Valid account in someone else's name: blocked until a Super Admin approves it with a reason.
+    _set_pujari_bank("00011020001772", "HDFC0000001")
+    check = _verify_pujari_details("name_mismatch")["check"]
+    r = _approve_payout(str(s["id"]))
+    expect(r.status_code == 409 and "does not match" in r.text, f"mismatch paid {r.status_code} {r.text[:200]}")
+    expect(call("POST", f"/admin/payout-verifications/{check['id']}/approve", SUPER, {"reason": "x"}).status_code == 422, "short reason")
+    ok = call("POST", f"/admin/payout-verifications/{check['id']}/approve", SUPER, {"reason": "Checked passbook: joint account"})
+    expect(ok.status_code == 200, f"approve {ok.text}")
+    r = _approve_payout(str(s["id"]))
+    expect(r.status_code == 200 and r.json()["status"] == "successful" and FAKE.transfer_creates == 1, f"approved payout {r.text[:300]}")
+    # UPI: needs the pujari's consent (saving details on the Bank & UPI screen records it).
+    _set_pujari_bank(None, None, "success@upi")
+    sql("UPDATE pujari_profiles SET payout_details_consent_at = NULL WHERE user_id = CAST(:p AS uuid)", p=pid)
+    sql("DELETE FROM security_rate_limits WHERE bucket = 'payout_details_check'")
+    r = call("POST", f"/admin/pujaris/{pid}/payout-verification", SUPER)
+    expect(r.status_code == 409 and "agreed" in r.text, f"UPI checked without consent {r.status_code} {r.text[:200]}")
+    saved = call("PATCH", "/pujari/profile", PUJARI, {"upi_id": "success@upi"})
+    expect(saved.status_code == 200, f"pujari save {saved.status_code} {saved.text[:200]}")
+    _restore_demo_pujari_bookable()
+    expect(one("SELECT payout_details_consent_at FROM pujari_profiles WHERE user_id = CAST(:p AS uuid)", p=pid)["payout_details_consent_at"], "consent not recorded")
+    _verify_pujari_details("verified")
+    summary = call("GET", f"/admin/pujaris/{pid}/payout-verification", SUPER).json()
+    expect(summary["payable"] and summary["instrument"] == "upi" and summary["current"]["name_at_bank"] == "PANDIT TEST", f"summary {summary}")
+    # Secure ID not set up: a clear refusal, nothing recorded.
+    settings.cashfree_vrs_client_id = ""
+    _set_pujari_bank("026291800001191", "YESB0000262", holder="Pandit New")
+    r = call("POST", f"/admin/pujaris/{pid}/payout-verification", SUPER)
+    expect(r.status_code == 409 and "Secure ID" in r.text, f"unconfigured {r.status_code}")
+
+
 CHECKS = {name[len("check_"):]: fn for name, fn in list(globals().items()) if name.startswith("check_")}
 
 if __name__ == "__main__":
     name = sys.argv[1]
+    # Most checks exercise the wallet next to the gateway: start each one with the wallet explicitly on (the default is
+    # automatic, i.e. off once Cashfree is configured). Checks about the default or wallet-off change it themselves.
+    _set_setting("customer_wallet_enabled", True)
     CHECKS[name]()
     print(f"PASS {name}")

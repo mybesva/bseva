@@ -497,10 +497,14 @@ function WalletRewardsSummary() {
   const { t } = useI18n();
   const [balance, setBalance] = useState<number | null>(null);
   const [rewardCount, setRewardCount] = useState<number | null>(null);
+  const [walletOff, setWalletOff] = useState(false);
 
   useEffect(() => {
-    api<{ wallet: { balance_paise: number } }>("/wallet")
-      .then((r) => setBalance(r.wallet?.balance_paise || 0))
+    api<{ wallet: { balance_paise: number }; customer_wallet_enabled?: boolean }>("/wallet")
+      .then((r) => {
+        setBalance(r.wallet?.balance_paise || 0);
+        setWalletOff(r.customer_wallet_enabled === false);
+      })
       .catch(() => setBalance(null));
     api<any[]>("/wallet/rewards")
       .then((r) => setRewardCount(Array.isArray(r) ? r.length : 0))
@@ -521,6 +525,16 @@ function WalletRewardsSummary() {
           <span className="mt-1 block text-2xl font-extrabold text-foreground">{rewardCount == null ? "—" : rewardCount}</span>
         </Link>
       </div>
+      {walletOff && (
+        <div className="mt-3 space-y-1 text-sm">
+          <p className="font-medium text-foreground">{t("wallet.off.title")}</p>
+          <p className="text-muted-foreground">
+            {balance != null && balance > 0
+              ? t("wallet.off.balance", { amount: `₹${(balance / 100).toLocaleString("en-IN")}` })
+              : t("wallet.off.body")}
+          </p>
+        </div>
+      )}
     </SectionCard>
   );
 }

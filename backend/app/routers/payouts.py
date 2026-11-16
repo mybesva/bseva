@@ -80,7 +80,46 @@ def preview_payout(settlement_id: str, user=Depends(require_super_admin), db: Se
         "configured": settings.cashfree_payouts_configured,
         "environment": settings.cashfree_payout_env,
         **service.payout_preview(db, s),
+        "verification": _verification(db, str(s["pujari_id"])),
     }
+
+
+def _verification(db: Session, pujari_id: str) -> dict:
+    from app.payouts.verification import verification_summary
+
+    v = verification_summary(db, pujari_id)
+    return {k: v.get(k) for k in ("has_details", "required", "payable", "current", "configured", "message")}
+
+
+class PayoutCheckApproveIn(BaseModel):
+    reason: str = Field(min_length=5, max_length=300)
+
+
+@router.get("/admin/pujaris/{pujari_id}/payout-verification")
+def payout_verification(pujari_id: str, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    """Whether this pujari's current bank / UPI details are verified for payouts, with past checks."""
+    from app.payouts.verification import verification_summary
+
+    return verification_summary(db, pujari_id)
+
+
+@router.post("/admin/pujaris/{pujari_id}/payout-verification")
+def check_payout_details(pujari_id: str, request: Request, user=Depends(require_super_admin), db: Session = Depends(get_db)):
+    """Check the pujari's current bank / UPI details with Cashfree Secure ID (billed per check; UPI sends Rs 1)."""
+    from app.payouts.verification import run_check
+
+    rate_limit.enforce(db, ("payout_details_check", 30, 3600), str(user["id"]), fail_closed=True)
+    return run_check(db, pujari_id, user)
+
+
+@router.post("/admin/payout-verifications/{verification_id}/approve")
+def approve_payout_details(
+    verification_id: str, body: PayoutCheckApproveIn, user=Depends(require_super_admin), db: Session = Depends(get_db)
+):
+    """Accept a name mismatch after checking the pujari's documents."""
+    from app.payouts.verification import approve_mismatch
+
+    return approve_mismatch(db, verification_id, user, body.reason)
 
 
 @router.post("/admin/payouts/settlements/{settlement_id}")
@@ -102,6 +141,9 @@ def create_payout(
         if e.status_code == 400:
             sa.log_failure(db, user, PAYOUT_ACTION, str(e.detail), settlement_id=settlement_id, ip=ip)
         raise
+    from app.payouts.verification import require_payable
+
+    require_payable(db, str(s["pujari_id"]))
     amount = int(s["settlement_amount_paise"] or 0)
     reference = service.payout_reference(db, s)
     expected_net = service.payout_split(db, s)["net_paise"]

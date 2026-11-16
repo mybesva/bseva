@@ -216,6 +216,15 @@ class WalletAdminCreditIn(BaseModel):
     mpin: str = Field(max_length=12)
 
 
+class WalletManualRefundIn(BaseModel):
+    """A customer's wallet balance paid back outside the app (customer wallet switched off)."""
+    amount_paise: int = Field(gt=0, le=500_000_00)
+    method: Literal["upi", "bank_transfer", "other"]
+    # UPI reference / bank UTR of the payment made to the customer. Unique per customer.
+    reference: str = Field(min_length=4, max_length=80)
+    note: Optional[str] = Field(default=None, max_length=200)
+
+
 class BlockIn(BaseModel):
     blocked: bool
     reason: Optional[str] = None
@@ -396,6 +405,8 @@ class PujariProfileIn(BaseModel):
     bank_holder_name: Optional[str] = Field(default=None, max_length=120)
     bank_name: Optional[str] = Field(default=None, max_length=120)
     upi_id: Optional[str] = Field(default=None, max_length=256)
+    # How the pujari wants to receive payouts (their choice); the chosen details must be complete.
+    payout_method: Optional[Literal["upi", "bank"]] = None
     onboarding_step: Optional[int] = Field(default=None, ge=1, le=6)
     licence_type: Optional[Literal["driving_licence", "cab_commercial", "other", "none"]] = None
     licence_number: Optional[str] = Field(default=None, max_length=40)

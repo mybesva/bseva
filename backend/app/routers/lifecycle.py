@@ -1020,6 +1020,12 @@ def _maybe_referral_reward(db: Session, customer_id: str, booking_id: str) -> No
             {"b": booking_id, "id": ref["id"]},
         )
         return
+    if scope != "pujari":
+        from app.customer_wallet import customer_wallet_enabled
+
+        if not customer_wallet_enabled(db):
+            # Customer rewards are wallet credit: with the customer wallet off none is given (and none is owed).
+            return
     if scope == "pujari":
         reward = int(get_setting(db, "referral_pujari_reward_paise", 10000))
         rtype = "pujari_referral"

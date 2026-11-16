@@ -6,7 +6,9 @@ import { View } from "react-native";
 import { DatePickerField } from "@/components/DatePickerField";
 import { TimePicker } from "@/components/TimePicker";
 import { AppText, Card, ErrorBanner, PrimaryButton } from "@/components/ui";
+import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
+import { openChargeCheckout } from "@/services/onlinePayment";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { formatDisplaySlot } from "@/utils/formatDate";
@@ -45,10 +47,14 @@ const feeText = (paise: number) => (paise ? `Fee ${rupees(paise)}` : "Free");
 
 export function RescheduleSection({ bookingId, onChanged }: { bookingId: string; onChanged: () => void }) {
   const { colors } = useAppTheme();
+  const { t } = useI18n();
   const q = useQuery({
     queryKey: ["reschedule", bookingId],
     queryFn: () => apiClient.rescheduleSummary(bookingId) as Promise<Summary>,
   });
+  // Customer wallet switched off by Super Admin: a reschedule fee is paid online (Cashfree) instead.
+  const paymentConfigQ = useQuery({ queryKey: ["payment-config"], queryFn: () => apiClient.paymentConfig() });
+  const walletEnabled = paymentConfigQ.data?.wallet_enabled !== false;
   const [step, setStep] = useState<"closed" | "slot" | "pay">("closed");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
@@ -59,13 +65,22 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
   if (!info || (info.blocked_code === "RESCHEDULE_NOT_ALLOWED" && !info.reschedule_count)) return null;
   const performance = info.pujari_performance;
   const fee = info.next_fee_paise;
-  const shortfall = Math.max(0, fee - info.wallet_balance_paise);
+  const shortfall = walletEnabled ? Math.max(0, fee - info.wallet_balance_paise) : 0;
 
   async function save() {
     setSaving(true);
     setError(null);
     try {
-      await apiClient.rescheduleBooking(bookingId, date, time, fee);
+      const out = await apiClient.rescheduleBooking(bookingId, date, time, fee);
+      if (out?.payment_required && out.checkout) {
+        // The booking moves only once the payment is verified; the charge screen shows the result.
+        const checkout = out.checkout;
+        setStep("closed");
+        setDate("");
+        router.push(`/customer/payment/charge/${checkout.payment_id}`);
+        await openChargeCheckout(checkout);
+        return;
+      }
       setStep("closed");
       setDate("");
       await q.refetch();
@@ -132,8 +147,10 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
             <AppText variant="h3">{fee ? "Pay Rescheduling Charge" : "Free Rescheduling"}</AppText>
             <AppText>New Time: {slot(date, time)}</AppText>
             <AppText>Rescheduling Charge: {rupees(fee)}</AppText>
-            {fee ? (
+            {fee && walletEnabled ? (
               <AppText>Wallet Balance: {rupees(info.wallet_balance_paise)}</AppText>
+            ) : fee ? (
+              <AppText color={colors.mutedForeground}>{t("pay.onlineHint")}</AppText>
             ) : (
               <AppText color={colors.mutedForeground}>This reschedule is free of cost. Nothing will be charged.</AppText>
             )}
@@ -146,7 +163,13 @@ export function RescheduleSection({ bookingId, onChanged }: { bookingId: string;
               </>
             ) : (
               <PrimaryButton
-                title={fee ? `Pay ${rupees(fee)} from Wallet` : "Confirm Free Reschedule"}
+                title={
+                  !fee
+                    ? "Confirm Free Reschedule"
+                    : walletEnabled
+                      ? `Pay ${rupees(fee)} from Wallet`
+                      : t("pay.charge.payAndReschedule", { amount: rupees(fee) })
+                }
                 loading={saving}
                 onPress={() => void save()}
               />

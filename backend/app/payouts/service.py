@@ -36,13 +36,23 @@ def _instrument(profile: dict) -> dict | None:
     upi = str(profile.get("upi_id") or "").strip().lower()
     name = re.sub(r"[^A-Za-z ]", " ", str(profile.get("bank_holder_name") or profile.get("name") or ""))
     name = re.sub(r"\s+", " ", name).strip()[:100]
-    if account and ifsc and name:
-        return {"instrument": "bank", "account": account, "ifsc": ifsc, "vpa": None, "name": name,
-                "mode": "imps", "masked": f"A/c ••••{account[-4:]} · {ifsc}"}
-    if upi and name:
-        return {"instrument": "upi", "account": None, "ifsc": None, "vpa": upi, "name": name,
-                "mode": "upi", "masked": f"UPI {upi[:2]}•••@{upi.split('@')[-1]}"}
-    return None
+    bank = (
+        {"instrument": "bank", "account": account, "ifsc": ifsc, "vpa": None, "name": name,
+         "mode": "imps", "masked": f"A/c ••••{account[-4:]} · {ifsc}"}
+        if account and ifsc and name else None
+    )
+    upi_inst = (
+        {"instrument": "upi", "account": None, "ifsc": None, "vpa": upi, "name": name,
+         "mode": "upi", "masked": f"UPI {upi[:2]}•••@{upi.split('@')[-1]}"}
+        if upi and name else None
+    )
+    # The pujari's own choice when those details are complete; otherwise the bank account first, then UPI.
+    choice = str(profile.get("payout_method") or "").strip().lower()
+    if choice == "upi" and upi_inst:
+        return upi_inst
+    if choice == "bank" and bank:
+        return bank
+    return bank or upi_inst
 
 
 def _fingerprint(inst: dict) -> str:
@@ -54,12 +64,18 @@ def pujari_payout_details(db: Session, pujari_id: str) -> dict:
     row = db.execute(
         text(
             """
-            SELECT u.name, u.phone, u.email, p.bank_account_number, p.bank_ifsc, p.bank_holder_name, p.upi_id
+            SELECT u.name, u.phone, u.email, p.bank_account_number, p.bank_ifsc, p.bank_holder_name, p.upi_id,
+                   p.payout_method
             FROM users u LEFT JOIN pujari_profiles p ON p.user_id = u.id WHERE u.id = CAST(:id AS uuid)
             """
         ),
         {"id": pujari_id},
     ).mappings().first()
+    if row:
+        from app.field_crypto import decrypt_value
+
+        # Stored encrypted when DATA_ENCRYPTION_KEY is set (app.field_crypto): send the real number, never the cipher.
+        row = {**dict(row), "bank_account_number": decrypt_value(row.get("bank_account_number"))}
     inst = _instrument(dict(row)) if row else None
     if not inst:
         raise HTTPException(400, "This pujari has no complete bank account or UPI ID for payouts")

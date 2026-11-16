@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppText, Card, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
+import { AppText, Card, ChoiceChips, ErrorBanner, Field, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
 import { useAppTheme } from "@/theme/ThemeContext";
@@ -32,6 +32,28 @@ export default function BankScreen() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // How the pujari wants to receive payouts (their choice when both UPI and a bank account are filled in).
+  const [method, setMethod] = useState<"" | "upi" | "bank">("");
+  const [baselineMethod, setBaselineMethod] = useState<"" | "upi" | "bank">("");
+  const [consentBusy, setConsentBusy] = useState(false);
+  const data = q.data as (typeof q.data & {
+    payout_method?: "upi" | "bank" | null;
+    payout_method_effective?: "upi" | "bank" | null;
+    payout_consent_needed?: boolean;
+  }) | undefined;
+
+  async function allowVerification() {
+    setConsentBusy(true);
+    try {
+      await apiClient.givePayoutVerificationConsent();
+      await q.refetch();
+      showSuccessAlert(t("payout.consent.done"));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setConsentBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!q.data) return;
@@ -46,11 +68,18 @@ export default function BankScreen() {
     };
     setBaseline(saved);
     setDraft(saved);
+    const m = (data?.payout_method || data?.payout_method_effective || "") as "" | "upi" | "bank";
+    setMethod(m);
+    setBaselineMethod(m);
     // Nothing saved yet: open straight in edit mode, like the web.
     setEditing(!hasSettlementMethod(saved));
   }, [q.data]);
 
-  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [draft, baseline]);
+  const dirty = useMemo(
+    () => JSON.stringify(draft) !== JSON.stringify(baseline) || method !== baselineMethod,
+    [draft, baseline, method, baselineMethod],
+  );
+  const bothFilled = Boolean(draft.upiId.trim()) && draft.accountNumber.replace(/\D/g, "").length >= 9;
   const bankRequired = bankDraftTouched(draft);
 
   function setField<K extends keyof BankDraft>(key: K, value: string) {
@@ -81,7 +110,9 @@ export default function BankScreen() {
     }
     setBusy(true);
     try {
-      await apiClient.patchPujariProfile(settlementPayload(draft));
+      const payload: Record<string, unknown> = { ...settlementPayload(draft) };
+      if (bothFilled && method) payload.payout_method = method;
+      await apiClient.patchPujariProfile(payload);
       await q.refetch();
       setEditing(false);
       showSuccessAlert(t("web.bank.saved"));
@@ -100,6 +131,15 @@ export default function BankScreen() {
           {t("web.bank.description")}
         </AppText>
         <ErrorBanner message={error} />
+
+        {data?.payout_consent_needed ? (
+          // One tap: UPI payouts are verified with a ₹1 check, which needs the pujari's consent first.
+          <Card style={{ gap: 8, borderColor: "#F59E0B", backgroundColor: "#F59E0B14" }}>
+            <AppText style={{ fontWeight: "700" }}>{t("payout.consent.title")}</AppText>
+            <AppText variant="small" color={colors.mutedForeground}>{t("payout.consent.body")}</AppText>
+            <PrimaryButton title={t("payout.consent.allow")} loading={consentBusy} disabled={consentBusy} onPress={() => void allowVerification()} />
+          </Card>
+        ) : null}
 
         {!editing ? (
           <Card style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, borderColor: `${colors.primary}66`, backgroundColor: `${colors.primary}0D` }}>
@@ -175,6 +215,24 @@ export default function BankScreen() {
           error={fieldErrors.accountConfirm}
         />
 
+        {bothFilled ? (
+          <View style={{ gap: 6 }}>
+            <AppText variant="small" style={{ fontWeight: "600" }}>{t("payout.method.label")}</AppText>
+            <ChoiceChips
+              options={[
+                { id: "upi", label: t("payout.method.upi") },
+                { id: "bank", label: t("payout.method.bank") },
+              ]}
+              value={method}
+              onChange={(next) => editing && setMethod(String(next) as "upi" | "bank")}
+            />
+            <AppText variant="small" color={colors.mutedForeground}>{t("payout.method.hint")}</AppText>
+          </View>
+        ) : null}
+        {/* Saving records the pujari's consent to verification (backend app.payouts.verification). */}
+        <AppText variant="small" color={colors.mutedForeground}>
+          {t("payout.verifyConsent")}
+        </AppText>
         {!editing ? (
           <PrimaryButton title={t("common.edit")} onPress={() => setEditing(true)} />
         ) : (

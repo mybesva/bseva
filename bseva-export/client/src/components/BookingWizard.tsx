@@ -318,10 +318,18 @@ export default function BookingWizard({
   const [wallet, setWallet] = useState<{ balance?: number; wallet?: { balance_paise: number } } | null>(null);
   // Online checkout is offered only when the server says the gateway is configured; wallet stays available.
   const [onlineEnabled, setOnlineEnabled] = useState(false);
+  // Super Admin can switch the customer wallet off: then the only way to pay is online.
+  const [walletEnabled, setWalletEnabled] = useState(true);
   const [payMethod, setPayMethod] = useState<"cashfree" | "wallet">("wallet");
   // The default selection is not a choice: until the customer picks a method, Review shows both refund cases.
   const [payMethodChosen, setPayMethodChosen] = useState(false);
-  const reviewRefundMethod: RefundMethod = !onlineEnabled ? "wallet" : payMethodChosen ? payMethod : "either";
+  const reviewRefundMethod: RefundMethod = !walletEnabled
+    ? "cashfree"
+    : !onlineEnabled
+      ? "wallet"
+      : payMethodChosen
+        ? payMethod
+        : "either";
   const [quote, setQuote] = useState<any>(null);
   const [panchang, setPanchang] = useState<any>(null);
   const [recurring, setRecurring] = useState<"none" | "weekly" | "monthly" | "selected_dates">("none");
@@ -435,7 +443,9 @@ export default function BookingWizard({
     paymentConfig()
       .then((c) => {
         setOnlineEnabled(Boolean(c.online_enabled));
-        if (c.online_enabled) setPayMethod("cashfree");
+        const walletOn = c.wallet_enabled !== false;
+        setWalletEnabled(walletOn);
+        if (c.online_enabled || !walletOn) setPayMethod("cashfree");
       })
       .catch(() => setOnlineEnabled(false));
   }, [isAuthenticated]);
@@ -1791,7 +1801,7 @@ export default function BookingWizard({
           {isAuthenticated && (
             <Card>
               <CardContent className="p-6 space-y-4">
-                {onlineEnabled && (
+                {onlineEnabled && walletEnabled && (
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">{t("pay.method")}</Label>
                     <RadioGroup
@@ -1814,6 +1824,15 @@ export default function BookingWizard({
                         <span className="block text-sm font-medium">{t("pay.wallet")}</span>
                       </label>
                     </RadioGroup>
+                  </div>
+                )}
+                {!walletEnabled && (
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">{t("pay.method")}</Label>
+                    <div className="rounded-md border p-3">
+                      <span className="block text-sm font-medium">{t("pay.online")}</span>
+                      <span className="block text-xs text-muted-foreground">{t("pay.onlineHint")}</span>
+                    </div>
                   </div>
                 )}
                 {payMethod === "wallet" && (
@@ -1911,7 +1930,7 @@ export default function BookingWizard({
                   </div>
                 ))}
                 {policy!.slug === "cancellation_policy" && (
-                  <p className="font-medium text-foreground">{t(refundDestinationKey(onlineEnabled ? payMethod : "wallet"))}</p>
+                  <p className="font-medium text-foreground">{t(refundDestinationKey(!walletEnabled ? "cashfree" : onlineEnabled ? payMethod : "wallet"))}</p>
                 )}
               </div>
             ))}

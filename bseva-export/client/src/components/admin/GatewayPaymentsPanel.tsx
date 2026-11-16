@@ -29,6 +29,14 @@ function when(v?: string | null) {
 }
 
 /** Gateway (Cashfree) payments, refunds, payouts and webhook log. Statuses are what the provider reported. */
+// Payments other than a new booking (customer wallet off): what was paid for.
+const CHARGE_LABELS: Record<string, string> = {
+  reschedule_fee: "Reschedule fee",
+  consultation: "Muhurtham consultation",
+  seva_registration: "Seva registration",
+  booking_payment: "Recurring booking date",
+};
+
 export default function GatewayPaymentsPanel() {
   const { user } = useAuth();
   const isSuper = user?.role === "super_admin";
@@ -148,7 +156,12 @@ export default function GatewayPaymentsPanel() {
               <TableBody>
                 {payments.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-mono text-xs">{p.booking_number}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {p.booking_number || p.charge_reference}
+                      {p.purpose && p.purpose !== "booking" ? (
+                        <span className="block font-sans text-[11px] text-muted-foreground">{CHARGE_LABELS[p.purpose] ?? p.purpose}</span>
+                      ) : null}
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{p.provider_order_id} · #{p.attempt_no}</TableCell>
                     <TableCell>
                       <Badge variant={tone(p.status) as any}>{p.status}{p.duplicate_of ? " · duplicate" : ""}</Badge>
