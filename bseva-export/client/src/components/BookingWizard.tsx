@@ -527,9 +527,19 @@ export default function BookingWizard({
     if (bookingDate) qs.set("booking_date", format(bookingDate, "yyyy-MM-dd"));
     qs.set("mode", serviceMode === "virtual" ? "virtual" : "in_person");
     if (customerCountry) qs.set("country", customerCountry);
+    // Ignore replies to earlier requests: a slow, outdated quote (e.g. one asked before the date was picked)
+    // must never replace the current one, or the page shows a different total from the one charged.
+    let outdated = false;
     api(`/quote?${qs}`)
-      .then(setQuote)
-      .catch(() => setQuote(null));
+      .then((q) => {
+        if (!outdated) setQuote(q);
+      })
+      .catch(() => {
+        if (!outdated) setQuote(null);
+      });
+    return () => {
+      outdated = true;
+    };
   }, [
     bookingDate,
     serviceId,
@@ -1062,7 +1072,16 @@ export default function BookingWizard({
         country: customerCountry,
       });
       const finalQuote = await api<any>(`/quote?${finalQuoteParams}`);
+      const shownTotal = Number(quote?.totalAmount);
       setQuote(finalQuote);
+      if (Number(finalQuote?.totalAmount) !== shownTotal) {
+        // Never charge an amount the customer has not seen: show the new total and let them pay again.
+        const amount = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
+          Number(finalQuote?.totalAmount ?? 0) / 100,
+        );
+        toast.error(t("pay.priceChanged", { amount }));
+        return;
+      }
       const submitSignature = JSON.stringify({
         serviceId, tier, serviceMode,
         bookingDate: format(bookingDate, "yyyy-MM-dd"),

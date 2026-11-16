@@ -434,8 +434,13 @@ export default function BookService() {
     return true;
   }
 
+  // Only the latest request may set the quote: a slower reply to an earlier one (e.g. before the date was
+  // picked) must not replace it, or the screen shows a different total from the one charged.
+  const quoteRequest = useRef(0);
+
   async function loadQuote() {
     if (!svc) return;
+    const request = ++quoteRequest.current;
     setError(null);
     try {
       const q = await apiClient.quote({
@@ -449,8 +454,9 @@ export default function BookService() {
         country: mode === "virtual" ? customerCountry : undefined,
         mode,
       });
-      setQuote(q);
+      if (request === quoteRequest.current) setQuote(q);
     } catch (e: unknown) {
+      if (request !== quoteRequest.current) return;
       setError(e instanceof Error ? e.message : t("mobile.quoteFailed"));
     }
   }
