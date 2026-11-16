@@ -3,7 +3,7 @@ import { spacing } from "@bseva/tokens";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { ComponentProps } from "react";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { AppText, ErrorBanner, LoadingBlock, Screen } from "@/components/ui";
@@ -12,6 +12,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type ActionIcon = ComponentProps<typeof Ionicons>["name"];
 
@@ -225,7 +226,7 @@ export default function AdminDashboard() {
       />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => q.refetch()} />}
       >
         {q.isLoading ? <LoadingBlock /> : null}
         {q.error ? <ErrorBanner message={q.error instanceof Error ? q.error.message : "Could not load"} /> : null}

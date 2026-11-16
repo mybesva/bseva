@@ -3,12 +3,13 @@ import type { CatalogService, SevaEvent, ServiceType } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
-import { RefreshControl, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { PujaServiceCard } from "@/components/PujaImage";
 import { SevaEventCard } from "@/components/customer/SevaEventCard";
 import { AppText, EmptyState, ErrorBanner, LoadingBlock } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useI18n } from "@/providers/I18nProvider";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 /**
  * Chadhava Seva / Pravachan Seva on mobile. Uses the existing Seva service and event APIs.
@@ -36,19 +37,19 @@ export function SevaTypePane({ type }: { type: Exclude<ServiceType, "puja"> }) {
   const loading = servicesQ.isLoading || eventsQ.isLoading;
   const failure = servicesQ.error || eventsQ.error;
   const errorMessage = failure ? (failure instanceof Error && failure.message ? failure.message : t("errors.generic")) : null;
-  const refreshing = (servicesQ.isRefetching || eventsQ.isRefetching) && !loading;
 
   return (
     <ScrollView
       contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}
       keyboardShouldPersistTaps="handled"
       refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            void servicesQ.refetch();
-            void eventsQ.refetch();
-          }}
+        <PullToRefresh
+          onRefresh={() =>
+            Promise.all([
+              servicesQ.refetch(),
+              eventsQ.refetch(),
+            ])
+          }
         />
       }
     >

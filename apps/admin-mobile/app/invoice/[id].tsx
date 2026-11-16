@@ -82,8 +82,8 @@ export default function AdminInvoiceHtml() {
   async function downloadPdf() {
     setBusy("download");
     try {
-      await downloadAuthorizedPdf(`/api/v1/invoices/${id}/pdf`, `invoice-${id}.pdf`);
-      pdfAlert(t("admin.invoices"), t("mobile.invoiceSaved"));
+      const saved = await downloadAuthorizedPdf(`/api/v1/invoices/${id}/pdf`, `invoice-${id}.pdf`);
+      if (saved.method === "saved") pdfAlert(t("admin.invoices"), t("mobile.invoiceSaved"));
     } catch (e: unknown) {
       pdfAlert(t("admin.invoices"), e instanceof Error ? e.message : t("mobile.invoiceDownloadFailed"));
     } finally {

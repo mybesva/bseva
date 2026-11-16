@@ -1,12 +1,13 @@
 import type { SevaEvent } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { RefreshControl, ScrollView, TouchableOpacity, View } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, EmptyState, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 function eventKindLabel(ev: SevaEvent, t: (k: string) => string): string {
   if (ev.puja_event_kind === "group_live") return t("seva.groupLivePuja");
@@ -32,7 +33,7 @@ export default function PujariSevaEventsScreen() {
       </SafeAreaView>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => q.refetch()} />}
       >
         {q.isLoading ? <LoadingBlock /> : null}
         {(q.data || []).length === 0 && !q.isLoading ? <EmptyState title={t("seva.noEvents")} /> : null}

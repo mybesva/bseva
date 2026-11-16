@@ -3,7 +3,7 @@ import { formatDisplayDateTime } from "@bseva/locales";
 import { walletLoadSchema } from "@bseva/validation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
@@ -12,6 +12,7 @@ import { useI18n } from "@/providers/I18nProvider";
 import { showSuccessAlert } from "@/utils/actionFeedback";
 import { userMessage } from "@/utils/userMessage";
 import { text as ctext } from "@/content/compliance";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 function publicWalletDescription(raw?: string | null, fallback = "Wallet transaction"): string {
   const s = String(raw || "").trim();
@@ -73,7 +74,7 @@ export default function WalletScreen() {
       </SafeAreaView>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12 }}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => q.refetch()} />}
       >
         {q.isLoading ? <LoadingBlock /> : null}
         <Card>

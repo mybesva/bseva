@@ -22,8 +22,8 @@ export default function BookingReceiptScreen() {
   async function downloadPdf() {
     setBusy("download");
     try {
-      await downloadAuthorizedPdf(`/api/v1/bookings/${id}/receipt/pdf`, `receipt-${id}.pdf`);
-      pdfAlert(t("web.booking.receipt"), t("mobile.invoiceSaved"));
+      const saved = await downloadAuthorizedPdf(`/api/v1/bookings/${id}/receipt/pdf`, `receipt-${id}.pdf`);
+      if (saved.method === "saved") pdfAlert(t("web.booking.receipt"), t("mobile.invoiceSaved"));
     } catch (e: unknown) {
       pdfAlert(t("web.booking.receipt"), e instanceof Error ? e.message : t("mobile.invoiceDownloadFailed"));
     } finally {

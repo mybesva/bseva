@@ -1,12 +1,13 @@
 import { pujariEarningsStats, rupees, translatedTokenLabel } from "@bseva/config";
 import { formatDisplayDateTime } from "@bseva/locales";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshControl, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, LoadingBlock, Screen } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 export default function PujariEarnings() {
   const { colors } = useAppTheme();
@@ -27,7 +28,7 @@ export default function PujariEarnings() {
       </SafeAreaView>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12 }}
-        refreshControl={<RefreshControl refreshing={bookings.isRefetching} onRefresh={() => void bookings.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => bookings.refetch()} />}
       >
         {bookings.isLoading ? <LoadingBlock /> : null}
         <Card>

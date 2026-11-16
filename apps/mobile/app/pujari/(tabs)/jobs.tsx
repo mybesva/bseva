@@ -3,7 +3,7 @@ import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshControl, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PujariBookingsFilter, type PujariStatusFilter } from "@/components/PujariBookingsFilter";
 import { PujariDashboardBookingCard } from "@/components/PujariDashboardBookingCard";
@@ -12,6 +12,7 @@ import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { compareBookingsBySchedule } from "@/utils/pujariBookings";
 import { useI18n } from "@/providers/I18nProvider";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const STATUS_FILTERS: PujariStatusFilter[] = [
   "all",
@@ -154,7 +155,7 @@ export default function PujariJobs() {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, gap: 12, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => q.refetch()} />}
       >
         <PujariBookingsFilter
           segment={segment}

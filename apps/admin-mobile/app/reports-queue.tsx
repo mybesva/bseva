@@ -3,7 +3,7 @@ import { displayTokenLabel, formatIndianPhone } from "@bseva/config";
 import { formatDisplayDateTime } from "@bseva/locales";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { Modal, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -22,6 +22,7 @@ import {
 import { useAdmin } from "@/providers/AdminProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 /** User reports (complaints). Not the Super Admin analytics "Reports" page. */
 const API = "/admin/user-reports";
@@ -381,7 +382,7 @@ export default function AdminReportsQueue() {
       <ScreenHeader title="User Reports" back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
       >
         {!allowed ? (
           <EmptyState title="No access" subtitle="Your admin permissions do not include user reports." />
