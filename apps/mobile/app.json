@@ -13,11 +13,11 @@
       "backgroundColor": "#FFF8E7"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.bseva.app",
       "appleTeamId": "67ZN9U655H",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "2",
+      "buildNumber": "4",
       "infoPlist": {
         "NSCameraUsageDescription": "B-Seva uses the camera so you can take a profile photo, signature photo, or document photo instead of only picking from the library.",
         "NSPhotoLibraryUsageDescription": "B-Seva needs photo library access to attach documents and profile photos.",
@@ -33,7 +33,7 @@
     "android": {
       "package": "com.bseva.app",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 5,
+      "versionCode": 7,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
