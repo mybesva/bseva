@@ -13,8 +13,7 @@ import {
   cacheAuthorizedPdf,
   downloadAuthorizedPdf,
   pdfAlert,
-  printHtmlDocument,
-  printPdfFile,
+  printAuthorizedPdf,
   shareCachedPdf,
 } from "@/utils/documentPdf";
 
@@ -92,8 +91,9 @@ export default function InvoiceHtmlScreen() {
   async function downloadPdf() {
     setBusy("download");
     try {
-      await downloadAuthorizedPdf(`/api/v1/invoices/${id}/pdf`, `invoice-${id}.pdf`);
-      pdfAlert(t("mobile.invoices"), t("mobile.invoiceSaved"));
+      const saved = await downloadAuthorizedPdf(`/api/v1/invoices/${id}/pdf`, `invoice-${id}.pdf`);
+      // "shared": no folder was picked, so the share sheet opened instead (nothing to confirm).
+      if (saved.method === "saved") pdfAlert(t("mobile.invoices"), t("mobile.invoiceSaved"));
     } catch (e: unknown) {
       pdfAlert(t("mobile.invoices"), e instanceof Error ? e.message : t("mobile.invoiceDownloadFailed"));
     } finally {
@@ -104,12 +104,8 @@ export default function InvoiceHtmlScreen() {
   async function printSave() {
     setBusy("print");
     try {
-      if (q.data) {
-        await printHtmlDocument(q.data);
-      } else {
-        const cached = await cacheAuthorizedPdf(`/api/v1/invoices/${id}/pdf`, `invoice-${id}.pdf`);
-        await printPdfFile(cached);
-      }
+      // The server PDF, not the HTML: rendering HTML on Android can stall and leave printing stuck.
+      await printAuthorizedPdf(`/api/v1/invoices/${id}/pdf`, `invoice-${id}.pdf`, q.data);
     } catch (e: unknown) {
       pdfAlert(t("mobile.invoices"), e instanceof Error ? e.message : t("mobile.invoicePrintFailed"));
     } finally {

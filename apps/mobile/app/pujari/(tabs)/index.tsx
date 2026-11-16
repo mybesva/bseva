@@ -3,7 +3,7 @@ import type { Booking } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import { RefreshControl, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { PujariDashboardSection } from "@/components/PujariDashboardSection";
 import { HomeBrandBar } from "@/components/ScreenHeader";
 import { PujariQuickActions } from "@/components/PujariQuickActions";
@@ -27,6 +27,7 @@ import {
   pujariDashboardStats,
 } from "@/utils/pujariBookings";
 import { shouldShowPujariVerificationAlert } from "@/utils/pujariVerification";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type FeaturedSection = {
   title: string;
@@ -127,12 +128,13 @@ export default function PujariHome() {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, gap: 16, paddingBottom: 100 }}
         refreshControl={
-          <RefreshControl
-            refreshing={bookings.isRefetching || profile.isRefetching}
-            onRefresh={() => {
-              void bookings.refetch();
-              void profile.refetch();
-            }}
+          <PullToRefresh
+            onRefresh={() =>
+              Promise.all([
+                bookings.refetch(),
+                profile.refetch(),
+              ])
+            }
           />
         }
       >

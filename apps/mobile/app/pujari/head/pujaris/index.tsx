@@ -2,11 +2,12 @@ import { formatIndianPhone } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, ScrollView } from "react-native";
+import { Pressable, ScrollView } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type Row = {
   id: string;
@@ -44,7 +45,7 @@ export default function HeadPujariDirectory() {
       <ScreenHeader title="Pujari Directory" back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
       >
         <ErrorBanner message={list.error instanceof Error ? list.error.message : null} />
         <Field label="Search" value={q} onChangeText={setQ} />

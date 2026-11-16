@@ -3,7 +3,7 @@ import { displayTokenLabel, formatIndianPhone, rupees } from "@bseva/config";
 import { formatDisplayDate, formatDisplayDateTime } from "@bseva/locales";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { Modal, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { showAdminActionSheet } from "@/components/admin/adminActionSheet";
@@ -23,6 +23,7 @@ import {
 import { useAdmin } from "@/providers/AdminProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const PAGE_SIZE = 20;
 
@@ -535,7 +536,7 @@ export default function AdminAccountDeletions() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
       >
         {!allowed ? (
           <EmptyState title="No access" subtitle="Your admin permissions do not include account deletions." />

@@ -152,6 +152,12 @@ def _do_notifications(db: Session, b: dict) -> dict:
         message_key="bookingCreated",
         message_vars={"number": number},
     )
+    # WhatsApp goes out after the caller commits (app.whatsapp.msg91), at most once per booking and person.
+    from app.whatsapp import msg91
+
+    msg91.notify(db, "booking_confirmed", bid, b["customer_id"])
+    if b.get("pujari_id"):
+        msg91.notify(db, "pujari_new_booking", bid, b["pujari_id"])
     notify_ops_staff(
         db,
         title="New Virtual Puja Booking" if virtual else "New Booking",

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, Field, LoadingBlock, PrimaryButton, Screen, StatusBadge, SuccessBanner } from "@/components/ui";
 import { useAdmin } from "@/providers/AdminProvider";
@@ -8,6 +8,7 @@ import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { formatDisplayDateTime } from "@bseva/locales";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type Direction = "customer_to_pujari" | "pujari_to_customer";
 
@@ -104,7 +105,7 @@ export default function AdminReviews() {
       <ScreenHeader title={t("admin.reviews")} back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
       >
         {list.error ? <ErrorBanner message={list.error instanceof Error ? list.error.message : "Failed to load reviews"} /> : null}
         <ErrorBanner message={error} />

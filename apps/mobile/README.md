@@ -52,3 +52,21 @@ Needs a free [expo.dev](https://expo.dev/signup) account. Browser login (`eas lo
 ```bash
 npx eas-cli@latest build --platform android --profile preview
 ```
+
+## App links (website links open the app)
+
+Links to `b-seva.com` and `qa.b-seva.com` (WhatsApp "View booking", emails) open the installed app instead of the
+website. Paths: customer app `/my-bookings`, `/booking/<id>`, `/customer/...`, puja pages `/services`, `/services/<slug>`,
+`/book/<slug>` and `/astrology` (promotion links); pujari app `/pujari/...`.
+
+- Website: `deploy/nginx/well-known/` is served at `/.well-known/apple-app-site-association` and
+  `/.well-known/assetlinks.json` on both hosts.
+- iOS: `app.config.ts` adds the Associated Domains entitlement (`applinks:b-seva.com`, `applinks:qa.b-seva.com`).
+  The App IDs `com.bseva.app` and `com.bseva.pujari` need the Associated Domains capability (EAS enables it on
+  build when it manages the credentials).
+- Android: release builds only, from `android-variants/<app>/AndroidManifest.xml`. `assetlinks.json` lists the
+  upload-key SHA-256 of each app (APKs built and signed locally). For builds installed from Google Play, also add
+  the **app signing key** SHA-256 from Play Console > Test and release > App integrity.
+- In the app, `app/+native-intent.tsx` maps the URL to the screen.
+
+Only builds made after this change open links; installed older builds keep opening the website.

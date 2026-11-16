@@ -110,7 +110,10 @@ def wallet(email: str) -> int:
 
 
 def booking_body(svc: dict, **extra) -> dict:
-    day = date.today() + timedelta(days=5 + (uuid.uuid4().int % 40))
+    # 11–48 days ahead: after the demo seed's confirmed bookings for Pujari 1 (today + 7 at 09:00, today + 10 at
+    # 11:00), which would otherwise block the 10:00 slot and leave a booking with no offer, and before the fixed
+    # day 50 / 51 bookings used by one check.
+    day = date.today() + timedelta(days=11 + (uuid.uuid4().int % 38))
     return {
         "service_id": str(svc["id"]),
         "package_type": "basic",

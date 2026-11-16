@@ -3,12 +3,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, ChoiceChips, EmptyState, ErrorBanner, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type SupportConversation = {
   id: string;
@@ -45,7 +46,7 @@ export default function SupportConversations() {
       <ScreenHeader title="Live Chat" back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isFetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
       >
         <AppText variant="small" color={colors.mutedForeground}>
           In-app chats from customers. Open one to reply or convert it to a ticket.

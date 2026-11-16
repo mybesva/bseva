@@ -264,6 +264,77 @@ def check_worker_prunes_old_events():
     assert [r[0] for r in sql("SELECT event_key FROM whatsapp_webhook_events").all()] == ["new"]
 
 
+def check_msg91_booking_notifications():
+    """Booking events -> MSG91 after commit, values from the real rows, once only, nothing on rollback."""
+    reset()
+    sql("TRUNCATE job_dedupe")
+    from app.whatsapp import msg91
+
+    settings.msg91_whatsapp_enabled = True
+    settings.msg91_authkey = "pgCheckAuthKey0123456789"
+    msg91.dispatch = lambda fn: fn()
+    calls: list[dict] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert req.headers["authkey"] == "pgCheckAuthKey0123456789"
+        calls.append(json.loads(req.content))
+        return httpx.Response(200, json={"status": "success", "hasError": False, "request_id": f"req{len(calls)}"})
+
+    msg91.http_client_factory = lambda: httpx.Client(transport=httpx.MockTransport(handler))
+    cid = sql("INSERT INTO users (id, name, email, phone, password_hash, role) VALUES (gen_random_uuid(), 'Raj Kumar', "
+              "'msg91-cust@example.org', '9800000001', 'x', 'customer') RETURNING id").scalar()
+    pid = sql("INSERT INTO users (id, name, email, phone, password_hash, role) VALUES (gen_random_uuid(), 'Sharma ji', "
+              "'msg91-puj@example.org', '9000000050', 'x', 'pujari') RETURNING id").scalar()
+    # The pujari's WhatsApp number wins over the login phone.
+    sql("INSERT INTO pujari_profiles (user_id, requested_level, whatsapp_number) VALUES (:p, 1, '+91 98000 00001')", p=pid)
+    svc = sql("INSERT INTO services (id, name, slug, required_level) VALUES (gen_random_uuid(), 'Satyanarayana Puja', "
+              "'msg91-puja', 1) RETURNING id").scalar()
+    bid = str(sql(
+        """
+        INSERT INTO bookings (id, booking_number, customer_id, pujari_id, service_id, booking_date, start_time, end_time,
+                              mode, package_type, base_price_paise, gst_amount_paise, gst_percent, total_paise, status,
+                              location_label)
+        VALUES (gen_random_uuid(), 'BSV-PG-1', :c, :p, :s, DATE '2026-12-05', '10:00', '11:00', 'in_person', 'standard',
+                100000, 18000, 18, 118000, 'confirmed', '12 Temple Street, Madhapur, Hyderabad') RETURNING id
+        """, c=cid, p=pid, s=svc,
+    ).scalar())
+
+    with SessionLocal() as db:
+        db.execute(text("SELECT 1"))
+        msg91.notify(db, "booking_confirmed", bid, cid)
+        msg91.notify(db, "pujari_new_booking", bid, pid)
+        assert calls == []  # nothing before commit
+        db.commit()
+    assert len(calls) == 2, calls
+    by_name = {c["payload"]["template"]["name"]: c["payload"]["template"]["to_and_components"][0] for c in calls}
+    cust = by_name["qa_bseva_booking_confirmed"]
+    assert cust["to"] == [TO]
+    assert [cust["components"][f"body_{i}"]["value"] for i in range(1, 6)] == [
+        "Raj Kumar", "Satyanarayana Puja", "5 Dec 2026", "10:00 AM", "BSV-PG-1"]
+    puj = by_name["qa_pujari_new_booking"]
+    assert [puj["components"][f"body_{i}"]["value"] for i in range(1, 6)] == [
+        "Sharma ji", "Satyanarayana Puja", "5 Dec 2026", "10:00 AM", "Hyderabad"]
+    assert puj["components"]["button_1"]["value"] == bid
+
+    with SessionLocal() as db:  # the same event again (a retried task): not sent twice
+        db.execute(text("SELECT 1"))
+        msg91.notify(db, "booking_confirmed", bid, cid)
+        db.commit()
+    with SessionLocal() as db:  # a change that rolls back: nothing sent
+        db.execute(text("SELECT 1"))
+        msg91.notify(db, "booking_cancelled", bid, cid)
+        db.rollback()
+    assert len(calls) == 2, calls
+    rows = sql("SELECT wamid, purpose, template_name, status, recipient_last4 FROM whatsapp_messages ORDER BY wamid").mappings().all()
+    assert [dict(r) for r in rows] == [
+        {"wamid": "msg91:req1", "purpose": "booking_confirmed", "template_name": "qa_bseva_booking_confirmed",
+         "status": "accepted", "recipient_last4": "0001"},
+        {"wamid": "msg91:req2", "purpose": "pujari_new_booking", "template_name": "qa_pujari_new_booking",
+         "status": "accepted", "recipient_last4": "0001"},
+    ], rows
+    assert "Raj Kumar" not in LOG.getvalue() and "pgCheckAuthKey" not in LOG.getvalue()
+
+
 if __name__ == "__main__":
     name = sys.argv[1]
     globals()[f"check_{name}"]()

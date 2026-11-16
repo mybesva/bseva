@@ -2,7 +2,7 @@ import { displayTokenLabel } from "@bseva/config";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { RefreshControl, ScrollView, TouchableOpacity, View } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import { AppText, ChoiceChips, EmptyState, ErrorBanner, LoadingBlock, PrimaryButton, Screen } from "@/components/ui";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SevaEventFormModal } from "@/components/admin/SevaEventForm";
@@ -10,6 +10,7 @@ import { useAdmin } from "@/providers/AdminProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import type { SevaEvent } from "@bseva/types";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const FILTERS = ["all", "puja", "chadhava", "pravachan"];
 
@@ -54,7 +55,7 @@ export default function AdminSevaEventsScreen() {
       <ScreenHeader title="Seva Events" back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => q.refetch()} />}
       >
         <ErrorBanner message={error || (q.error instanceof Error ? q.error.message : null)} />
         {canManage ? (

@@ -337,7 +337,10 @@ def notify_pujaris_new_offer(
         return
     body = f"New {service_name or 'puja'} request ({booking_number}) near you — accept or decline in Bookings."
     link = pujari_booking_link(booking_id) if booking_id else "/pujari/bookings"
+    from app.whatsapp import msg91
+
     for pid in pujari_ids:
+        msg91.notify(db, "pujari_new_booking", booking_id, pid)
         try:
             create_notification(
                 db,

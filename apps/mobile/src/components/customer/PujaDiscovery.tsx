@@ -7,12 +7,13 @@ import type { CatalogService } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { PujaServiceCard } from "@/components/PujaImage";
 import { AppText, EmptyState, ErrorBanner, LoadingBlock } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useI18n } from "@/providers/I18nProvider";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -138,12 +139,13 @@ export function PujaDiscovery({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 32 }}
         refreshControl={
-          <RefreshControl
-            refreshing={servicesQ.isRefetching && !servicesQ.isLoading}
-            onRefresh={() => {
-              void servicesQ.refetch();
-              void categoriesQ.refetch();
-            }}
+          <PullToRefresh
+            onRefresh={() =>
+              Promise.all([
+                servicesQ.refetch(),
+                categoriesQ.refetch(),
+              ])
+            }
           />
         }
       >

@@ -31,17 +31,17 @@ def company_snapshot(db: Session) -> dict[str, str]:
     """Live admin-configurable company block. Copied into each issued invoice."""
     return {
         "brand_name": _s(db, "invoice_brand_name", "BSeva"),
-        "legal_name": _s(db, "invoice_company_name", "BSeva Services Private Limited"),
+        "legal_name": _s(db, "invoice_company_name", "B-SEVA PRIVATE LIMITED"),
         "address": _s(
             db,
             "invoice_company_address",
-            "123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India",
+            "Divyasree Holdings Pvt Ltd, Plot No. 5 & 43, HITEC City Layout, Madhapur, Shaikpet, Hyderabad – 500081, Telangana, India",
         ),
         "state": _s(db, "invoice_company_state", "Telangana"),
-        "pincode": _s(db, "invoice_company_pincode", "500034"),
+        "pincode": _s(db, "invoice_company_pincode", "500081"),
         "email": _s(db, "invoice_company_email", "support@b-seva.com"),
         "phone": _s(db, "invoice_company_phone", ""),
-        "gstin": _s(db, "invoice_gstin", ""),
+        "gstin": _s(db, "invoice_gstin", "36AAPCB2396C1ZK"),
         "pan": _s(db, "invoice_pan", ""),
         "website": _s(db, "invoice_website", "www.b-seva.com"),
         "logo_path": _s(db, "invoice_logo_path", "/bseva-logo-transparent.png"),

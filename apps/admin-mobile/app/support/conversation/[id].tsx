@@ -2,12 +2,13 @@ import { displayTokenLabel } from "@bseva/config";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppText, Card, EmptyState, ErrorBanner, LoadingBlock, PrimaryButton, Screen, StatusBadge } from "@/components/ui";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 // Same shape/key as app/support/conversations.tsx (route files should not import each other).
 type SupportConversation = {
@@ -122,7 +123,7 @@ export default function SupportConversationThread() {
           ref={scrollRef}
           contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 16 }}
           keyboardShouldPersistTaps="handled"
-          refreshControl={<RefreshControl refreshing={messages.isFetching} onRefresh={() => void messages.refetch()} />}
+          refreshControl={<PullToRefresh onRefresh={() => messages.refetch()} />}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
           {conv ? (

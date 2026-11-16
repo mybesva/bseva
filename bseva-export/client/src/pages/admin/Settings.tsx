@@ -255,7 +255,7 @@ const PLATFORM_KEYS: PlatformKey[] = [
     label: "Complete Address",
     type: "string",
     group: "invoices",
-    hint: "Use commas, e.g. 123, Banjara Hills Road No. 12, Hyderabad, Telangana – 500034, India.",
+    hint: "Use commas, e.g. Plot No. 5 & 43, HITEC City Layout, Madhapur, Hyderabad – 500081, Telangana, India.",
     multiline: true,
   },
   { key: "invoice_company_state", label: "State", type: "string", group: "invoices" },

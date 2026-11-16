@@ -1,0 +1,16 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <activity android:name="com.bseva.app.MainActivity">
+      <!-- App Links: pujari links (e.g. /pujari/bookings/<id>) open in this app (verified by assetlinks.json). -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="https"/>
+        <data android:host="b-seva.com"/>
+        <data android:host="qa.b-seva.com"/>
+        <data android:pathPrefix="/pujari/"/>
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

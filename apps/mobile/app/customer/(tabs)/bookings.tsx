@@ -3,7 +3,7 @@ import type { Booking, SevaRegistration } from "@bseva/types";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, Card, ChoiceChips, EmptyState, LoadingBlock, Screen, StatusBadge } from "@/components/ui";
 import { SevaRegistrationCard } from "@/components/customer/SevaRegistrationCard";
@@ -12,6 +12,7 @@ import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { formatDisplayDate, formatDisplaySlot } from "@/utils/formatDate";
 import { useI18n } from "@/providers/I18nProvider";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type TypeFilter = (typeof BOOKING_TYPE_FILTERS)[number]["id"] | "live";
 
@@ -57,12 +58,13 @@ export default function CustomerBookings() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10 }}
         refreshControl={
-          <RefreshControl
-            refreshing={q.isRefetching || seva.isRefetching}
-            onRefresh={() => {
-              void q.refetch();
-              void seva.refetch();
-            }}
+          <PullToRefresh
+            onRefresh={() =>
+              Promise.all([
+                q.refetch(),
+                seva.refetch(),
+              ])
+            }
           />
         }
       >

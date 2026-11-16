@@ -11,7 +11,7 @@ import type { Paginated } from "@bseva/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Alert, Modal, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { confirmAdminAction, showAdminActionSheet, type ActionSheetOption } from "@/components/admin/adminActionSheet";
 import { AdminFormModal } from "@/components/admin/AdminFormModal";
@@ -34,6 +34,7 @@ import { useAdmin } from "@/providers/AdminProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type CustomerRow = {
   id: string;
@@ -323,7 +324,7 @@ export default function AdminCustomers() {
       />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
         keyboardShouldPersistTaps="handled"
       >
         <ErrorBanner message={error} />

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import {
@@ -13,6 +13,7 @@ import { AppText, EmptyState, LoadingBlock, PrimaryButton, Screen } from "@/comp
 import { OPEN_TICKET_STATUSES } from "@/lib/supportLabels";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 export default function AdminSupport() {
   const { t } = useI18n();
@@ -53,10 +54,7 @@ export default function AdminSupport() {
       <ScreenHeader title={t("admin.support")} back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isFetching} onRefresh={() => {
-              void list.refetch();
-              void chats.refetch();
-            }} />}
+        refreshControl={<PullToRefresh onRefresh={() => Promise.all([list.refetch(), chats.refetch()])} />}
         keyboardShouldPersistTaps="handled"
       >
         <PrimaryButton

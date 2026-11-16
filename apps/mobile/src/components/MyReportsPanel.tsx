@@ -1,12 +1,13 @@
 import { formatDisplayDateTime } from "@bseva/locales";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { AppText, Card, EmptyState, ErrorBanner, LoadingBlock } from "@/components/ui";
 import { REPORT_REASON_LABELS, REPORT_STATUS_LABELS, REPORT_TARGET_LABELS, text } from "@/content/compliance";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { apiErrorMessage } from "@/utils/userMessage";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 /** Reports this user has filed and their status (Support & Contact → My Reports). */
 export function MyReportsPanel() {
@@ -17,7 +18,7 @@ export function MyReportsPanel() {
   return (
     <ScrollView
       contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }}
-      refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+      refreshControl={<PullToRefresh onRefresh={() => q.refetch()} />}
     >
         <AppText variant="small" color={colors.mutedForeground}>
           {text.howToReport}

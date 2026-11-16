@@ -4,7 +4,7 @@ import type { Booking, CatalogService } from "@bseva/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { Image, Pressable, RefreshControl, ScrollView } from "react-native";
+import { Image, Pressable, ScrollView } from "react-native";
 import { CustomerWelcomeHero, customerGreetingName } from "@/components/CustomerWelcomeHero";
 import { PanchangCard } from "@/components/PanchangCard";
 import { HomeBrandBar } from "@/components/ScreenHeader";
@@ -22,6 +22,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 export default function CustomerHome() {
   const { user } = useAuth();
@@ -85,19 +86,20 @@ export default function CustomerHome() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl
-            refreshing={bookings.isRefetching || profile.isRefetching || availability.isRefetching || banners.isRefetching}
-            onRefresh={() => {
-              void bookings.refetch();
-              void services.refetch();
-              void profile.refetch();
-              void availability.refetch();
-              void config.refetch();
-              // Banners, recommendations and the seasonal popup change from admin, so reload them too.
-              void banners.refetch();
-              void recs.refetch();
-              void qc.invalidateQueries({ queryKey: ["promo-popups"] });
-            }}
+          <PullToRefresh
+            onRefresh={() =>
+              Promise.all([
+                bookings.refetch(),
+                services.refetch(),
+                profile.refetch(),
+                availability.refetch(),
+                config.refetch(),
+                // Banners, recommendations and the seasonal popup change from admin, so reload them too.
+                banners.refetch(),
+                recs.refetch(),
+                qc.invalidateQueries({ queryKey: ["promo-popups"] }),
+              ])
+            }
           />
         }
       >

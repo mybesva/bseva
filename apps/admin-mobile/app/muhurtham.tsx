@@ -1,6 +1,6 @@
 import { translatedTokenLabel } from "@bseva/config";
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { PujaTitle } from "@/components/PujaTitle";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -9,6 +9,7 @@ import { useAdmin } from "@/providers/AdminProvider";
 import { useI18n } from "@/providers/I18nProvider";
 import { apiClient } from "@/services/api";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type ConsultationStatus = "requested" | "in_progress" | "guided" | "completed" | "cancelled";
 type Consultation = {
@@ -84,7 +85,7 @@ export default function MuhurthamScreen() {
       <ScreenHeader title={t("admin.muhurtham")} back />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={<PullToRefresh onRefresh={() => list.refetch()} />}
       >
         <ErrorBanner message={error || (list.error instanceof Error ? list.error.message : null)} />
         <Field label={t("admin.search")} value={query} onChangeText={setQuery} />
